@@ -10,6 +10,20 @@ import { test, expect } from "@playwright/test";
 
 // Developer terms that must NEVER appear in user-visible text.
 // (They can still exist in HTML attributes, data-testid, URLs, etc.)
+//
+// Pass 7 Day 4 additions, all caught from the live Telethon Pass 1.5
+// transcripts and the spending-feature unwind:
+//   "container", "sandboxed" — leaked from bot replies, also a sweep
+//     hedge against any new infrastructure-leak.
+//   "web_search", "web_fetch" — Anthropic tool-call names appeared raw
+//     in Telegram replies; user-mode UI must never reproduce that.
+//   "admin key", "billing scope", "cost endpoint" — vestiges of the
+//     short-lived admin-API spending integration (Day 1a, unwound 1b);
+//     guarding so they can't quietly creep back in.
+//   "Podman", "Docker" — runtime names are allowed only behind a
+//     "Show terminal command" disclosure on the install screen
+//     (Pass 5). Banning the bare strings catches accidental leaks
+//     into any other surface.
 const BANNED_TERMS = [
   "OpenClaw Orchestrator",
   "OpenClaw Vault",
@@ -30,6 +44,15 @@ const BANNED_TERMS = [
   "Checking prerequisites",
   "submodule",
   "Submodule",
+  "containers",
+  "sandboxed",
+  "web_search",
+  "web_fetch",
+  "admin key",
+  "Admin key",
+  "Admin Key",
+  "billing scope",
+  "cost endpoint",
 ];
 
 /** Get visible text from the page, ignoring script/style/meta content */

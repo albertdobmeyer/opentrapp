@@ -1,17 +1,20 @@
 //! Frontend-facing perimeter lifecycle commands.
 //!
 //! Pass 4 shipped `get_perimeter_state` so the Pass-6 Home rebuild has a
-//! live data source for the hero machine. Pass 7 Day 3 adds
+//! live data source for the hero machine. Pass 7 Day 3 added
 //! `restart_perimeter` so a key rotation in Preferences automatically
 //! cycles vault-agent (which only reads `.env` on boot) without making
-//! Karen reach for a terminal or manually relaunch.
+//! Karen reach for a terminal or manually relaunch. Pass 7 Day 4 adds
+//! `pause_perimeter` + `resume_perimeter` for the user-initiated stop
+//! state — closes the last hero state gap from Pass 2's spec.
 
 use std::time::Duration;
 
 use tauri::State;
 
 use crate::lifecycle::{
-    bring_perimeter_down_sync, run_compose, PerimeterStateStore, PerimeterStatus,
+    bring_perimeter_down_sync, clear_paused_marker, run_compose, write_paused_marker,
+    PerimeterStateStore, PerimeterStatus,
 };
 use crate::orchestrator::state::AppState;
 
@@ -29,7 +32,7 @@ pub fn get_perimeter_state(
     store: State<'_, PerimeterStateStore>,
 ) -> Result<PerimeterStatus, String> {
     store
-        .0
+        .status
         .lock()
         .map(|guard| guard.clone())
         .map_err(|e| format!("perimeter state lock poisoned: {e}"))
@@ -65,6 +68,84 @@ pub async fn restart_perimeter(state: State<'_, AppState>) -> Result<(), String>
             "Couldn't bring your assistant back up. Check the key you just saved \
              and try again."
                 .to_string(),
+        );
+    }
+
+    Ok(())
+}
+
+/// Pause the perimeter on user request. Stops the 4 containers but keeps
+/// them around (no `down`, no destroy) so resume is fast. Persists the
+/// paused state to `~/.lobster-trapp/paused` so it survives an app restart
+/// — pausing yesterday shouldn't silently un-pause when the user reopens
+/// the app today.
+///
+/// The status aggregator reads the paused flag every 60s and reports
+/// `paused_by_user` regardless of container state, so the user sees a
+/// calm "paused" hero rather than an alarming "didn't recover" one.
+#[tauri::command]
+pub async fn pause_perimeter(
+    state: State<'_, AppState>,
+    store: State<'_, PerimeterStateStore>,
+) -> Result<(), String> {
+    let root = state
+        .monorepo_root
+        .read()
+        .map(|g| g.clone())
+        .map_err(|e| format!("monorepo root lock poisoned: {e}"))?;
+
+    // Set the flag first so even if compose stop is slow the aggregator
+    // already classifies the state correctly on the next tick.
+    store.set_paused(true);
+    if let Err(e) = write_paused_marker() {
+        eprintln!("[lifecycle] couldn't persist paused marker: {e}");
+    }
+
+    let result = tokio::task::spawn_blocking(move || {
+        run_compose(&root, &["stop"], Duration::from_secs(30))
+    })
+    .await
+    .map_err(|e| format!("pause task join failed: {e}"))?;
+
+    if !result {
+        // Roll back the flag so the user isn't stuck in a fake-paused
+        // state with running containers.
+        store.set_paused(false);
+        clear_paused_marker();
+        return Err("Couldn't pause your assistant. Try again in a moment.".to_string());
+    }
+
+    Ok(())
+}
+
+/// Resume from a paused state. Clears the persisted flag and brings
+/// containers back online. Same `compose up -d` path as restart, since
+/// `compose stop` left the containers around but stopped.
+#[tauri::command]
+pub async fn resume_perimeter(
+    state: State<'_, AppState>,
+    store: State<'_, PerimeterStateStore>,
+) -> Result<(), String> {
+    let root = state
+        .monorepo_root
+        .read()
+        .map(|g| g.clone())
+        .map_err(|e| format!("monorepo root lock poisoned: {e}"))?;
+
+    // Clear the flag first so a slow start still shows "starting/recovering"
+    // rather than staying stuck on "paused".
+    store.set_paused(false);
+    clear_paused_marker();
+
+    let result = tokio::task::spawn_blocking(move || {
+        run_compose(&root, &["up", "-d"], RESTART_UP_BUDGET)
+    })
+    .await
+    .map_err(|e| format!("resume task join failed: {e}"))?;
+
+    if !result {
+        return Err(
+            "Couldn't bring your assistant back online. Try again in a moment.".to_string(),
         );
     }
 

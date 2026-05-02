@@ -57,8 +57,9 @@ pub enum AssistantStatus {
     ErrorPerimeter,
     /// Containers are healthy but Anthropic rejected the key.
     ErrorKey,
-    /// Reserved for Day 4 — user-initiated pause.
-    #[allow(dead_code)]
+    /// User-initiated pause via `pause_perimeter`. Persists across app
+    /// restarts via the `~/.lobster-trapp/paused` marker. Cleared by
+    /// `resume_perimeter`.
     PausedByUser,
 }
 
@@ -172,8 +173,13 @@ async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> Assist
     // 1. Snapshot the perimeter state (set by the watchdog every 30s).
     let perimeter = handle
         .try_state::<PerimeterStateStore>()
-        .and_then(|store| store.0.lock().ok().map(|g| g.state.clone()))
+        .and_then(|store| store.status.lock().ok().map(|g| g.state.clone()))
         .unwrap_or(PerimeterState::NotSetup);
+
+    let paused = handle
+        .try_state::<PerimeterStateStore>()
+        .map(|store| store.is_paused())
+        .unwrap_or(false);
 
     // 2. Read .env for key presence + Anthropic key value.
     let env_path = vault_env_path(handle);
@@ -187,11 +193,17 @@ async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> Assist
         None
     };
 
-    // 4. Derive aggregated status.
-    let status = derive_status(&perimeter, has_anthropic, key_valid);
+    // 4. Derive aggregated status. Pause overrides everything else: a
+    //    user-initiated stop should never read as "didn't recover".
+    let status = derive_status(&perimeter, has_anthropic, key_valid, paused);
 
-    // 5. Compose the alerts list.
-    let alerts = build_alerts(&perimeter, has_anthropic, has_telegram, key_valid);
+    // 5. Compose the alerts list. Suppressed entirely when paused — the
+    //    user knows their assistant is off; nothing to alarm about.
+    let alerts = if paused {
+        Vec::new()
+    } else {
+        build_alerts(&perimeter, has_anthropic, has_telegram, key_valid)
+    };
 
     AssistantStatusSnapshot {
         status,
@@ -206,7 +218,11 @@ fn derive_status(
     perimeter: &PerimeterState,
     has_anthropic: bool,
     key_valid: Option<bool>,
+    paused: bool,
 ) -> AssistantStatus {
+    if paused {
+        return AssistantStatus::PausedByUser;
+    }
     match perimeter {
         PerimeterState::NotSetup => AssistantStatus::NotSetup,
         PerimeterState::Starting => AssistantStatus::Starting,
@@ -422,7 +438,7 @@ mod tests {
     #[test]
     fn derive_running_with_valid_key_is_ok() {
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, true, Some(true)),
+            derive_status(&PerimeterState::RunningSafely, true, Some(true), false),
             AssistantStatus::Ok
         );
     }
@@ -430,7 +446,7 @@ mod tests {
     #[test]
     fn derive_running_with_invalid_key_is_error_key() {
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, true, Some(false)),
+            derive_status(&PerimeterState::RunningSafely, true, Some(false), false),
             AssistantStatus::ErrorKey
         );
     }
@@ -439,7 +455,7 @@ mod tests {
     fn derive_running_with_inconclusive_probe_stays_ok() {
         // Optimistic on transient issues — don't alarm on network errors.
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, true, None),
+            derive_status(&PerimeterState::RunningSafely, true, None, false),
             AssistantStatus::Ok
         );
     }
@@ -447,7 +463,7 @@ mod tests {
     #[test]
     fn derive_running_without_anthropic_key_is_not_setup() {
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, false, None),
+            derive_status(&PerimeterState::RunningSafely, false, None, false),
             AssistantStatus::NotSetup
         );
     }
@@ -455,7 +471,7 @@ mod tests {
     #[test]
     fn derive_stopped_perimeter_is_error_perimeter() {
         assert_eq!(
-            derive_status(&PerimeterState::Stopped, true, Some(true)),
+            derive_status(&PerimeterState::Stopped, true, Some(true), false),
             AssistantStatus::ErrorPerimeter
         );
     }
@@ -463,7 +479,7 @@ mod tests {
     #[test]
     fn derive_recovering_passes_through() {
         assert_eq!(
-            derive_status(&PerimeterState::Recovering, true, Some(true)),
+            derive_status(&PerimeterState::Recovering, true, Some(true), false),
             AssistantStatus::Recovering
         );
     }
@@ -471,8 +487,36 @@ mod tests {
     #[test]
     fn derive_not_setup_passes_through() {
         assert_eq!(
-            derive_status(&PerimeterState::NotSetup, false, None),
+            derive_status(&PerimeterState::NotSetup, false, None, false),
             AssistantStatus::NotSetup
+        );
+    }
+
+    #[test]
+    fn derive_paused_overrides_running() {
+        // Even when containers are healthy, pause wins.
+        assert_eq!(
+            derive_status(&PerimeterState::RunningSafely, true, Some(true), true),
+            AssistantStatus::PausedByUser
+        );
+    }
+
+    #[test]
+    fn derive_paused_overrides_stopped() {
+        // The whole point of pause: a stopped perimeter that the user
+        // chose isn't an error.
+        assert_eq!(
+            derive_status(&PerimeterState::Stopped, true, Some(true), true),
+            AssistantStatus::PausedByUser
+        );
+    }
+
+    #[test]
+    fn derive_paused_overrides_error_key() {
+        // Pause is louder than auth issues; user clearly opted out.
+        assert_eq!(
+            derive_status(&PerimeterState::RunningSafely, true, Some(false), true),
+            AssistantStatus::PausedByUser
         );
     }
 

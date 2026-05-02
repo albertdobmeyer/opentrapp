@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
-import { MessageCircle, RotateCcw } from "lucide-react";
+import { MessageCircle, Pause, Play, RotateCcw } from "lucide-react";
 import { useSettings } from "@/hooks/useSettings";
 import type { HeroState } from "@/hooks/useHero";
+import { pausePerimeter, resumePerimeter } from "@/lib/tauri";
+import { useToast } from "@/lib/ToastContext";
+import { classifyError } from "@/lib/errors";
 
 interface Props {
   state: HeroState;
@@ -57,7 +61,7 @@ const COPY: Record<HeroState, Copy> = {
   },
   paused_by_user: {
     title: "Your assistant is paused",
-    subline: "Resume from the tray menu when you want it back.",
+    subline: "It won't respond on Telegram until you resume it.",
     ringTint: "border-neutral-500/40 border-neutral-500/60",
     dotTint: "bg-neutral-500",
   },
@@ -66,7 +70,9 @@ const COPY: Record<HeroState, Copy> = {
 export default function HeroStatusCard({ state, loading }: Props) {
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { addToast, removeToast } = useToast();
   const copy = COPY[state];
+  const [pauseLoading, setPauseLoading] = useState(false);
 
   const telegramLink =
     settings.telegramBotUrl ??
@@ -79,6 +85,62 @@ export default function HeroStatusCard({ state, loading }: Props) {
       await openUrl(telegramLink);
     } catch {
       window.open(telegramLink, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  async function handlePause() {
+    setPauseLoading(true);
+    const stickyId = addToast({
+      type: "info",
+      title: "Pausing your assistant…",
+      duration: 0,
+    });
+    try {
+      await pausePerimeter();
+      removeToast(stickyId);
+      addToast({
+        type: "success",
+        title: "Your assistant is paused",
+        message: "It won't respond on Telegram until you resume it.",
+      });
+    } catch (err) {
+      removeToast(stickyId);
+      const c = classifyError(err);
+      addToast({
+        type: "error",
+        title: c.title === "Something went wrong" ? "Couldn't pause" : c.title,
+        message: c.userMessage,
+      });
+    } finally {
+      setPauseLoading(false);
+    }
+  }
+
+  async function handleResume() {
+    setPauseLoading(true);
+    const stickyId = addToast({
+      type: "info",
+      title: "Bringing your assistant back…",
+      message: "This usually takes about 10 seconds.",
+      duration: 0,
+    });
+    try {
+      await resumePerimeter();
+      removeToast(stickyId);
+      addToast({
+        type: "success",
+        title: "Your assistant is back online",
+      });
+    } catch (err) {
+      removeToast(stickyId);
+      const c = classifyError(err);
+      addToast({
+        type: "error",
+        title: c.title === "Something went wrong" ? "Couldn't resume" : c.title,
+        message: c.userMessage,
+      });
+    } finally {
+      setPauseLoading(false);
     }
   }
 
@@ -105,14 +167,25 @@ export default function HeroStatusCard({ state, loading }: Props) {
 
       <div className="flex flex-wrap items-center justify-center gap-3">
         {state === "running_safely" && (
-          <button
-            type="button"
-            onClick={handleOpenTelegram}
-            className="btn btn-lg btn-primary"
-          >
-            <MessageCircle size={18} />
-            Open Telegram
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={handleOpenTelegram}
+              className="btn btn-lg btn-primary"
+            >
+              <MessageCircle size={18} />
+              Open Telegram
+            </button>
+            <button
+              type="button"
+              onClick={handlePause}
+              className="btn btn-lg btn-ghost"
+              disabled={pauseLoading}
+            >
+              <Pause size={18} />
+              {pauseLoading ? "Pausing…" : "Pause"}
+            </button>
+          </>
         )}
 
         {state === "starting" && (
@@ -169,9 +242,15 @@ export default function HeroStatusCard({ state, loading }: Props) {
         )}
 
         {state === "paused_by_user" && (
-          <span className="text-xs text-neutral-500">
-            Paused — resume from the tray menu.
-          </span>
+          <button
+            type="button"
+            onClick={handleResume}
+            className="btn btn-lg btn-primary"
+            disabled={pauseLoading}
+          >
+            <Play size={18} />
+            {pauseLoading ? "Resuming…" : "Resume"}
+          </button>
         )}
       </div>
     </div>

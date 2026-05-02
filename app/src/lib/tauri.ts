@@ -293,6 +293,25 @@ export async function restartPerimeter(): Promise<void> {
 }
 
 /**
+ * Pause the perimeter on user request. Stops containers but keeps them
+ * around (no destroy) so resume is fast (~3-5s). Persists across app
+ * restarts via `~/.lobster-trapp/paused` so the user's intent survives.
+ * Status aggregator reports `paused_by_user` while paused, suppressing
+ * all "didn't recover" / "key not working" alerts.
+ */
+export async function pausePerimeter(): Promise<void> {
+  return invoke<void>("pause_perimeter");
+}
+
+/**
+ * Bring the perimeter back online after a pause. Same `compose up -d`
+ * path as restart since `compose stop` left the containers around.
+ */
+export async function resumePerimeter(): Promise<void> {
+  return invoke<void>("resume_perimeter");
+}
+
+/**
  * Resolved Telegram bot identity. Both fields come from a single `getMe`
  * call and are always populated together.
  */

@@ -12,7 +12,7 @@
 
 use std::path::{Path, PathBuf};
 use std::process::Command as StdCommand;
-use std::sync::Mutex;
+use std::sync::{Mutex, RwLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
@@ -80,13 +80,55 @@ impl PerimeterStatus {
 }
 
 /// Tauri-managed shared state. Read by the `get_perimeter_state` command
-/// and updated by the watchdog.
-pub struct PerimeterStateStore(pub Mutex<PerimeterStatus>);
+/// and updated by the watchdog. Includes a `paused` flag separate from the
+/// container-derived state so a user-initiated stop is distinguishable from
+/// a crash.
+pub struct PerimeterStateStore {
+    pub status: Mutex<PerimeterStatus>,
+    pub paused: RwLock<bool>,
+}
 
 impl PerimeterStateStore {
     pub fn new() -> Self {
-        Self(Mutex::new(PerimeterStatus::empty()))
+        Self {
+            status: Mutex::new(PerimeterStatus::empty()),
+            paused: RwLock::new(is_paused_persisted()),
+        }
     }
+
+    pub fn is_paused(&self) -> bool {
+        self.paused.read().map(|g| *g).unwrap_or(false)
+    }
+
+    pub fn set_paused(&self, value: bool) {
+        if let Ok(mut g) = self.paused.write() {
+            *g = value;
+        }
+    }
+}
+
+/// Persisted pause flag — file presence at `~/.lobster-trapp/paused` means
+/// the user paused their assistant and expects it to stay paused across
+/// app restarts. Best-effort: a missing file (the default) means "not
+/// paused", so a corrupted home dir simply resumes normal behavior.
+fn paused_marker_path() -> PathBuf {
+    runguard_dir().join("paused")
+}
+
+pub fn is_paused_persisted() -> bool {
+    paused_marker_path().exists()
+}
+
+pub fn write_paused_marker() -> std::io::Result<()> {
+    let path = paused_marker_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, "1")
+}
+
+pub fn clear_paused_marker() {
+    let _ = std::fs::remove_file(paused_marker_path());
 }
 
 // ─── Secret redaction (defensive) ─────────────────────────────────────
@@ -345,7 +387,7 @@ pub fn spawn_watchdog(handle: AppHandle, interval: Duration) {
             last_state = Some(status.state.clone());
 
             if let Some(store) = handle.try_state::<PerimeterStateStore>() {
-                if let Ok(mut guard) = store.0.lock() {
+                if let Ok(mut guard) = store.status.lock() {
                     *guard = status.clone();
                 }
             }

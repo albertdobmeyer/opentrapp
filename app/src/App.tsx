@@ -1,8 +1,13 @@
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useManifests } from "@/hooks/useManifests";
 import { useSettings } from "@/hooks/useSettings";
 import { AppContextProvider } from "@/lib/AppContext";
 import { ToastProvider } from "@/lib/ToastContext";
+import {
+  getAutostartEnabled,
+  setAutostartEnabled,
+} from "@/lib/osIntegration";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import UserLayout from "@/components/UserLayout";
 import ModeSwitcher from "@/components/ModeSwitcher";
@@ -28,6 +33,34 @@ export default function App() {
   const { settings, loaded: settingsLoaded, update: updateSettings } = useSettings();
   // Manifests are still discovered (used by dev mode + setup wizard); user mode no longer needs them at the top level.
   useManifests();
+
+  // Reconcile OS-level autostart with the persisted preference once on
+  // boot. Handles two cases: a fresh install where the default ("on")
+  // hasn't been registered with the OS yet, and a user who toggled
+  // autostart off via System Settings outside the app.
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const osState = await getAutostartEnabled();
+        if (cancelled) return;
+        if (osState !== settings.autostart) {
+          await setAutostartEnabled(settings.autostart);
+        }
+      } catch {
+        // Browser dev mode or plugin not initialised — silent. The user
+        // can still toggle in Preferences once running in Tauri.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally only depending on settingsLoaded — we don't want to
+    // re-run every time autostart toggles (the toggle handler already
+    // calls setAutostartEnabled directly).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsLoaded]);
 
   if (!settingsLoaded) {
     return (

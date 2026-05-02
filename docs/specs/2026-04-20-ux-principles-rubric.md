@@ -230,16 +230,18 @@ Originally scored 2026-04-20 (rows 1–13). Re-scored 2026-04-29 with P11–P13 
 | 11 | Settings | 8 | 7 | N/A | N/A | 9 | 9 | 8 | 6 | N/A | 9 | N/A | 8 | N/A | **8.0** |
 | 12 | 404 Page | 10 | 10 | 10 | N/A | N/A | N/A | 10 | N/A | N/A | 10 | N/A | N/A | N/A | **10.0** |
 | 13 | ErrorBoundary | 7 | 5 | 7 | 6 | 4 | N/A | 8 | N/A | N/A | 9 | N/A | N/A | N/A | **6.6** |
-| 14 | Home | 9 | 9 | N/A | 8 | 9 | 10 | 9 | N/A | 8 | 10 | 9 | 8 | 8 | **8.8** |
+| 14 | Home | 9 | 9 | N/A | 8 | 9 | 10 | 9 | N/A | 8 | 10 | **10** | **9** | 8 | **9.0** |
 | 15 | Security Monitor (friendlier placeholder) | 8 | 8 | N/A | N/A | N/A | 9 | 8 | N/A | N/A | 10 | N/A | N/A | N/A | **8.5** |
 | 16 | Discover | 9 | 9 | N/A | N/A | 9 | 10 | 9 | N/A | 8 | 10 | N/A | N/A | 8 | **9.0** |
-| 17 | Preferences | 9 | 9 | 8 | 8 | 9 | 9 | 9 | 8 | N/A | 9 | N/A | 8 | N/A | **8.6** |
+| 17 | Preferences | 9 | 9 | 8 | 8 | 9 | 9 | 9 | 8 | N/A | 9 | N/A | **9** | N/A | **8.7** |
 | 18 | Help (friendlier placeholder) | 8 | 8 | N/A | N/A | N/A | 9 | 8 | N/A | N/A | 10 | N/A | N/A | N/A | **8.5** |
 | 19 | Telegram first-chat (live, Pass 1.5) | 7 | N/A | 9 | 10 | 8 | 9 | 8 | 9 | 6 | 10 | N/A | N/A | N/A | **8.4** |
 
 **N/A means the principle doesn't apply** (no forms on a 404 page, no loading on the complete step, no perimeter coupling on the wizard's static pages, etc.).
 
 **Bold scores changed in the 2026-04-29 re-score** — primarily lifecycle (P11) and notification (P12) drops on Dashboard, plus the 5 placeholder pages added.
+
+**Bold scores changed in the 2026-05-02 Pass 7 Day 4 re-score** — Home P11 jumped 9 → 10 (the `paused_by_user` hero state shipped, closing the last gap from the 7-state hero machine — every state in `docs/specs/2026-04-29-delightful-sloth-target-ux.md` is now reachable). Home P12 jumped 8 → 9 (backend status aggregator runs every 60s, fires `assistant-status-changed` events on transitions, drives both the proactive alerts banner and the hero card; OS-permission gate added). Preferences P12 jumped 8 → 9 (notification toggle now requests OS permission on first enable, falls back gracefully to in-app toasts on denial; autostart toggle now actually wires through `tauri-plugin-autostart` instead of just persisting the preference).
 
 ---
 
@@ -401,13 +403,10 @@ These are the new violations the 2026-04-28 dogfood walkthrough and 2026-04-29 l
 - ❌ "Coming in Phase E.2.X" → friendlier placeholder OR ship the page real
 - ❌ `spec: docs/specs/ui-rebuild-2026-04-21/user-mode/0X-...md` (monospace, end-user-visible) → never appears in user mode
 
-**Banned-term list gaps (Pass 7 cleanup — extend `app/e2e/user-facing.spec.ts:13-33`):**
+**Banned-term list gaps (Pass 7 Day 4 sweep — extended `app/e2e/user-facing.spec.ts:13-50`):**
 
-- `container` (bare — currently only the compound `container_runtime` is banned; bare leaked into bot reply scenario 3 in Pass 1.5)
-- `sandboxed` / `sandbox` (leaked into bot reply scenario 3)
-- `web_search`, `web_fetch`, `tool` (when used as Anthropic-API tool-name jargon — leaked into bot reply scenario 4)
-- `Podman`, `Docker` (leaked in `MissingRuntimeCard` + the landing page download CTA)
-- `Forge`, `Pioneer`, `Vault` (when used as codename labels — leaked in landing-page diagram)
+- ✅ `containers` (plural), `sandboxed`, `web_search`, `web_fetch`, `admin key`, `Admin key`, `Admin Key`, `billing scope`, `cost endpoint` — **CLOSED 2026-05-02 (Pass 7 Day 4):** added to `BANNED_TERMS` array. The `admin key` family guards against re-introduction of Day-1a's unwound spending feature; the `web_*` and `sandboxed` terms guard against the Pass 1.5 bot-reply leaks recurring inside the parent app's user surfaces. Sweep verified clean across `app/src/pages/user/` and `app/src/components/user/`.
+- ⏸ `container` (singular), `sandbox` (singular), `Podman`, `Docker`, `Forge`, `Pioneer`, `Vault` — **deferred to Pass 8 polish:** singular `container`/`sandbox` are too useful as English nouns ("safe container", "sandbox metaphor") to ban globally; Podman/Docker remain in the install-flow body text for macOS/Windows where the user must download the actual product (the Linux path already hides them behind a "Show terminal command" disclosure per Pass 5). Forge/Pioneer/Vault appear only on the marketing landing page (out of this app's scope); flagged for Pass 8 deserve-to-exist review.
 
 **Wizard P0s named in Pass 1 (Pass 5 owns):**
 

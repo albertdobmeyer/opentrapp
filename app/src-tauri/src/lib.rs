@@ -15,7 +15,7 @@ use tauri::{
 
 use lifecycle::{
     bring_perimeter_down_sync, bring_perimeter_up_async, clear_runguard,
-    establish_runguard, install_signal_handlers, spawn_watchdog,
+    establish_runguard, install_signal_handlers, is_paused_persisted, spawn_watchdog,
     PerimeterStateStore,
 };
 use status_aggregator::{spawn_status_evaluator, AssistantStatusStore};
@@ -164,7 +164,13 @@ pub fn run() {
             setup_tray(app)?;
             // Spawn perimeter bring-up on a background thread so the UI
             // appears immediately even if a first-time pull is happening.
-            bring_perimeter_up_async(perimeter_root_setup.clone());
+            // Skip when the user explicitly paused — pausing yesterday
+            // shouldn't silently un-pause when the app reopens today.
+            if is_paused_persisted() {
+                eprintln!("[lifecycle] paused marker present — skipping perimeter bring-up");
+            } else {
+                bring_perimeter_up_async(perimeter_root_setup.clone());
+            }
             // Install Unix signal handlers (SIGTERM, SIGINT → graceful exit).
             install_signal_handlers(app.handle().clone());
             // Spawn the perimeter-state watchdog.
@@ -189,6 +195,8 @@ pub fn run() {
             commands::health::run_health_probe,
             commands::lifecycle::get_perimeter_state,
             commands::lifecycle::restart_perimeter,
+            commands::lifecycle::pause_perimeter,
+            commands::lifecycle::resume_perimeter,
             status_aggregator::get_assistant_status,
             commands::prerequisites::check_prerequisites,
             commands::prerequisites::init_submodules,

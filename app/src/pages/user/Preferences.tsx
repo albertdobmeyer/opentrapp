@@ -12,6 +12,10 @@ import {
 } from "lucide-react";
 import { readConfig, restartPerimeter, writeConfig } from "@/lib/tauri";
 import { classifyError } from "@/lib/errors";
+import {
+  ensureNotificationPermission,
+  setAutostartEnabled,
+} from "@/lib/osIntegration";
 import { useToast } from "@/lib/ToastContext";
 import { useSettings } from "@/hooks/useSettings";
 import {
@@ -291,8 +295,27 @@ function NotificationsSection() {
   const { addToast } = useToast();
   const n = settings.notifications;
 
-  function toggle<K extends keyof typeof n>(key: K, label: string) {
+  async function toggle<K extends keyof typeof n>(key: K, label: string) {
     const next = !n[key];
+
+    // First-time enable of any notification — request OS permission so
+    // the system actually delivers them. If the user denies, we still
+    // honour their in-app preference (alerts banner + toasts), just
+    // without OS-level notifications.
+    if (next && !n.securityAlerts && !n.updates) {
+      const result = await ensureNotificationPermission();
+      if (result === "denied") {
+        addToast({
+          type: "warning",
+          title: `${label} on (in-app only)`,
+          message:
+            "Your operating system blocked notifications. You'll still see them in the app.",
+        });
+        void update({ notifications: { ...n, [key]: next } });
+        return;
+      }
+    }
+
     void update({ notifications: { ...n, [key]: next } });
     addToast({
       type: "success",
@@ -306,12 +329,12 @@ function NotificationsSection() {
       <ToggleRow
         label="Security alerts"
         checked={n.securityAlerts}
-        onChange={() => toggle("securityAlerts", "Security alerts")}
+        onChange={() => void toggle("securityAlerts", "Security alerts")}
       />
       <ToggleRow
         label="App updates"
         checked={n.updates}
-        onChange={() => toggle("updates", "App updates")}
+        onChange={() => void toggle("updates", "App updates")}
       />
     </div>
   );
@@ -323,15 +346,23 @@ function StartupSection() {
   const { settings, update } = useSettings();
   const { addToast } = useToast();
 
-  function toggleAutostart() {
+  async function toggleAutostart() {
     const next = !settings.autostart;
-    void update({ autostart: next });
-    addToast({
-      type: "success",
-      title: next ? "Starting with your computer" : "Won't start automatically",
-      message:
-        "This preference will apply the next time you reboot.",
-    });
+    try {
+      await setAutostartEnabled(next);
+      void update({ autostart: next });
+      addToast({
+        type: "success",
+        title: next ? "Starting with your computer" : "Won't start automatically",
+      });
+    } catch (err) {
+      const c = classifyError(err);
+      addToast({
+        type: "error",
+        title: c.title === "Something went wrong" ? "Couldn't update startup setting" : c.title,
+        message: c.userMessage,
+      });
+    }
   }
 
   function toggleCloseToTray() {
