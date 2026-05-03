@@ -1,7 +1,7 @@
 {
   "name": "lobster-trapp",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Security-first desktop GUI for the OpenClaw ecosystem",
   "author": "Albert Dobmeyer",
   "license": "MIT",
