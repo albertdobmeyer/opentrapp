@@ -2,45 +2,42 @@
 
 ## Scope
 
-This policy covers all repositories in the OpenClaw ecosystem:
+This policy covers the four repositories that compose the Lobster-TrApp distribution:
 
-- [lobster-trapp](https://github.com/albertdobmeyer/lobster-trapp) — Desktop GUI orchestrator
-- [openclaw-vault](https://github.com/albertdobmeyer/openclaw-vault) — Hardened container sandbox
-- [clawhub-forge](https://github.com/albertdobmeyer/clawhub-forge) — Skill development workbench
-- [moltbook-pioneer](https://github.com/albertdobmeyer/moltbook-pioneer) — Agent social network tools
+- [`lobster-trapp`](https://github.com/albertdobmeyer/lobster-trapp) — desktop application and perimeter orchestrator
+- [`openclaw-vault`](https://github.com/albertdobmeyer/openclaw-vault) — runtime-containment module (`vault-agent`, `vault-proxy`)
+- [`clawhub-forge`](https://github.com/albertdobmeyer/clawhub-forge) — supply-chain defense module (`vault-forge`)
+- [`moltbook-pioneer`](https://github.com/albertdobmeyer/moltbook-pioneer) — social-content analysis module (`vault-pioneer`); **parked since 2026-05-03**, see the repository's README
 
-## Reporting a Vulnerability
+Vulnerabilities in upstream dependencies (Tauri, mitmproxy, Rust crates, npm packages) and in the third-party platforms this software interfaces with (Anthropic API, Telegram, OpenClaw, ClawHub, Moltbook) are out of scope; please report those to their respective maintainers.
 
-If you discover a security vulnerability in any of these repositories, please report it responsibly.
+## Reporting a vulnerability
 
-**Do not open a public GitHub issue for security vulnerabilities.**
+Do **not** open a public GitHub issue for security vulnerabilities.
 
-Instead, please email: **albertdobmeyer@proton.me**
+Send a private report to **albertdobmeyer@proton.me** with:
 
-Include:
-- Which repository and file(s) are affected
-- A description of the vulnerability
-- Steps to reproduce (if applicable)
-- Potential impact
+- The affected repository and file path(s)
+- A description of the vulnerability and a proof-of-concept where applicable
+- Steps to reproduce
+- Expected impact (confidentiality, integrity, availability; whether host or container scope)
 
-## Response
+Reports are acknowledged within 48 hours. Severity is assessed using a CVSS-style impact analysis; remediation timing is prioritised accordingly. Reporters are credited in the resulting fix commit unless they request anonymity.
 
-- You will receive an acknowledgment within 48 hours
-- A fix will be prioritized based on severity
-- You will be credited in the fix commit unless you prefer anonymity
+## In scope
 
-## What Qualifies
+The following classes of issue are accepted:
 
-- Container escape vectors in openclaw-vault
-- Command injection in lobster-trapp's manifest runner
-- Path traversal in config file handling
-- Credential exposure (API keys, tokens)
-- Supply chain attacks via skill scanning bypass in clawhub-forge
-- Prompt injection bypass in moltbook-pioneer's feed scanner
+- Container-escape vectors in `openclaw-vault` (capability gain, mount escape, kernel-namespace escape, seccomp bypass)
+- Privilege escalation through the Lobster-TrApp manifest runner (command injection, path traversal, environment-variable leakage)
+- Credential exposure (API keys or tokens visible to a container that should not have them, leakage to logs or stderr)
+- Supply-chain bypasses in `clawhub-forge` (skill-scanner false negatives, CDR pipeline bypass, manifest tampering between scan and delivery)
+- Network-allowlist bypasses through `vault-proxy` (egress to denylisted hosts, request smuggling, header injection enabling unauthorised endpoints)
+- Defects in the perimeter lifecycle that leave containers running after the desktop application exits or that allow unauthorised re-entry into a "paused" state
 
-## What Does Not Qualify
+## Out of scope
 
-- Vulnerabilities in upstream dependencies (report to the upstream project)
-- Vulnerabilities in OpenClaw, ClawHub, or Moltbook platforms themselves (report to their maintainers)
-- Social engineering attacks that require user approval (by design, the vault uses approval mode)
-- Issues requiring physical access to the machine
+- Issues that require physical access to the host machine
+- Social-engineering attacks that require explicit user approval to succeed (the agent runs in an approval-gated mode by default)
+- Issues affecting `vault-pioneer` until the Moltbook API stabilises and the module is un-parked
+- Configuration mistakes by an end user that override defaults documented as security-critical
