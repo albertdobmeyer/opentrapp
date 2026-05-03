@@ -49,3 +49,6 @@ test-screenshots/
 
 # Logs
 *.log
+
+# Playwright test results
+test-results/

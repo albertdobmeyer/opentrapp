@@ -1,14 +1,14 @@
-# Lobster-TrApp: Unified Perimeter Compose
+# Lobster-TrApp: unified perimeter compose
 #
 # Four-container security perimeter for the OpenClaw ecosystem.
-# All untrusted content (agent runtime, SKILL files, social feeds)
+# All untrusted content (agent runtime, skill files, social feeds)
 # is processed inside containers, never on the host.
 #
 # Architecture:
-#   vault-agent   — OpenClaw runtime (the cell block)
-#   vault-forge   — Skill scanner & CDR (the workshop)
-#   vault-pioneer — Feed scanner & monitoring (the monitoring station)
-#   vault-proxy   — API key injection, domain allowlist, traffic routing (the gate)
+#   vault-agent   — OpenClaw runtime containment
+#   vault-forge   — supply-chain defense (skill scanner + CDR)
+#   vault-pioneer — social-content analysis (parked since 2026-05-03)
+#   vault-proxy   — egress gateway: API-key injection, domain allowlist, request logging
 #
 # Network isolation:
 #   vault-agent   ↔ vault-proxy  (agent-net, internal)

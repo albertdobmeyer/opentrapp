@@ -1,172 +1,153 @@
-# Lobster-TrApp — Your Personal AI Assistant, Safe on Any Computer
+# Lobster-TrApp — Contributor Guide
 
-## Product Identity (Northstar)
+Project documentation for AI coding assistants and human contributors working in this repository.
 
-**Lobster-TrApp is the safe front door to the OpenClaw ecosystem for non-technical users.**
+For end-user documentation, see [`README.md`](README.md). For the full architecture, see [`docs/trifecta.md`](docs/trifecta.md). For terminology, see [`GLOSSARY.md`](GLOSSARY.md).
 
-The product is NOT a security dashboard. The security is invisible infrastructure — like a lock on a front door. The user walks through the door and uses their AI assistant. They never think about the lock.
+---
 
-- **What users see:** "My personal AI assistant, controlled from Telegram"
-- **What we build:** A 4-container security perimeter that makes this safe
-- **Northstar:** "Your own personal AI assistant, safe on any computer"
-- **Design spec:** `docs/specs/2026-04-19-product-identity-spec.md`
+## 1. What this project is
 
-**UI Rule:** The frontend (this parent repo) must NEVER expose developer concepts to end users. No containers, proxies, manifests, shell levels, or component IDs in user-facing text. Map developer terms to user terms (see GLOSSARY.md "User-Facing Terms").
+Lobster-TrApp is a Tauri 2 desktop application that runs the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The application is the perimeter orchestrator: it composes the four containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations.
 
-## What This Is
+The agent's reasoning is delegated to Anthropic's API. The agent's execution layer (file work, tool calls, skill loading) runs locally inside `vault-agent`. The application can never claim to make running an autonomous agent absolutely safe; it raises the cost of compromise via defense-in-depth and is open about the residual risks.
 
-Lobster-TrApp is a **desktop GUI** that lets non-technical users safely run OpenClaw (an autonomous AI agent) on their personal computer. Behind a friendly interface, it wraps the entire OpenClaw ecosystem in a containerized perimeter where all untrusted content — the agent itself, downloaded skills, social network feeds — is processed inside hardened containers, never on the user's host machine.
-
-**You are working in the parent repo (the frontend).** This repo bundles three backend component repos as submodules, provides the Tauri desktop GUI, defines the manifest contract, and manages the container perimeter. The submodules are invisible infrastructure — the user never sees them.
-
-## What the User Experiences
-
-A non-technical user downloads Lobster-TrApp, enters an API key, connects Telegram, and gets a safe AI assistant they can talk to from their phone. The security is invisible — they don't know about containers, proxies, or shell levels. They just have an assistant that works.
-
-Behind the scenes, Lobster-TrApp manages a 4-container perimeter that air-gaps the dangerous AI agent from the user's system while letting it do useful work. The **dynamic shell** adjusts restrictions based on context, and an intelligent warden (Claude Code / Opus) makes security decisions on behalf of the user.
-
-## The Security Model
-
-Think of this as a contained productivity  system. The OpenClaw agents are inmates — powerful but dangerous. The perimeter is the containerized workshop:
-
-- **vault-agent** (cell block) — where the agent runs, heavily restricted
-- **vault-forge** (workshop) — where untrusted SKILL files are scanned and rebuilt, inside the fence
-- **vault-pioneer** (monitoring station) — where untrusted social content is analyzed, inside the fence
-- **vault-proxy** (the gate) — the only door in/out, holds API keys, enforces allowlists
-
-Nothing untrusted ever touches the user's host. See `docs/trifecta.md` for the full security model.
-
-### Multi-Agent Trust Chain
+## 2. Repository layout
 
 ```
-TIER 1: TRUSTED — human + Claude Code (warden, host access, makes decisions)
-TIER 2: INFRASTRUCTURE — Lobster-TrApp (4 containers, enforces boundaries)
-TIER 3: CONTAINED — OpenClaw agents (do the work, within boundaries)
-```
-
-## Architecture
-
-```
-lobster-trapp/                    (this repo — public)
+lobster-trapp/                          (this repository — public)
 ├── components/
-│   ├── openclaw-vault/           git submodule — container + proxy
-│   ├── clawhub-forge/            git submodule — containerized scanner
-│   └── moltbook-pioneer/         git submodule — containerized feed monitor
-├── app/                          Tauri 2 + React 18 desktop GUI
-│   ├── src/                      React frontend
-│   └── src-tauri/                Rust backend
-├── compose.yml                   4-service perimeter (agent + forge + pioneer + proxy)
+│   ├── openclaw-vault/                 git submodule — runtime containment (vault-agent + vault-proxy)
+│   ├── clawhub-forge/                  git submodule — supply-chain defense (vault-forge)
+│   └── moltbook-pioneer/               git submodule — social-content analysis (vault-pioneer); parked
+├── app/                                Tauri 2 + React 18 desktop application
+│   ├── src/                            React frontend
+│   └── src-tauri/                      Rust backend
+├── compose.yml                         four-service perimeter compose definition
 ├── schemas/
-│   └── component.schema.json     THE CONTRACT — all manifests conform to this
+│   └── component.schema.json           manifest contract schema
 ├── config/
-│   └── orchestrator-workflows.yml  Cross-component workflow definitions
+│   └── orchestrator-workflows.yml      cross-component workflow definitions
 ├── tests/
-│   └── orchestrator-check.sh     41-check validation suite
+│   └── orchestrator-check.sh           42-check validation suite
 └── docs/
-    ├── trifecta.md               How the three modules work together
-    └── handoff.md                Current state and next steps
+    ├── trifecta.md                     architecture, threat model, defense layers
+    ├── handoff.md                      current session-state documentation
+    └── archive/                        historical planning artifacts
 ```
 
-### Component Roles
+### Component status
+
 | Component | Role | Container | Status |
 |-----------|------|-----------|--------|
-| openclaw-vault | `runtime` — agent containment | vault-agent + vault-proxy | Active |
-| clawhub-forge | `toolchain` — skill security scanner | vault-forge | Active |
-| moltbook-pioneer | `network` — social feed monitor | vault-pioneer | Active (API deferred) |
+| `openclaw-vault` | runtime containment | `vault-agent` + `vault-proxy` | Active |
+| `clawhub-forge` | supply-chain defense | `vault-forge` | Active |
+| `moltbook-pioneer` | social-content analysis | `vault-pioneer` | Parked since 2026-05-03 (Moltbook acquired by Meta 2026-03-10; API intermittent since 2026-04-05) |
 
-## The Manifest Contract
+## 3. UI rule (non-negotiable)
 
-Each component self-describes via `component.yml`. The GUI discovers these and renders dashboards generically. The contract is defined in `schemas/component.schema.json` with 6 sections:
+The frontend must never expose developer concepts to the end user. No containers, proxies, manifests, shell levels, or component IDs in user-visible text. The mappings between developer terms and user-facing terms are in [`GLOSSARY.md`](GLOSSARY.md) Section 1.
 
-1. **identity** — id, name, version, role, icon, color
-2. **status** — declared states + probe commands
-3. **commands** — individual operations with args, danger levels, output formats
-4. **configs** — editable config files with format metadata
+The 28-term ban is enforced by [`app/e2e/user-facing.spec.ts`](app/e2e/user-facing.spec.ts) on every commit. New developer-jargon terms encountered during contribution work must either be replaced with their user-facing mapping or added to the banned-terms array if they should never be surfaced to end users.
+
+## 4. The manifest contract
+
+Each component self-describes via `component.yml`. The Tauri backend reads these manifests at startup; the React frontend renders dashboards generically from them. The schema is at [`schemas/component.schema.json`](schemas/component.schema.json) and contains six sections:
+
+1. **identity** — `id`, `name`, `version`, `role`, `icon`, `color`
+2. **status** — declared states and the probe commands that distinguish them
+3. **commands** — individual operations with argument schemas, danger levels, output formats
+4. **configs** — editable configuration files with format metadata
 5. **health** — lightweight probes for dashboard badges
-6. **workflows** — multi-step automated sequences (chains commands into user-facing actions)
+6. **workflows** — multi-step automated sequences (chains of commands presented to the user as a single action)
 
-### Workflows
+### Workflow types
 
-Workflows are the bridge between the manifest-driven architecture and non-technical users. Instead of clicking individual commands, users trigger workflows that execute multi-step pipelines automatically:
+- **Component workflows** — declared inside a single `component.yml`; reference command IDs within that component only
+- **Orchestrator workflows** — declared in [`config/orchestrator-workflows.yml`](config/orchestrator-workflows.yml); reference component IDs plus command or workflow IDs across components
 
-- **Component workflows** (in each `component.yml`): vet-skill, safe-download, secure-start, etc.
-- **Orchestrator workflows** (in `config/orchestrator-workflows.yml`): install-skill (forge.scan → vault.install), first-run-setup, full-audit
+### Schema-alignment requirement
 
-### Rules for the Contract
-- **Never change enum values** without updating: schema JSON, Rust `manifest.rs`, TypeScript `types.ts`
-- **Enum alignment is tested** by `tests/orchestrator-check.sh` section 7
-- **Cross-references are validated**: commands, states, workflow steps, orchestrator component refs
-- **Workflow steps must reference valid command IDs** within the same component
+The schema is implemented in three places that must stay in sync:
 
-## The Generic Architecture Constraint
+- `schemas/component.schema.json` (source of truth)
+- `app/src-tauri/src/orchestrator/manifest.rs` (Rust serde structs)
+- `app/src/lib/types.ts` (TypeScript types)
 
-The Tauri backend must remain **generic** — it reads manifests and executes what they declare. It does not contain component-specific logic. However, it does understand:
+Enum-value alignment is verified by [`tests/orchestrator-check.sh`](tests/orchestrator-check.sh) section 7. Cross-references (commands referenced from workflows, states referenced from `available_when`, orchestrator workflow steps referencing component commands) are also validated.
 
-- **Workflow execution** — how to run multi-step sequences from workflow definitions
-- **Container management** — how to build, start, stop containers via compose
-- **Cross-component workflows** — how to route steps to the correct component
+## 5. The "generic backend" constraint
 
-The distinction: the app knows HOW to execute workflows generically. It does NOT know WHAT any specific component does internally.
+The Tauri backend reads manifests and executes what they declare. It must not contain component-specific logic. The backend's responsibilities are:
 
-## Key Files
+- Workflow execution — running multi-step sequences from manifest definitions
+- Container management — building, starting, stopping containers via compose
+- Cross-component routing — directing workflow steps to the correct component
+
+The backend knows *how* to execute workflows generically; it does not know *what* any specific component does internally.
+
+## 6. Key files
 
 | Purpose | File |
 |---------|------|
-| Manifest schema (contract) | `schemas/component.schema.json` |
-| Rust manifest structs | `app/src-tauri/src/orchestrator/manifest.rs` |
-| TypeScript types | `app/src/lib/types.ts` |
-| Tauri command handlers | `app/src-tauri/src/commands/*.rs` |
-| Tauri invoke wrappers | `app/src/lib/tauri.ts` |
-| React hooks | `app/src/hooks/*.ts` |
-| Perimeter compose | `compose.yml` |
-| Orchestrator workflows | `config/orchestrator-workflows.yml` |
-| Orchestration tests | `tests/orchestrator-check.sh` |
-| Rust unit tests | `app/src-tauri/src/orchestrator/tests.rs` |
-| Architecture spec | `docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md` |
-| Module relationships | `docs/trifecta.md` |
+| Manifest schema (source of truth) | [`schemas/component.schema.json`](schemas/component.schema.json) |
+| Rust manifest structs | [`app/src-tauri/src/orchestrator/manifest.rs`](app/src-tauri/src/orchestrator/manifest.rs) |
+| TypeScript types | [`app/src/lib/types.ts`](app/src/lib/types.ts) |
+| Tauri command handlers | [`app/src-tauri/src/commands/`](app/src-tauri/src/commands/) |
+| Tauri invoke wrappers | [`app/src/lib/tauri.ts`](app/src/lib/tauri.ts) |
+| React hooks | [`app/src/hooks/`](app/src/hooks/) |
+| Perimeter compose | [`compose.yml`](compose.yml) |
+| Orchestrator workflows | [`config/orchestrator-workflows.yml`](config/orchestrator-workflows.yml) |
+| Orchestration tests | [`tests/orchestrator-check.sh`](tests/orchestrator-check.sh) |
+| Rust orchestrator unit tests | [`app/src-tauri/src/orchestrator/tests.rs`](app/src-tauri/src/orchestrator/tests.rs) |
+| Architecture (this repository) | [`docs/trifecta.md`](docs/trifecta.md) |
+| Architecture v2 design spec | [`docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md`](docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md) |
 
-## Commands
+## 7. Build and test
 
-### Build & Test
 ```bash
 # Rust backend
 cd app/src-tauri && cargo build
-cd app/src-tauri && cargo test
+cd app/src-tauri && cargo test --lib    # 56 tests at v0.3.0
 
 # Frontend
 cd app && npm install
-cd app && npm run dev                   # Dev server (Vite)
+cd app && npm test -- --run             # vitest, 175 tests
+cd app && npx tsc --noEmit              # TypeScript strict
+cd app && npx playwright test           # end-to-end, 25 tests
+cd app && npm run dev                   # Vite dev server
 
-# Full orchestration validation (41 checks)
-bash tests/orchestrator-check.sh
+# Manifest and orchestration validation
+bash tests/orchestrator-check.sh        # 42 checks, must report 0 warnings
 
-# Container perimeter
-podman compose up -d                    # Start all 4 containers
-podman compose down                     # Stop perimeter
+# Container perimeter (smoke)
+podman compose up -d                    # start all four containers
+podman compose down                     # stop perimeter
 ```
 
-### What the Tests Validate
+### What the orchestration check validates
+
 1. Repository structure (directories, essential files)
-2. JSON Schema validity (6 sections)
+2. JSON Schema validity (six sections)
 3. All component manifests parse, valid identity, cross-references, enums
 4. Submodule synchronization status
-5. Build artifacts (Cargo.toml, tauri.conf.json, package.json, tsconfig)
-6. Frontend-backend contract (Rust handlers match frontend invoke calls)
+5. Build artifacts (`Cargo.toml`, `tauri.conf.json`, `package.json`, `tsconfig.json`)
+6. Frontend-backend contract: every Rust command handler has a matching frontend invoke wrapper
 7. Manifest enum values match Rust serde expectations
 8. Prerequisites cross-references valid
-9. Workflow step→command references valid, orchestrator workflow references valid
+9. Workflow step → command references valid; orchestrator workflow references valid
 
-## Submodule Discipline
+## 8. Submodule discipline
 
-### The Dual-Copy Problem
-Each component exists in TWO places:
-- **Standalone clone**: `~/<component>/` (for focused development)
-- **Submodule copy**: `~/lobster-trapp/components/<component>/` (for orchestrator integration)
+Each component exists in two places on a contributor's machine:
 
-These are independent git checkouts. Changes in one do NOT automatically appear in the other.
+- **Standalone clone:** `~/<component>/` (focused development on one component)
+- **Submodule copy:** `~/lobster-trapp/components/<component>/` (orchestrator integration)
 
-### Sync Workflow
-After making changes in a standalone clone:
+These are independent git checkouts. Changes in one do not propagate to the other automatically.
+
+### Sync workflow after a submodule change
+
 ```bash
 cd components/<component>
 git pull
@@ -175,27 +156,29 @@ git add components/<component>
 git commit -m "Update <component> submodule reference"
 ```
 
-## Security Considerations
+## 9. Security considerations
 
-- **Command injection prevention**: `runner.rs` wraps all interpolated args in single quotes with escaping
-- **Path traversal protection**: `config.rs` validates canonical paths stay within component directory
-- **Regex in probes**: `status.rs` uses the `regex` crate for `stdout_regex` rules
-- **Stream deduplication**: `stream.rs` kills old processes before starting new streams
-- **Network isolation**: compose networks are `internal: true` — no default gateway, containers can't reach the internet directly
-- **Zero untrusted content on host**: all downloads, scanning, and feed processing happen inside containers
+- **Command injection prevention** — `app/src-tauri/src/orchestrator/runner.rs` wraps all interpolated arguments in single quotes with shell escaping.
+- **Path traversal protection** — `app/src-tauri/src/commands/config.rs` validates that canonical paths stay within the component's directory.
+- **Regex in probes** — `app/src-tauri/src/commands/status.rs` uses the `regex` crate for `stdout_regex` rules; never shells out to grep.
+- **Stream deduplication** — `app/src-tauri/src/commands/stream.rs` kills any prior streaming process before starting a new one.
+- **Network isolation** — compose networks are `internal: true`; no default gateway. Containers cannot reach the public internet directly; only `vault-proxy` can.
+- **No untrusted content on the host** — all skill downloads, scanning, and feed processing happen inside containers.
 
-## What the App Must NEVER Do
+## 10. Constraints
 
-- Contain component-specific logic in Rust or React (the generic constraint)
+The application must not:
+
+- Contain component-specific logic in Rust or React (the generic-backend constraint)
 - Duplicate domain logic that belongs in a submodule
 - Run AI models or agent code directly
-- Expose network services (no remote access)
-- Process untrusted content on the host (skills, feeds — always inside containers)
+- Expose network services (no remote-management surface)
+- Process untrusted content on the host filesystem
 
-## What NOT to Do
+When contributing:
 
-- Do not add component-specific logic to the Tauri backend — it must remain generic
-- Do not modify `component.yml` files in submodules without also pushing to the component's own remote
-- Do not change the schema without updating all three alignment layers (schema JSON, Rust structs, TS types)
-- Do not commit `node_modules/`, `target/`, `app/src-tauri/gen/`, or `.env` (covered by .gitignore)
-- Do not force-push submodule references — this breaks other clones
+- Do not add component-specific logic to the Tauri backend; it must remain generic
+- Do not modify `component.yml` files in submodules without also pushing the change to the component's own remote
+- Do not change the manifest schema without updating all three alignment layers (`schemas/component.schema.json`, `manifest.rs`, `types.ts`)
+- Do not commit `node_modules/`, `target/`, `app/src-tauri/gen/`, or `.env` (covered by `.gitignore`)
+- Do not force-push submodule references; this breaks other clones

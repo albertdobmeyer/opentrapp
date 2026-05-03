@@ -19,9 +19,9 @@ interface Props {
 
 /**
  * Reusable modal for "Show me how to get one" flows on the Connect step.
- * Text-only numbered walkthroughs for v0.2.0 — real screenshots get slotted
- * into each step in a later phase (E.4). Reused in E.2.4 Preferences
- * key-change flow, so keep it generic.
+ * Text-only numbered walkthroughs at v0.3.0; screenshots are queued for a
+ * post-launch revision. Also reused by the Preferences key-change flow,
+ * so keep it generic.
  */
 export default function HowToModal({ open, onClose, title, steps, ctaLabel }: Props) {
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);

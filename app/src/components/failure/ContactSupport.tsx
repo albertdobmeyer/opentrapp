@@ -12,6 +12,9 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { invoke } from "@tauri-apps/api/core";
 import { useToast } from "@/lib/ToastContext";
 import type { ClassifiedError } from "@/lib/errors";
+import packageJson from "../../../package.json";
+
+const APP_VERSION = packageJson.version;
 
 interface ContactSupportProps {
   classified: ClassifiedError;
@@ -63,7 +66,7 @@ export default function ContactSupport({
 
   function openEmail() {
     const subject = encodeURIComponent(
-      `Lobster-TrApp needs help [v0.1.0]`
+      `Lobster-TrApp needs help [v${APP_VERSION}]`
     );
     const body = encodeURIComponent(
       `[Paste the copied diagnostic info here]\n\nWhat were you trying to do when this happened?\n\n`

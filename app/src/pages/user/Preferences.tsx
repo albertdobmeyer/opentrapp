@@ -28,7 +28,7 @@ import {
 
 const VAULT_ENV = { component: "openclaw-vault", path: ".env" } as const;
 
-const APP_VERSION = "0.2.0";
+const APP_VERSION = "0.3.0";
 
 export default function Preferences() {
   return (

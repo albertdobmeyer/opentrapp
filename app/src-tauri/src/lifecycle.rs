@@ -229,7 +229,7 @@ pub fn bring_perimeter_up_async(root: PathBuf) {
 
 /// Tear the perimeter down on graceful exit. Synchronous — we want the
 /// containers actually stopped before the process terminates so we don't
-/// leak the cell block. 30s budget enforced by `timeout(1)`.
+/// leak the running perimeter. 30s budget enforced by `timeout(1)`.
 pub fn bring_perimeter_down_sync(root: &Path) {
     run_compose(root, &["down"], Duration::from_secs(30));
 }

@@ -45,11 +45,11 @@ export const USE_CASE_CATEGORIES: { id: UseCaseCategory | "all"; label: string }
  * 19 curated use cases drawn from the user-mode gallery spec
  * (docs/specs/ui-rebuild-2026-04-21/user-mode/12-use-case-gallery.md).
  *
- * Capability tally for v0.2.0 ship readiness:
- *   ready          → 12  (work today at Split Shell)
- *   needs_fetch    →  6  (work today at Soft Shell, redirect at Split)
- *   needs_calendar →  1  (deferred to v0.3.0 vault-calendar)
- *   needs_voice    →  0  (no voice prompts in v0.2.0 gallery; vault-voice is v0.4.0)
+ * Capability tally:
+ *   ready          → 12  (work at the default Split Shell)
+ *   needs_fetch    →  6  (work at Soft Shell; redirect to a URL at Split)
+ *   needs_calendar →  1  (vault-calendar; not yet shipped)
+ *   needs_voice    →  0  (vault-voice; not yet shipped)
  */
 export const USE_CASES: UseCase[] = [
   {

@@ -50,7 +50,7 @@ for dir in components schemas app app/src app/src-tauri; do
 done
 
 # Check essential files exist
-for file in schemas/component.schema.json docker-compose.example.yml README.md; do
+for file in schemas/component.schema.json compose.yml README.md; do
   if [ -f "$file" ]; then
     pass "File exists: $file"
   else
