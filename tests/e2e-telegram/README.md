@@ -2,8 +2,9 @@
 
 Python + Telethon test harness that drives `@LobsterTrappBot` as the user's
 own Telegram account and probes the Lobster-TrApp perimeter end-to-end.
-Produces pass/fail/unclear findings about whether the security perimeter
-is Swiss cheese, an empty containerized workshop cell, or just right.
+Produces pass/fail/unclear findings about whether the perimeter is too
+permissive (Swiss cheese), too restrictive (refuses everything regardless
+of policy), or correctly calibrated.
 
 ## Why Telegram and not a unit-test mock?
 

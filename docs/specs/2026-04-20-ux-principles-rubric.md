@@ -167,7 +167,7 @@
 
 **The rule:** App start ⇒ perimeter up. App close ⇒ perimeter down. App crash ⇒ perimeter cleanly torn down (no orphan containers). OS reboot ⇒ app autostart respected; perimeter follows the app, not the other way around.
 
-**Why:** The product story is "a silent middleman security warden." That demands the warden's lifetime equal the user's session with the app. Today (per Pass 1's Phase 1 audit) the app is a control panel, not a lifecycle owner — SIGKILL leaks containers, closing the app leaves them running, relaunching shows "Your assistant is ready" even when the perimeter is offline. Each of those states is a lie to the user.
+**Why:** The product premise is that the perimeter is invisible-but-load-bearing infrastructure. That demands the perimeter's lifetime equal the user's session with the app. Today (per Pass 1's Phase 1 audit) the app is a control panel, not a lifecycle owner — SIGKILL leaks containers, closing the app leaves them running, relaunching shows "Your assistant is ready" even when the perimeter is offline. Each of those states is a lie to the user.
 
 **Test question:** *If I randomly kill the Tauri process right now, will containers die within 5 seconds? If I relaunch, will the app know whether the perimeter is up before it tells the user "running safely"?*
 

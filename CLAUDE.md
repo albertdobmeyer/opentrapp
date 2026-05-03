@@ -101,7 +101,7 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Orchestration tests | [`tests/orchestrator-check.sh`](tests/orchestrator-check.sh) |
 | Rust orchestrator unit tests | [`app/src-tauri/src/orchestrator/tests.rs`](app/src-tauri/src/orchestrator/tests.rs) |
 | Architecture (this repository) | [`docs/trifecta.md`](docs/trifecta.md) |
-| Architecture v2 design spec | [`docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md`](docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md) |
+| Architecture v2 design spec (historical, supersded by `docs/trifecta.md`) | [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) |
 
 ## 7. Build and test
 

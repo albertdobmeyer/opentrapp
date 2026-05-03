@@ -2,7 +2,7 @@
 
 **Updated:** 2026-05-03
 **Supersedes:** Previous version (2026-04-15)
-**Design spec:** [`docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md`](superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md)
+**Origin design spec (archived):** [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) — the seminal architecture-v2 design document. This document supersedes it.
 
 This document describes the security architecture of Lobster-TrApp: the problem it addresses, the threat model, the container topology, and how the components compose into a single defensive perimeter around an autonomous AI agent.
 
@@ -270,7 +270,7 @@ Each capability has exactly one owning module to avoid duplication or ambiguity.
 ## 11. References
 
 - Top-level project [`README.md`](../README.md)
-- Architecture v2 design spec: [`docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md`](superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md)
+- Architecture v2 origin design spec (archived): [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md)
 - Component manifests: `components/<component>/component.yml`
 - Manifest schema: [`schemas/component.schema.json`](../schemas/component.schema.json)
 - Orchestrator workflows: [`config/orchestrator-workflows.yml`](../config/orchestrator-workflows.yml)

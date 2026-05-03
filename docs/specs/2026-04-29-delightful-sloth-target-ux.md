@@ -45,7 +45,7 @@ The 10-principle rubric scored well in Passes 1 + 1.5, but three behaviors emerg
 
 **Rule:** App start ⇒ perimeter up. App close ⇒ perimeter down. App crash ⇒ perimeter cleanly torn down (no orphan containers). OS restart ⇒ app autostart respected; perimeter follows app, not the other way around.
 
-**Why:** Pass 1 Phase 1 audit confirmed the app today is a control panel, not a lifecycle owner. SIGKILL leaks containers indefinitely; closing the app leaves containers running with no UI to manage them; relaunching the app shows "Your assistant is ready" even when the perimeter is offline. The product story ("a silent middleman security warden") demands this invariant.
+**Why:** Pass 1 Phase 1 audit confirmed the app today is a control panel, not a lifecycle owner. SIGKILL leaks containers indefinitely; closing the app leaves containers running with no UI to manage them; relaunching the app shows "Your assistant is ready" even when the perimeter is offline. The product premise (a silent security perimeter that owns its own runtime) demands this invariant.
 
 **How to score:** Stress-test (Pass 4 verification) — kill the Tauri process; containers must die within 5s. Reopen the app; perimeter must come back without user action. Kill one container while app running; watchdog must restart it within 30s.
 
@@ -335,7 +335,7 @@ Each moment defines: target score (≥, where the rubric goes), cardinal experie
 | The original mission, persona, and copy patterns | `docs/specs/2026-04-19-product-identity-spec.md` |
 | Per-page detailed component design (Home, Security, Discover, Preferences, Help) | `docs/specs/ui-rebuild-2026-04-21/user-mode/{08–12}.md` |
 | The 10 scoring principles + Pass 1.5 banned-term hits to add | `docs/specs/2026-04-20-ux-principles-rubric.md` (extend per Pass 3) |
-| The architecture metaphors (containerized workshop-warden, secure-tunnel) | `docs/trifecta.md` |
+| The architecture (perimeter, trust tiers, defense-in-depth, ownership matrix) | `docs/trifecta.md` |
 | The data sources for activity, spending, security telemetry | `09-security-monitor.md` "Data sources needed" + `08-home-dashboard.md` backend addenda |
 | Current frictions to fix (Pass 1 + 1.5 punch-lists) | `docs/specs/2026-04-28-dogfood-walkthrough-findings.md`; `docs/specs/2026-04-29-live-signal-first-chat.md` |
 | Banned-term enforcement | `app/e2e/user-facing.spec.ts:13-33` (extend per Pass 1.5 P0s) |
@@ -375,7 +375,7 @@ No phase codes. No spec paths. One concrete fallback action.
 
 ## Out of scope (locked per master plan)
 
-- External-AI-as-warden via MCP (Claude Desktop / Claude Code / Gemini CLI integration) — deferred to v0.3+
+- External-AI coordinator via MCP (Claude Desktop / Claude Code / Gemini CLI integration) — deferred to v0.3+
 - New capability sidecars: vault-calendar, vault-voice, vault-email
 - Backend orchestrator architecture changes (engine is solid; Pass 4 adds lifecycle hooks but does not restructure)
 - Manifest schema changes

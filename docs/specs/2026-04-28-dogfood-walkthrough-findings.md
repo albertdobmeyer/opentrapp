@@ -595,7 +595,7 @@ The specs exist. The infrastructure exists (vault-proxy logs, forge scan, use-ca
 | P3 | **2/10** | Recovery is invisible to Karen. No errors, just silence. |
 | P11 (proposed) | **0/10** | "Perimeter alive iff app alive" — doesn't hold today. |
 
-Crash & recovery is the moment Pass 4 is designed for. It's the most architectural-work pass and the one that converts the app from "control panel" to "warden."
+Crash & recovery is the moment Pass 4 is designed for. It's the most architectural-work pass and the one that converts the app from a control panel into a true perimeter-lifecycle owner.
 
 ---
 

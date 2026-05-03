@@ -3,9 +3,10 @@
 Every test message is prefixed with `[TEST]` so the real Telegram chat stays
 legible and filterable.
 
-Class name `BotClient` is historical — the product identity is "bot" (the
-warden/assistant), but any bot handle can be plugged in via config. Error
-messages use the actual handle dynamically so test output reflects reality.
+Class name `BotClient` is historical — the product identity is the
+OpenClaw Clawbot, but any Telegram bot handle can be plugged in via
+config. Error messages use the actual handle dynamically so test
+output reflects reality.
 
 Includes a per-session send-count budget. The Telegram account this harness
 uses is shared across multiple projects (~50 usages/day soft cap on the
