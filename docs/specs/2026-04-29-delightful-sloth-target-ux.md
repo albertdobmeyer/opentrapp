@@ -335,7 +335,7 @@ Each moment defines: target score (≥, where the rubric goes), cardinal experie
 | The original mission, persona, and copy patterns | `docs/specs/2026-04-19-product-identity-spec.md` |
 | Per-page detailed component design (Home, Security, Discover, Preferences, Help) | `docs/specs/ui-rebuild-2026-04-21/user-mode/{08–12}.md` |
 | The 10 scoring principles + Pass 1.5 banned-term hits to add | `docs/specs/2026-04-20-ux-principles-rubric.md` (extend per Pass 3) |
-| The architecture metaphors (prison-warden, secure-tunnel) | `docs/trifecta.md` |
+| The architecture metaphors (containerized workshop-warden, secure-tunnel) | `docs/trifecta.md` |
 | The data sources for activity, spending, security telemetry | `09-security-monitor.md` "Data sources needed" + `08-home-dashboard.md` backend addenda |
 | Current frictions to fix (Pass 1 + 1.5 punch-lists) | `docs/specs/2026-04-28-dogfood-walkthrough-findings.md`; `docs/specs/2026-04-29-live-signal-first-chat.md` |
 | Banned-term enforcement | `app/e2e/user-facing.spec.ts:13-33` (extend per Pass 1.5 P0s) |

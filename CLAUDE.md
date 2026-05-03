@@ -27,7 +27,7 @@ Behind the scenes, Lobster-TrApp manages a 4-container perimeter that air-gaps t
 
 ## The Security Model
 
-Think of this as a prison labor system. The OpenClaw agents are inmates — powerful but dangerous. The perimeter is the prison:
+Think of this as a contained productivity  system. The OpenClaw agents are inmates — powerful but dangerous. The perimeter is the containerized workshop:
 
 - **vault-agent** (cell block) — where the agent runs, heavily restricted
 - **vault-forge** (workshop) — where untrusted SKILL files are scanned and rebuilt, inside the fence

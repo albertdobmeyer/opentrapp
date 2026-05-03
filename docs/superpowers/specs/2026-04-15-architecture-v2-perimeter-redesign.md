@@ -62,7 +62,7 @@ TIER 3: CONTAINED (does the work, within boundaries)
 ```
 
 - **Tier 1** operates on the user's host with full trust. The human gives high-level instructions in natural language. Their trusted agent (Claude Code, powered by a large reasoning model like Opus) is the **intelligent warden** — it translates human intent into security decisions, monitors agent behavior, adjusts the dynamic shell in real time, and reports back in plain language. The human doesn't need to understand security; the warden does.
-- **Tier 2** is the prison infrastructure. It enforces all security boundaries mechanically. Everything that touches untrusted content runs here, inside containers. The Tauri GUI is one interface to this infrastructure; Claude Code is another. Tier 2 doesn't make decisions — it enforces what the warden (Tier 1) decides.
+- **Tier 2** is the containerized workshop infrastructure. It enforces all security boundaries mechanically. Everything that touches untrusted content runs here, inside containers. The Tauri GUI is one interface to this infrastructure; Claude Code is another. Tier 2 doesn't make decisions — it enforces what the warden (Tier 1) decides.
 - **Tier 3** is the contained workforce. OpenClaw agents do automation work (file management, web browsing, messaging, scheduling) within the boundaries set by Tier 2 and decided by Tier 1. The agents are powerful and resourceful but untrusted — they request capabilities, the warden judges, the infrastructure enforces.
 
 ---

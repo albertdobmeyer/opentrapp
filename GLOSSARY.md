@@ -85,7 +85,7 @@ The shell is the security boundary around the OpenClaw agent. Inspired by lobste
 | **OpenClaw** | The upstream open-source AI agent runtime we're securing. Not our project — we wrap it. Think of it as the engine; we build the safety cage around it. |
 | **ClawHub** | The upstream skill registry for OpenClaw. 11.9% malware rate during the ClawHavoc incident. Skills from here are scanned by forge inside the perimeter before the agent can use them. |
 | **Moltbook** | The upstream agent social network where AI agents post, follow, and interact. Content from here is scanned by pioneer inside the perimeter before the agent sees it. |
-| **The Prison Allegory** | The mental model for the architecture. OpenClaw agents are inmates (powerful but dangerous). The perimeter is the prison fence. Forge is the workshop. Pioneer is the monitoring station. The proxy is the gate. Claude Code is the warden. The GUI is the control panel. All untrusted content stays inside the fence. |
+| **The containerized workshop Allegory** | The mental model for the architecture. OpenClaw agents are inmates (powerful but dangerous). The perimeter is the containerized workshop fence. Forge is the workshop. Pioneer is the monitoring station. The proxy is the gate. Claude Code is the warden. The GUI is the control panel. All untrusted content stays inside the fence. |
 
 ---
 

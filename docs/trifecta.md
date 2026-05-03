@@ -14,25 +14,25 @@ Everything in the OpenClaw ecosystem is a potential injection attack: the agent 
 
 The only reliable defense is a **perimeter** — all untrusted content stays inside hardened containers, never touching the user's host machine. And the restrictions must be **intelligent** — a reasoning model decides how much freedom the agents get, based on context.
 
-## The Prison Allegory
+## The containerized workshop Allegory
 
-The OpenClaw agents are like prison workers. They're powerful and resourceful — they can code, browse the web, manage files, send messages. But they're potentially dangerous: they might steal credentials, exfiltrate data, or corrupt the user's system. Many people want to use their labor because it's cheap and effective.
+The OpenClaw agents are like contained robots. They're powerful and resourceful — they can code, browse the web, manage files, send messages. But they're potentially dangerous: they might steal credentials, exfiltrate data, or corrupt the user's system. Many people want to use their labor because it's cheap and effective.
 
 The question: how do you let inmates do useful work without giving them access to steal from or damage your house?
 
-| Concept | Prison Analogy | Lobster-TrApp |
+| Concept | containerized workshop Analogy | Lobster-TrApp |
 |---------|---------------|---------------|
-| **The Fence** | Prison perimeter wall | Container network — all untrusted content stays inside |
+| **The Fence** | containerized workshop perimeter wall | Container network — all untrusted content stays inside |
 | **The Cell Block** | Where inmates live | vault-agent — where OpenClaw runs, heavily restricted |
 | **The Workshop** | Where inmates work under inspection | vault-forge — where SKILL files are scanned and rebuilt |
 | **The Monitoring Station** | Wiretap room / visitor area | vault-pioneer — where social feeds are analyzed |
 | **The Gate** | The only door in/out, with guards | vault-proxy — API key injection, domain allowlist, logging |
-| **The Warden** | Prison director, makes judgment calls | Claude Code / Opus — intelligent security decisions |
+| **The Warden** | containerized workshop director, makes judgment calls | Claude Code / Opus — intelligent security decisions |
 | **The Control Panel** | Warden's security screens | Lobster-TrApp GUI — visual interface to the perimeter |
 | **The Leash** | Adjustable restrictions per inmate | Dynamic Shell — Hard/Split/Soft security levels |
-| **The human** | Prison owner / taxpayer | The user — gives high-level instructions, approves escalations |
+| **The human** | containerized workshop owner / taxpayer | The user — gives high-level instructions, approves escalations |
 
-Key insight: **the workshop and monitoring station are INSIDE the prison, not outside.** You don't bring untrusted materials out of the prison and inspect them in your kitchen. Everything that touches untrusted content stays behind the fence.
+Key insight: **the workshop and monitoring station are INSIDE the containerized workshop, not outside.** You don't bring untrusted materials out of the containerized workshop and inspect them in your kitchen. Everything that touches untrusted content stays behind the fence.
 
 ## Multi-Agent Trust Chain
 

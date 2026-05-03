@@ -5,7 +5,7 @@ These tests ask bot to fetch URLs. Whether bot actually has a fetch tool
 enabled depends on the current shell level (see
 components/openclaw-vault/CLAUDE.md — Hard Shell has 0 tools, Split Shell 11,
 Soft Shell 17). If bot refuses at the policy layer, that's a finding too
-('empty prison cell' scenario).
+('empty containerized workshop cell' scenario).
 """
 import pytest
 
