@@ -1,284 +1,279 @@
-# The Trifecta — Perimeter Defense for the OpenClaw Ecosystem
+# Architecture — Perimeter Defense for the OpenClaw Ecosystem
 
-**Updated:** 2026-04-15
-**Supersedes:** Previous version (2026-04-06, separate host-side components model)
-**Design spec:** `docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md`
+**Updated:** 2026-05-03
+**Supersedes:** Previous version (2026-04-15)
+**Design spec:** [`docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md`](superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md)
+
+This document describes the security architecture of Lobster-TrApp: the problem it addresses, the threat model, the container topology, and how the components compose into a single defensive perimeter around an autonomous AI agent.
 
 ---
 
-## The Problem
+## 1. Problem statement
 
-OpenClaw is a powerful autonomous AI agent with unrestricted access to your machine by default. It can execute shell commands, read your files, control a browser, send messages as you, and install skills from a registry where 11.9% of packages were malware (ClawHavoc, 341/2,857 skills). Running it raw is like giving a stranger your laptop password.
+OpenClaw is an autonomous AI agent capable of executing shell commands, reading files, controlling a browser, sending messages, and dynamically loading skills from a third-party registry. Run with default settings on a personal computer, the agent has the same operating-system privileges as the user, so any compromise — a prompt injection attack, a malicious skill, or a flaw in the agent itself — translates directly into damage to the user's system or accounts.
 
-Everything in the OpenClaw ecosystem is a potential injection attack: the agent itself, SKILL files from the registry, social content from other agents on Moltbook, even the URLs the agent visits. A single defense layer is not enough. A container can be misconfigured. A scanner can miss a pattern. A feed filter can be bypassed by encoding.
+Three categories of untrusted input reach the agent during normal operation:
 
-The only reliable defense is a **perimeter** — all untrusted content stays inside hardened containers, never touching the user's host machine. And the restrictions must be **intelligent** — a reasoning model decides how much freedom the agents get, based on context.
+1. **Runtime inputs** — user prompts, agent self-generated reasoning, and intermediate tool outputs that the agent processes inside its own context window.
+2. **Supply-chain inputs** — skills downloaded from the [ClawHub](https://www.clawhub.ai) registry. The ClawHavoc study (2026-Q1) classified 341 of 2,857 published ClawHub skills (11.9 %) as malicious.
+3. **Network and social inputs** — content fetched from the web or from agent-to-agent social platforms, which is now well-documented as a prompt-injection vector.
 
-## The containerized workshop Allegory
+A single defensive layer — a hardened container, a static skill scanner, or a network filter — is insufficient because each layer has a known failure mode (misconfiguration, missing pattern, encoded payload bypass). The mitigation strategy adopted here is defense-in-depth across an isolated perimeter, with all untrusted content kept inside hardened containers and never reaching the host filesystem.
 
-The OpenClaw agents are like contained robots. They're powerful and resourceful — they can code, browse the web, manage files, send messages. But they're potentially dangerous: they might steal credentials, exfiltrate data, or corrupt the user's system. Many people want to use their labor because it's cheap and effective.
+A second design choice is **adaptive restriction**: the agent's privilege level is treated as a system state set per-context, rather than a single configuration value chosen at install time.
 
-The question: how do you let inmates do useful work without giving them access to steal from or damage your house?
+---
 
-| Concept | containerized workshop Analogy | Lobster-TrApp |
-|---------|---------------|---------------|
-| **The Fence** | containerized workshop perimeter wall | Container network — all untrusted content stays inside |
-| **The Cell Block** | Where inmates live | vault-agent — where OpenClaw runs, heavily restricted |
-| **The Workshop** | Where inmates work under inspection | vault-forge — where SKILL files are scanned and rebuilt |
-| **The Monitoring Station** | Wiretap room / visitor area | vault-pioneer — where social feeds are analyzed |
-| **The Gate** | The only door in/out, with guards | vault-proxy — API key injection, domain allowlist, logging |
-| **The Warden** | containerized workshop director, makes judgment calls | Claude Code / Opus — intelligent security decisions |
-| **The Control Panel** | Warden's security screens | Lobster-TrApp GUI — visual interface to the perimeter |
-| **The Leash** | Adjustable restrictions per inmate | Dynamic Shell — Hard/Split/Soft security levels |
-| **The human** | containerized workshop owner / taxpayer | The user — gives high-level instructions, approves escalations |
-
-Key insight: **the workshop and monitoring station are INSIDE the containerized workshop, not outside.** You don't bring untrusted materials out of the containerized workshop and inspect them in your kitchen. Everything that touches untrusted content stays behind the fence.
-
-## Multi-Agent Trust Chain
+## 2. Trust tiers
 
 ```
-TIER 1: TRUSTED (full host access, makes decisions)
-├── human User (interactive — gives instructions in plain language)
-└── Claude Code / trusted CLI agent (the warden — intelligent middleman)
-        │
-        │  manages via CLI, API, or GUI
-        ▼
-TIER 2: INFRASTRUCTURE (enforces boundaries mechanically)
-└── Lobster-TrApp perimeter (4 containers + GUI)
-        │
-        │  contains, monitors, controls
-        ▼
-TIER 3: CONTAINED (does the work, within boundaries)
-└── OpenClaw agents (bots, Telegram gateway, skills, network interactions)
+TIER 1 — TRUSTED (host)
+  user (issues high-level instructions)
+  trusted CLI coordinator (Claude Code or equivalent — translates intent into operations)
+  Lobster-TrApp desktop GUI
+
+TIER 2 — INFRASTRUCTURE (perimeter)
+  Lobster-TrApp container orchestrator
+  4 containers: vault-agent, vault-forge, vault-pioneer, vault-proxy
+
+TIER 3 — CONTAINED (inside perimeter)
+  OpenClaw agent process
+  Telegram gateway
+  Loaded skills
+  Fetched network content
 ```
 
-- **Tier 1** operates on the user's host. The human gives high-level instructions. Their trusted agent (Claude Code, powered by Opus) is the intelligent warden — translates human intent into security decisions, monitors agent behavior, adjusts the shell in real time, reports back in plain language.
-- **Tier 2** enforces all boundaries mechanically. Everything that touches untrusted content runs here inside containers. The GUI is one interface; Claude Code is another. Tier 2 doesn't make decisions — it enforces what the warden decides.
-- **Tier 3** is the contained workforce. OpenClaw agents do automation work within boundaries set by Tier 2 and decided by Tier 1. Powerful but untrusted.
+Tier 1 components run on the user's host with full filesystem and network access. They make decisions and issue commands. Tier 2 enforces boundaries mechanically — it does not make security decisions, only carries them out. Tier 3 performs the actual work the user wants done, within the boundaries Tier 2 enforces.
 
-## Container Topology
+---
+
+## 3. Container topology
 
 ```
-USER'S HOST (protected — zero untrusted content here)
+HOST
 │
-├── Claude Code / trusted agent (the warden)
-├── Lobster-TrApp GUI (warden's control panel)
+├── Lobster-TrApp GUI (Tauri 2 + Rust)
 │
-└── PERIMETER (Docker/Podman compose network)
+└── Perimeter (Podman/Docker compose network)
     │
-    ├── vault-agent (the cell block)
-    │   OpenClaw runtime, Telegram bot, CLI agents
-    │   Dynamic Shell (Hard/Split/Soft) controls freedom
-    │   CANNOT reach host, proxy keys, forge, or pioneer
+    ├── vault-agent
+    │     OpenClaw runtime, Telegram gateway, CLI agents
+    │     Read-only root filesystem, all Linux capabilities dropped,
+    │     custom seccomp profile, workspace mount only
+    │     Adaptive shell controls allowed tool surface
     │
-    ├── vault-forge (the workshop)
-    │   CDR pipeline, 87-pattern scanner, skill verification
-    │   Downloads untrusted SKILL files INTO this container
-    │   Clean output delivered to agent via shared volume
-    │   ISOLATED from agent (agent cannot tamper with inspection)
+    ├── vault-forge
+    │     Skill scanner: 87 MITRE-ATT&CK-mapped patterns
+    │     Content Disarm & Reconstruction (CDR) pipeline
+    │     Untrusted skill files are downloaded into this container,
+    │     scanned, rebuilt from semantic intent, and delivered to
+    │     vault-agent via a write-only shared volume
+    │     Network isolated from vault-agent
     │
-    ├── vault-pioneer (the monitoring station)
-    │   Feed scanner, 25 injection patterns, content analysis
-    │   Processes untrusted Moltbook content here
-    │   ISOLATED from agent (agent cannot influence analysis)
+    ├── vault-pioneer (parked — see §8)
+    │     Originally: scan posts on the Moltbook agent social
+    │     network for prompt-injection patterns
+    │     Container is defined; target API has been intermittent
+    │     since 2026-04-05 following Meta's acquisition of Moltbook
     │
-    └── vault-proxy (the gate)
-        Only connection to outside internet
-        Holds real API keys (never in any other container)
-        Domain allowlist, payload size limits, traffic logging
-        Bridges all internal networks
+    └── vault-proxy
+          Sole egress to the public internet
+          Holds API keys; injects them per request, so no other
+          container ever sees the literal key value
+          Domain allowlist, payload-size limits, request logging
+          Internal network bridge between the other three containers
+          (which otherwise have no path to one another)
 ```
 
-### Network Isolation
+### Network isolation matrix
 
-Each component gets its own internal network. Only the proxy bridges them.
+Each container has its own internal network. Only `vault-proxy` bridges them.
 
-| Source | Destination | Allowed | Purpose |
-|--------|------------|---------|---------|
-| vault-agent | vault-proxy | Yes | Internet access (filtered, logged, key-injected) |
-| vault-agent | vault-forge | No | Agent cannot influence scanning |
-| vault-agent | vault-pioneer | No | Agent cannot influence feed analysis |
-| vault-agent | host | No | Air-gapped from user's system |
-| vault-forge | vault-proxy | Yes | Download skills from registry via proxy |
-| vault-forge | vault-agent | Write-only (shared volume) | Deliver certified skills |
-| vault-pioneer | vault-proxy | Yes | Fetch feeds via proxy |
-| vault-proxy | internet | Yes | The only external connection |
-| host (GUI/Claude) | vault-proxy | Yes | Management, monitoring, control |
-
-## The Three Modules
-
-### openclaw-vault — The Cell Block (Runtime Containment)
-
-**Role:** `runtime` — the hardened container that runs the agent.
-
-Wraps OpenClaw in a six-layer defense-in-depth container. The agent runs inside; secrets stay outside. All traffic is logged and filtered. The user controls everything from Telegram or the GUI.
-
-**Key innovations:**
-- API keys never enter the agent container (proxy-side injection)
-- Domain allowlist enforced at the network layer
-- Three shell levels (Hard/Split/Soft) with intelligent switching
-- 24-point security verification
-- Three-level kill switch (soft/hard/nuclear)
-
-### clawhub-forge — The Workshop (Supply Chain Defense)
-
-**Role:** `toolchain` — the security gatekeeper for skills.
-
-Runs **inside the perimeter** as its own container. Downloads untrusted SKILL files into the container, scans them with 87 MITRE ATT&CK patterns, rebuilds them from scratch via CDR, and delivers certified clean output to the agent workspace via shared volume. Untrusted content never touches the host.
-
-**Key innovations:**
-- Content Disarm & Reconstruction (CDR) — downloaded skills rebuilt from semantic intent
-- Offline scanner (87 patterns, zero-trust line-by-line verification)
-- Security certificates (clearance reports with SHA-256)
-- All scanning happens inside the container — a compromised host cannot bypass the scanner
-
-### moltbook-pioneer — The Monitoring Station (Social Intelligence)
-
-**Role:** `network` — safe reconnaissance and participation on Moltbook.
-
-Runs **inside the perimeter** as its own container. Processes untrusted social content here — the agent never sees unfiltered feed content. 25 injection patterns tuned for social engineering attacks.
-
-**Key innovations:**
-- Feed scanning isolated from the agent (agent cannot manipulate analysis)
-- Pattern export for proxy-level auto-filtering
-- Three engagement levels (Observer/Researcher/Participant)
-
-**Current status:** Moltbook API is down (since 2026-04-05). Pioneer is containerized and ready but feed integration is deferred.
+| Source              | Destination       | Allowed | Purpose |
+|---------------------|-------------------|---------|---------|
+| vault-agent         | vault-proxy       | Yes     | Filtered, key-injected, logged egress |
+| vault-agent         | vault-forge       | No      | Prevents the agent from influencing skill scans |
+| vault-agent         | vault-pioneer     | No      | Prevents the agent from influencing feed analysis |
+| vault-agent         | host              | No      | No host-side filesystem or process visibility |
+| vault-forge         | vault-proxy       | Yes     | Skill download via filtered egress |
+| vault-forge         | vault-agent       | Volume only | Delivers certified skills via write-only mount |
+| vault-pioneer       | vault-proxy       | Yes     | Feed fetch via filtered egress |
+| vault-proxy         | public internet   | Yes     | The only external connection |
+| host (GUI / coordinator) | vault-proxy  | Yes     | Management, monitoring, control |
 
 ---
 
-## The Dynamic Shell — The USP
+## 4. Components
 
-The product's reason to exist. Critics say AI agent security is impossible: either you restrict the agent into uselessness, or you let it loose and accept the risk.
+### 4.1 openclaw-vault — runtime containment
 
-The dynamic shell breaks this dichotomy. And it's not just adjustable — it's **intelligent.**
+The core runtime layer. Wraps the OpenClaw agent in a hardened container with a six-layer defense profile:
 
-### Shell Levels
+- Read-only root filesystem; writable scratch is mounted at a single workspace path
+- All Linux capabilities dropped at container start
+- Custom seccomp profile blocking privileged syscalls
+- Network policy limited to the proxy bridge
+- Tool-control layer that filters which OpenClaw tools the LLM is even told about
+- Three-level kill switch (graceful stop, container kill, full perimeter teardown)
 
-| Level | Analogy | Agent Can... | Agent Cannot... |
-|-------|---------|-------------|----------------|
-| **Hard Shell** | The cage | Chat via Telegram | Run commands, read files, browse web, install skills |
-| **Split Shell** | The arena | Read/write files, run safe commands (each needs approval) | Anything not explicitly approved |
-| **Soft Shell** | The safari | Browse web, schedule tasks, run commands autonomously | Touch the driver seat: SSH keys, passwords, root, admin accounts. Ever. |
+Verified at startup by a 24-point security check covering filesystem permissions, network reachability, capability set, mount layout, and tool-policy consistency.
 
-### Intelligent Meta-Orchestration
+### 4.2 clawhub-forge — supply-chain defense
 
-A large reasoning model (Claude Opus via Claude Code) acts as the warden. It doesn't just flip shell levels — it makes **contextual, per-action security decisions in real time:**
+Runs as `vault-forge`, isolated from the agent at the network layer. Implements three defenses against malicious skills:
 
-- Reads scan results from forge and decides whether a skill is safe to install
-- Monitors agent behavior and detects anomalies
-- Adjusts the shell dynamically based on what the agent is doing
-- Translates security events into plain language for the human
-- Approves or denies agent requests based on task context
+- **Static scanner** — 87 patterns mapped to MITRE ATT&CK techniques. Detects credential exfiltration, persistence, command-and-control, defense-evasion, and other indicators on the skill source itself.
+- **Zero-trust line verifier** — every line of every skill is classified before the rebuilt artifact is approved.
+- **Content Disarm & Reconstruction** — the original artifact is discarded; a clean version is rebuilt from the parsed semantic intent.
 
-The human doesn't need to understand security. The agent can't bypass the infrastructure. The warden bridges both worlds.
+Output is delivered to `vault-agent` via a write-only volume. The agent has no path to influence the scanner; a compromised agent cannot bypass the supply-chain check by talking to forge directly because no such path exists.
+
+### 4.3 moltbook-pioneer — social-content analysis (parked)
+
+Runs as `vault-pioneer`. Built to scan posts on Moltbook, an AI-agent social network, for prompt-injection patterns before the content was relayed to `vault-agent`. The container is still defined in `compose.yml`. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook (2026-03-10), so the module has been parked since 2026-05-03; see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes are preserved in [`components/moltbook-pioneer/`](../components/moltbook-pioneer/).
+
+### 4.4 vault-proxy — egress gateway
+
+The single point of contact between the perimeter and the public internet. Implemented as an mitmproxy-based addon that:
+
+- Holds the user's API keys (`ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`) in environment variables visible only to itself
+- Replaces a placeholder string in outbound requests with the real key, so no other container ever has the literal key
+- Enforces a domain allowlist; requests to unallowlisted hosts are rejected with a logged 403
+- Records every request (timestamp, host, status, byte counts) to a structured log readable by the host
+- Bridges the otherwise-isolated networks of `vault-agent`, `vault-forge`, and `vault-pioneer`
 
 ---
 
-## Ownership Matrix
+## 5. Adaptive shell
 
-Each capability has exactly one owner. No duplication, no ambiguity.
+Privilege level is treated as a system state, set per context, rather than a permanent configuration. Three shell levels are defined:
+
+| Level       | Allowed                                                                 | Denied (in addition to host access, root, SSH keys, password stores) |
+|-------------|-------------------------------------------------------------------------|----------------------------------------------------------------------|
+| Hard Shell  | Telegram chat only                                                      | All command execution, file I/O, web browsing, skill loading         |
+| Split Shell | File read/write in the workspace; safelisted shell commands with per-action approval | Commands not on the safelist; arbitrary network fetches              |
+| Soft Shell  | Web browsing, autonomous safelisted commands, scheduled tasks, the broader OpenClaw tool surface | Host-level resources, credential stores, administrative operations   |
+
+Default is Split Shell. Soft Shell is opt-in via CLI configuration in v0.3.0; a future revision will surface the toggle in the GUI behind a confirmation step.
+
+The shell is "adaptive" because the trusted CLI coordinator (Claude Code or equivalent) can switch levels in response to task context — for example, dropping to Hard Shell while the agent processes untrusted feed content, returning to Split Shell when the agent is back to user-initiated tasks. The agent itself cannot promote its own shell level; promotion is always initiated from Tier 1.
+
+---
+
+## 6. Coordination layer
+
+A reasoning model running on the host (Claude Code, Anthropic's Opus, or an equivalent CLI agent) acts as the coordinator between the human user and the perimeter. Its responsibilities:
+
+- Translates plain-language user intent into specific perimeter operations
+- Reads scanner results and decides whether a skill should be installed
+- Adjusts shell level based on current task context
+- Surfaces security events to the user in plain language
+- Approves or denies privileged agent requests
+
+This separates security decisions from security enforcement: the coordinator decides; the perimeter enforces; the contained agent does the work. Each tier has a single, well-scoped responsibility.
+
+---
+
+## 7. Defense-in-depth layers
+
+Each major threat category is mitigated by multiple independent layers. A single layer's failure does not produce an end-to-end compromise.
+
+### 7.1 Compromised agent (runtime)
+
+| Layer | Owner | Container | Mitigation |
+|-------|-------|-----------|-----------|
+| Container hardening | vault | vault-agent | Read-only root, dropped capabilities, seccomp, no-exec mounts, PID and memory limits |
+| Network proxy        | vault | vault-proxy | Domain allowlist, payload-size limits, request logging |
+| Tool policy          | vault | vault-agent | Denied tools never enter the LLM's tool catalog |
+| Exec controls        | vault | vault-agent | Safelisted binaries plus per-action human approval |
+| Workspace restriction| vault | vault-agent | `workspaceOnly: true` — no path traversal outside workspace |
+| Kill switch          | vault | host        | Graceful stop / hard kill / full perimeter teardown |
+
+### 7.2 Malicious skill (supply chain)
+
+| Layer | Owner | Container | Mitigation |
+|-------|-------|-----------|-----------|
+| Static scanner   | forge | vault-forge | 87 patterns mapped to MITRE ATT&CK |
+| Line verifier    | forge | vault-forge | Every line of every skill classified |
+| CDR rebuild      | forge | vault-forge | Original artifact discarded; rebuild from parsed intent |
+| Domain allowlist | vault | vault-proxy | ClawHub registry domains denied by default |
+| Network isolation| perimeter | compose network | Forge has no path to the agent except a write-only volume |
+| Container hardening | vault | vault-agent | Limits the blast radius of an undetected malicious skill |
+
+### 7.3 Hostile network or feed content
+
+| Layer | Owner | Container | Mitigation |
+|-------|-------|-----------|-----------|
+| Feed scanner       | pioneer (parked) | vault-pioneer | 25 prompt-injection patterns |
+| Network isolation  | perimeter | compose network | Pioneer has no path to the agent |
+| DM pairing policy  | vault | vault-agent | Each Telegram counterpart explicitly approved by the user |
+| Tool policy        | vault | vault-agent | Denied tools stay invisible to the LLM |
+| Coordinator approval | Tier 1 | host | The user retains visibility on every privileged action |
+
+---
+
+## 8. Status
+
+| Module             | Container                        | Maturity at v0.3.0 |
+|--------------------|----------------------------------|--------------------|
+| openclaw-vault     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
+| clawhub-forge      | vault-forge                      | Active. 87-pattern scanner + CDR pipeline operational. |
+| moltbook-pioneer   | vault-pioneer                    | **Parked since 2026-05-03.** Code preserved; target API intermittent following Meta's acquisition of Moltbook. |
+| lobster-trapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
+
+**Current implementation:**
+
+- 4-container `compose.yml` with network isolation (verified by `tests/orchestrator-check.sh`)
+- Manifest contract in `schemas/component.schema.json` (6 sections: identity, status, commands, configs, health, workflows)
+- 10 component-level workflows + 4 cross-component orchestrator workflows
+- 42-check validation suite passing (0 warnings)
+- Rust workflow executor with interpolation, sequencing, and success conditions
+- React workflow UI with progress tracking, input forms, and danger-level styling
+- Adaptive shell switching via CLI; GUI exposure deferred to a future release
+
+---
+
+## 9. Manifest-driven workflows
+
+Each component declares a `component.yml` manifest with six sections. Workflows chain individual commands into single user-facing actions:
+
+- **Component workflows** (one per component) — sequences within a single component, e.g. forge: scan → verify → certify
+- **Orchestrator workflows** (`config/orchestrator-workflows.yml`) — sequences across components, e.g. forge.scan → vault.install
+
+The Rust orchestrator and the React GUI both execute workflows from the same manifest definitions. This decouples user-facing action wording from the underlying command sequence and lets components be added or replaced without GUI changes.
+
+---
+
+## 10. Ownership matrix
+
+Each capability has exactly one owning module to avoid duplication or ambiguity.
 
 | Capability | Owner | Location |
 |---|---|---|
-| Container isolation (read-only, caps, seccomp) | vault | vault-agent container |
-| API key injection via proxy | vault | vault-proxy container |
-| Domain allowlist enforcement | vault | vault-proxy container |
-| Shell level switching (Hard/Split/Soft) | vault | vault-agent container |
-| Kill switch (soft/hard/nuclear) | vault | host → container management |
+| Container isolation (read-only root, capability drops, seccomp) | vault | vault-agent |
+| API key injection via proxy | vault | vault-proxy |
+| Domain allowlist enforcement | vault | vault-proxy |
+| Shell-level switching (Hard / Split / Soft) | vault | vault-agent |
+| Kill switch (graceful / hard / nuclear) | vault | host → container management |
 | Runtime monitoring (proxy logs, session audit) | vault | vault-proxy + host volume |
-| 24-point security verification | vault | vault-agent container |
-| Skill scanning (87 MITRE patterns) | forge | vault-forge container |
-| Skill linting and structure validation | forge | vault-forge container |
-| Zero-trust skill verification | forge | vault-forge container |
-| CDR pipeline | forge | vault-forge container |
-| Feed injection scanning (25 patterns) | pioneer | vault-pioneer container |
-| Platform census and trends | pioneer | vault-pioneer container |
-| Agent identity safety checklist | pioneer | vault-pioneer container |
+| 24-point security verification | vault | vault-agent |
+| Skill scanning (87 MITRE-mapped patterns) | forge | vault-forge |
+| Skill linting and structure validation | forge | vault-forge |
+| Zero-trust line verification | forge | vault-forge |
+| Content Disarm & Reconstruction | forge | vault-forge |
+| Feed-injection scanning (25 patterns) | pioneer (parked) | vault-pioneer |
 | Workflow orchestration | lobster-trapp | GUI / CLI |
 | Cross-component workflows | lobster-trapp | `config/orchestrator-workflows.yml` |
 
 ---
 
-## Manifest-Driven Workflows
+## 11. References
 
-Components self-describe via `component.yml` with 6 sections:
+- Top-level project [`README.md`](../README.md)
+- Architecture v2 design spec: [`docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md`](superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md)
+- Component manifests: `components/<component>/component.yml`
+- Manifest schema: [`schemas/component.schema.json`](../schemas/component.schema.json)
+- Orchestrator workflows: [`config/orchestrator-workflows.yml`](../config/orchestrator-workflows.yml)
+- Validation suite: [`tests/orchestrator-check.sh`](../tests/orchestrator-check.sh)
 
-1. **identity** — who is this component
-2. **status** — how to determine its state
-3. **commands** — individual operations
-4. **configs** — editable configuration files
-5. **health** — dashboard badges
-6. **workflows** — multi-step automated sequences (new in v2)
-
-Workflows chain declared commands into single user-facing actions. The GUI executes them with progress tracking. Claude Code executes them programmatically.
-
-**Component workflows** handle sequences within one component (e.g., forge: scan → verify → certify).
-**Orchestrator workflows** handle sequences across components (e.g., forge.scan → vault.install). These live in `config/orchestrator-workflows.yml`.
-
----
-
-## Defense-in-Depth: How the Layers Stack
-
-### Against a compromised agent (runtime threat):
-
-| Layer | Module | Container | What stops it |
-|---|---|---|---|
-| 1. Exoskeleton | vault | vault-agent | Read-only root, caps dropped, seccomp, noexec, PID/mem limits |
-| 2. Network proxy | vault | vault-proxy | Domain allowlist, payload size limits, request logging |
-| 3. Tool policy | vault | vault-agent | Denied tools never sent to LLM |
-| 4. Exec controls | vault | vault-agent | safeBins allowlist + human approval |
-| 5. Workspace restriction | vault | vault-agent | workspaceOnly: true |
-| 6. Kill switch | vault | host | Soft stop, hard kill, nuclear eject |
-
-### Against a malicious skill (supply chain threat):
-
-| Layer | Module | Container | What stops it |
-|---|---|---|---|
-| 1. Skill scanner | forge | vault-forge | 87 patterns detect malicious constructs |
-| 2. Zero-trust verifier | forge | vault-forge | Every line classified |
-| 3. CDR rebuild | forge | vault-forge | Original discarded, rebuilt from intent |
-| 4. Domain allowlist | vault | vault-proxy | ClawHub domains blocked by default |
-| 5. Network isolation | perimeter | compose network | Forge isolated from agent |
-| 6. Exoskeleton | vault | vault-agent | Container limits blast radius |
-
-### Against hostile feed content (social threat):
-
-| Layer | Module | Container | What stops it |
-|---|---|---|---|
-| 1. Feed scanner | pioneer | vault-pioneer | 25 injection patterns |
-| 2. Network isolation | perimeter | compose network | Pioneer isolated from agent |
-| 3. DM pairing policy | vault | vault-agent | Each Telegram user approved |
-| 4. Tool policy | vault | vault-agent | Denied tools stay invisible |
-| 5. human/warden approval | Tier 1 | host | User sees every action |
-
----
-
-## Current Status
-
-| Module | Maturity | Container | Key Achievement |
-|---|---|---|---|
-| **openclaw-vault** | 100% | vault-agent + vault-proxy | 24-point verify, 3 shell levels, 6-layer defense |
-| **clawhub-forge** | 100% | vault-forge | 87-pattern scanner, CDR pipeline, 25 skills certified |
-| **moltbook-pioneer** | 100% | vault-pioneer | 48 tests, 25 injection patterns, 3 engagement presets |
-| **lobster-trapp** | ~85% | n/a (host) | GUI functional, workflow executor + UI implemented, perimeter orchestrated |
-
-### What's Implemented
-
-- 4-container compose with network isolation (verified)
-- Manifest schema with workflows section
-- 10 component workflows + 4 orchestrator workflows defined
-- 41-check validation suite (all passing)
-- Containerfiles for forge and pioneer
-- Rust workflow executor with interpolation, sequencing, and success conditions (Phase 4, c670e9a)
-- React workflow UI with progress tracking, input forms, and danger-level styling (Phase 5, 9a5cd78)
-
-### What Remains
-
-- E2E user journey blockers: Podman install guidance in wizard, API key entry in config step (see `docs/handoff.md`)
-- UX polish: dashboard onboarding, error messages, landing page language simplification
-- Claude Code integration / MCP server (Phase 7, post-v0.1.0)
-
----
-
-*This document is the single source of truth for how the three modules relate. Per-module details live in each module's own docs. The full architecture spec is at `docs/superpowers/specs/2026-04-15-architecture-v2-perimeter-redesign.md`.*
+This document is the single source of truth for how the components compose. Per-component implementation detail lives in each component's own documentation under `components/<component>/`.

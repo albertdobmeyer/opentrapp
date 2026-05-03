@@ -2,111 +2,123 @@
 
 [![CI](https://github.com/albertdobmeyer/lobster-trapp/actions/workflows/ci.yml/badge.svg)](https://github.com/albertdobmeyer/lobster-trapp/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**A safer way to run [OpenClaw](https://www.getopenclaw.ai) on your own computer.**
+A desktop application that runs the [OpenClaw](https://www.getopenclaw.ai) Clawbot inside a four-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT.
 
-Lobster-TrApp installs the OpenClaw Clawbot on your machine inside a four-container sandbox, and lets you chat with it from Telegram. Every skill it loads is checked against 87 known malware patterns before it runs. The Clawbot's reasoning still goes through Anthropic's API — only its file work and tool execution stay local.
+The architecture, threat model, and per-component capabilities are described in [`docs/trifecta.md`](docs/trifecta.md).
 
-We can't promise it's safe; we can show you what we did to make it safer. The whole architecture is open source under MIT — please read it, audit it, and decide for yourself.
-
-**Author**: [@albertdobmeyer](https://github.com/albertdobmeyer) · **Public landing page**: [lobster-trapp.com](https://lobster-trapp.com)
+**Author:** [@albertdobmeyer](https://github.com/albertdobmeyer) · **Public landing page:** [lobster-trapp.com](https://lobster-trapp.com)
 
 ---
 
-## What this is, and what it isn't
+## Purpose
 
-**What this is.** A desktop wrapper one open-source contributor built so that running OpenClaw on a personal computer doesn't require wiring up four containers, a proxy, a skill scanner, and a Telegram bridge by hand. There's no team behind it, no company, no funding, no business model. It's a side project shared because we hope it's useful to people who want to explore the OpenClaw ecosystem more safely than running it raw on their main machine.
+OpenClaw is an autonomous AI agent capable of executing shell commands, reading files, and loading skills from a third-party registry. Run with default settings, the agent has the same operating-system privileges as the user. The ClawHavoc study (2026-Q1) classified 11.9 % of published ClawHub skills as malicious (341 of 2,857). Lobster-TrApp wraps the agent in a defense-in-depth perimeter to reduce the impact of agent compromise, malicious skills, and prompt-injection attacks.
 
-**What this isn't.** A finished, audited security product. A guarantee. A replacement for thinking before you give an autonomous agent access to your machine. The OpenClaw Clawbot is genuinely powerful and genuinely hard to fully control — that's an open research problem the whole AI-safety community is working on. What we did is build the smallest cell we could think of around it, and document honestly what that cell does and doesn't catch.
+The agent's reasoning is performed by [Anthropic](https://www.anthropic.com)'s API; only the agent's execution layer (file work, tool calls, skill invocations) is local.
 
-## What it actually does (default Split Shell)
+## Capabilities (default Split Shell)
 
-- **A Clawbot you talk to from Telegram on your phone.** Once paired, you message a bot, the Clawbot answers from inside its sandbox.
-- **Reasoning runs on Anthropic's API**, not locally. The vault-proxy holds your `ANTHROPIC_API_KEY` and injects it per-request — the Clawbot itself never sees the key.
-- **File workspace.** The Clawbot can read and summarise files you place in its sandboxed workspace. It cannot reach files outside that workspace.
-- **Image processing.** Pictures you send via Telegram are processed inside the sandbox.
-- **Skill scanning.** Skills the Clawbot tries to load from [ClawHub](https://www.clawhub.ai) are checked against 87 known malware patterns first. Patterns the scanner doesn't know yet can still slip through.
-- **Sandboxed sandbox.** Designed to keep the Clawbot off your personal files, passwords, and SSH keys. Designed to prevent host-level installs. None of these are absolute guarantees.
-- **24 startup checks** verify the sandbox topology before the Clawbot runs.
+- Telegram bot interface — message the Clawbot from a paired phone
+- File read/write within a sandboxed workspace; the host filesystem is not exposed to the container
+- Image processing on Telegram-supplied content
+- Skill loading from ClawHub gated by a 87-pattern scanner with MITRE-ATT&CK mapping and Content Disarm & Reconstruction
+- 24-point startup verification of the perimeter topology
+- API keys held by `vault-proxy` and injected per request; the agent container never reads the literal key
 
-**Not enabled by default:** web browsing, web fetch, and broader tool access live at "Soft Shell" and are opt-in via CLI configuration — see [components/openclaw-vault/README.md](components/openclaw-vault/README.md). The default Split Shell is the safer setting.
+Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled by default. They are available at "Soft Shell" via CLI configuration in v0.3.0; see [`components/openclaw-vault/`](components/openclaw-vault/).
 
-## Download
+## Limitations
 
-Grab the latest installer for your platform from the [Releases](https://github.com/albertdobmeyer/lobster-trapp/releases) page. The setup wizard handles the rest — no terminal required.
+- This is experimental software. It is provided as-is, without warranty of any kind. The authors accept no responsibility for damage resulting from its use.
+- Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility.
+- The agent's reasoning is not local. Operating Lobster-TrApp without internet access to Anthropic's API is not supported.
+- Installer binaries are signed with the Tauri auto-updater key, not with OS-level code-signing certificates. macOS Gatekeeper and Windows SmartScreen will display a first-launch warning.
+- One of the three originally-planned modules (`moltbook-pioneer`) is **parked since 2026-05-03**. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook. The container is still defined in `compose.yml`; the code is preserved at [`components/moltbook-pioneer/`](components/moltbook-pioneer/).
 
-**Requires [Podman](https://podman.io/) or [Docker](https://www.docker.com/)** (both free). The setup wizard will check for this and walk you through installation if it's missing.
+## Requirements
 
-**Recommended setup path:** we suggest using an AI coding assistant (such as [Claude Code](https://claude.com/claude-code)) to walk you through the install. The wizard is friendly, but if anything goes wrong on your specific machine, having an AI pair programmer next to you while you read the logs is the smoothest path.
+- 64-bit Linux, macOS (Apple Silicon or Intel), or Windows
+- [Podman](https://podman.io/) or [Docker](https://www.docker.com/) installed and runnable by the current user
+- Approximately 4 GB free disk space for the four container images
+- An [Anthropic API key](https://console.anthropic.com/) and a Telegram bot token (the in-app setup wizard explains how to obtain both)
+
+## Installation
+
+Pre-built installers for all three platforms are attached to each [GitHub release](https://github.com/albertdobmeyer/lobster-trapp/releases/latest):
+
+| Platform | Format |
+|----------|--------|
+| Linux    | `.deb`, `.rpm`, `.AppImage` |
+| macOS    | `.dmg` (Apple Silicon and Intel) |
+| Windows  | `.msi`, `.exe` |
+
+The setup wizard verifies that Podman or Docker is installed and walks the user through API-key entry and Telegram pairing. No terminal interaction is required after install.
+
+For unsupported platforms or to audit the build pipeline, see *Building from source* below.
 
 ---
 
 <details>
-<summary><strong>How it works (for the curious)</strong></summary>
+<summary><strong>Architecture summary</strong></summary>
 
-The Clawbot runs inside a 4-container perimeter:
+The runtime perimeter consists of four containers connected by an internal compose network:
 
-| Container | What It Does | Status |
-|-----------|--------------|--------|
-| **vault-agent** | Where the Clawbot runs — read-only filesystem, all capabilities dropped, custom seccomp profile | Active |
-| **vault-forge** | Where skills are scanned (87 patterns + 16 prompt-injection patterns) and rebuilt safely | Active |
-| **vault-proxy** | The only internet connection — holds API keys, enforces a domain allowlist, logs every request | Active |
-| **vault-pioneer** | Originally meant to scan posts on the Moltbook AI-agent social network for prompt-injection patterns | **Parked** — see below |
+| Container | Role | Description |
+|-----------|------|-------------|
+| `vault-agent`   | Runtime containment | Read-only root filesystem, all Linux capabilities dropped, custom seccomp profile, workspace mount only |
+| `vault-forge`   | Supply-chain defense | 87-pattern skill scanner, zero-trust line verifier, Content Disarm & Reconstruction pipeline |
+| `vault-proxy`   | Egress gateway      | Holds API keys, enforces a domain allowlist, logs every request, the only path to the public internet |
+| `vault-pioneer` | Social-content analysis | **Parked** — see *Limitations* |
 
-Your API keys are held by `vault-proxy` and injected per-request; the Clawbot itself never sees them. Network traffic is filtered against the allowlist and logged. 24 startup checks verify the sandbox topology before the Clawbot is brought online. See [docs/trifecta.md](docs/trifecta.md) for the full architecture.
+Each container has its own internal network. `vault-proxy` is the only bridge between them; `vault-agent` cannot reach `vault-forge` or `vault-pioneer` directly.
 
-### About vault-pioneer
-
-The fourth container (`vault-pioneer`) is **parked since 2026-05-03**. It was built to scan posts on [Moltbook](https://moltbook.com), an AI-agent social network, for prompt-injection patterns before they reached the Clawbot. Meta acquired Moltbook on 2026-03-10 and the public API has been intermittent since 2026-04-05. Without a stable target API the module can't reliably do its job. The container is still defined in `compose.yml` for completeness, but has no functional API to talk to. Code, docs, and threat-pattern research are preserved at [components/moltbook-pioneer/](components/moltbook-pioneer/) for whenever the network stabilises (or a successor appears). We're independent open-source researchers documenting what we observed; we can't control what corporations buy.
+The full architecture, threat model, defense-in-depth tables, and ownership matrix are documented in [`docs/trifecta.md`](docs/trifecta.md).
 
 </details>
 
 <details>
-<summary><strong>For developers</strong></summary>
+<summary><strong>Building from source</strong></summary>
 
-### Building from Source
-
-All three submodules are public. No special access required.
+All three submodules are public; no special access is required.
 
 ```bash
 git clone --recurse-submodules https://github.com/albertdobmeyer/lobster-trapp.git
-cd lobster-trapp
-cd app && npm install
-npm run dev                             # Frontend dev server (Vite)
-cd src-tauri && cargo build             # Rust backend
+cd lobster-trapp/app
+npm install
+npm run dev                              # frontend dev server
+cd src-tauri && cargo build              # Rust backend
 ```
 
-For a release-style desktop build, install Tauri's prerequisites for your platform and run `cd app && npm run tauri build`.
+For a release-style desktop build, install Tauri's prerequisites for the target platform and run `cd app && npm run tauri build`.
 
-### Testing
+### Test suite
 
 ```bash
-cd app/src-tauri && cargo test --lib    # Rust backend (56 tests at v0.3.0)
-cd app && npm test -- --run             # Frontend vitest (175 tests)
-cd app && npx tsc --noEmit              # TypeScript strict
-cd app && npx playwright test           # End-to-end (25 tests)
-bash tests/orchestrator-check.sh        # Orchestration (42 checks)
-podman compose up -d && podman compose down  # Container perimeter (smoke)
+cd app/src-tauri && cargo test --lib     # Rust unit tests (56 at v0.3.0)
+cd app && npm test -- --run              # Vitest (175)
+cd app && npx tsc --noEmit               # TypeScript strict
+cd app && npx playwright test            # End-to-end (25)
+bash tests/orchestrator-check.sh         # Manifest validation (42 checks)
+podman compose up -d && podman compose down  # Perimeter smoke test
 ```
 
-### Architecture
+Continuous integration runs all of the above on every push to `main` and every release tag; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+### Repository layout
 
 ```
-lobster-trapp/                       (this repo — desktop GUI + perimeter orchestrator)
+lobster-trapp/                       (this repository — desktop GUI + perimeter orchestrator)
 ├── components/
-│   ├── openclaw-vault/              runtime (vault-agent + vault-proxy)
-│   ├── clawhub-forge/               toolchain (vault-forge)
-│   └── moltbook-pioneer/            network (vault-pioneer) — parked
-├── app/                             Tauri 2 + React 18 desktop GUI
+│   ├── openclaw-vault/              runtime containment (vault-agent + vault-proxy)
+│   ├── clawhub-forge/               supply-chain defense (vault-forge)
+│   └── moltbook-pioneer/            social-content analysis (vault-pioneer) — parked
+├── app/                             Tauri 2 + React 18 desktop application
 ├── compose.yml                      4-service perimeter with network isolation
-├── schemas/component.schema.json    THE CONTRACT — all manifests conform to this
-└── config/orchestrator-workflows.yml  Cross-component workflow definitions
+├── schemas/component.schema.json    component manifest contract
+└── config/orchestrator-workflows.yml  cross-component workflow definitions
 ```
 
-See [CLAUDE.md](CLAUDE.md) for the full architecture specification and contribution rules.
-
-### Contributing
-
-Pull requests welcome. The product is small enough that the simplest path is usually: open an issue first, sketch the change, then send a PR. Tests must stay green (`cargo test --lib`, `npm test`, `playwright test`, `orchestrator-check.sh`). The 28 banned terms in `app/e2e/user-facing.spec.ts` are enforced — don't try to work around them; if your copy needs new terminology, add it deliberately and explain why in the PR body.
+See [`CLAUDE.md`](CLAUDE.md) for the full architecture specification and contribution rules.
 
 </details>
 
@@ -114,4 +126,4 @@ Pull requests welcome. The product is small enough that the simplest path is usu
 
 ## License
 
-[MIT](LICENSE) — Lobster-TrApp is a gift to the community. There is no paid tier, no telemetry, no upsell. The license lets you use, modify, redistribute, and even sell derivative works of this code. All we ask in return is the attribution the license already requires (keep the copyright notice). If this is useful to you, a star on GitHub or a mention when you talk about it is the only thanks we're looking for.
+Released under the [MIT License](LICENSE). The license permits use, modification, redistribution, and inclusion in derivative works subject only to the attribution requirement (preservation of the copyright notice). No warranty is provided.
