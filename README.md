@@ -34,8 +34,6 @@ We can't promise it's safe; we can show you what we did to make it safer. The wh
 
 Grab the latest installer for your platform from the [Releases](https://github.com/albertdobmeyer/lobster-trapp/releases) page. The setup wizard handles the rest — no terminal required.
 
-**Heads-up:** the v0.3.0 release page may temporarily have no asset attachments. The release-build CI hit a flake on a corrupted dependency tarball during the v0.3.0 cut, and we're re-running it. If the page is empty, please [build from source](#building-from-source) for now.
-
 **Requires [Podman](https://podman.io/) or [Docker](https://www.docker.com/)** (both free). The setup wizard will check for this and walk you through installation if it's missing.
 
 **Recommended setup path:** we suggest using an AI coding assistant (such as [Claude Code](https://claude.com/claude-code)) to walk you through the install. The wizard is friendly, but if anything goes wrong on your specific machine, having an AI pair programmer next to you while you read the logs is the smoothest path.
