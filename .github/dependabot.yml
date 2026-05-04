@@ -1,0 +1,46 @@
+version: 2
+updates:
+  # JavaScript / TypeScript dependencies for the Tauri frontend
+  - package-ecosystem: "npm"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    groups:
+      production-deps:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+      dev-deps:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+    labels:
+      - "dependencies"
+      - "javascript"
+
+  # Rust crates for the Tauri backend
+  - package-ecosystem: "cargo"
+    directory: "/app/src-tauri"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "rust"
+
+  # GitHub Actions used by the workflows in .github/workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "github-actions"

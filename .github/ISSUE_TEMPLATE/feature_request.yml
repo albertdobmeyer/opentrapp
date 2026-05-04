@@ -1,0 +1,59 @@
+name: Feature request
+description: Propose a new capability or change to existing behavior.
+title: "feat: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature proposals are evaluated against the architectural rules in
+        [CLAUDE.md](../../CLAUDE.md) and the project's stated scope in
+        [README.md](../../README.md). Proposals that conflict with the
+        manifest contract or the generic-backend constraint will be declined
+        on principle, regardless of utility.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: |
+        What problem does this feature solve? Describe the user or maintainer
+        experience that motivates the request, not the proposed solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would the feature behave? Sketch the user-facing flow first; implementation specifics are secondary.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: |
+        Other approaches you weighed and why they were rejected. Helps reviewers
+        understand the design space without re-deriving it.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - Frontend (React, TypeScript)
+        - Backend (Rust, Tauri commands)
+        - Manifest schema or contract
+        - Build, packaging, distribution
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Mock-ups, related issues, prior art, references, etc.

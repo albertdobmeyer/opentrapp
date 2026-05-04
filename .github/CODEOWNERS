@@ -1,0 +1,21 @@
+# Code ownership for Lobster-TrApp.
+#
+# When a pull request touches files under a path below, the listed owner is
+# automatically requested for review. CODEOWNERS does not block merging by
+# itself — branch protection rules govern that.
+
+# Default owner for everything not otherwise specified.
+*                                @albertdobmeyer
+
+# CI, security workflows, and repository configuration.
+/.github/                        @albertdobmeyer
+
+# The orchestrator schema and its three implementation layers (Rust, TS,
+# JSON Schema) must stay aligned. See CLAUDE.md §"Schema-alignment".
+/schemas/                        @albertdobmeyer
+/app/src-tauri/src/orchestrator/ @albertdobmeyer
+/app/src/lib/types.ts            @albertdobmeyer
+
+# Threat model and security policy.
+/SECURITY.md                     @albertdobmeyer
+/docs/threat-model.md            @albertdobmeyer

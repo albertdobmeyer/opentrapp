@@ -1,0 +1,93 @@
+name: Bug report
+description: Report a defect in the application or its build process.
+title: "bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a defect. Please complete the
+        fields below so the issue can be triaged efficiently. If the bug
+        constitutes a security vulnerability, **stop here** and follow the
+        private-disclosure process in [SECURITY.md](../../SECURITY.md).
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A concise description of the unexpected behavior.
+      placeholder: |
+        The setup wizard fails to advance past the prerequisite check on …
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: |
+        The smallest sequence of actions that reliably triggers the defect.
+        Include version numbers, container runtime, and any relevant
+        configuration.
+      value: |
+        1.
+        2.
+        3.
+
+        **Expected:**
+
+        **Actual:**
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Lobster-TrApp version
+      description: From the title bar, the About panel, or `git rev-parse HEAD`.
+      placeholder: "v0.3.0  /  993a536"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux (specify distribution in the next field)
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows
+    validations:
+      required: true
+
+  - type: input
+    id: os-detail
+    attributes:
+      label: OS version / distribution
+      placeholder: "Ubuntu 24.04 / macOS 15.2 / Windows 11 23H2"
+
+  - type: dropdown
+    id: container-runtime
+    attributes:
+      label: Container runtime
+      options:
+        - Podman
+        - Docker
+        - Other (specify in additional context)
+        - Not applicable
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: |
+        Output from the developer console, terminal, or `~/.lobster-trapp/logs/`.
+        Redact secrets before pasting.
+      render: shell
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that might help — screenshots, related issues, etc.

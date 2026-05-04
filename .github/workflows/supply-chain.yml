@@ -1,0 +1,98 @@
+name: Supply-chain audit
+
+# Vulnerability scans of declared dependencies. Runs on every push to main,
+# on every pull request that modifies a manifest or lockfile, and on a
+# weekly schedule so newly published advisories surface without waiting
+# for a code change.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/package.json"
+      - "app/package-lock.json"
+      - "app/src-tauri/Cargo.toml"
+      - "app/src-tauri/Cargo.lock"
+      - ".github/workflows/supply-chain.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/package.json"
+      - "app/package-lock.json"
+      - "app/src-tauri/Cargo.toml"
+      - "app/src-tauri/Cargo.lock"
+  schedule:
+    - cron: "37 6 * * 2"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit (frontend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+
+      # --audit-level=high blocks the run only on advisories rated High or
+      # Critical. Moderate and below are reported but not gated, on the
+      # principle that a noisy gate is an ignored gate.
+      - run: npm audit --audit-level=high --omit=dev
+
+  cargo-audit:
+    name: cargo audit (backend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Install cargo-audit
+        run: cargo install --locked cargo-audit
+
+      - run: cargo audit --deny warnings
+
+  cargo-deny:
+    name: cargo deny (license + bans)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Install cargo-deny
+        run: cargo install --locked cargo-deny
+
+      - run: cargo deny --all-features check
