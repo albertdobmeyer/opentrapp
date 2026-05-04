@@ -10,29 +10,25 @@
 workflows:
   # ─── Install a Skill Safely ────────────────────────────────────
   # The flagship cross-component workflow: forge scans a skill
-  # inside the perimeter, then delivers the certified result
-  # to the agent's workspace.
+  # inside the perimeter and delivers the certified result to the
+  # agent's workspace via the write-only forge-deliveries volume.
+  # The agent picks up new artefacts on its next reload — no
+  # separate "install" step is needed at the orchestrator layer.
   - id: install-skill
     name: Install a Skill
     user_description: >
       Downloads a skill, scans it for security threats inside a
       secure sandbox, rebuilds it from scratch to remove any hidden
-      content, and installs the clean version for your assistant.
+      content, and delivers the clean version to your assistant.
     danger: caution
     shell_requirement: split
     steps:
-      - id: download-and-scan
+      - id: scan-skill
         component: clawhub-forge
-        workflow: safe-download
+        command: scan
         args:
           skill_name: "{{input.skill_name}}"
         abort_on_failure: true
-      - id: install
-        component: openclaw-vault
-        command: install-skill
-        args:
-          skill_path: "exports/{{input.skill_name}}"
-        depends_on: download-and-scan
     inputs:
       - id: skill_name
         type: string
@@ -40,8 +36,9 @@ workflows:
         description: Name of the skill to install from ClawHub
 
   # ─── First-Time Setup ──────────────────────────────────────────
-  # The complete setup flow for a new user: detect runtime,
-  # build containers, start the agent, verify security.
+  # The complete setup flow for a new user: prepare the vault,
+  # set up forge for skill scanning, and (when un-parked) prepare
+  # pioneer's social-content scanner.
   - id: first-run-setup
     name: Set Up Your Assistant
     user_description: >
@@ -52,7 +49,7 @@ workflows:
     steps:
       - id: vault-setup
         component: openclaw-vault
-        workflow: secure-start
+        command: setup
         abort_on_failure: true
       - id: forge-setup
         component: clawhub-forge
@@ -65,43 +62,32 @@ workflows:
     inputs: []
 
   # ─── Full Security Audit ───────────────────────────────────────
-  # Run verification across all components simultaneously.
+  # Run verification across all components simultaneously. Pioneer's
+  # identity-check is the safety-relevant probe available while the
+  # component remains parked (see ADR-0004); it does not exercise
+  # the dormant feed-scanner pipeline.
   - id: full-audit
     name: Security Audit
     user_description: >
       Runs a complete security check across the entire system —
-      container isolation, skill scanner health, feed monitoring
-      status, and network security.
+      container isolation, skill scanner health, and identity
+      readiness for the social-content layer.
     danger: safe
     steps:
       - id: vault-verify
         component: openclaw-vault
-        workflow: full-verify
+        command: verify
       - id: forge-verify
         component: clawhub-forge
-        workflow: full-check
+        command: verify-all
       - id: pioneer-verify
         component: moltbook-pioneer
-        workflow: safety-check
+        command: identity-check
 
-  # ─── Enable Feed Monitoring ────────────────────────────────────
-  # Export pioneer's injection patterns for the proxy to use,
-  # then enable Moltbook domains in the allowlist.
-  # NOTE: Currently deferred — Moltbook API is down.
-  - id: enable-feeds
-    name: Enable Social Monitoring
-    user_description: >
-      Activates monitoring of the Moltbook agent network. Exports
-      security patterns to the gateway so dangerous content is
-      filtered before your assistant sees it.
-    danger: caution
-    shell_requirement: split
-    steps:
-      - id: export-patterns
-        component: moltbook-pioneer
-        workflow: export-patterns
-        abort_on_failure: true
-      - id: safety-preflight
-        component: moltbook-pioneer
-        workflow: safety-check
-        depends_on: export-patterns
+# ─── Enable Feed Monitoring (REMOVED 2026-05-04) ────────────────
+# The previous "enable-feeds" workflow referenced two pioneer
+# workflows (export-patterns and safety-check) that no longer
+# exist; pioneer's manifest exposes only commands now, and the
+# component itself is parked (see docs/adr/0004-parking-moltbook-pioneer.md).
+# When pioneer is un-parked, the workflow should be re-introduced
+# here referencing whatever the un-parked manifest exposes.
