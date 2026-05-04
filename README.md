@@ -1,6 +1,10 @@
+<p align="center">
+  <img src="app/public/logo-banner.png" alt="Lobster-TrApp" width="600"/>
+</p>
+
 # Lobster-TrApp
 
-[![CI](https://github.com/albertdobmeyer/lobster-trapp/actions/workflows/ci.yml/badge.svg)](https://github.com/albertdobmeyer/lobster-trapp/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/albertdobmeyer/lobster-trapp/actions/workflows/ci.yml/badge.svg)](https://github.com/albertdobmeyer/lobster-trapp/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-009966.svg)](LICENSE)
 
 A desktop application that runs the [OpenClaw](https://www.getopenclaw.ai) Clawbot inside a four-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT.
 

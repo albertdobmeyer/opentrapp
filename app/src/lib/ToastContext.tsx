@@ -63,17 +63,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 const BORDER_COLORS: Record<Toast["type"], string> = {
-  success: "border-green-500",
-  error: "border-red-500",
-  warning: "border-yellow-500",
-  info: "border-blue-500",
+  success: "border-success-500",
+  error: "border-danger-500",
+  warning: "border-warning-500",
+  info: "border-info-500",
 };
 
 const ICON_COLORS: Record<Toast["type"], string> = {
-  success: "text-green-400",
-  error: "text-red-400",
-  warning: "text-yellow-400",
-  info: "text-blue-400",
+  success: "text-success-400",
+  error: "text-danger-400",
+  warning: "text-warning-400",
+  info: "text-info-400",
 };
 
 function ToastList({

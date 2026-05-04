@@ -18,13 +18,20 @@ export default {
           900: "#0b1120",
           950: "#030712",
         },
+        // Brand: LobsterTrApp-Green (#009966) — primary identity color
         primary: {
-          50: "#fff5f0",
-          200: "#ffcbb0",
-          400: "#ff8a5c",
-          500: "#ff6b35",
-          600: "#e55527",
-          700: "#b84520",
+          50: "#e6f5ee",
+          200: "#80ccb3",
+          400: "#1ab07e",
+          500: "#009966",
+          600: "#007a52",
+          700: "#00583a",
+        },
+        // Brand secondary: LobsterTrApp-Red (#CC3333) — used in logo shield base
+        brand: {
+          red: "#cc3333",
+          "red-dark": "#a82828",
+          "red-light": "#d65555",
         },
         info: {
           400: "#60a5fa",
@@ -78,7 +85,7 @@ export default {
       },
       boxShadow: {
         xs: "0 1px 2px 0 rgba(0, 0, 0, 0.2)",
-        glow: "0 0 24px rgba(255, 107, 53, 0.15)",
+        glow: "0 0 24px rgba(0, 153, 102, 0.15)",
       },
       transitionTimingFunction: {
         "ease-out-soft": "cubic-bezier(0.16, 1, 0.3, 1)",

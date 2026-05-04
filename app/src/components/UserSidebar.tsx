@@ -29,12 +29,12 @@ export default function UserSidebar() {
       className="flex h-full w-20 flex-col items-center border-r border-neutral-800 bg-neutral-900 py-4"
       aria-label="Main navigation"
     >
-      <div
-        className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500/15 text-2xl"
+      <img
+        src="/logo-square.png"
+        alt=""
         aria-hidden
-      >
-        🦞
-      </div>
+        className="mb-6 h-12 w-12 rounded-xl"
+      />
       <nav className="flex flex-1 flex-col gap-1">
         {NAV_ITEMS.map(({ to, end, label, icon: Icon }) => (
           <NavLink
