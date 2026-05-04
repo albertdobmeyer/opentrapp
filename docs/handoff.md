@@ -1,7 +1,7 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-05-04 (whitepaper + 3 ADRs landed; post-launch roadmap published; 6 of 8 enrichment areas queued for the next session)
-**Current phase:** Post-v0.3.0 enrichment. The 3-week "Delightful Sloth" UX-coherence polish phase concluded with the v0.3.0 ship recommendation on 2026-05-02; the codebase-cleanup pass concluded on 2026-05-03. This phase is about elevating the project from "shipped open-source tool" to "publishable security-research project."
+**Last updated:** 2026-05-04 (post-launch roadmap fully landed; all 8 enrichment areas now have either a deliverable or a precise scaffold for a future session)
+**Current phase:** Post-v0.3.0 enrichment is done. Project state is "publishable security-research project" — threat model, prior-art comparison, reproducibility, SLSA/SBOM CI, Mermaid diagrams, CONTRIBUTING + CODE_OF_CONDUCT, demo-recording scaffold all in place; the only outstanding deliverable is the actual demo video, which needs a clean recording session.
 **Branch:** `main` — pushed to `origin/main`
 **Tag:** `v0.3.0` at `75dbccb` with 9 platform binaries attached
 
@@ -20,11 +20,30 @@
 | `104e2c4` | 2026-05-02 | Repair corrupted function-bind integrity hash + honest README rewrite |
 | `7ebdd8b` | 2026-05-02 | Pass 8: pre-ship walkthrough + SHIP recommendation |
 
-**Pick up at:** [`docs/roadmap-post-launch.md`](roadmap-post-launch.md). Six of the eight enrichment areas are queued. Recommended next item: §1 (formal threat model). See "What's queued" below for the full ordering and rationale.
+**Pick up at:** [`docs/roadmap-post-launch.md`](roadmap-post-launch.md). All eight enrichment areas have deliverables in `main` as of this commit; only the demo video itself (§7's recorded asset) is queued, with a complete scaffold at [`docs/demo/README.md`](demo/README.md). Next-session candidates: cut a v0.3.x release that includes the SLSA/SBOM/cosign attestations now that the CI workflow is in place; or schedule the demo-recording session.
 
 ---
 
-## What landed in this session (2026-05-04)
+## What landed in *this* session (2026-05-04, second commit of the day)
+
+Six of the eight roadmap items completed in a single autonomous pass; the seventh has a full scaffold; the eighth (whitepaper + ADRs) was already done in the morning commit. Files written or modified:
+
+| Roadmap item | Deliverable | Status |
+|---|---|---|
+| §1 Threat model | [`docs/threat-model.md`](threat-model.md) — STRIDE matrix across T1–T6 with residual-risk + evidence per row | Landed |
+| §2 Whitepaper | [`docs/whitepaper.md`](whitepaper.md) | Already landed (morning commit) |
+| §3 ADRs | [`docs/adr/0001`](adr/0001-proxy-side-api-key-injection.md), [`0002`](adr/0002-adaptive-shell-levels.md), [`0003`](adr/0003-content-disarm-reconstruction.md) | Already landed (morning commit) |
+| §4 Reproducibility + SLSA/SBOM | [`docs/reproduce.md`](reproduce.md) + [`docs/reproduce.sh`](reproduce.sh); [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) gains a tag-only attestation block (cosign keyless + syft SBOM + SLSA build provenance) | Landed |
+| §5 Prior-art | [`docs/why-not-x.md`](why-not-x.md) — page-or-two differential against 9 alternatives (sandbox.mode alone, Firejail, gVisor, OS sandboxes, VM-only, scanner-only, allowlist-only, no-perimeter, capability-OS) | Landed |
+| §6 Mermaid diagrams | [`docs/diagrams.md`](diagrams.md) — 5 diagrams (topology, trust tiers, network isolation, CDR pipeline, AssistantStatus state machine); README + trifecta embed selected diagrams | Landed |
+| §7 Demo recording | [`docs/demo/README.md`](demo/README.md) — shooting script, ffmpeg recipe, conversion targets, pre-publish checklist; [`docs/index.html`](index.html) carries a commented-out `<video>` block ready to enable | Scaffold landed; recording itself queued |
+| §8 CONTRIBUTING + CoC | [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md), [`.github/pull_request_template.md`](../.github/pull_request_template.md) | Landed |
+
+Cross-references added: README → threat-model + why-not-x + reproduce + diagrams; SECURITY → threat-model; trifecta → threat-model + diagrams.
+
+Test-count drift caught and corrected: README and CLAUDE.md previously stated `Vitest (175)` which did not match the actual `Tests 74 passed (74)`. The 74 figure comes from the whitepaper §8 and the morning handoff and is the v0.3.0 ground truth; the 175 was stale. README + CLAUDE.md + CONTRIBUTING + reproduce.md + reproduce.sh now say 74 consistently.
+
+## What landed earlier today (2026-05-04, morning commit)
 
 Three artefacts published, plus a roadmap that captures the rest of the enrichment work:
 
@@ -52,18 +71,18 @@ Eight enrichment areas, each with deliverable / scope / dependencies / effort es
 
 ## What's queued for next session
 
-Six of the eight roadmap items remain. Recommended ordering, with rationale:
+The roadmap is now empty of writeable work. The two outstanding items are operational:
 
-| Roadmap | Item | Rationale for ordering |
-|---|---|---|
-| §1 | Formal threat model | Highest credibility lever for a security-focused project. Foundation for citations from §5 (prior art). ~1 focused day. |
-| §4 | Reproducibility section + SLSA / SBOM in CI | Engineering rigor; mostly mechanical once the spec is written. Half day for `reproduce.md`, ~1 day for the CI work. Best done after §1 because the threat model's "evidence" cells will reference reproducible commands. |
-| §5 | Prior-art comparison | Pre-empts the most common reviewer question. Half day. |
-| §8 | CONTRIBUTING.md + CODE_OF_CONDUCT.md | Standard open-source hygiene; missing-but-expected. Quick win — 1–2 hours. |
-| §6 | Mermaid architecture diagrams | Visual polish for README and trifecta.md. Half day. |
-| §7 | Demo recording for the landing page | Last because it benefits from a stable v0.3.x release and a clean recording machine. |
+1. **Cut a v0.3.x release** that exercises the new attestation block in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). The workflow's tag-only path generates the SBOM, signs assets via cosign keyless, and emits the SLSA build-provenance attestation; none of this has been exercised against a real release yet. The first release after this commit is the smoke test for that pipeline.
+2. **Record the demo video.** Plan and shooting script in [`docs/demo/README.md`](demo/README.md). Half-day session, dominated by re-takes; needs a clean recording machine and a fresh API key + Telegram bot.
 
-§1, §4, §5, §8 can be done in parallel by different contributors. §6 and §7 are visual-polish work and should batch with whatever the next visible release is.
+Optional follow-ups that came up during the documentation work and are tracked inline rather than as roadmap items:
+
+- **Certificate pinning for upstream Anthropic / Telegram endpoints** (mentioned in [`docs/threat-model.md`](threat-model.md) T3 residual risks).
+- **Fuzzing the CDR parser and generator** (T2 residual risks).
+- **Per-platform documentation of what persists after `compose down`** (T6 residual risks).
+- **Friction-effect measurement on the per-action approval gate** (T5 residual risks).
+- **Five additional ADRs** queued in [`docs/adr/README.md`](adr/README.md) "Future ADRs": the moltbook-pioneer parking decision, the 2026-05-02 vision recheck, four-container topology choice, manifest-driven generic backend, Tauri choice. ~30–60 minutes each.
 
 ---
 

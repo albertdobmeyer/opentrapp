@@ -30,7 +30,7 @@ Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled b
 ## Limitations
 
 - This is experimental software. It is provided as-is, without warranty of any kind. The authors accept no responsibility for damage resulting from its use.
-- Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility.
+- Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility. The full attacker-capability matrix and residual-risk enumeration are in [`docs/threat-model.md`](docs/threat-model.md); the differential against alternative containment strategies (Firejail, gVisor, VM-only isolation, scanner-only, etc.) is in [`docs/why-not-x.md`](docs/why-not-x.md).
 - The agent's reasoning is not local. Operating Lobster-TrApp without internet access to Anthropic's API is not supported.
 - Installer binaries are signed with the Tauri auto-updater key, not with OS-level code-signing certificates. macOS Gatekeeper and Windows SmartScreen will display a first-launch warning.
 - One of the three originally-planned modules (`moltbook-pioneer`) is **parked since 2026-05-03**. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook. The container is still defined in `compose.yml`; the code is preserved at [`components/moltbook-pioneer/`](components/moltbook-pioneer/).
@@ -65,14 +65,37 @@ The runtime perimeter consists of four containers connected by an internal compo
 
 | Container | Role | Description |
 |-----------|------|-------------|
-| `vault-agent`   | Runtime containment | Read-only root filesystem, all Linux capabilities dropped, custom seccomp profile, workspace mount only |
+| `vault-agent`   | Runtime containment | Read-only root filesystem, all Linux capabilities dropped, custom syscall profile, workspace mount only |
 | `vault-forge`   | Supply-chain defense | 87-pattern skill scanner, zero-trust line verifier, Content Disarm & Reconstruction pipeline |
 | `vault-proxy`   | Egress gateway      | Holds API keys, enforces a domain allowlist, logs every request, the only path to the public internet |
 | `vault-pioneer` | Social-content analysis | **Parked** — see *Limitations* |
 
 Each container has its own internal network. `vault-proxy` is the only bridge between them; `vault-agent` cannot reach `vault-forge` or `vault-pioneer` directly.
 
-The full architecture, threat model, defense-in-depth tables, and ownership matrix are documented in [`docs/trifecta.md`](docs/trifecta.md).
+```mermaid
+flowchart LR
+    USER[User] --> GUI["Lobster-TrApp GUI"]
+    GUI --> PERIMETER
+
+    subgraph PERIMETER["Perimeter"]
+        AGENT[vault-agent]
+        FORGE[vault-forge]
+        PIONEER["vault-pioneer<br/>(parked)"]
+        PROXY[vault-proxy]
+    end
+
+    AGENT --> PROXY
+    FORGE --> PROXY
+    AGENT <-.->|"write-only volume"| FORGE
+    PROXY --> ANTHROPIC[Anthropic API]
+    PROXY --> TELEGRAM[Telegram]
+    PROXY --> CLAWHUB[ClawHub]
+
+    classDef parked stroke-dasharray: 5 5,color:#777
+    class PIONEER parked
+```
+
+Five Mermaid drawings (topology, trust tiers, network-isolation matrix, the skill-loading flow, the assistant-state machine) are in [`docs/diagrams.md`](docs/diagrams.md). The full architecture, attacker-capability matrix, defense-in-depth tables, and ownership matrix are in [`docs/trifecta.md`](docs/trifecta.md) and [`docs/threat-model.md`](docs/threat-model.md).
 
 </details>
 
@@ -95,14 +118,32 @@ For a release-style desktop build, install Tauri's prerequisites for the target 
 
 ```bash
 cd app/src-tauri && cargo test --lib     # Rust unit tests (56 at v0.3.0)
-cd app && npm test -- --run              # Vitest (175)
+cd app && npm test -- --run              # Vitest (74 at v0.3.0)
 cd app && npx tsc --noEmit               # TypeScript strict
 cd app && npx playwright test            # End-to-end (25)
 bash tests/orchestrator-check.sh         # Manifest validation (42 checks)
 podman compose up -d && podman compose down  # Perimeter smoke test
 ```
 
-Continuous integration runs all of the above on every push to `main` and every release tag; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Continuous integration runs all of the above on every push to `main` and every release tag; see [`.github/workflows/ci.yml`](.github/workflows/ci.yml). For an end-to-end script that re-derives every numerical claim in this README from a fresh clone, see [`docs/reproduce.md`](docs/reproduce.md) and run [`bash docs/reproduce.sh`](docs/reproduce.sh).
+
+Release artefacts are accompanied by a CycloneDX SBOM, a cosign keyless signature (sigstore), and a SLSA Build Level 2 build-provenance attestation. Verification:
+
+```bash
+# CycloneDX SBOM
+syft scan packages:artefact.deb -o cyclonedx-json | diff - sbom.cyclonedx.json
+
+# cosign signature (keyless / sigstore)
+cosign verify-blob \
+  --certificate sbom.cyclonedx.json.pem \
+  --signature sbom.cyclonedx.json.sig \
+  --certificate-identity "https://github.com/albertdobmeyer/lobster-trapp/.github/workflows/ci.yml@refs/tags/vX.Y.Z" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  sbom.cyclonedx.json
+
+# SLSA build provenance — see the `intoto.jsonl` asset on each release
+cosign verify-attestation --type slsaprovenance ...
+```
 
 ### Repository layout
 

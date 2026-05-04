@@ -112,7 +112,7 @@ cd app/src-tauri && cargo test --lib    # 56 tests at v0.3.0
 
 # Frontend
 cd app && npm install
-cd app && npm test -- --run             # vitest, 175 tests
+cd app && npm test -- --run             # vitest, 74 tests at v0.3.0
 cd app && npx tsc --noEmit              # TypeScript strict
 cd app && npx playwright test           # end-to-end, 25 tests
 cd app && npm run dev                   # Vite dev server

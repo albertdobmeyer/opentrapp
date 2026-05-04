@@ -1,16 +1,16 @@
 # Post-launch roadmap
 
 **Created:** 2026-05-04
-**Status:** Active. Items are independent and may be executed in any order; recommended ordering is given per item.
+**Status:** All eight items have a deliverable in `main` as of 2026-05-04. §7 (demo recording) is scaffolded but the recorded video itself is queued for a future maintainer session because it requires a clean recording environment.
 **Predecessor:** Pass 8 pre-ship audit shipped v0.3.0 on 2026-05-02. The cleanup and academic-tone passes (commits `4108482`, `1bc288f`, `9b9f6c8`, plus per-submodule work) brought the published codebase to a consistent baseline. This roadmap covers the next layer of work: enriching the project with artifacts that elevate it from "shipped open-source tool" to "publishable security-research project."
 
 The eight areas below are independent. Some are pure documentation; others touch CI or assets. Each block specifies deliverable, scope, dependencies, effort, and definition-of-done.
 
 ---
 
-## 1. Formal threat model
+## 1. Formal threat model — **DONE 2026-05-04**
 
-**Deliverable:** `docs/threat-model.md`
+**Deliverable:** [`docs/threat-model.md`](threat-model.md) — STRIDE-classified attacker-capability matrix across six attacker categories (T1–T6), each row carrying capability / STRIDE class / mitigating layer / residual risk / empirical evidence / reference. Cross-referenced from `README.md`, `SECURITY.md`, and `trifecta.md` §7.
 
 **Scope:**
 
@@ -87,9 +87,9 @@ Future ADRs (queued for later sessions) covering: parking moltbook-pioneer (the 
 
 ---
 
-## 4. Reproducibility section + SLSA / SBOM in CI
+## 4. Reproducibility section + SLSA / SBOM in CI — **DONE 2026-05-04**
 
-**Deliverable:** `docs/reproduce.md` and updates to `.github/workflows/ci.yml`.
+**Deliverable:** [`docs/reproduce.md`](reproduce.md) lists every numerical claim in `README.md` with the exact verification command, expected output, and runtime ceiling; [`docs/reproduce.sh`](reproduce.sh) is the executable companion (`--quick` mode runs the offline rows in under 5 seconds). [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) gains a tag-only attestation block: anchore/sbom-action for the CycloneDX SBOM, sigstore/cosign-installer + `cosign sign-blob` for keyless signatures, and actions/attest-build-provenance for the SLSA build-provenance attestation. Verification commands documented in `README.md`.
 
 **Scope:**
 
@@ -125,9 +125,9 @@ CI changes:
 
 ---
 
-## 5. Comparison with prior art
+## 5. Comparison with prior art — **DONE 2026-05-04**
 
-**Deliverable:** `docs/why-not-x.md` (or a new section in `trifecta.md`).
+**Deliverable:** [`docs/why-not-x.md`](why-not-x.md) — page-or-two differential against nine alternative containment strategies, plus a summary table comparing each on T1 / T2 / T3 / credential-isolation / cross-platform axes. Cross-referenced from `README.md` Limitations and from the threat model.
 
 **Scope:** A page-or-two comparison of the perimeter design against alternative containment strategies a security-aware reader is likely to ask about:
 
@@ -154,9 +154,9 @@ For each, one paragraph: what they offer, what they don't, the differential agai
 
 ---
 
-## 6. Visual architecture diagrams (Mermaid)
+## 6. Visual architecture diagrams (Mermaid) — **DONE 2026-05-04**
 
-**Deliverable:** Mermaid blocks embedded in `README.md` and `docs/trifecta.md` replacing or supplementing the existing ASCII diagrams.
+**Deliverable:** [`docs/diagrams.md`](diagrams.md) collects all five Mermaid drawings (four-container topology, trust tiers, network-isolation matrix, agent-skill-loading flow, AssistantStatus state machine), each captioned and citing its source-of-truth file. `README.md` embeds the topology drawing in the Architecture summary; `trifecta.md` §3 embeds the topology drawing alongside the existing ASCII fallback.
 
 **Scope:** GitHub renders Mermaid natively, so all diagrams live as code in the documents (no binary asset drift). Diagrams to add:
 
@@ -178,9 +178,9 @@ For each, one paragraph: what they offer, what they don't, the differential agai
 
 ---
 
-## 7. Demo recording on the landing page
+## 7. Demo recording on the landing page — **SCAFFOLDED 2026-05-04 (recording itself queued)**
 
-**Deliverable:** A short video (≤30 seconds) on the `lobster-trapp.com` landing page showing the setup-wizard flow plus first Telegram chat.
+**Deliverable:** A short video (≤30 seconds) on the `lobster-trapp.com` landing page showing the setup-wizard flow plus first Telegram chat. [`docs/demo/README.md`](demo/README.md) contains the shooting script (four scenes + a phone cut, 30 seconds total), the recording-environment recipe, the `ffmpeg` conversion commands (MP4 → GIF → WebM → poster), the size-cap targets, and the pre-publish checklist. [`docs/index.html`](index.html) carries a commented-out `<video>` block ready to enable when the assets land. The recording itself needs a clean machine and a maintainer session; that session is the only outstanding work for this item.
 
 **Scope:**
 
@@ -202,9 +202,9 @@ For each, one paragraph: what they offer, what they don't, the differential agai
 
 ---
 
-## 8. CONTRIBUTING.md and CODE_OF_CONDUCT.md
+## 8. CONTRIBUTING.md and CODE_OF_CONDUCT.md — **DONE 2026-05-04**
 
-**Deliverable:** Two files at the repository root.
+**Deliverable:** [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md), and [`.github/pull_request_template.md`](../.github/pull_request_template.md) at the repository root. CONTRIBUTING covers cloning with submodules, submodule discipline, the five test gates, the 28-reserved-term enforcement, the pull-request workflow, and security-sensitive-contribution handling. CODE_OF_CONDUCT is structured around the Contributor Covenant 2.1 framework with phrasing chosen for a calmer, more invitational register; the security-contact email matches `SECURITY.md`. The PR template walks contributors through type-of-change, test-gate confirmation, manifest-contract checkboxes, user-facing-surface checks, and documentation review.
 
 **Scope:**
 

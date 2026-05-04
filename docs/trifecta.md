@@ -49,6 +49,35 @@ Tier 1 components run on the user's host with full filesystem and network access
 
 ## 3. Container topology
 
+A Mermaid drawing of the topology, the network-isolation matrix, the trust tiers, the skill-loading flow, and the AssistantStatus state machine is collected in [`diagrams.md`](diagrams.md). For convenience the topology rendering is reproduced below.
+
+```mermaid
+flowchart TB
+    subgraph HOST["Host (Tier 1 — trusted)"]
+        USER[User]
+        GUI["Lobster-TrApp GUI<br/>(Tauri 2 + Rust)"]
+    end
+
+    subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
+        AGENT["vault-agent<br/>OpenClaw runtime + Telegram gateway"]
+        FORGE["vault-forge<br/>87-pattern scanner + CDR"]
+        PIONEER["vault-pioneer (parked)"]
+        PROXY["vault-proxy<br/>egress gateway, holds credentials"]
+    end
+
+    USER --> GUI
+    GUI --> PERIMETER
+    AGENT --> PROXY
+    FORGE --> PROXY
+    AGENT <-.->|"write-only volume"| FORGE
+    PROXY --> EXT[Public internet]
+
+    classDef parked stroke-dasharray: 5 5,color:#777
+    class PIONEER parked
+```
+
+The ASCII tree below preserves the same content for readers on platforms without Mermaid rendering.
+
 ```
 HOST
 │
@@ -176,7 +205,7 @@ This separates security decisions from security enforcement: the coordinator dec
 
 ## 7. Defense-in-depth layers
 
-Each major threat category is mitigated by multiple independent layers. A single layer's failure does not produce an end-to-end compromise.
+Each major threat category is mitigated by multiple independent layers. A single layer's failure does not produce an end-to-end compromise. The complete attacker-capability matrix that pairs each layer below with the specific attacker actions it addresses is in [`threat-model.md`](threat-model.md).
 
 ### 7.1 Compromised agent (runtime)
 

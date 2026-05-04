@@ -11,6 +11,8 @@ This policy covers the four repositories that compose the Lobster-TrApp distribu
 
 Vulnerabilities in upstream dependencies (Tauri, mitmproxy, Rust crates, npm packages) and in the third-party platforms this software interfaces with (Anthropic API, Telegram, OpenClaw, ClawHub, Moltbook) are out of scope; please report those to their respective maintainers.
 
+The full attacker-capability matrix (T1–T6), the perimeter layers that mitigate each, and the residual risks that remain after mitigation are documented in [`docs/threat-model.md`](docs/threat-model.md). The "In scope" and "Out of scope" sections below are aligned with that document.
+
 ## Reporting a vulnerability
 
 Do **not** open a public GitHub issue for security vulnerabilities.

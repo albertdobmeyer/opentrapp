@@ -134,6 +134,8 @@ jobs:
     needs: [check-frontend, check-rust, check-orchestration, integration-tests]
     permissions:
       contents: write
+      id-token: write           # required for cosign keyless signing (sigstore OIDC)
+      attestations: write       # required for build-provenance attestation
     strategy:
       fail-fast: false
       matrix:
@@ -151,6 +153,8 @@ jobs:
             runner: windows-latest
             args: ''
     runs-on: ${{ matrix.platform.runner }}
+    outputs:
+      release_id: ${{ steps.tauri.outputs.releaseId }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -181,6 +185,7 @@ jobs:
         run: npm ci
 
       - name: Build and release
+        id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -195,3 +200,71 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
+
+      # ── Supply-chain provenance (release tags only) ────────────────────────
+      # The four steps below run only on tag pushes and produce, per built
+      # artefact: a CycloneDX SBOM, a cosign keyless signature (sigstore), and
+      # a SLSA Build Level 2 build-provenance attestation. Outputs are
+      # uploaded as workflow artefacts; the release-bundle job below collects
+      # them into the GitHub Release as downloadable assets.
+
+      - name: Locate built artefacts
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: artefacts
+        shell: bash
+        run: |
+          # Tauri writes the bundle to a per-target subdirectory. Collect
+          # everything that looks like a release artefact.
+          set -euo pipefail
+          mkdir -p artefacts
+          find app/src-tauri/target -type f \
+            \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \
+               -o -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \) \
+            -exec cp {} artefacts/ \; || true
+          ls -la artefacts/
+          echo "dir=artefacts" >> "$GITHUB_OUTPUT"
+
+      - name: Generate CycloneDX SBOM (syft)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: artefacts/sbom-${{ matrix.platform.name }}.cyclonedx.json
+          upload-artifact: false
+          upload-release-assets: true
+
+      - name: Sign artefacts with cosign (keyless / sigstore)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: sigstore/cosign-installer@v3
+      - name: Run cosign sign-blob
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artefacts
+          for f in $(ls); do
+            cosign sign-blob --yes \
+              --output-signature "${f}.sig" \
+              --output-certificate "${f}.pem" \
+              "$f"
+          done
+
+      - name: Generate SLSA build-provenance attestation
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: artefacts/*
+
+      - name: Attach SBOM, signatures, and attestation to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: |
+            artefacts/sbom-*.cyclonedx.json
+            artefacts/*.sig
+            artefacts/*.pem
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
