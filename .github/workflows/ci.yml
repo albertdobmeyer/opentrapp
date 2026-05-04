@@ -13,6 +13,11 @@ on:
         type: boolean
         default: false
 
+# Read-only by default. Jobs that need write access (build-and-release)
+# declare it explicitly at the job level. Principle of least privilege.
+permissions:
+  contents: read
+
 jobs:
   check-frontend:
     name: Frontend (tsc + vitest)
@@ -21,11 +26,11 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -42,13 +47,13 @@ jobs:
       run:
         working-directory: app/src-tauri
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
         with:
           workspaces: app/src-tauri
 
@@ -64,17 +69,17 @@ jobs:
     name: Orchestration (42 checks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
-      - run: pip install pyyaml
+      - run: pip install --require-hashes -r tests/requirements.txt
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -91,15 +96,15 @@ jobs:
     needs: check-orchestration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
-      - run: pip install pyyaml
+      - run: pip install --require-hashes -r tests/requirements.txt
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -114,11 +119,11 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -156,21 +161,21 @@ jobs:
     outputs:
       release_id: ${{ steps.tauri.outputs.releaseId }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: app/package-lock.json
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
         with:
           targets: ${{ matrix.platform.runner == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
         with:
           workspaces: app/src-tauri
 
@@ -186,7 +191,7 @@ jobs:
 
       - name: Build and release
         id: tauri
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@fce9c6108b31ea247710505d3aaaa893ee6768d4 # v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -226,7 +231,7 @@ jobs:
 
       - name: Generate CycloneDX SBOM (syft)
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
         with:
           path: .
           format: cyclonedx-json
@@ -236,7 +241,7 @@ jobs:
 
       - name: Sign artefacts with cosign (keyless / sigstore)
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@f713795cb21599bc4e5c4b58cbad1da852d7eeb9 # v3
       - name: Run cosign sign-blob
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -252,13 +257,13 @@ jobs:
 
       - name: Generate SLSA build-provenance attestation
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@92c65d2898f1f53cfdc910b962cecff86e7f8fcc # v1
         with:
           subject-path: artefacts/*
 
       - name: Attach SBOM, signatures, and attestation to release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ github.ref_name }}
           draft: true
