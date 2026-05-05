@@ -222,13 +222,17 @@ jobs:
         id: artefacts
         shell: bash
         run: |
-          # Tauri writes the bundle to a per-target subdirectory. Collect
-          # everything that looks like a release artefact.
+          # Tauri writes the bundle to .../release/bundle/<format>/. The
+          # earlier version of this step found every *.exe under target/,
+          # which on Windows swept in ~80 Cargo build-script intermediate
+          # binaries (build_script_build-XXXXX.exe). Constraining the find
+          # to */release/bundle/* keeps only the user-facing release artefacts.
           set -euo pipefail
           mkdir -p artefacts
-          find app/src-tauri/target -type f \
+          find app/src-tauri/target -type f -path "*/release/bundle/*" \
             \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \
-               -o -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \) \
+               -o -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \
+               -o -name "*.app.tar.gz" \) \
             -exec cp {} artefacts/ \; || true
           ls -la artefacts/
           echo "dir=artefacts" >> "$GITHUB_OUTPUT"
