@@ -1,0 +1,11 @@
+# cargo-fuzz outputs.
+#
+# `corpus/` is intentionally NOT ignored — the seed inputs checked in
+# under each target's directory are part of the fuzz harness and must
+# travel with the repository so CI runs against them. Newly synthesised
+# inputs grow the corpus over time; periodically minimise with
+# `cargo fuzz cmin <target>` and commit the reduced set if the corpus
+# has grown unwieldy.
+target/
+artifacts/
+coverage/
