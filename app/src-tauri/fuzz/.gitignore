@@ -10,6 +10,10 @@ target/
 artifacts/
 coverage/
 
-# The fuzz crate's lockfile — regenerated on every cargo-fuzz invocation;
-# the parent crate's Cargo.lock pins the security-relevant deps.
-Cargo.lock
+# fuzz/Cargo.lock IS committed (unlike most cargo-fuzz setups, where it's
+# typically gitignored). Reason: this fuzz crate is its own workspace
+# (`[workspace]` in Cargo.toml), so cargo resolves its deps independently
+# of the parent's Cargo.lock. Without a committed lockfile, CI can pick
+# slightly mismatched versions of the tauri-codegen-emitted code vs the
+# tauri runtime crate, producing E0063 "missing field" errors at build.
+# Committing the lockfile pins both halves to the same version.
