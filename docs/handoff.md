@@ -32,7 +32,7 @@ Six of the eight roadmap items completed in a single autonomous pass; the sevent
 |---|---|---|
 | §1 Threat model | [`docs/threat-model.md`](threat-model.md) — STRIDE matrix across T1–T6 with residual-risk + evidence per row | Landed |
 | §2 Whitepaper | [`docs/whitepaper.md`](whitepaper.md) | Already landed (morning commit) |
-| §3 ADRs | [`docs/adr/0001`](adr/0001-proxy-side-api-key-injection.md), [`0002`](adr/0002-adaptive-shell-levels.md), [`0003`](adr/0003-content-disarm-reconstruction.md) | Already landed (morning commit) |
+| §3 ADRs | [`docs/adr/0001`](adr/0001-proxy-side-api-key-injection.md) through [`0008`](adr/0008-tauri-over-electron.md) | First three landed in the morning commit; the remaining five (pioneer parking, deserve-to-exist, four-container topology, manifest-driven backend, Tauri choice) landed in this evening's third commit |
 | §4 Reproducibility + SLSA/SBOM | [`docs/reproduce.md`](reproduce.md) + [`docs/reproduce.sh`](reproduce.sh); [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) gains a tag-only attestation block (cosign keyless + syft SBOM + SLSA build provenance) | Landed |
 | §5 Prior-art | [`docs/why-not-x.md`](why-not-x.md) — page-or-two differential against 9 alternatives (sandbox.mode alone, Firejail, gVisor, OS sandboxes, VM-only, scanner-only, allowlist-only, no-perimeter, capability-OS) | Landed |
 | §6 Mermaid diagrams | [`docs/diagrams.md`](diagrams.md) — 5 diagrams (topology, trust tiers, network isolation, CDR pipeline, AssistantStatus state machine); README + trifecta embed selected diagrams | Landed |
@@ -82,7 +82,7 @@ Optional follow-ups that came up during the documentation work and are tracked i
 - **Fuzzing the CDR parser and generator** (T2 residual risks).
 - **Per-platform documentation of what persists after `compose down`** (T6 residual risks).
 - **Friction-effect measurement on the per-action approval gate** (T5 residual risks).
-- **Five additional ADRs** queued in [`docs/adr/README.md`](adr/README.md) "Future ADRs": the moltbook-pioneer parking decision, the 2026-05-02 vision recheck, four-container topology choice, manifest-driven generic backend, Tauri choice. ~30–60 minutes each.
+- The five additional ADRs that were queued (pioneer parking, deserve-to-exist, four-container topology, manifest-driven backend, Tauri choice) are now landed; no further ADRs queued.
 
 ---
 

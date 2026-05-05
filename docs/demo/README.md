@@ -37,6 +37,8 @@ The video walks the wizard end-to-end, then cuts to the first Telegram chat. Rou
 - Captions use the same monospace font as the website's nav-logo (`Courier New`-ish system stack).
 - The `Welcome` window starts at `1280×800` — the natural size of the desktop window. The recording is captured at that size, then exported at 1280×720 by cropping the OS window-chrome.
 
+**Branding.** As of 2026-05-04 the application uses the official LobsterTrApp brand assets (green `#009966` + brand red `#CC3333`). The wizard's Welcome screen displays [`app/public/logo-banner.png`](../../app/public/logo-banner.png); the user-mode shell carries [`app/public/logo-square.png`](../../app/public/logo-square.png) in the sidebar; the browser tab uses [`app/public/favicon.png`](../../app/public/favicon.png). The recording must be made against a build that includes these assets (anything ≥ commit `993a536`); a recording made against an older build would show the pre-brand placeholder lobster SVG and the 🦞 emoji and be visibly stale on the landing page.
+
 ---
 
 ## Recording recipe
