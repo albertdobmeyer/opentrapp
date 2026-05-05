@@ -146,15 +146,19 @@ jobs:
       matrix:
         platform:
           - name: Linux x64
+            slug: linux-x64
             runner: ubuntu-22.04
             args: ''
           - name: macOS ARM
+            slug: macos-arm
             runner: macos-latest
             args: '--target aarch64-apple-darwin'
           - name: macOS Intel
+            slug: macos-intel
             runner: macos-latest
             args: '--target x86_64-apple-darwin'
           - name: Windows x64
+            slug: windows-x64
             runner: windows-latest
             args: ''
     runs-on: ${{ matrix.platform.runner }}
@@ -235,7 +239,10 @@ jobs:
         with:
           path: .
           format: cyclonedx-json
-          output-file: artefacts/sbom-${{ matrix.platform.name }}.cyclonedx.json
+          # Use the platform's slug (no spaces) for the filename; matrix.platform.name
+          # contains a space (e.g. "Linux x64") which broke the unquoted `for f in $(ls)`
+          # downstream in the cosign sign-blob step on the v0.3.2 build.
+          output-file: artefacts/sbom-${{ matrix.platform.slug }}.cyclonedx.json
           upload-artifact: false
           upload-release-assets: true
 
@@ -247,8 +254,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          shopt -s nullglob
           cd artefacts
-          for f in $(ls); do
+          # Glob expansion handles spaces correctly; `for f in $(ls)` does not.
+          for f in *; do
+            [ -f "$f" ] || continue
+            # Skip files we ourselves are about to produce.
+            case "$f" in
+              *.sig|*.pem) continue ;;
+            esac
             cosign sign-blob --yes \
               --output-signature "${f}.sig" \
               --output-certificate "${f}.pem" \
