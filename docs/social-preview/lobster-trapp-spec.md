@@ -1,137 +1,146 @@
 # Lobster-TrApp — Social Preview Image Spec
 
-Design brief for the GitHub social preview image (the card shown when the repo link is shared on social media, Slack, Discord, etc.).
+Design brief for the GitHub social preview image (the card shown when the repo link is shared on social media, Slack, Discord, embeds, etc.).
+
+The canonical asset is rendered by [`scripts/render-social-preview.py`](../../scripts/render-social-preview.py); this document describes the design intent so the script and the SVG mockup stay aligned.
 
 ---
 
 ## Dimensions & Format
 
-- **Size**: 1280 x 640 px
+- **Size**: 1280 × 640 px
 - **Format**: PNG (final output)
-- **Safe area**: Keep all critical content within a 960 x 480 centered region (GitHub crops edges on mobile and embed views)
+- **Safe area**: keep all critical content within a 960 × 480 centered region — GitHub crops edges on mobile and embed views
 
 ---
 
 ## What This Image Must Communicate
 
-In 2 seconds of glance time, a viewer should understand three things:
+In ~2 seconds of glance time, a viewer should pick up:
 
-1. **This is a desktop app** — not a CLI tool, not a library, not a SaaS product
-2. **It orchestrates multiple things** — it's a hub that ties components together
-3. **Security is the point** — the shield motif signals that this isn't just a dashboard, it's a *trust boundary*
+1. **Brand identity** — the gradient banner is the project's visual mark; recognising it across surfaces is the point
+2. **The proposition** — "a safer way to run OpenClaw on your own computer"
+3. **Authorship and source** — `albertdobmeyer` and the GitHub URL, in muted monospace
 
 ---
 
 ## Composition
 
-### Layout: Left-weighted logo with right-aligned text
+### Layout: centered, single focal element
 
 ```
 ┌──────────────────────────────────────────────┐
 │                                              │
 │                                              │
-│     ┌──────────┐                             │
-│     │          │   Lobster-TrApp             │
-│     │  SHIELD  │                             │
-│     │  + CLAW  │   Security-first desktop    │
-│     │   LOGO   │   GUI for AI agents you     │
-│     │          │   can actually trust         │
-│     └──────────┘                             │
+│         ┌──────────────────────────┐         │
+│         │  [shield] Lobster-TrApp  │         │
+│         └──────────────────────────┘         │
 │                                              │
-│              albertdobmeyer              │
+│       A safer way to run OpenClaw on         │
+│              your own computer.              │
 │                                              │
+│                                              │
+│   albertdobmeyer  /  github.com/...          │
 └──────────────────────────────────────────────┘
 ```
 
-- **Left third**: The official logo — golden shield with emerald trim and red lobster claws — rendered at roughly 300x360 px, vertically centered
-- **Right two-thirds**: Text block, vertically centered, left-aligned
-- **Footer**: `albertdobmeyer` in muted monospace, centered at the bottom
+- **Banner**: the canonical gradient FontLogo, ~880 px wide, centered horizontally, vertically positioned around y ≈ 150 (i.e. slightly above the canvas midline so the tagline sits in the optical centre)
+- **Glow**: a soft radial halo behind the banner, green at the green end of the gradient and blue at the blue end, blurred ~42 px — gives the card a premium, lit feel at thumbnail size
+- **Tagline**: one line, sans-serif, slate-300, centered ~36 px below the banner
+- **Footer**: `albertdobmeyer  /  github.com/albertdobmeyer/lobster-trapp` in Consolas, slate-500, ~56 px from the bottom edge
 
-### Why this layout
+### Why this layout (and not the previous asymmetric one)
 
-The submodule previews (vault, forge, pioneer) are centered text-only designs on solid color backgrounds. Lobster-trapp is the *parent* — it should feel visually distinct and more "premium" than the components it orchestrates. The logo gives it visual weight and brand recognition that pure-text cards lack.
+The earlier spec called for a left-weighted logo with right-aligned text and a separate golden-shield illustration. That design predates the unified FontLogo banner. The banner now carries both the shield and the wordmark in a single composition, so the card no longer needs a manual asymmetric layout — a single centered element reads cleaner at every embed size and matches how the same banner is used in the README and on the landing page.
 
 ---
 
 ## Color Palette
 
-| Element | Color | Hex |
-|---------|-------|-----|
-| Background (primary) | Slate 900 | `#0f172a` |
-| Background (gradient end) | Slate 800 | `#1e293b` |
-| Title text | Slate 50 | `#f8fafc` |
-| Tagline text | Slate 400 | `#94a3b8` |
-| Footer text | Slate 600 | `#475569` |
-| Shield face | Amber 400 → 700 | `#fbbf24` → `#b45309` |
-| Shield trim | Emerald | as in logo |
-| Claw fill | Red 500 → 800 | `#ef4444` → `#991b1b` |
+| Element | Token | Hex |
+|---|---|---|
+| Background — top-left | Slate 900 | `#0f172a` |
+| Background — bottom-right | Slate 800 | `#1e293b` |
+| Dot-grid texture | Slate 400 @ ~10 % | `#94a3b8` |
+| Banner gradient — start | **LobsterTrApp-Green** | `#009966` |
+| Banner gradient — end | **LobsterTrApp-Blue** | `#0EA5E9` |
+| Shield (in banner only) | **LobsterTrApp-Red** | `#CC3333` |
+| Banner outline + wordmark | White | `#FFFFFF` |
+| Tagline text | Slate 300 | `#cbd5e1` |
+| Footer text | Slate 500 | `#64748b` |
 
-Background should be a subtle diagonal gradient from slate-900 to slate-800, matching the app's dark theme. Do **not** use a flat solid — the gradient adds depth at social-card size.
+The banner already carries the brand greens, blues, reds and whites. The card should not introduce additional accent colours; everything outside the banner stays in the slate scale. The brand red is reserved for the shield element inside the banner — do not use it elsewhere on the card.
+
+The background is a 135° gradient from slate-900 to slate-800. A flat solid is not equivalent — the gradient adds the depth that makes the card hold up at small sizes.
 
 ---
 
 ## Typography
 
-| Element | Font | Size (approx at 1280px) | Weight |
-|---------|------|-------------------------|--------|
-| Title: "Lobster-TrApp" | Monospace (Courier New, JetBrains Mono, or SF Mono) | 64–72 px | Bold |
-| Tagline | System sans-serif (SF Pro, Segoe UI, Inter) | 24–28 px | Regular |
-| Footer | Monospace | 18–20 px | Regular |
+| Element | Font | Size | Weight |
+|---|---|---|---|
+| Tagline | Segoe UI / SF Pro / Inter (system sans) | 30 px | Regular |
+| Footer | Consolas / JetBrains Mono / SF Mono (monospace) | 18 px | Regular |
 
-The title must use a monospace font to match the developer/terminal aesthetic of the project. The hyphen and capital T in "TrApp" should be preserved exactly.
+The wordmark inside the banner is part of the banner image and is not re-typeset.
 
 ---
 
-## Tagline Options (pick one)
+## Tagline
 
-**Primary recommendation:**
-> Security-first desktop GUI for AI agents you can actually trust
+**Canonical:**
 
-**Alternatives:**
-> Manifest-driven desktop GUI for the OpenClaw ecosystem
+> A safer way to run OpenClaw on your own computer.
 
-> One GUI. Three components. Zero blind trust.
+This is the same line used as the H1 on the landing page and in the `<title>` / `og:title` / `twitter:title` of `docs/index.html`. Keeping it identical across surfaces is intentional — the social card, the landing page, and search engine results should all reinforce the same one-line proposition.
 
-> The desktop app that lets non-technical users safely run AI agents
-
-The first option leads with the security value proposition and speaks to end users. The second is more technically precise. Choose based on target audience — if the preview is mostly seen by developers, option 2; if it's for a broader audience, option 1.
+Do not substitute alternates. If the project's positioning changes, update all three surfaces together.
 
 ---
 
 ## Visual Details
 
-- **Logo rendering**: Use the official `lobster-trapp-logo.png` as the source. The logo features a golden shield with green emerald border trim and gold rivets, containing three red lobster claws (two open pincers at top, one smaller at bottom), all on a dark navy rounded-square background. Render it crisp at the card size — no blurring or heavy drop shadows.
-- **Subtle texture** (optional): A very faint grid or dot pattern in the background at 2–3% opacity adds visual interest without distracting. The submodule previews don't have this, so it further distinguishes the parent repo.
-- **No feature pills or badges**: Keep it clean. The social preview is not a feature list — that's what the README is for.
-- **No screenshots**: The app doesn't have a polished UI yet (Phase 3/4). Don't include anything that will look dated in 2 months.
+- **Banner source**: [`logos/Lobster-TrApp-FontLogo-Gradient.png`](../../logos/Lobster-TrApp-FontLogo-Gradient.png), the brand-gradient (green → blue) variant of the canonical FontLogo. Re-render via [`scripts/render-gradient-banner.py`](../../scripts/render-gradient-banner.py) if the source ever changes.
+- **Background texture**: a faint dot grid at 32 px spacing, ~10 % alpha. Subtle — it should be barely perceptible on a phone, not a feature in its own right.
+- **Glow construction**: take the banner's alpha as a mask, paint it with the same green-→-blue gradient, blur heavily, lay it under the banner. This produces a halo that visually extends the banner's brand colours into the slate.
+- **No drop shadows under text**: the slate background gives enough contrast on its own; shadows muddy small-size renders.
+- **No screenshots**: the desktop UI is still maturing; the card should reference the brand mark, not transient interface state.
 
 ---
 
 ## What NOT to Include
 
-- Component names or submodule details (too much information for a card)
-- Version numbers (goes stale)
-- GitHub stars/badges (redundant — they're already on the repo page)
-- QR codes or URLs
-- More than 2 lines of text below the title
+- Component or submodule names (Vault, Forge, Pioneer) — too much information for a card
+- Version numbers or release codenames — go stale immediately
+- GitHub stars, build badges, or other shields — already on the repo page
+- QR codes, secondary URLs, or call-to-action buttons
+- The deprecated golden-shield-with-claws illustration — superseded by the FontLogo banner
+- More than one line of tagline text below the banner
 
 ---
 
 ## Relationship to Other Previews
 
 | Repo | Background | Style |
-|------|-----------|-------|
+|---|---|---|
 | openclaw-vault | Red | Centered text, solid bg |
 | clawhub-forge | Blue | Centered text, solid bg |
 | moltbook-pioneer | Purple | Centered text, solid bg |
-| **lobster-trapp** | **Dark slate gradient** | **Logo + text, asymmetric layout** |
+| **lobster-trapp** | **Slate gradient + brand glow** | **Centered banner + tagline** |
 
-The parent repo intentionally breaks the pattern of the submodules. The dark background and asymmetric layout signal hierarchy — this is the orchestrator, not a component.
+The parent repo intentionally breaks the pattern of the submodules. The slate gradient and the gradient banner signal hierarchy — this is the orchestrator and the brand surface, not a component preview.
 
 ---
 
-## Delivery
+## Build & Deliver
 
-- Export as PNG at exactly 1280 x 640 px
-- Save to `docs/social-preview/lobster-trapp.png`
-- Upload via: GitHub repo Settings > General > Social preview > Edit > Upload
+The card is rendered, not hand-edited.
+
+```bash
+python scripts/render-social-preview.py
+# wrote docs/social-preview/lobster-trapp.png (1280x640)
+```
+
+The script is idempotent and reads from the canonical gradient banner; re-run whenever the banner or tagline changes. The companion `lobster-trapp.svg` mirrors the design as a vector source so it can be opened in design tools, but the PNG is the asset GitHub serves.
+
+**Upload path**: GitHub repo → Settings → General → Social preview → Edit → upload `docs/social-preview/lobster-trapp.png`.
