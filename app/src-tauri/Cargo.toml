@@ -19,7 +19,7 @@ serde_yaml = "0.9"
 tokio = { version = "1", features = ["full"] }
 glob = "0.3"
 regex = "1"
-thiserror = "1"
+thiserror = "2"
 tauri-plugin-notification = "2.3.3"
 tauri-plugin-clipboard-manager = "2.3.2"
 tauri-plugin-autostart = "2.5.1"
