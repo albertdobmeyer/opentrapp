@@ -335,7 +335,7 @@ if [[ "$trifecta_ok" == true ]]; then
 fi
 
 # 3.2: Vault skill installation spec mentions clearance report fields
-SPEC_SKILL="$VAULT/docs/specs/2026-03-30-skill-installation-path.md"
+SPEC_SKILL="$VAULT/docs/archive/specs/2026-03-30-skill-installation-path.md"
 if [[ -f "$SPEC_SKILL" ]]; then
   MENTIONS=0
   for term in "scan" "critical" "verdict" "checksum"; do
@@ -353,7 +353,7 @@ else
 fi
 
 # 3.3: Feed scanning spec mentions patterns and severity
-SPEC_FEED="$VAULT/docs/specs/2026-03-30-feed-scanning-deferred.md"
+SPEC_FEED="$VAULT/docs/archive/specs/2026-03-30-feed-scanning-deferred.md"
 if [[ -f "$SPEC_FEED" ]]; then
   HAS_PATTERNS=false
   HAS_SEVERITY=false
