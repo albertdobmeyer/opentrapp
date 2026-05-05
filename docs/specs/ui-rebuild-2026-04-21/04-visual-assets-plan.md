@@ -1,5 +1,7 @@
 # Visual Assets Plan
 
+> **Brand Identity section is superseded (2026-05-04).** The "logo-mark / logo-mark-mono / logo-wordmark" set this document plans was retired before it shipped. The canonical brand mark is now the **FontLogo banner** family in [`logos/`](../../../logos/), with the green→blue gradient variant at `logos/Lobster-TrApp-FontLogo-Gradient.png` deployed across the README, landing page, and social preview. The deprecated golden-shield-with-claws design referenced in earlier drafts is retired entirely. See [`memory/brand_colors.md`](../../../../) and [`scripts/render-gradient-banner.py`](../../../scripts/render-gradient-banner.py) for the current brand pipeline. Sections B–D below (illustrations, status, empty states) are still in scope.
+
 **Prerequisite reading:** `01-vision-and-personas.md`, `02-design-system.md`
 **Purpose:** Inventory all visual assets needed for the rebuild. Sourcing strategy, licensing, file organization.
 

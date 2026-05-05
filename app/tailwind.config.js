@@ -27,11 +27,15 @@ export default {
           600: "#007a52",
           700: "#00583a",
         },
-        // Brand secondary: LobsterTrApp-Red (#CC3333) — used in logo shield base
+        // Brand: LobsterTrApp-Red (#CC3333) — reserved for the logo shield only.
+        // Brand: LobsterTrApp-Blue (#0EA5E9) — secondary accent; pairs with primary in gradients.
         brand: {
           red: "#cc3333",
           "red-dark": "#a82828",
           "red-light": "#d65555",
+          blue: "#0ea5e9",
+          "blue-dark": "#0284c7",
+          "blue-light": "#38bdf8",
         },
         info: {
           400: "#60a5fa",
