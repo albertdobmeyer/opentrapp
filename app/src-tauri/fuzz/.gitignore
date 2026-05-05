@@ -9,3 +9,7 @@
 target/
 artifacts/
 coverage/
+
+# The fuzz crate's lockfile — regenerated on every cargo-fuzz invocation;
+# the parent crate's Cargo.lock pins the security-relevant deps.
+Cargo.lock

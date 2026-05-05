@@ -15,8 +15,10 @@ pub struct CommandResult {
     pub duration_ms: u64,
 }
 
-/// Test-accessible version of interpolate_args
-#[cfg(test)]
+/// Test-accessible version of interpolate_args. Also exposed under the
+/// `fuzzing` feature so the `fuzz_api::interpolate_args` wrapper in lib.rs
+/// can drive the function from the cargo-fuzz harness.
+#[cfg(any(test, feature = "fuzzing"))]
 pub fn interpolate_args_for_test(command: &str, args: &HashMap<String, String>) -> String {
     interpolate_args(command, args)
 }
