@@ -1,0 +1,8 @@
+# Per-scenario output JSON written by the harness — recreated each run.
+artifacts/
+!artifacts/.gitkeep
+
+# Operator screenshots (Tier C/D evidence)
+*.png
+*.jpg
+*.jpeg

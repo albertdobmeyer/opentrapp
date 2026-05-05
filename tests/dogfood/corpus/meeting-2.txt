@@ -1,0 +1,12 @@
+From: Karen <karen@example.com>
+Date: Tue, 29 Apr 2026
+Subject: 1:1 with Sam
+
+What we covered:
+
+- Sam wants more autonomy on the platform refactor; Karen agreed to step back from review of architecture decisions. Karen to write a one-pager describing the new ownership boundary.
+- Sam flagged a recurring conflict with the data-eng team on tooling. Karen to set up a 30-min mediation meeting before Friday.
+- Sam wants to attend the Rust meetup on May 8; Karen to approve via the team training budget.
+
+Other:
+- Sam mentioned interest in mentoring a junior. Karen to bring this up at the staffing review next month.
