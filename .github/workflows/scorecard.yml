@@ -11,6 +11,12 @@ on:
     - cron: "23 6 * * 2"
   push:
     branches: [main]
+  # workflow_dispatch lets a maintainer trigger a fresh Scorecard run from
+  # the Actions tab or via `gh workflow run scorecard.yml`. Useful when
+  # changes that affect a Scorecard check have just landed and the
+  # maintainer wants the public score updated without waiting for the
+  # weekly cron.
+  workflow_dispatch:
 
 permissions: read-all
 
