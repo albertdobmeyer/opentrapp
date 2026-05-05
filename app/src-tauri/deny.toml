@@ -33,6 +33,17 @@ ignore = [
   { id = "RUSTSEC-2025-0081", reason = "unic-char-property: transitive (same chain as unic-char-range)" },
   { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: transitive (same chain as unic-char-range)" },
   { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident: transitive (same chain as unic-char-range)" },
+
+  # ── Unsoundness warning on transitive dep (GitHub Dependabot alert #7):
+  { id = "RUSTSEC-2024-0429", reason = "glib 0.18.5 unsoundness in VariantStrIter::Iterator/DoubleEndedIterator: transitive via tauri/wry; awaits glib bump to ≥0.20 upstream. Not reachable from this app's code (no direct VariantStrIter usage)." },
+
+  # NOTE: GitHub Dependabot alert #8 (RUSTSEC-2026-0097, rand 0.7/0.8 unsoundness
+  # with custom logger via rand::rng()) is intentionally NOT in this list —
+  # cargo-deny's view of the advisory DB does not match the version constraints
+  # of our transitive `rand` deps, so an ignore here would emit "advisory not
+  # detected" warnings on every supply-chain CI run. The alert itself is
+  # dismissed at the Dependabot level with the same justification: we do not
+  # configure a custom logger, so the unsoundness path is not entered.
 ]
 
 [licenses]
