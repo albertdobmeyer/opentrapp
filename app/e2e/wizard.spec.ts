@@ -98,8 +98,13 @@ function assertNoBannedWizardTerms(text: string, context: string) {
 test.describe("Setup wizard — 4-step flow", () => {
   test("Welcome step renders spec copy and focused CTA", async ({ page }) => {
     await page.goto("/setup");
+    // Brand banner image carries the Lobster-TrApp wordmark; the heading
+    // beside it reads simply "Welcome".
     await expect(
-      page.getByRole("heading", { name: "Welcome to Lobster-TrApp" }),
+      page.getByRole("img", { name: "Lobster-TrApp" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Welcome" }),
     ).toBeVisible();
     await expect(
       page.getByText("Your personal AI assistant, safe on your computer."),
