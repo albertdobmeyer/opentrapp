@@ -1,0 +1,10 @@
+identity:
+  id: example
+  name: Example
+  version: 0.1.0
+  role: runtime
+status:
+  states: []
+commands: []
+configs: []
+health: []

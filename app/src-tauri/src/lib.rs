@@ -4,6 +4,30 @@ mod orchestrator;
 mod status_aggregator;
 mod util;
 
+// Public surface used exclusively by the `cargo-fuzz` harnesses at
+// app/src-tauri/fuzz/. Enabled by the `fuzzing` cargo feature; absent
+// from production builds. The two functions below mirror the parser and
+// the argument interpolator that handle untrusted input — manifests
+// loaded from third-party components, and user-supplied command
+// arguments respectively — and are the highest-leverage targets for
+// continuous fuzzing.
+#[cfg(feature = "fuzzing")]
+pub mod fuzz_api {
+    use std::collections::HashMap;
+
+    /// Parse a YAML byte slice as a `component.yml` manifest. Mirrors the
+    /// production parser invoked by `orchestrator::discovery`.
+    pub fn parse_manifest(input: &[u8]) -> Result<crate::orchestrator::manifest::Manifest, serde_yaml::Error> {
+        serde_yaml::from_slice(input)
+    }
+
+    /// Interpolate user-supplied arguments into a manifest-declared command
+    /// template. Mirrors the production path in `orchestrator::runner`.
+    pub fn interpolate_args(command: &str, args: &HashMap<String, String>) -> String {
+        crate::orchestrator::runner::interpolate_args_for_test(command, args)
+    }
+}
+
 use orchestrator::state::AppState;
 use std::path::PathBuf;
 use std::time::Duration;
