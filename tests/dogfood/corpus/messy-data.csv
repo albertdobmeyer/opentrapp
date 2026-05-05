@@ -1,0 +1,7 @@
+name,email,signup_date,plan
+" Karen Lee  ", karen@example.com, 2024-03-15, BASIC
+Mark    Jones,mark@example.org, 03/22/2024, premium
+Pat Smith ,pat@example.net, 2024-04-01, ENTERPRISE
+,jane@@example.com,, basic
+"Jordan O'Brien", jordan@example.com, March 30 2024, Premium
+Sam Park, sam@example.com, 2024-04-12,

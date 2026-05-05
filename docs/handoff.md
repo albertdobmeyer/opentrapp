@@ -1,9 +1,57 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-05-04 (post-launch roadmap fully landed; all 8 enrichment areas now have either a deliverable or a precise scaffold for a future session)
-**Current phase:** Post-v0.3.0 enrichment is done. Project state is "publishable security-research project" — threat model, prior-art comparison, reproducibility, SLSA/SBOM CI, Mermaid diagrams, CONTRIBUTING + CODE_OF_CONDUCT, demo-recording scaffold all in place; the only outstanding deliverable is the actual demo video, which needs a clean recording session.
+**Last updated:** 2026-05-05 (dogfood full-arc test rig authored; run pending in next session)
+**Current phase:** Test execution. The publication-ready doc set, supply-chain attestation pipeline, and v0.3.2 release-prep are all in main. The next session's mission is to **run the dogfood full-arc test** authored in this session and produce the empirical findings doc.
 **Branch:** `main` — pushed to `origin/main`
-**Tag:** `v0.3.0` at `75dbccb` with 9 platform binaries attached
+**Tag:** `v0.3.0` at `75dbccb` with 9 platform binaries attached. v0.3.1 tag exists but has no artefacts (its build was skipped). v0.3.2 release-prep merged to main but tag not yet cut.
+
+---
+
+## RUN THIS NEXT — Dogfood Full Arc
+
+**Mission:** simulate Karen, the non-technical end user, downloading and using Lobster-TrApp. Drive the full arc — discovery → install → wizard → first chat → five jobs → wind-down — plus three additional tiers stress-testing every defensive layer, every AssistantStatus state, and every termination path. Capture signals; produce the findings doc.
+
+The user's explicit direction (2026-05-05): **the most unconservative settings — push every defensive layer to its limits, real ClawHub installations, real Anthropic API, adversarial prompt-injection attempts, edge cases.**
+
+### Where to start
+
+1. Read [`tests/dogfood/README.md`](../tests/dogfood/README.md) — the index that ties the four artefact files together.
+2. Read [`docs/specs/2026-05-05-dogfood-full-arc-spec.md`](specs/2026-05-05-dogfood-full-arc-spec.md) — the spec (persona, four tiers, 27 scenarios, success criteria).
+3. Walk [`tests/dogfood/CHECKLIST.md`](../tests/dogfood/CHECKLIST.md) — the operator-facing checklist (pre-flight, per-scenario gates, post-run sign-off).
+4. Run the harness: `cd tests/e2e-telegram && source .venv/bin/activate && cd ../dogfood && pytest -m dogfood_full -xvs`.
+5. Fill in [`tests/dogfood/findings-template.md`](../tests/dogfood/findings-template.md) — copy to `docs/specs/2026-05-DD-dogfood-full-arc-findings.md` and populate.
+
+### Pre-flight requirements (the run-session will check these)
+
+- `main` at the latest commit, all CI green
+- A fresh Telegram bot (do NOT reuse a personal account)
+- A fresh Anthropic API key with $1 hard spending cap
+- `.env.test` at the repo root with the harness credentials (see `tests/e2e-telegram/SECONDARY_ACCOUNT_SETUP.md`)
+- All four containers down before session start (`podman ps` empty; `~/.lobster-trapp/runguard.pid` absent)
+- The dogfood corpus at `tests/dogfood/corpus/` populated (committed stubs are usable; replace for a "real Karen" run)
+
+### What "ship-recommended" looks like at session end
+
+- All Tier A scenarios pass with usable, non-jargon replies
+- All Tier B scenarios bounce off their defensive layer; zero credential or workspace leaks
+- All Tier C states render with calm, jargon-free copy
+- All Tier D paths reach clean teardown
+- `verify.sh` start = `verify.sh` end (architecture invariant)
+- API spend < $0.50
+- Zero banned-term hits in any reply
+- Operator's qualitative read of the bot voice is "natural, calm, helpful"
+
+### Cost & time envelope
+
+~70 minutes wall-clock; ~$0.40 of Anthropic spend (cap $0.50). Tier A is the longest segment at ~35 min.
+
+### What this rig **doesn't** do (and what to do about it)
+
+- **Doesn't run the wizard** — operator does that part by hand. The Telethon harness picks up after the bot is paired.
+- **Doesn't supersede the existing per-boundary tests** in `tests/e2e-telegram/` — Tier B references them rather than duplicating.
+- **Doesn't enforce subjective UX failures** — banned-term leaks, credential leaks, and architecture invariants are hard asserts; bot copy / latency / quality are *recorded* but don't fail the run. The findings doc author scores severity.
+
+---
 
 **Recent commits (in chronological order):**
 
