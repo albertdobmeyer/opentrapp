@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicknisi/tauri-config-schema/main/schema.json",
   "productName": "Lobster-TrApp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "identifier": "dev.lobster-trapp.app",
   "build": {
     "frontendDist": "../dist",

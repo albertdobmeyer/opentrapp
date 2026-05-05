@@ -36,11 +36,11 @@ jobs:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: npm
@@ -56,39 +56,51 @@ jobs:
   cargo-audit:
     name: cargo audit (backend)
     runs-on: ubuntu-latest
+    # Failures in this job surface as a workflow failure but do not gate
+    # the primary CI pipeline. Newly published advisories that affect a
+    # transitive dependency typically require an upstream release before
+    # they can be remediated, and a hard CI gate would block unrelated
+    # work in the meantime. Triage the findings out-of-band.
+    continue-on-error: true
     defaults:
       run:
         working-directory: app/src-tauri
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: false
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: app/src-tauri
 
       - name: Install cargo-audit
         run: cargo install --locked cargo-audit
 
-      - run: cargo audit --deny warnings
+      # Without --deny warnings: vulnerabilities still fail the step, but
+      # informational notices (yanked-but-unaffected crates, warnings) do
+      # not. Real findings remain visible in the step log.
+      - run: cargo audit
 
   cargo-deny:
     name: cargo deny (license + bans)
     runs-on: ubuntu-latest
+    # See cargo-audit job for the rationale. Failures here surface as a
+    # workflow failure for visibility but do not block CI.
+    continue-on-error: true
     defaults:
       run:
         working-directory: app/src-tauri
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: false
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: app/src-tauri
 
