@@ -101,6 +101,12 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Orchestration tests | [`tests/orchestrator-check.sh`](tests/orchestrator-check.sh) |
 | Rust orchestrator unit tests | [`app/src-tauri/src/orchestrator/tests.rs`](app/src-tauri/src/orchestrator/tests.rs) |
 | Architecture (this repository) | [`docs/trifecta.md`](docs/trifecta.md) |
+| Threat model | [`docs/threat-model.md`](docs/threat-model.md) |
+| Prior-art comparison | [`docs/why-not-x.md`](docs/why-not-x.md) |
+| Reproducibility recipe | [`docs/reproduce.md`](docs/reproduce.md) + [`docs/reproduce.sh`](docs/reproduce.sh) |
+| Mermaid architecture diagrams | [`docs/diagrams.md`](docs/diagrams.md) |
+| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — eight records covering proxy-side credentials, adaptive shells, CDR, pioneer parking, deserve-to-exist, four-container topology, manifest-driven backend, Tauri |
+| Whitepaper | [`docs/whitepaper.md`](docs/whitepaper.md) |
 | Architecture v2 design spec (historical, supersded by `docs/trifecta.md`) | [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) |
 
 ## 7. Build and test
