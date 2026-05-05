@@ -154,6 +154,11 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
+// The Tauri desktop-app entry point. Gated out when the `fuzzing` feature
+// is on so the fuzz harness can compile this lib without dragging in
+// `tauri::generate_context!()` and the rest of the Tauri builder surface
+// — the harness only needs `fuzz_api`, not the live app.
+#[cfg(not(feature = "fuzzing"))]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let monorepo_root = find_monorepo_root();

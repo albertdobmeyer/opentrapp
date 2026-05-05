@@ -33,7 +33,11 @@ jobs:
   fuzz:
     name: Fuzz (${{ matrix.target }})
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Cold-cache builds compile the full Tauri stack with sancov+ASan
+    # instrumentation, which takes ~8 minutes on a clean ubuntu-latest
+    # runner. The 60-second fuzz run itself is bounded by -max_total_time.
+    # Once Swatinem/rust-cache populates, subsequent runs land under 3 min.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -83,7 +87,14 @@ jobs:
 
       - name: Run ${{ matrix.target }} for 60 seconds
         run: |
-          cargo +nightly fuzz run ${{ matrix.target }} -- \
+          # Pin the target to gnu/glibc explicitly. cargo-fuzz on Linux
+          # defaults to x86_64-unknown-linux-musl (static linking), which
+          # is incompatible with the address sanitizer the harness needs:
+          #   error: sanitizer is incompatible with statically linked libc,
+          #          disable it using `-C target-feature=-crt-static`
+          # The gnu target uses dynamic linking; ASan attaches cleanly.
+          cargo +nightly fuzz run ${{ matrix.target }} \
+            --target x86_64-unknown-linux-gnu -- \
             -max_total_time=60 \
             -timeout=10 \
             -rss_limit_mb=2048
