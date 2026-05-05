@@ -32,3 +32,10 @@ tauri-build = { version = "2", features = [] }
 [lib]
 name = "lobster_trapp_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
+
+[features]
+# Exposes a thin public surface (`fuzz_api` module) over the manifest
+# parser and command-argument interpolator. Enabled only by the fuzz
+# crate at app/src-tauri/fuzz/. Production builds have the feature off
+# and the internal modules remain private.
+fuzzing = []
