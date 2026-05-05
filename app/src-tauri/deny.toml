@@ -6,7 +6,34 @@ all-features = true
 
 [advisories]
 yanked = "warn"
-ignore = []
+# Each entry below is a transitive-dep advisory we accept rather than fix,
+# with a stated reason. Re-evaluate on every dependency bump. Vulnerabilities
+# (severity advisories) are NOT in this list — they are addressed by bumping
+# the underlying crate. Only "unmaintained" and "unsound" warnings are listed.
+ignore = [
+  # ── GTK3 bindings: pulled by webkit2gtk via tauri/wry on Linux. Will be
+  #    resolved when the Tauri ecosystem migrates to GTK4 bindings (tracked
+  #    upstream in tauri-apps/wry). No remediation available at our layer.
+  { id = "RUSTSEC-2024-0411", reason = "gdkwayland-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0412", reason = "gdk: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0413", reason = "atk: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0414", reason = "gdkx11-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0415", reason = "gtk: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0416", reason = "atk-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0417", reason = "gdkx11: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0418", reason = "gdk-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0419", reason = "gtk3-macros: pulled by tauri/wry; awaits GTK4 migration upstream" },
+  { id = "RUSTSEC-2024-0420", reason = "gtk-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
+
+  # ── Other unmaintained transitive deps with no first-party remediation:
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time only, transitive; replaced by proc-macro-error2 upstream when build-deps migrate" },
+  { id = "RUSTSEC-2025-0057", reason = "fxhash: transitive (selectors/cssparser via tauri); awaits selectors migration to ahash" },
+  { id = "RUSTSEC-2025-0075", reason = "unic-char-range: transitive (idna→unicode-bidi chain); deprecated in favour of icu4x" },
+  { id = "RUSTSEC-2025-0080", reason = "unic-common: transitive (same chain as unic-char-range)" },
+  { id = "RUSTSEC-2025-0081", reason = "unic-char-property: transitive (same chain as unic-char-range)" },
+  { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: transitive (same chain as unic-char-range)" },
+  { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident: transitive (same chain as unic-char-range)" },
+]
 
 [licenses]
 # Permissive licenses compatible with the project's MIT license. Add new
@@ -19,13 +46,12 @@ allow = [
   "BSD-3-Clause",
   "BSL-1.0",
   "CC0-1.0",
+  "CDLA-Permissive-2.0",   # webpki-roots v1: Mozilla CA bundle data file
   "ISC",
   "MIT",
   "MIT-0",
   "MPL-2.0",
-  "OpenSSL",
   "Unicode-3.0",
-  "Unicode-DFS-2016",
   "Unlicense",
   "Zlib",
 ]
