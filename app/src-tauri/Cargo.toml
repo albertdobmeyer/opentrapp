@@ -1,6 +1,6 @@
 [package]
 name = "lobster-trapp"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 description = "Security-first desktop GUI for the OpenClaw ecosystem"
 authors = ["Albert Dobmeyer"]
