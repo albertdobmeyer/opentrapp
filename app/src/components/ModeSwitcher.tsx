@@ -1,6 +1,7 @@
+import { Terminal, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Terminal, X } from "lucide-react";
+
 import { useAppContext } from "@/lib/AppContext";
 
 /**
@@ -41,7 +42,7 @@ export default function ModeSwitcher() {
     }
 
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => { window.removeEventListener("keydown", onKeyDown); };
   }, [
     mode,
     toggleMode,

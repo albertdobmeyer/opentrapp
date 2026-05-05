@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { MessageCircle, Pause, Play, RotateCcw } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { useSettings } from "@/hooks/useSettings";
-import type { HeroState } from "@/hooks/useHero";
+import { classifyError } from "@/lib/errors";
 import { pausePerimeter, resumePerimeter } from "@/lib/tauri";
 import { useToast } from "@/lib/ToastContext";
-import { classifyError } from "@/lib/errors";
+
+import type { HeroState } from "@/hooks/useHero";
 
 interface Props {
   state: HeroState;
@@ -103,9 +105,9 @@ export default function HeroStatusCard({ state, loading }: Props) {
         title: "Your assistant is paused",
         message: "It won't respond on Telegram until you resume it.",
       });
-    } catch (err) {
+    } catch (error) {
       removeToast(stickyId);
-      const c = classifyError(err);
+      const c = classifyError(error);
       addToast({
         type: "error",
         title: c.title === "Something went wrong" ? "Couldn't pause" : c.title,
@@ -131,9 +133,9 @@ export default function HeroStatusCard({ state, loading }: Props) {
         type: "success",
         title: "Your assistant is back online",
       });
-    } catch (err) {
+    } catch (error) {
       removeToast(stickyId);
-      const c = classifyError(err);
+      const c = classifyError(error);
       addToast({
         type: "error",
         title: c.title === "Something went wrong" ? "Couldn't resume" : c.title,
@@ -204,7 +206,7 @@ export default function HeroStatusCard({ state, loading }: Props) {
           <>
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => { window.location.reload(); }}
               className="btn btn-lg btn-primary"
             >
               <RotateCcw size={18} />
@@ -212,7 +214,7 @@ export default function HeroStatusCard({ state, loading }: Props) {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/help")}
+              onClick={() => { navigate("/help"); }}
               className="btn btn-lg btn-ghost"
             >
               Get help
@@ -223,7 +225,7 @@ export default function HeroStatusCard({ state, loading }: Props) {
         {state === "error_key" && (
           <button
             type="button"
-            onClick={() => navigate("/preferences")}
+            onClick={() => { navigate("/preferences"); }}
             className="btn btn-lg btn-primary"
           >
             <RotateCcw size={18} />
@@ -234,7 +236,7 @@ export default function HeroStatusCard({ state, loading }: Props) {
         {state === "not_setup" && (
           <button
             type="button"
-            onClick={() => navigate("/setup")}
+            onClick={() => { navigate("/setup"); }}
             className="btn btn-lg btn-primary"
           >
             Run setup

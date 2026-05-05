@@ -1,33 +1,34 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import ModeSwitcher from "@/components/ModeSwitcher";
+import UserLayout from "@/components/UserLayout";
 import { useManifests } from "@/hooks/useManifests";
 import { useSettings } from "@/hooks/useSettings";
+import DevLayout from "@/layouts/DevLayout";
 import { AppContextProvider } from "@/lib/AppContext";
-import { ToastProvider } from "@/lib/ToastContext";
 import {
   getAutostartEnabled,
   setAutostartEnabled,
 } from "@/lib/osIntegration";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import UserLayout from "@/components/UserLayout";
-import ModeSwitcher from "@/components/ModeSwitcher";
-import Setup from "@/pages/Setup";
-import NotFound from "@/pages/NotFound";
-import Home from "@/pages/user/Home";
-import SecurityMonitor from "@/pages/user/SecurityMonitor";
-import Discover from "@/pages/user/Discover";
-import Preferences from "@/pages/user/Preferences";
-import Help from "@/pages/user/Help";
-import DevLayout from "@/layouts/DevLayout";
-import DevOverview from "@/pages/dev/DevOverview";
-import DevComponents from "@/pages/dev/DevComponents";
+import { ToastProvider } from "@/lib/ToastContext";
+import DevAllowlist from "@/pages/dev/DevAllowlist";
 import DevComponentDetail from "@/pages/dev/DevComponentDetail";
+import DevComponents from "@/pages/dev/DevComponents";
 import DevLogs from "@/pages/dev/DevLogs";
 import DevManifests from "@/pages/dev/DevManifests";
-import DevSecurity from "@/pages/dev/DevSecurity";
-import DevAllowlist from "@/pages/dev/DevAllowlist";
-import DevShellLevels from "@/pages/dev/DevShellLevels";
+import DevOverview from "@/pages/dev/DevOverview";
 import DevPreferences from "@/pages/dev/DevPreferences";
+import DevSecurity from "@/pages/dev/DevSecurity";
+import DevShellLevels from "@/pages/dev/DevShellLevels";
+import NotFound from "@/pages/NotFound";
+import Setup from "@/pages/Setup";
+import Discover from "@/pages/user/Discover";
+import Help from "@/pages/user/Help";
+import Home from "@/pages/user/Home";
+import Preferences from "@/pages/user/Preferences";
+import SecurityMonitor from "@/pages/user/SecurityMonitor";
 
 export default function App() {
   const { settings, loaded: settingsLoaded, update: updateSettings } = useSettings();
@@ -109,11 +110,11 @@ export default function App() {
                 element={
                   mode === "developer" ? (
                     <Navigate to="/dev" replace />
-                  ) : !settings.wizardCompleted ? (
+                  ) : (!settings.wizardCompleted ? (
                     <Navigate to="/setup" replace />
                   ) : (
                     <Home />
-                  )
+                  ))
                 }
               />
               <Route path="/security" element={<SecurityMonitor />} />

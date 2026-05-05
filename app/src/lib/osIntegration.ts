@@ -20,17 +20,13 @@ export async function setAutostartEnabled(enabled: boolean): Promise<boolean> {
     );
     const current = await isEnabled();
     if (current === enabled) return false;
-    if (enabled) {
-      await enable();
-    } else {
-      await disable();
-    }
+    await (enabled ? enable() : disable());
     return true;
-  } catch (err) {
+  } catch (error) {
     // Re-throw so the caller can surface a friendly toast.
     throw new Error(
       `Couldn't update startup setting: ${
-        err instanceof Error ? err.message : String(err)
+        error instanceof Error ? error.message : String(error)
       }`,
     );
   }

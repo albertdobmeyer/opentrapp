@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   HeartHandshake,
   Clipboard,
@@ -8,11 +9,13 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
+
 import { useToast } from "@/lib/ToastContext";
-import type { ClassifiedError } from "@/lib/errors";
+
 import packageJson from "../../../package.json";
+
+import type { ClassifiedError } from "@/lib/errors";
 
 const APP_VERSION = packageJson.version;
 
@@ -52,12 +55,12 @@ export default function ContactSupport({
         title: "Copied!",
         message: "Now paste it in an email or GitHub issue.",
       });
-    } catch (err) {
+    } catch (error) {
       addToast({
         type: "error",
         title: "Couldn't copy diagnostics",
         message:
-          err instanceof Error ? err.message : "Try again in a moment.",
+          error instanceof Error ? error.message : "Try again in a moment.",
       });
     } finally {
       setCopying(false);
@@ -153,7 +156,7 @@ export default function ContactSupport({
       <div className="border-t border-neutral-800 pt-4">
         <button
           type="button"
-          onClick={() => setShowTechnical((v) => !v)}
+          onClick={() => { setShowTechnical((v) => !v); }}
           className="flex items-center gap-1 text-[11px] text-neutral-600 hover:text-neutral-400"
         >
           {showTechnical ? <ChevronUp size={12} /> : <ChevronDown size={12} />}

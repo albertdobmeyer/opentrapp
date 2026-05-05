@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { useEffect, useState } from "react";
+
 import {
   getAssistantStatus,
   type AssistantStatusSnapshot,
   type BackendAlert,
 } from "@/lib/tauri";
+
 import { useSettings } from "./useSettings";
 
 export type AlertSeverity = "danger" | "warning" | "info";

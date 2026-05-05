@@ -46,7 +46,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       // Auto-dismiss (default 5s, 0 = sticky)
       const duration = toast.duration ?? 5000;
       if (duration > 0) {
-        setTimeout(() => removeToast(id), duration);
+        setTimeout(() => { removeToast(id); }, duration);
       }
 
       return id;
@@ -118,7 +118,7 @@ function ToastItem({
           )}
         </div>
         <button
-          onClick={() => onDismiss(toast.id)}
+          onClick={() => { onDismiss(toast.id); }}
           className="text-gray-600 hover:text-gray-400 text-xs shrink-0"
           aria-label="Dismiss"
         >
@@ -128,7 +128,7 @@ function ToastItem({
       {toast.details && (
         <div className="mt-1">
           <button
-            onClick={() => setExpanded(!expanded)}
+            onClick={() => { setExpanded(!expanded); }}
             className="text-xs text-gray-500 hover:text-gray-300"
           >
             {expanded ? "Hide details" : "Show details"}

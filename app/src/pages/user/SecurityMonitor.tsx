@@ -1,4 +1,5 @@
 import { ShieldCheck } from "lucide-react";
+
 import StillBuildingCard from "@/components/user/StillBuildingCard";
 
 export default function SecurityMonitor() {

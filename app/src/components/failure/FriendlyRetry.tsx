@@ -1,5 +1,6 @@
-import { useState } from "react";
 import { CloudFog, RotateCw, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+
 import type { ClassifiedError } from "@/lib/errors";
 
 interface FriendlyRetryProps {
@@ -80,7 +81,7 @@ export default function FriendlyRetry({
 
       <button
         type="button"
-        onClick={() => setShowTechnical((v) => !v)}
+        onClick={() => { setShowTechnical((v) => !v); }}
         className="mt-8 inline-flex items-center gap-1 text-[11px] text-neutral-600 hover:text-neutral-400"
       >
         {showTechnical ? <ChevronUp size={12} /> : <ChevronDown size={12} />}

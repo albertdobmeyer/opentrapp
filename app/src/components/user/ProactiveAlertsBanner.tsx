@@ -1,5 +1,6 @@
-import { useNavigate } from "react-router-dom";
 import { AlertTriangle, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import { useAlerts } from "@/hooks/useAlerts";
 
 /**
@@ -19,15 +20,15 @@ export default function ProactiveAlertsBanner() {
         const tone =
           alert.severity === "danger"
             ? "border-danger-500/60 bg-danger-500/10"
-            : alert.severity === "warning"
+            : (alert.severity === "warning"
               ? "border-warning-500/60 bg-warning-500/10"
-              : "border-info-500/60 bg-info-500/10";
+              : "border-info-500/60 bg-info-500/10");
         const iconTint =
           alert.severity === "danger"
             ? "text-danger-400"
-            : alert.severity === "warning"
+            : (alert.severity === "warning"
               ? "text-warning-400"
-              : "text-info-400";
+              : "text-info-400");
         return (
           <div
             key={alert.id}
@@ -43,7 +44,7 @@ export default function ProactiveAlertsBanner() {
               {alert.cta && (
                 <button
                   type="button"
-                  onClick={() => navigate(alert.cta!.to)}
+                  onClick={() => { navigate(alert.cta!.to); }}
                   className="mt-2 text-xs font-medium text-primary-400 underline-offset-4 hover:text-primary-300 hover:underline"
                 >
                   {alert.cta.label}
@@ -53,7 +54,7 @@ export default function ProactiveAlertsBanner() {
             {alert.dismissable && (
               <button
                 type="button"
-                onClick={() => dismiss(alert.id)}
+                onClick={() => { dismiss(alert.id); }}
                 aria-label={`Dismiss "${alert.title}"`}
                 className="rounded p-1 text-neutral-500 transition-colors hover:text-neutral-200"
               >

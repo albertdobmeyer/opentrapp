@@ -23,8 +23,8 @@ export async function withRetry<T>(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await op();
-    } catch (err) {
-      lastErr = err;
+    } catch (error) {
+      lastErr = error;
       if (attempt === maxRetries) break;
       onRetry?.(attempt + 1);
       // Linear backoff: 2s, 4s. Exponential is overkill at maxRetries=2.
@@ -51,7 +51,7 @@ export function parseEnvKeys(envText: string): {
   let telegramToken: string | null = null;
 
   for (const line of lines) {
-    const match = line.match(/^([A-Z_]+)=(.*)$/);
+    const match = /^([A-Z_]+)=(.*)$/.exec(line);
     if (!match) continue;
     const [, key, rawValue] = match;
     const value = rawValue.replace(/^["']|["']$/g, "").trim();
@@ -81,7 +81,7 @@ export function identifyPastedKey(value: string): "anthropic" | "telegram" | nul
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (trimmed.startsWith("sk-ant-")) return "anthropic";
-  if (/^\d{6,12}:[A-Za-z0-9_-]{30,}$/.test(trimmed)) return "telegram";
+  if (/^\d{6,12}:[\w-]{30,}$/.test(trimmed)) return "telegram";
   return null;
 }
 
@@ -92,7 +92,7 @@ export function isAnthropicKeyLike(value: string): boolean {
 
 /** Inline regex check used for green-checkmark feedback. Non-blocking. */
 export function isTelegramTokenLike(value: string): boolean {
-  return /^\d{6,12}:[A-Za-z0-9_-]{10,}$/.test(value.trim());
+  return /^\d{6,12}:[\w-]{10,}$/.test(value.trim());
 }
 
 /**

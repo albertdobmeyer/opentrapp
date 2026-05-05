@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { useEffect, useRef, useState } from "react";
+
 import {
   getAssistantStatus,
   type AssistantStatus,
   type AssistantStatusSnapshot,
 } from "@/lib/tauri";
+
 import { useSettings } from "./useSettings";
 
 /**

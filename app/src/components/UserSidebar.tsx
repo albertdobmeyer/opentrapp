@@ -1,4 +1,3 @@
-import { NavLink } from "react-router-dom";
 import {
   Home as HomeIcon,
   ShieldCheck,
@@ -7,6 +6,7 @@ import {
   LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
+import { NavLink } from "react-router-dom";
 
 interface NavItem {
   to: string;

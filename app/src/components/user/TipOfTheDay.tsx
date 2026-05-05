@@ -1,8 +1,9 @@
-import { useNavigate } from "react-router-dom";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Lightbulb } from "lucide-react";
-import { useSettings } from "@/hooks/useSettings";
+import { useNavigate } from "react-router-dom";
+
 import { USE_CASES } from "@/content/use-cases";
+import { useSettings } from "@/hooks/useSettings";
 
 /**
  * Daily rotating tip — deterministic pick from the use-case gallery
@@ -55,7 +56,7 @@ export default function TipOfTheDay() {
         </button>
         <button
           type="button"
-          onClick={() => navigate("/discover")}
+          onClick={() => { navigate("/discover"); }}
           className="text-xs text-primary-400 underline-offset-4 hover:text-primary-300 hover:underline"
         >
           Explore more ideas →
