@@ -62,28 +62,33 @@ For each row, the matrix records:
 
 ---
 
-## 3. Architecture Decision Records (ADRs)
+## 3. Architecture Decision Records (ADRs) — **DONE 2026-05-04**
 
-**Deliverable:** `docs/adr/` directory — three records written this session, with the format established for future additions.
+**Deliverable:** `docs/adr/` directory — eight records covering every distinctive architectural choice in the project, plus a README index.
 
-**Scope:** Adopt the standard ADR format from [adr.github.io](https://adr.github.io/): status / context / decision / consequences / alternatives considered / references. Three highest-leverage records to write first:
+**Scope:** Adopt the standard ADR format from [adr.github.io](https://adr.github.io/): status / context / decision / consequences / alternatives considered / references. Eight records now landed (formerly three):
 
 - **ADR-0001:** Proxy-side API-key injection (the architectural cornerstone)
 - **ADR-0002:** Adaptive shell levels (the capability-sequencing model)
 - **ADR-0003:** Content Disarm & Reconstruction (the supply-chain defense pattern)
+- **ADR-0004:** Parking moltbook-pioneer (the corporate-acquisition decision)
+- **ADR-0005:** The "deserve-to-exist" scope test (the 2026-05-02 vision recheck)
+- **ADR-0006:** Four-container compose vs. single-container vs. VM-level isolation
+- **ADR-0007:** The manifest-driven generic backend
+- **ADR-0008:** The choice of Tauri 2 over Electron / native / web-only
 
-Future ADRs (queued for later sessions) covering: parking moltbook-pioneer (the corporate-acquisition decision), the 2026-05-02 vision recheck (deserve-to-exist as a scope test), four-container compose vs. single-container vs. VM-level isolation, the manifest-driven generic backend, the choice of Tauri over Electron / native / web-only.
+No additional ADRs currently queued. New decisions that meet the *When to write an ADR* criteria in [`adr/README.md`](adr/README.md) should be added with the next sequential number.
 
 **Dependencies:** The format itself (templates) needs to be established once. After that each ADR is independent.
 
-**Effort:** Three records this session (~3–4 hours). Each subsequent ADR is ~30–60 minutes once the template is set.
+**Effort actual:** First three records in the morning session (~3–4 hours); five more in the same evening (~2 hours total at ~25 min each — faster than estimated once the template was set).
 
-**Definition-of-done:**
+**Definition-of-done — DONE:**
 
-- Three records in `docs/adr/` with sequential numbering
-- A `docs/adr/README.md` index
-- Each record references the live source files (`commands/lifecycle.rs`, `vault-proxy.py`, etc.) so the connection between record and current code is traceable
-- Cross-referenced from `CLAUDE.md` "Key files" table
+- ✅ Eight records in `docs/adr/` with sequential numbering
+- ✅ A `docs/adr/README.md` index covering all eight
+- ✅ Each record references the live source files (`commands/lifecycle.rs`, `vault-proxy.py`, etc.) so the connection between record and current code is traceable
+- ✅ Cross-referenced from `CLAUDE.md` "Key files" table
 
 ---
 

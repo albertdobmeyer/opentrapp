@@ -28,13 +28,12 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0001](0001-proxy-side-api-key-injection.md) | Accepted | Proxy-side API-key injection |
 | [0002](0002-adaptive-shell-levels.md) | Accepted | Adaptive shell levels (Hard / Split / Soft) as a system state |
 | [0003](0003-content-disarm-reconstruction.md) | Accepted | Content Disarm and Reconstruction for skills |
+| [0004](0004-parking-moltbook-pioneer.md) | Accepted | Parking moltbook-pioneer |
+| [0005](0005-deserve-to-exist-scope-test.md) | Accepted | The "deserve-to-exist" scope test |
+| [0006](0006-four-container-topology.md) | Accepted | Four-container compose topology |
+| [0007](0007-manifest-driven-generic-backend.md) | Accepted | Manifest-driven generic backend |
+| [0008](0008-tauri-over-electron.md) | Accepted | Tauri 2 over Electron, native, and web-only |
 
 ## Future ADRs
 
-The post-launch roadmap ([`../roadmap-post-launch.md`](../roadmap-post-launch.md) §3) lists ADRs queued for future writing:
-
-- Parking `moltbook-pioneer` following Meta's acquisition of Moltbook (2026-03-10)
-- The 2026-05-02 vision recheck and the "deserve-to-exist" scope test
-- Four-container compose vs. single-container vs. VM-level isolation
-- The manifest-driven generic backend (no component-specific logic in Rust or React)
-- The choice of Tauri 2 over Electron, native, and web-only alternatives
+No additional records currently queued. New decisions that meet the *When to write an ADR* criteria above should be added with the next sequential number.
