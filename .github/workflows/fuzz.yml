@@ -44,6 +44,7 @@ jobs:
         target:
           - manifest_parse
           - runner_interpolate
+          - redact_secrets
     defaults:
       run:
         working-directory: app/src-tauri/fuzz

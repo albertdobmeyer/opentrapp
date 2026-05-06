@@ -26,6 +26,15 @@ pub mod fuzz_api {
     pub fn interpolate_args(command: &str, args: &HashMap<String, String>) -> String {
         crate::orchestrator::runner::interpolate_args_for_test(command, args)
     }
+
+    /// Redact known token-bearing environment variables from a string. The
+    /// production caller is `lifecycle::redact_secrets`, which is invoked on
+    /// `podman compose` stderr before logging — failure modes worth surfacing
+    /// are panics, infinite loops, or under-redaction (a real
+    /// `TELEGRAM_BOT_TOKEN=…` substring escaping the redactor).
+    pub fn redact_secrets(s: &str) -> String {
+        crate::lifecycle::redact_secrets(s)
+    }
 }
 
 use orchestrator::state::AppState;

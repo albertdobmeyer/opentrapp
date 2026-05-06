@@ -43,3 +43,10 @@ path = "fuzz_targets/runner_interpolate.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "redact_secrets"
+path = "fuzz_targets/redact_secrets.rs"
+test = false
+doc = false
+bench = false
