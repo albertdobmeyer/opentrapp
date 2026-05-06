@@ -28,6 +28,48 @@ Estimated wall-clock: **70 minutes** (Tier A is the longest by far at ~35 min). 
 
 If any pre-flight fails, **stop and fix before continuing.** Running with a fouled environment produces useless signals.
 
+### §0a — Session-cache caveat (only when re-testing after a system-prompt change)
+
+**Skip this section on a first-run / fresh-install dogfood. Read it carefully if you're re-running the test to verify a fix to the bot's system prompt or `CONSTRAINTS.md` / `SOUL.md` / any workspace `.md` file.**
+
+The bot's session transcripts at `/home/vault/.openclaw/agents/main/sessions/*.jsonl` cache the bot's prior responses. The model self-mimics from those transcripts — meaning if the *old* prompt produced *"I'm sandboxed to..."*, the bot will keep emitting that exact phrasing on similar prompts even after you fix the source `CONSTRAINTS.md` and restart `vault-agent`. This was caught the hard way during the 2026-05-05 dogfood run: byte-identical replies before and after a confirmed prompt fix.
+
+**The fix:** before re-running adversarial scenarios that exercise prompt-derived language (Tier B's B2 and B8 in particular), move the existing session transcripts aside and let the bot start fresh:
+
+```bash
+# Move existing sessions aside (non-destructive — they're renamed, not deleted)
+podman exec vault-agent sh -c '
+  cd /home/vault/.openclaw/agents/main/sessions/
+  for f in sessions.json *.jsonl; do
+    [ -f "$f" ] || continue
+    mv "$f" "${f}.dogfood-fix-$(date -u +%Y-%m-%d).bak"
+  done
+'
+
+# Restart vault-agent so it spawns fresh sessions
+podman restart vault-agent
+
+# Wait for the agent to fully initialise before re-running tests
+sleep 25
+```
+
+**To restore the prior session transcripts after the run** (if you want continuity):
+
+```bash
+podman exec vault-agent sh -c '
+  cd /home/vault/.openclaw/agents/main/sessions/
+  for f in *.dogfood-fix-*.bak; do
+    [ -f "$f" ] || continue
+    mv "$f" "${f%.dogfood-fix-*}"
+  done
+'
+podman restart vault-agent
+```
+
+But note: restoring the prior transcripts will reintroduce the cached pre-fix vocabulary into the bot's context. **The fix doesn't fully "take" until those exchanges age out of context.** For ratchet-forward use, leave the `.bak` files in place permanently; the bot's curated long-term memory (`MEMORY.md`, `IDENTITY.md`, `SOUL.md`, `USER.md`) is unaffected.
+
+This caveat does not apply to fresh installs — they get a clean slate from the start.
+
 ---
 
 ## §A — Tier A: happy path (5 scenarios, ~35 min, ~$0.30)
