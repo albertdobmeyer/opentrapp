@@ -39,9 +39,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     // Surface to the dev console; never to the end user.
-    if (typeof console !== "undefined") {
-      console.error("ErrorBoundary caught:", error, info?.componentStack);
-    }
+    console.error("ErrorBoundary caught:", error, info.componentStack);
   }
 
   handleRetry = () => {
@@ -59,7 +57,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     const classified = classifyError(this.state.error);
     const useLevel3 =
-      this.props.forceContactSupport ||
+      (this.props.forceContactSupport ?? false) ||
       this.state.escalated ||
       !classified.retryable;
 

@@ -1,32 +1,8 @@
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
-import { DEFAULT_SETTINGS } from "@/lib/settings";
+import { AppContext, type AppContextValue } from "@/hooks/useAppContext";
 
 import type { AppMode, AppSettings } from "@/lib/settings";
-
-interface AppContextValue {
-  settings: AppSettings;
-  settingsLoaded: boolean;
-  updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
-  mode: AppMode;
-  setMode: (mode: AppMode) => Promise<void>;
-  toggleMode: () => Promise<AppMode>;
-  markAdvancedModeIntroSeen: () => Promise<void>;
-}
-
-export const AppContext = createContext<AppContextValue>({
-  settings: DEFAULT_SETTINGS,
-  settingsLoaded: false,
-  updateSettings: async () => {},
-  mode: "user",
-  setMode: async () => {},
-  toggleMode: async () => "user",
-  markAdvancedModeIntroSeen: async () => {},
-});
-
-export function useAppContext() {
-  return useContext(AppContext);
-}
 
 interface ProviderProps {
   settings: AppSettings;
@@ -37,7 +13,8 @@ interface ProviderProps {
 
 /**
  * Wraps AppContext.Provider with the mode helpers derived from settings.
- * Use this instead of AppContext.Provider directly so mode logic stays in one place.
+ * Use this instead of AppContext.Provider directly so mode logic stays in
+ * one place.
  */
 export function AppContextProvider({
   settings,

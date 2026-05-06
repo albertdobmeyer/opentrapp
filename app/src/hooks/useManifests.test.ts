@@ -37,7 +37,7 @@ beforeEach(() => {
 
 describe("useManifests", () => {
   test("starts in loading state", () => {
-    mockInvoke.mockReturnValue(new Promise(() => {})); // never resolves
+    mockInvoke.mockReturnValue(new Promise(() => undefined)); // never resolves
     const { result } = renderHook(() => useManifests(), { wrapper });
     expect(result.current.loading).toBe(true);
     expect(result.current.components).toEqual([]);
@@ -77,7 +77,7 @@ describe("useManifests", () => {
     });
 
     mockInvoke.mockResolvedValue([fakeComponent]);
-    result.current.refresh();
+    void result.current.refresh();
 
     await waitFor(() => {
       expect(result.current.components).toEqual([fakeComponent]);

@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useSettings } from "@/hooks/useSettings";
+import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
 import { pausePerimeter, resumePerimeter } from "@/lib/tauri";
-import { useToast } from "@/lib/ToastContext";
 
 import type { HeroState } from "@/hooks/useHero";
 

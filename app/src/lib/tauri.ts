@@ -290,7 +290,7 @@ export async function getAssistantStatus(): Promise<AssistantStatusSnapshot> {
  * via `classifyError`.
  */
 export async function restartPerimeter(): Promise<void> {
-  return invoke<void>("restart_perimeter");
+  await invoke("restart_perimeter");
 }
 
 /**
@@ -301,7 +301,7 @@ export async function restartPerimeter(): Promise<void> {
  * all "didn't recover" / "key not working" alerts.
  */
 export async function pausePerimeter(): Promise<void> {
-  return invoke<void>("pause_perimeter");
+  await invoke("pause_perimeter");
 }
 
 /**
@@ -309,7 +309,7 @@ export async function pausePerimeter(): Promise<void> {
  * path as restart since `compose stop` left the containers around.
  */
 export async function resumePerimeter(): Promise<void> {
-  return invoke<void>("resume_perimeter");
+  await invoke("resume_perimeter");
 }
 
 /**

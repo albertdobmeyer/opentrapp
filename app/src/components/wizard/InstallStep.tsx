@@ -297,7 +297,7 @@ export default function InstallStep({ onComplete, onBack }: Props) {
 
   // Kick off pipeline on mount.
   useEffect(() => {
-    runPipeline();
+    void runPipeline();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -323,7 +323,7 @@ export default function InstallStep({ onComplete, onBack }: Props) {
   const handleRetry = () => {
     for (const fn of unlistenersRef.current) fn();
     unlistenersRef.current = [];
-    runPipeline();
+    void runPipeline();
   };
 
   // ── Render branches ─────────────────────────────────────────────────────
@@ -510,7 +510,7 @@ function MissingRuntimeCard({
           One thing missing
         </h2>
         <p className="mb-4 text-sm text-neutral-400">
-          You'll need a sandbox runner installed first. It's free, takes a
+          You’ll need a sandbox runner installed first. It’s free, takes a
           minute, and is what keeps your assistant safely separated from the
           rest of your computer.
         </p>
@@ -548,7 +548,7 @@ function MissingRuntimeCard({
         </div>
 
         <p className="mb-6 text-xs text-neutral-500">
-          After installing, click "Check again" — we'll pick it up
+          After installing, click “Check again” — we’ll pick it up
           automatically.
         </p>
 
@@ -604,7 +604,7 @@ function InstallLine({
           {showAdvanced && (
             <>
               <p className="mt-2 text-[11px] text-neutral-500">
-                If you're comfortable with the terminal, run this. Otherwise,
+                If you’re comfortable with the terminal, run this. Otherwise,
                 use the guide above.
               </p>
               <code className="mt-2 block rounded bg-neutral-950 px-2 py-1.5 font-mono text-xs text-info-400">

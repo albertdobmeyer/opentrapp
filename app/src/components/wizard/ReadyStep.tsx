@@ -73,7 +73,7 @@ export default function ReadyStep({ onGoToDashboard }: Props) {
       </h1>
       <p className="animate-slide-up mb-10 max-w-md text-base text-neutral-400">
         {settings.telegramBotUsername
-          ? <>Say hi on Telegram — search for <span className="text-neutral-200">@{settings.telegramBotUsername}</span> if it doesn't open the right chat.</>
+          ? <>Say hi on Telegram — search for <span className="text-neutral-200">@{settings.telegramBotUsername}</span> if it doesn’t open the right chat.</>
           : "Say hi on Telegram to get started."}
       </p>
 
@@ -104,7 +104,7 @@ export default function ReadyStep({ onGoToDashboard }: Props) {
       <div className="mt-12 max-w-md rounded-lg border border-neutral-800 bg-neutral-900 p-4 text-left text-xs text-neutral-400">
         <p>
           💡 <span className="text-neutral-300">Tip:</span> You can ask your
-          assistant things like "What's the weather?" or "Plan my Tuesday."
+          assistant things like “What’s the weather?” or “Plan my Tuesday.”
         </p>
       </div>
 

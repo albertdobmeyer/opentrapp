@@ -165,7 +165,7 @@ describe("withRetry", () => {
     const err = new Error("always fails");
     const fn = vi.fn().mockRejectedValue(err);
 
-    const promise = withRetry(fn, 2).catch((error) => error);
+    const promise = withRetry(fn, 2).catch((error: unknown) => error);
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(2000);
     await vi.advanceTimersByTimeAsync(4000);

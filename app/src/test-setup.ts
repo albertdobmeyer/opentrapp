@@ -10,13 +10,16 @@ vi.mock("@tauri-apps/api/core", () => ({
 vi.mock("@tauri-apps/plugin-store", () => {
   const store = new Map<string, unknown>();
   const mockStore = {
-    get: vi.fn(async (key: string) => store.get(key)),
-    set: vi.fn(async (key: string, value: unknown) => { store.set(key, value); }),
-    save: vi.fn(async () => {}),
+    get: vi.fn((key: string) => Promise.resolve(store.get(key))),
+    set: vi.fn((key: string, value: unknown) => {
+      store.set(key, value);
+      return Promise.resolve();
+    }),
+    save: vi.fn(() => Promise.resolve()),
     _store: store,
   };
   return {
-    load: vi.fn(async () => mockStore),
+    load: vi.fn(() => Promise.resolve(mockStore)),
     __mockStore: mockStore,
   };
 });

@@ -41,15 +41,18 @@ export default function ProactiveAlertsBanner() {
               {alert.body && (
                 <p className="mt-1 text-xs text-neutral-300">{alert.body}</p>
               )}
-              {alert.cta && (
-                <button
-                  type="button"
-                  onClick={() => { navigate(alert.cta!.to); }}
-                  className="mt-2 text-xs font-medium text-primary-400 underline-offset-4 hover:text-primary-300 hover:underline"
-                >
-                  {alert.cta.label}
-                </button>
-              )}
+              {alert.cta && (() => {
+                const cta = alert.cta;
+                return (
+                  <button
+                    type="button"
+                    onClick={() => { navigate(cta.to); }}
+                    className="mt-2 text-xs font-medium text-primary-400 underline-offset-4 hover:text-primary-300 hover:underline"
+                  >
+                    {cta.label}
+                  </button>
+                );
+              })()}
             </div>
             {alert.dismissable && (
               <button

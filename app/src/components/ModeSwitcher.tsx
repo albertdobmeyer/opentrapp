@@ -2,7 +2,7 @@ import { Terminal, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { useAppContext } from "@/lib/AppContext";
+import { useAppContext } from "@/hooks/useAppContext";
 
 /**
  * Listens for Cmd/Ctrl+Shift+D, toggles between user and developer mode, and
@@ -19,7 +19,7 @@ export default function ModeSwitcher() {
   const [lastEnteredFrom, setLastEnteredFrom] = useState<string | null>(null);
 
   useEffect(() => {
-    async function onKeyDown(event: KeyboardEvent) {
+    function onKeyDown(event: KeyboardEvent) {
       const isToggle =
         (event.metaKey || event.ctrlKey) &&
         event.shiftKey &&
@@ -28,17 +28,18 @@ export default function ModeSwitcher() {
 
       event.preventDefault();
       const enteringDeveloper = mode !== "developer";
-      const next = await toggleMode();
 
-      if (next === "developer") {
-        setLastEnteredFrom(location.pathname);
-        navigate("/dev", { replace: false });
-        if (enteringDeveloper && !settings.hasSeenAdvancedModeIntro) {
-          setIntroOpen(true);
+      void toggleMode().then((next) => {
+        if (next === "developer") {
+          setLastEnteredFrom(location.pathname);
+          navigate("/dev", { replace: false });
+          if (enteringDeveloper && !settings.hasSeenAdvancedModeIntro) {
+            setIntroOpen(true);
+          }
+        } else {
+          navigate("/", { replace: false });
         }
-      } else {
-        navigate("/", { replace: false });
-      }
+      });
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -93,7 +94,7 @@ export default function ModeSwitcher() {
           </h2>
         </div>
         <p className="text-sm text-neutral-300 mb-3">
-          You're now seeing Lobster-TrApp's full technical controls. This view
+          You’re now seeing Lobster-TrApp’s full technical controls. This view
           shows you every component, log, configuration, and security check.
         </p>
         <ul className="text-sm text-neutral-400 mb-6 space-y-1.5 list-disc list-inside">
@@ -105,7 +106,7 @@ export default function ModeSwitcher() {
             </kbd>
             .
           </li>
-          <li>This mode is hidden by default — you probably don't need it.</li>
+          <li>This mode is hidden by default — you probably don’t need it.</li>
         </ul>
         <div className="flex items-center justify-end gap-2">
           <button

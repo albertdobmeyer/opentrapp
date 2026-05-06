@@ -4,14 +4,14 @@ import {
   HeartHandshake,
   Clipboard,
   Mail,
-  Github,
+  ExternalLink,
   RotateCw,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { useState } from "react";
 
-import { useToast } from "@/lib/ToastContext";
+import { useToast } from "@/hooks/useToast";
 
 import packageJson from "../../../package.json";
 
@@ -30,6 +30,20 @@ interface ContactSupportProps {
 const SUPPORT_EMAIL = "support@lobster-trapp.com";
 const GITHUB_ISSUE_URL =
   "https://github.com/albertdobmeyer/lobster-trapp/issues/new?template=bug.md";
+
+function openEmail() {
+  const subject = encodeURIComponent(
+    `Lobster-TrApp needs help [v${APP_VERSION}]`,
+  );
+  const body = encodeURIComponent(
+    `[Paste the copied diagnostic info here]\n\nWhat were you trying to do when this happened?\n\n`,
+  );
+  window.open(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
+}
+
+function openGithub() {
+  window.open(GITHUB_ISSUE_URL, "_blank", "noopener");
+}
 
 /**
  * Level 3 of the failure cascade per spec 06. Shown after Level 2 retry has failed
@@ -67,19 +81,9 @@ export default function ContactSupport({
     }
   }
 
-  function openEmail() {
-    const subject = encodeURIComponent(
-      `Lobster-TrApp needs help [v${APP_VERSION}]`
-    );
-    const body = encodeURIComponent(
-      `[Paste the copied diagnostic info here]\n\nWhat were you trying to do when this happened?\n\n`
-    );
-    window.open(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
-  }
-
-  function openGithub() {
-    window.open(GITHUB_ISSUE_URL, "_blank", "noopener");
-  }
+  // openEmail and openGithub are hoisted to module scope below; nothing they
+  // do depends on component state, so they remain referentially stable across
+  // renders and avoid re-creation on every commit.
 
   return (
     <div className="mx-auto max-w-lg py-12 px-4 animate-slide-in">
@@ -94,7 +98,7 @@ export default function ContactSupport({
           {titleOverride ?? "Still having trouble"}
         </h2>
         <p className="mb-8 text-sm text-neutral-400">
-          We're sorry this isn't working. Here's how to get help quickly:
+          We’re sorry this isn’t working. Here’s how to get help quickly:
         </p>
       </div>
 
@@ -103,7 +107,7 @@ export default function ContactSupport({
           📋 Copy diagnostic info
         </h3>
         <p className="mb-4 text-xs text-neutral-400">
-          We'll prepare a small text file with everything our team needs to help
+          We’ll prepare a small text file with everything our team needs to help
           you. No passwords or personal data.
         </p>
         <button
@@ -134,7 +138,7 @@ export default function ContactSupport({
           onClick={openGithub}
           className="btn btn-md btn-ghost"
         >
-          <Github size={16} />
+          <ExternalLink size={16} />
           Post on GitHub
         </button>
       </div>

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
-import { useAppContext } from "@/lib/AppContext";
+import { useAppContext } from "@/hooks/useAppContext";
 
 interface NavItem {
   to: string;

@@ -45,7 +45,7 @@ export default function TipOfTheDay() {
         </span>
       </div>
       <p className="mb-1 text-sm font-semibold text-neutral-100">{tip.title}</p>
-      <p className="mb-4 text-xs text-neutral-400">"{tip.prompt}"</p>
+      <p className="mb-4 text-xs text-neutral-400">“{tip.prompt}”</p>
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"

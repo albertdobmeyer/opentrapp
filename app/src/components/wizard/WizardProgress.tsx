@@ -39,7 +39,7 @@ export default function WizardProgress({ currentStep, completedSteps }: Props) {
               aria-current={isCurrent ? "step" : undefined}
             >
               <div
-                aria-label={`Step ${idx + 1} of ${STEP_ORDER.length}: ${STEP_LABELS[step]}${isCurrent ? " (current)" : (isCompleted ? " (done)" : "")}`}
+                aria-label={`Step ${String(idx + 1)} of ${String(STEP_ORDER.length)}: ${STEP_LABELS[step]}${isCurrent ? " (current)" : (isCompleted ? " (done)" : "")}`}
                 className={`h-2.5 w-2.5 rounded-full transition-colors duration-200 ${
                   isFilled
                     ? (isCurrent
