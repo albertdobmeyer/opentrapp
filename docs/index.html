@@ -76,14 +76,18 @@
     }
 
     .nav-logo {
-      font-family: 'Courier New', monospace;
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: #f8fafc;
-      letter-spacing: -0.02em;
+      display: inline-flex;
+      align-items: center;
+      height: 100%;
+      text-decoration: none;
     }
 
-    .nav-logo span { color: #009966; }
+    .nav-logo img {
+      height: 32px;
+      width: auto;
+      display: block;
+      filter: drop-shadow(0 1px 2px rgba(2, 6, 23, 0.6));
+    }
 
     .nav-links {
       display: flex;
@@ -625,7 +629,9 @@
 
   <!-- ── Nav ───────────────────────────────────────── -->
   <nav class="nav" id="nav">
-    <div class="nav-logo">Lobster-<span>TrApp</span></div>
+    <a href="#" class="nav-logo" aria-label="Lobster-TrApp — back to top">
+      <img src="img/logo-banner.png" alt="Lobster-TrApp">
+    </a>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
       <li><a href="#ecosystem">Ecosystem</a></li>
