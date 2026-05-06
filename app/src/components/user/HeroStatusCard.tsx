@@ -90,61 +90,31 @@ export default function HeroStatusCard({ state, loading }: Props) {
     }
   }
 
-  async function handlePause() {
-    setPauseLoading(true);
-    const stickyId = addToast({
-      type: "info",
-      title: "Pausing your assistant…",
-      duration: 0,
+  const handlePause = () =>
+    runPerimeterToggle({
+      setLoading: setPauseLoading,
+      addToast,
+      removeToast,
+      action: pausePerimeter,
+      pendingTitle: "Pausing your assistant…",
+      pendingMessage: undefined,
+      successTitle: "Your assistant is paused",
+      successMessage: "It won't respond on Telegram until you resume it.",
+      errorFallbackTitle: "Couldn't pause",
     });
-    try {
-      await pausePerimeter();
-      removeToast(stickyId);
-      addToast({
-        type: "success",
-        title: "Your assistant is paused",
-        message: "It won't respond on Telegram until you resume it.",
-      });
-    } catch (error) {
-      removeToast(stickyId);
-      const c = classifyError(error);
-      addToast({
-        type: "error",
-        title: c.title === "Something went wrong" ? "Couldn't pause" : c.title,
-        message: c.userMessage,
-      });
-    } finally {
-      setPauseLoading(false);
-    }
-  }
 
-  async function handleResume() {
-    setPauseLoading(true);
-    const stickyId = addToast({
-      type: "info",
-      title: "Bringing your assistant back…",
-      message: "This usually takes about 10 seconds.",
-      duration: 0,
+  const handleResume = () =>
+    runPerimeterToggle({
+      setLoading: setPauseLoading,
+      addToast,
+      removeToast,
+      action: resumePerimeter,
+      pendingTitle: "Bringing your assistant back…",
+      pendingMessage: "This usually takes about 10 seconds.",
+      successTitle: "Your assistant is back online",
+      successMessage: undefined,
+      errorFallbackTitle: "Couldn't resume",
     });
-    try {
-      await resumePerimeter();
-      removeToast(stickyId);
-      addToast({
-        type: "success",
-        title: "Your assistant is back online",
-      });
-    } catch (error) {
-      removeToast(stickyId);
-      const c = classifyError(error);
-      addToast({
-        type: "error",
-        title: c.title === "Something went wrong" ? "Couldn't resume" : c.title,
-        message: c.userMessage,
-      });
-    } finally {
-      setPauseLoading(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -283,4 +253,52 @@ function StatusIllustration({ ringTint, dotTint }: { ringTint: string; dotTint: 
       <span className={`absolute inset-7 rounded-full ${dotTint}`} />
     </div>
   );
+}
+
+interface PerimeterToggleArgs {
+  setLoading: (v: boolean) => void;
+  addToast: ReturnType<typeof useToast>["addToast"];
+  removeToast: ReturnType<typeof useToast>["removeToast"];
+  action: () => Promise<void>;
+  pendingTitle: string;
+  pendingMessage: string | undefined;
+  successTitle: string;
+  successMessage: string | undefined;
+  errorFallbackTitle: string;
+}
+
+/**
+ * Drives one perimeter pause/resume action through its full toast lifecycle:
+ * sticky in-flight → success or classified error. Hoisted out of the
+ * component so the host stays focused on render concerns.
+ */
+async function runPerimeterToggle(args: PerimeterToggleArgs): Promise<void> {
+  const {
+    setLoading, addToast, removeToast, action,
+    pendingTitle, pendingMessage,
+    successTitle, successMessage,
+    errorFallbackTitle,
+  } = args;
+  setLoading(true);
+  const stickyId = addToast({
+    type: "info",
+    title: pendingTitle,
+    message: pendingMessage,
+    duration: 0,
+  });
+  try {
+    await action();
+    removeToast(stickyId);
+    addToast({ type: "success", title: successTitle, message: successMessage });
+  } catch (error) {
+    removeToast(stickyId);
+    const c = classifyError(error);
+    addToast({
+      type: "error",
+      title: c.title === "Something went wrong" ? errorFallbackTitle : c.title,
+      message: c.userMessage,
+    });
+  } finally {
+    setLoading(false);
+  }
 }
