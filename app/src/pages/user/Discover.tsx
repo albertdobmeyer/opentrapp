@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { ExternalLink, Search, Star } from "lucide-react";
-import { useSettings } from "@/hooks/useSettings";
+import { useMemo, useState } from "react";
+
 import {
   USE_CASES,
   USE_CASE_CATEGORIES,
@@ -9,6 +9,7 @@ import {
   type UseCaseCapability,
   type UseCaseCategory,
 } from "@/content/use-cases";
+import { useSettings } from "@/hooks/useSettings";
 
 type CategoryFilter = UseCaseCategory | "all";
 
@@ -85,7 +86,7 @@ export default function Discover() {
           <input
             type="search"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); }}
             placeholder="Search ideas…"
             aria-label="Search ideas"
             className="input pl-9"
@@ -102,7 +103,7 @@ export default function Discover() {
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => setCategory(cat.id)}
+              onClick={() => { setCategory(cat.id); }}
               className={
                 active
                   ? "btn btn-sm btn-primary"
@@ -126,7 +127,7 @@ export default function Discover() {
               key={uc.id}
               useCase={uc}
               isFavorite={favorites.includes(uc.id)}
-              onToggleFavorite={() => toggleFavorite(uc.id)}
+              onToggleFavorite={() => { toggleFavorite(uc.id); }}
               onTry={() => tryPrompt(uc)}
             />
           ))}

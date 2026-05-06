@@ -1,4 +1,5 @@
 import { Shield } from "lucide-react";
+
 import HeroStatusCard from "@/components/user/HeroStatusCard";
 import ProactiveAlertsBanner from "@/components/user/ProactiveAlertsBanner";
 import SpendingTile from "@/components/user/SpendingTile";

@@ -14,10 +14,7 @@ export interface SetupProgress {
   skippedKeys?: boolean;
 }
 
-export interface DismissedAlerts {
-  /** Per-session dismissals keyed by alert id with epoch ms of dismissal. */
-  [alertId: string]: number;
-}
+export type DismissedAlerts = Record<string, number>;
 
 export interface AppSettings {
   monorepoPathOverride: string | null;

@@ -1,5 +1,3 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Bell,
   Eye,
@@ -10,14 +8,17 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { readConfig, restartPerimeter, writeConfig } from "@/lib/tauri";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { useSettings } from "@/hooks/useSettings";
 import { classifyError } from "@/lib/errors";
 import {
   ensureNotificationPermission,
   setAutostartEnabled,
 } from "@/lib/osIntegration";
+import { readConfig, restartPerimeter, writeConfig } from "@/lib/tauri";
 import { useToast } from "@/lib/ToastContext";
-import { useSettings } from "@/hooks/useSettings";
 import {
   isAnthropicKeyLike,
   isTelegramTokenLike,
@@ -136,9 +137,9 @@ function KeysSection() {
           title: "Your assistant is back online",
           message: "Your new key is active.",
         });
-      } catch (restartErr) {
+      } catch (error) {
         removeToast(restartingId);
-        const classified = classifyError(restartErr);
+        const classified = classifyError(error);
         addToast({
           type: "error",
           title:
@@ -149,8 +150,8 @@ function KeysSection() {
           duration: 0,
         });
       }
-    } catch (err) {
-      const classified = classifyError(err);
+    } catch (error) {
+      const classified = classifyError(error);
       addToast({
         type: "error",
         title: classified.title === "Something went wrong" ? "Couldn't save your key" : classified.title,
@@ -178,10 +179,10 @@ function KeysSection() {
         draft={draft}
         showDraft={showDraft}
         saving={saving && editing === "anthropic"}
-        onChangeClick={() => startEditing("anthropic")}
-        onCancel={() => setEditing(null)}
+        onChangeClick={() => { startEditing("anthropic"); }}
+        onCancel={() => { setEditing(null); }}
         onDraftChange={setDraft}
-        onToggleShow={() => setShowDraft((v) => !v)}
+        onToggleShow={() => { setShowDraft((v) => !v); }}
         onSave={() => save("anthropic")}
         placeholder="sk-ant-api03-…"
       />
@@ -195,10 +196,10 @@ function KeysSection() {
         draft={draft}
         showDraft={showDraft}
         saving={saving && editing === "telegram"}
-        onChangeClick={() => startEditing("telegram")}
-        onCancel={() => setEditing(null)}
+        onChangeClick={() => { startEditing("telegram"); }}
+        onCancel={() => { setEditing(null); }}
         onDraftChange={setDraft}
-        onToggleShow={() => setShowDraft((v) => !v)}
+        onToggleShow={() => { setShowDraft((v) => !v); }}
         onSave={() => save("telegram")}
         placeholder="1234567890:ABCdef…"
       />
@@ -230,7 +231,7 @@ function KeyRow(props: KeyRowProps) {
           <input
             type={props.showDraft ? "text" : "password"}
             value={props.draft}
-            onChange={(e) => props.onDraftChange(e.target.value)}
+            onChange={(e) => { props.onDraftChange(e.target.value); }}
             placeholder={props.placeholder}
             autoComplete="off"
             autoFocus
@@ -355,8 +356,8 @@ function StartupSection() {
         type: "success",
         title: next ? "Starting with your computer" : "Won't start automatically",
       });
-    } catch (err) {
-      const c = classifyError(err);
+    } catch (error) {
+      const c = classifyError(error);
       addToast({
         type: "error",
         title: c.title === "Something went wrong" ? "Couldn't update startup setting" : c.title,
@@ -419,7 +420,7 @@ function ReRunSetupSection() {
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setConfirming(false)}
+              onClick={() => { setConfirming(false); }}
               className="btn btn-sm btn-ghost"
             >
               Cancel
@@ -436,7 +437,7 @@ function ReRunSetupSection() {
       ) : (
         <button
           type="button"
-          onClick={() => setConfirming(true)}
+          onClick={() => { setConfirming(true); }}
           className="btn btn-md btn-ghost border border-neutral-700"
         >
           Re-run setup

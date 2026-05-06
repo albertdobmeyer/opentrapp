@@ -1,8 +1,12 @@
+import { invoke } from "@tauri-apps/api/core";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { useManifests } from "./useManifests";
+
 import { ToastProvider } from "@/lib/ToastContext";
+
+import { useManifests } from "./useManifests";
+
+
 import type { DiscoveredComponent } from "@/lib/types";
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>

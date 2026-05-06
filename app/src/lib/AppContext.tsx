@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useMemo } from "react";
-import type { AppMode, AppSettings } from "@/lib/settings";
+
 import { DEFAULT_SETTINGS } from "@/lib/settings";
+
+import type { AppMode, AppSettings } from "@/lib/settings";
 
 interface AppContextValue {
   settings: AppSettings;

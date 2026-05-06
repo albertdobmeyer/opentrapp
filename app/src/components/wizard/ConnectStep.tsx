@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState, type ClipboardEvent } from "react";
 import { Check, Eye, EyeOff, Key, MessageCircle, ExternalLink } from "lucide-react";
+import { useEffect, useRef, useState, type ClipboardEvent } from "react";
+
+import { classifyError } from "@/lib/errors";
 import { readConfig, writeConfig } from "@/lib/tauri";
+import { useToast } from "@/lib/ToastContext";
 import {
   identifyPastedKey,
   isAnthropicKeyLike,
@@ -9,8 +12,7 @@ import {
   parseEnvKeys,
   upsertEnvVar,
 } from "@/lib/wizardUtils";
-import { useToast } from "@/lib/ToastContext";
-import { classifyError } from "@/lib/errors";
+
 import HowToModal, { type HowToStep } from "./HowToModal";
 
 interface Props {
@@ -104,8 +106,8 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
   // Clear the aria-live announcement after a beat so it doesn't stay stuck.
   useEffect(() => {
     if (!announcement) return;
-    const t = setTimeout(() => setAnnouncement(""), 2000);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => { setAnnouncement(""); }, 2000);
+    return () => { clearTimeout(t); };
   }, [announcement]);
 
   function handlePaste(
@@ -160,8 +162,8 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
         await persistKeys();
       }
       onContinue({ skippedKeys: opts.skip });
-    } catch (err) {
-      const classified = classifyError(err);
+    } catch (error) {
+      const classified = classifyError(error);
       addToast({
         type: "error",
         title: classified.title === "Something went wrong"
@@ -238,8 +240,8 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
               id="anthropic-key"
               type={showAnthropic ? "text" : "password"}
               value={anthropicKey}
-              onChange={(e) => setAnthropicKey(e.target.value)}
-              onPaste={(e) => handlePaste(e, "anthropic")}
+              onChange={(e) => { setAnthropicKey(e.target.value); }}
+              onPaste={(e) => { handlePaste(e, "anthropic"); }}
               placeholder="sk-ant-api03-..."
               autoComplete="off"
               aria-describedby="anthropic-hint"
@@ -248,7 +250,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
             <button
               type="button"
               aria-label={showAnthropic ? "Hide key" : "Show key"}
-              onClick={() => setShowAnthropic((v) => !v)}
+              onClick={() => { setShowAnthropic((v) => !v); }}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300"
             >
               {showAnthropic ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -260,7 +262,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
           Don't have one yet?{" "}
           <button
             type="button"
-            onClick={() => setOpenModal("anthropic")}
+            onClick={() => { setOpenModal("anthropic"); }}
             className="inline-flex items-center gap-1 text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
           >
             Show me how to get one (2 min)
@@ -308,8 +310,8 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
               id="telegram-token"
               type={showTelegram ? "text" : "password"}
               value={telegramToken}
-              onChange={(e) => setTelegramToken(e.target.value)}
-              onPaste={(e) => handlePaste(e, "telegram")}
+              onChange={(e) => { setTelegramToken(e.target.value); }}
+              onPaste={(e) => { handlePaste(e, "telegram"); }}
               placeholder="1234567890:ABCdefGHIjkl..."
               autoComplete="off"
               aria-describedby="telegram-hint"
@@ -318,7 +320,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
             <button
               type="button"
               aria-label={showTelegram ? "Hide token" : "Show token"}
-              onClick={() => setShowTelegram((v) => !v)}
+              onClick={() => { setShowTelegram((v) => !v); }}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300"
             >
               {showTelegram ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -330,7 +332,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
           Need to create one?{" "}
           <button
             type="button"
-            onClick={() => setOpenModal("telegram")}
+            onClick={() => { setOpenModal("telegram"); }}
             className="inline-flex items-center gap-1 text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
           >
             Walk me through it (3 min)
@@ -370,13 +372,13 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
 
       <HowToModal
         open={openModal === "anthropic"}
-        onClose={() => setOpenModal(null)}
+        onClose={() => { setOpenModal(null); }}
         title="How to get an Anthropic API key"
         steps={ANTHROPIC_STEPS}
       />
       <HowToModal
         open={openModal === "telegram"}
-        onClose={() => setOpenModal(null)}
+        onClose={() => { setOpenModal(null); }}
         title="How to create a Telegram bot"
         steps={TELEGRAM_STEPS}
       />

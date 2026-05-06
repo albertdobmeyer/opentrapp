@@ -1,4 +1,5 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
+
 import type {
   DiscoveredComponent,
   CommandResult,
@@ -54,7 +55,7 @@ export async function runCommand(
 export async function loadOptions(
   componentId: string,
   commandString: string,
-  timeoutSeconds: number = 5,
+  timeoutSeconds = 5,
 ): Promise<string[]> {
   return invoke<string[]>("load_options", {
     componentId,
@@ -110,7 +111,7 @@ export async function writeConfig(
 export async function runHealthProbe(
   componentId: string,
   probeCommand: string,
-  timeoutSeconds: number = 10,
+  timeoutSeconds = 10,
 ): Promise<{ probe_id: string; stdout: string; stderr: string; exit_code: number }> {
   return invoke("run_health_probe", {
     componentId,
@@ -133,23 +134,23 @@ export interface PrerequisiteReport {
     name: string | null;
     version: string | null;
   };
-  submodules: Array<{
+  submodules: {
     id: string;
     name: string;
     cloned: boolean;
     has_manifest: boolean;
-  }>;
-  components: Array<{
+  }[];
+  components: {
     component_id: string;
     component_name: string;
     needs_container_runtime: boolean;
-    missing_config_files: Array<{
+    missing_config_files: {
       path: string;
       template: string | null;
       description: string | null;
-    }>;
+    }[];
     check_passed: boolean | null;
-  }>;
+  }[];
 }
 
 export async function checkPrerequisites(): Promise<PrerequisiteReport> {

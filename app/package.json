@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint . --max-warnings 350"
+    "lint": "eslint . --max-warnings 110"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",

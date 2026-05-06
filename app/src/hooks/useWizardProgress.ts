@@ -1,5 +1,7 @@
 import { useCallback } from "react";
+
 import { useSettings } from "./useSettings";
+
 import type { SetupProgress, SetupStep } from "@/lib/settings";
 
 /**
@@ -22,7 +24,7 @@ export function useWizardProgress() {
       completedSteps.add(step);
       const next: SetupProgress = {
         step,
-        completedSteps: Array.from(completedSteps),
+        completedSteps: [...completedSteps],
         ...(opts?.skippedKeys ? { skippedKeys: true } : {}),
       };
       await update({ setupProgress: next });

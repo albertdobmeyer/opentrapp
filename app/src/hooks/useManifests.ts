@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import type { DiscoveredComponent } from "@/lib/types";
+
+import { classifyError } from "@/lib/errors";
 import { listComponents } from "@/lib/tauri";
 import { useToast } from "@/lib/ToastContext";
-import { classifyError } from "@/lib/errors";
+
+import type { DiscoveredComponent } from "@/lib/types";
 
 export function useManifests() {
   const [components, setComponents] = useState<DiscoveredComponent[]>([]);
@@ -16,10 +18,10 @@ export function useManifests() {
       setError(null);
       const result = await listComponents();
       setComponents(result);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
+    } catch (error_) {
+      const msg = error_ instanceof Error ? error_.message : String(error_);
       setError(msg);
-      const classified = classifyError(err);
+      const classified = classifyError(error_);
       addToast({
         type: "error",
         title: "Discovery failed",

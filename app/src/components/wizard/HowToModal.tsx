@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 export interface HowToStep {
   heading: string;
@@ -34,7 +34,7 @@ export default function HowToModal({ open, onClose, title, steps, ctaLabel }: Pr
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -49,7 +49,7 @@ export default function HowToModal({ open, onClose, title, steps, ctaLabel }: Pr
     >
       <div
         className="card-hero relative w-full max-w-xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); }}
       >
         <button
           ref={closeBtnRef}

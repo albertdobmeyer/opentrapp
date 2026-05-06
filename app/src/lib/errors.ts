@@ -54,7 +54,7 @@ interface Pattern {
 const PATTERNS: Pattern[] = [
   // Connectivity
   {
-    test: /ECONNREFUSED|ETIMEDOUT|ENETUNREACH|getaddrinfo|fetch failed|network error/i,
+    test: /econnrefused|etimedout|enetunreach|getaddrinfo|fetch failed|network error/i,
     category: "execution",
     severity: "connectivity",
     title: "Can't reach the network",
@@ -74,7 +74,7 @@ const PATTERNS: Pattern[] = [
   },
   // Resource — disk/memory
   {
-    test: /ENOSPC|disk full|out of memory|cannot allocate/i,
+    test: /enospc|disk full|out of memory|cannot allocate/i,
     category: "execution",
     severity: "resource",
     title: "Your computer is out of space",
@@ -97,7 +97,7 @@ const PATTERNS: Pattern[] = [
   // Wizard install pipeline — specific failure shapes, ordered before
   // the generic "execution failed" / "Not found" catch-alls.
   {
-    test: /Some assistant modules failed to download/i,
+    test: /some assistant modules failed to download/i,
     category: "execution",
     severity: "connectivity",
     title: "Couldn't download everything",
@@ -106,7 +106,7 @@ const PATTERNS: Pattern[] = [
     retryable: true,
   },
   {
-    test: /Workflow ended with status:/i,
+    test: /workflow ended with status:/i,
     category: "execution",
     severity: "transient",
     title: "Safety check didn't finish",
@@ -134,7 +134,7 @@ const PATTERNS: Pattern[] = [
     retryable: true,
   },
   {
-    test: /Component not found/i,
+    test: /component not found/i,
     category: "not_found",
     severity: "configuration",
     title: "We couldn't find that part of the app",
@@ -143,7 +143,7 @@ const PATTERNS: Pattern[] = [
     retryable: false,
   },
   {
-    test: /Command not found/i,
+    test: /command not found/i,
     category: "not_found",
     severity: "configuration",
     title: "We couldn't find what to run",
@@ -152,7 +152,7 @@ const PATTERNS: Pattern[] = [
     retryable: false,
   },
   {
-    test: /Config file not found/i,
+    test: /config file not found/i,
     category: "config",
     severity: "configuration",
     title: "Settings file is missing",
@@ -161,7 +161,7 @@ const PATTERNS: Pattern[] = [
     retryable: false,
   },
   {
-    test: /Config write error/i,
+    test: /config write error/i,
     category: "config",
     severity: "configuration",
     title: "Couldn't save your settings",
@@ -170,7 +170,7 @@ const PATTERNS: Pattern[] = [
     retryable: true,
   },
   {
-    test: /Shell not found/i,
+    test: /shell not found/i,
     category: "execution",
     severity: "platform",
     title: "Shell not available",
@@ -179,7 +179,7 @@ const PATTERNS: Pattern[] = [
     retryable: false,
   },
   {
-    test: /Path traversal/i,
+    test: /path traversal/i,
     category: "permission",
     severity: "permissions",
     title: "Access denied",
@@ -188,7 +188,7 @@ const PATTERNS: Pattern[] = [
     retryable: false,
   },
   {
-    test: /Manifest parse error/i,
+    test: /manifest parse error/i,
     category: "parse",
     severity: "configuration",
     title: "Settings are invalid",
@@ -207,7 +207,7 @@ const PATTERNS: Pattern[] = [
   },
   // Catch-all "Not found" goes last so more-specific patterns above win
   {
-    test: /Not found/i,
+    test: /not found/i,
     category: "not_found",
     severity: "configuration",
     title: "Not found",

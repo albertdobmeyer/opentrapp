@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+
 import DevPlaceholder from "./DevPlaceholder";
 
 export default function DevComponentDetail() {

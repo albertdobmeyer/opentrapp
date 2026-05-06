@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
 import { load } from "@tauri-apps/plugin-store";
-import type { AppSettings } from "@/lib/settings";
+import { useState, useEffect, useCallback } from "react";
+
 import { DEFAULT_SETTINGS } from "@/lib/settings";
+
+import type { AppSettings } from "@/lib/settings";
+
 
 const STORE_FILE = "settings.json";
 const STORE_KEY = "app_settings";

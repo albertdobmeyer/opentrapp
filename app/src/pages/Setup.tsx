@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { SetupStep } from "@/lib/settings";
-import { useWizardProgress } from "@/hooks/useWizardProgress";
-import { useSettings } from "@/hooks/useSettings";
-import WelcomeStep from "@/components/wizard/WelcomeStep";
+
 import ConnectStep from "@/components/wizard/ConnectStep";
 import InstallStep from "@/components/wizard/InstallStep";
 import ReadyStep from "@/components/wizard/ReadyStep";
+import WelcomeStep from "@/components/wizard/WelcomeStep";
 import WizardProgress from "@/components/wizard/WizardProgress";
+import { useSettings } from "@/hooks/useSettings";
+import { useWizardProgress } from "@/hooks/useWizardProgress";
+
+import type { SetupStep } from "@/lib/settings";
 
 const STEP_ORDER: SetupStep[] = ["welcome", "connect", "install", "ready"];
 
@@ -64,7 +66,7 @@ export default function Setup() {
           <WelcomeStep
             onNext={() => advance("connect")}
             canSkipToDashboard={settings.wizardCompleted}
-            onSkipToDashboard={() => navigate("/")}
+            onSkipToDashboard={() => { navigate("/"); }}
           />
         )}
 

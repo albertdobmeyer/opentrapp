@@ -128,7 +128,10 @@ export default tseslint.config(
       'unicorn/no-useless-length-check': 'warn',
       'unicorn/no-useless-promise-resolve-reject': 'warn',
       'unicorn/no-useless-spread': 'warn',
-      'unicorn/no-useless-undefined': 'warn',
+      // Disabled: too aggressive when a typed callable's signature requires
+      // an argument (e.g. vitest mockResolvedValue<T>()), where the explicit
+      // `undefined` carries the type and is not actually useless.
+      'unicorn/no-useless-undefined': 'off',
       'unicorn/no-zero-fractions': 'warn',
       'unicorn/prefer-add-event-listener': 'warn',
       'unicorn/prefer-array-find': 'warn',
@@ -153,7 +156,10 @@ export default tseslint.config(
       'unicorn/prefer-set-has': 'warn',
       'unicorn/prefer-set-size': 'warn',
       'unicorn/prefer-spread': 'warn',
-      'unicorn/prefer-string-replace-all': 'warn',
+      // Disabled: would emit String.prototype.replaceAll, an ES2021 feature
+      // beyond this project's ES2020 tsconfig target. Re-enable after a
+      // separate tsconfig target bump.
+      'unicorn/prefer-string-replace-all': 'off',
       'unicorn/prefer-string-slice': 'warn',
       'unicorn/prefer-string-starts-ends-with': 'warn',
       'unicorn/prefer-string-trim-start-end': 'warn',

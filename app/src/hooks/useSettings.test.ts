@@ -1,7 +1,10 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
 import { load } from "@tauri-apps/plugin-store";
-import { useSettings } from "./useSettings";
+import { renderHook, act, waitFor } from "@testing-library/react";
+
 import { DEFAULT_SETTINGS } from "@/lib/settings";
+
+import { useSettings } from "./useSettings";
+
 
 describe("useSettings", () => {
   beforeEach(async () => {

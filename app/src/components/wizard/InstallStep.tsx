@@ -1,4 +1,3 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import {
   Check,
@@ -8,7 +7,12 @@ import {
   ExternalLink,
   Loader2,
 } from "lucide-react";
-import type { StreamEnd, StreamLine } from "@/lib/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+
+import ContactSupport from "@/components/failure/ContactSupport";
+import FriendlyRetry from "@/components/failure/FriendlyRetry";
+import { useSettings } from "@/hooks/useSettings";
 import { classifyError, type ClassifiedError } from "@/lib/errors";
 import {
   checkPrerequisites,
@@ -20,9 +24,8 @@ import {
   stopStream,
 } from "@/lib/tauri";
 import { parseEnvKeys, withRetry } from "@/lib/wizardUtils";
-import { useSettings } from "@/hooks/useSettings";
-import FriendlyRetry from "@/components/failure/FriendlyRetry";
-import ContactSupport from "@/components/failure/ContactSupport";
+
+import type { StreamEnd, StreamLine } from "@/lib/types";
 
 type SubStepId = "check" | "download" | "build" | "safety";
 type SubStepStatus = "pending" | "running" | "succeeded" | "failed";
@@ -58,8 +61,8 @@ type Outcome =
 /** Redact API keys and tokens from streamed build output. */
 function sanitizeLine(text: string): string {
   return text
-    .replace(/(ANTHROPIC_API_KEY=|sk-ant-api\d{2}-)[^\s'"]+/g, "$1[REDACTED]")
-    .replace(/(OPENAI_API_KEY=|sk-)[A-Za-z0-9_-]{10,}/g, "$1[REDACTED]")
+    .replace(/(ANTHROPIC_API_KEY=|sk-ant-api\d{2}-)[^\s"']+/g, "$1[REDACTED]")
+    .replace(/(OPENAI_API_KEY=|sk-)[\w-]{10,}/g, "$1[REDACTED]")
     .replace(/(TELEGRAM_BOT_TOKEN=)\S+/g, "$1[REDACTED]")
     .replace(/(-e\s+ANTHROPIC_API_KEY=)\S+/g, "$1[REDACTED]")
     .replace(/(-e\s+TELEGRAM_BOT_TOKEN=)\S+/g, "$1[REDACTED]");
@@ -71,7 +74,7 @@ export default function InstallStep({ onComplete, onBack }: Props) {
   const [outcome, setOutcome] = useState<Outcome>({ kind: "running" });
   const [showDetails, setShowDetails] = useState(false);
   const [tick, setTick] = useState(0);
-  const unlistenersRef = useRef<Array<() => void>>([]);
+  const unlistenersRef = useRef<(() => void)[]>([]);
   const cancelledRef = useRef(false);
   const currentSubStepRef = useRef<SubStepId | null>(null);
 
@@ -94,15 +97,15 @@ export default function InstallStep({ onComplete, onBack }: Props) {
 
   // Live timer refresh for the running step.
   useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => { setTick((t) => t + 1); }, 1000);
+    return () => { clearInterval(interval); };
   }, []);
 
   // Cleanup stream listeners on unmount.
   useEffect(() => {
     return () => {
       cancelledRef.current = true;
-      unlistenersRef.current.forEach((fn) => fn());
+      for (const fn of unlistenersRef.current) fn();
     };
   }, []);
 
@@ -149,12 +152,12 @@ export default function InstallStep({ onComplete, onBack }: Props) {
 
         try {
           await startStream(componentId, commandId);
-        } catch (err) {
+        } catch (error) {
           if (!settled) {
             settled = true;
             unlistenLine();
             unlistenEnd();
-            reject(err);
+            reject(error);
           }
         }
       });
@@ -197,7 +200,7 @@ export default function InstallStep({ onComplete, onBack }: Props) {
           if (out) appendLog("download", out);
         },
         2,
-        (attempt) => updateStep("download", { retryAttempt: attempt }),
+        (attempt) => { updateStep("download", { retryAttempt: attempt }); },
       );
       // Re-check to pick up newly cloned submodules.
       const postInitReport = await checkPrerequisites();
@@ -211,15 +214,15 @@ export default function InstallStep({ onComplete, onBack }: Props) {
       // ── C: Build your assistant (stream vault + forge; skip pioneer) ──
       currentSubStepRef.current = "build";
       updateStep("build", { status: "running", startedAt: Date.now() });
-      const components = postInitReport.components
+      const components = new Set(postInitReport.components
         .map((c) => c.component_id)
-        .filter((id) => id !== "moltbook-pioneer");
+        .filter((id) => id !== "moltbook-pioneer"));
 
       // Build vault first (setup + start), then forge (setup). Each streams
       // to the shared technical log for the build sub-step. Serialised
       // because forge's setup depends on vault networking being in place
       // (matches first-run-setup workflow's depends_on wiring).
-      if (components.includes("openclaw-vault")) {
+      if (components.has("openclaw-vault")) {
         await withRetry(
           async () => {
             appendLog("build", "→ Your assistant: install");
@@ -229,17 +232,17 @@ export default function InstallStep({ onComplete, onBack }: Props) {
           },
           2,
           (attempt) =>
-            updateStep("build", { retryAttempt: attempt }),
+            { updateStep("build", { retryAttempt: attempt }); },
         );
       }
-      if (components.includes("clawhub-forge")) {
+      if (components.has("clawhub-forge")) {
         await withRetry(
           async () => {
             appendLog("build", "→ Skill scanner: install");
             await streamOneCommand("clawhub-forge", "setup", "build");
           },
           2,
-          (attempt) => updateStep("build", { retryAttempt: attempt }),
+          (attempt) => { updateStep("build", { retryAttempt: attempt }); },
         );
       }
       updateStep("build", { status: "succeeded" });
@@ -250,24 +253,24 @@ export default function InstallStep({ onComplete, onBack }: Props) {
       await withRetry(
         async () => {
           const tasks: Promise<unknown>[] = [];
-          if (components.includes("openclaw-vault")) {
+          if (components.has("openclaw-vault")) {
             appendLog("safety", "Running assistant security audit (24 checks)…");
             tasks.push(executeWorkflow("openclaw-vault", "full-verify"));
           }
-          if (components.includes("clawhub-forge")) {
+          if (components.has("clawhub-forge")) {
             appendLog("safety", "Running skill scanner pipeline check…");
             tasks.push(executeWorkflow("clawhub-forge", "full-check"));
           }
           const results = await Promise.all(tasks);
           // WorkflowResult.status must be "completed" for a pass.
-          for (const r of results as Array<{ status: string }>) {
+          for (const r of results as { status: string }[]) {
             if (r.status !== "completed") {
               throw new Error(`Workflow ended with status: ${r.status}`);
             }
           }
         },
         2,
-        (attempt) => updateStep("safety", { retryAttempt: attempt }),
+        (attempt) => { updateStep("safety", { retryAttempt: attempt }); },
       );
       updateStep("safety", { status: "succeeded" });
 
@@ -275,9 +278,9 @@ export default function InstallStep({ onComplete, onBack }: Props) {
       void prefetchTelegramUrl(update);
 
       setOutcome({ kind: "succeeded" });
-    } catch (err) {
+    } catch (error) {
       if (cancelledRef.current) return;
-      const classified = classifyError(err, currentSubStepRef.current ?? undefined);
+      const classified = classifyError(error, currentSubStepRef.current ?? undefined);
       // Mark any running step as failed.
       setSteps((prev) =>
         prev.map((s) =>
@@ -312,13 +315,13 @@ export default function InstallStep({ onComplete, onBack }: Props) {
   // final green state.
   useEffect(() => {
     if (outcome.kind !== "succeeded") return;
-    const t = setTimeout(() => onComplete(), 1000);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => { onComplete(); }, 1000);
+    return () => { clearTimeout(t); };
   }, [outcome, onComplete]);
 
   // Guard against user triggering a click while the retry is pending.
   const handleRetry = () => {
-    unlistenersRef.current.forEach((fn) => fn());
+    for (const fn of unlistenersRef.current) fn();
     unlistenersRef.current = [];
     runPipeline();
   };
@@ -346,11 +349,11 @@ export default function InstallStep({ onComplete, onBack }: Props) {
         onRetry={handleRetry}
         secondary={{ label: "Go back", action: onBack }}
         onGetHelp={() =>
-          setOutcome({
+          { setOutcome({
             kind: "failed",
             classified: outcome.classified,
             level: 3,
-          })
+          }); }
         }
       />
     );
@@ -371,9 +374,9 @@ export default function InstallStep({ onComplete, onBack }: Props) {
         <p className="text-sm text-neutral-400" aria-live="polite">
           {outcome.kind === "succeeded"
             ? "All done. Taking you to the finish line…"
-            : runningStep
+            : (runningStep
               ? `${runningStep.label}…`
-              : "This usually takes 2–3 minutes."}
+              : "This usually takes 2–3 minutes.")}
         </p>
         {totalRemainingMs !== null && outcome.kind === "running" && (
           <p className="mt-1 text-xs text-neutral-500">
@@ -422,7 +425,7 @@ export default function InstallStep({ onComplete, onBack }: Props) {
       <div className="text-center">
         <button
           type="button"
-          onClick={() => setShowDetails((v) => !v)}
+          onClick={() => { setShowDetails((v) => !v); }}
           className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-300"
           aria-expanded={showDetails}
         >
@@ -591,7 +594,7 @@ function InstallLine({
         <div className="mt-3 border-t border-neutral-800 pt-2">
           <button
             type="button"
-            onClick={() => setShowAdvanced((v) => !v)}
+            onClick={() => { setShowAdvanced((v) => !v); }}
             className="inline-flex items-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-300"
             aria-expanded={showAdvanced}
           >

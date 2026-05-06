@@ -1,4 +1,3 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   Activity,
   Boxes,
@@ -12,6 +11,8 @@ import {
   Terminal,
   type LucideIcon,
 } from "lucide-react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+
 import { useAppContext } from "@/lib/AppContext";
 
 interface NavItem {

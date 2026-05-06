@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+
 import type { LucideIcon } from "lucide-react";
 
 export type TileTone = "neutral" | "warning" | "danger";
@@ -34,7 +35,7 @@ export default function StatTile({
   return (
     <button
       type="button"
-      onClick={() => navigate(href)}
+      onClick={() => { navigate(href); }}
       className={`card-interactive text-left ${accent}`}
       aria-label={`${title} — ${value}. Click for details.`}
     >

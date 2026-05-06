@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { LayoutDashboard, MessageCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+
 import { useSettings } from "@/hooks/useSettings";
 
 const AUTO_ADVANCE_SECONDS = 5;
@@ -23,8 +24,8 @@ export default function ReadyStep({ onGoToDashboard }: Props) {
   // auto-advances to the dashboard. "Gives user agency" per spec 07 §Step 4.
   useEffect(() => {
     const startCountdownAfterMs = 3000;
-    const t = setTimeout(() => setSecondsLeft(AUTO_ADVANCE_SECONDS), startCountdownAfterMs);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => { setSecondsLeft(AUTO_ADVANCE_SECONDS); }, startCountdownAfterMs);
+    return () => { clearTimeout(t); };
   }, []);
 
   useEffect(() => {
@@ -33,8 +34,8 @@ export default function ReadyStep({ onGoToDashboard }: Props) {
       onGoToDashboard();
       return;
     }
-    const t = setTimeout(() => setSecondsLeft((s) => (s === null ? null : s - 1)), 1000);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => { setSecondsLeft((s) => (s === null ? null : s - 1)); }, 1000);
+    return () => { clearTimeout(t); };
   }, [secondsLeft, onGoToDashboard]);
 
   const cancelAutoAdvance = () => {
