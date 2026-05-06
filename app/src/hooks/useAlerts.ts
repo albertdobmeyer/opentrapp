@@ -51,9 +51,10 @@ export function useAlerts(): { alerts: Alert[]; dismiss: (id: string) => void } 
     let cancelled = false;
     let unlisten: (() => void) | null = null;
 
-    (async () => {
+    void (async () => {
       try {
         const initial = await getAssistantStatus();
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- closure-mutated by cleanup function below; ESLint's narrowing is unaware
         if (!cancelled) setSnapshot(initial);
       } catch {
         // Tauri IPC unavailable (e.g. browser dev mode) — keep EMPTY_SNAPSHOT.
@@ -76,7 +77,7 @@ export function useAlerts(): { alerts: Alert[]; dismiss: (id: string) => void } 
   const alerts = snapshot.alerts
     .filter((a) => !(a.suppress_during_wizard && !settings.wizardCompleted))
     .filter((a) => !settings.dismissedAlerts[a.id])
-    .map(toFrontendAlert);
+    .map((a) => toFrontendAlert(a));
 
   function dismiss(id: string) {
     void update({

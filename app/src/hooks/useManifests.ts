@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 
+import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
 import { listComponents } from "@/lib/tauri";
-import { useToast } from "@/lib/ToastContext";
 
 import type { DiscoveredComponent } from "@/lib/types";
 
@@ -26,7 +26,7 @@ export function useManifests() {
         type: "error",
         title: "Discovery failed",
         message: classified.message,
-        retryFn: refresh,
+        retryFn: () => { void refresh(); },
         duration: 0,
       });
     } finally {
@@ -35,7 +35,7 @@ export function useManifests() {
   };
 
   useEffect(() => {
-    refresh();
+    void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

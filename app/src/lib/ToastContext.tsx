@@ -1,32 +1,6 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { useCallback, useState } from "react";
 
-export interface Toast {
-  id: string;
-  type: "success" | "error" | "warning" | "info";
-  title: string;
-  message?: string;
-  details?: string;
-  retryFn?: () => void;
-  duration?: number; // ms, 0 = sticky
-}
-
-export type AddToastFn = (toast: Omit<Toast, "id">) => string;
-
-interface ToastContextValue {
-  toasts: Toast[];
-  addToast: AddToastFn;
-  removeToast: (id: string) => void;
-}
-
-export const ToastContext = createContext<ToastContextValue>({
-  toasts: [],
-  addToast: () => "",
-  removeToast: () => {},
-});
-
-export function useToast() {
-  return useContext(ToastContext);
-}
+import { ToastContext, type AddToastFn, type Toast } from "@/hooks/useToast";
 
 let toastCounter = 0;
 
@@ -144,7 +118,7 @@ function ToastItem({
         <button
           onClick={() => {
             onDismiss(toast.id);
-            toast.retryFn!();
+            toast.retryFn?.();
           }}
           className="mt-2 text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300"
         >

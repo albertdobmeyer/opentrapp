@@ -1,9 +1,9 @@
 import { Check, Eye, EyeOff, Key, MessageCircle, ExternalLink } from "lucide-react";
 import { useEffect, useRef, useState, type ClipboardEvent } from "react";
 
+import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
 import { readConfig, writeConfig } from "@/lib/tauri";
-import { useToast } from "@/lib/ToastContext";
 import {
   identifyPastedKey,
   isAnthropicKeyLike,
@@ -191,7 +191,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
         Connect your accounts
       </h1>
       <p className="mb-8 text-sm text-neutral-400">
-        Your assistant needs two things to work. Enter them once and you're
+        Your assistant needs two things to work. Enter them once and you’re
         done. Nothing leaves your computer.
       </p>
 
@@ -215,7 +215,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
           )}
         </div>
         <p className="mb-3 text-xs text-neutral-500">
-          The AI's brain. Also how you'll pay for its thoughts (about $5–20/month
+          The AI’s brain. Also how you’ll pay for its thoughts (about $5–20/month
           for typical use).
         </p>
 
@@ -259,7 +259,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
         )}
 
         <p id="anthropic-hint" className="mt-3 text-xs text-neutral-500">
-          Don't have one yet?{" "}
+          Don’t have one yet?{" "}
           <button
             type="button"
             onClick={() => { setOpenModal("anthropic"); }}
@@ -286,7 +286,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
           )}
         </div>
         <p className="mb-3 text-xs text-neutral-500">
-          How you'll talk to your assistant.
+          How you’ll talk to your assistant.
         </p>
 
         {existingTelegramMask && !telegramToken ? (

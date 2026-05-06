@@ -42,9 +42,10 @@ export default function App() {
   useEffect(() => {
     if (!settingsLoaded) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const osState = await getAutostartEnabled();
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- closure-mutated by cleanup function below; ESLint's narrowing is unaware
         if (cancelled) return;
         if (osState !== settings.autostart) {
           await setAutostartEnabled(settings.autostart);

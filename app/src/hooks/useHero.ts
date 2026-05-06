@@ -52,15 +52,17 @@ export function useHero(): Hero {
     let cancelled = false;
     let unlisten: (() => void) | null = null;
 
-    (async () => {
+    void (async () => {
       try {
         const initial = await getAssistantStatus();
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- closure-mutated by cleanup function; ESLint's narrowing is unaware
         if (cancelled) return;
         if (initial.status === "ok") hasBeenRunningRef.current = true;
         setSnapshot(initial);
       } catch {
         // Tauri IPC unavailable (e.g. browser dev mode) — keep EMPTY_SNAPSHOT.
       } finally {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- closure-mutated by cleanup function; ESLint's narrowing is unaware
         if (!cancelled) setLoading(false);
       }
 

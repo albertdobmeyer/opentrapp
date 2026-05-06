@@ -12,13 +12,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useSettings } from "@/hooks/useSettings";
+import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
 import {
   ensureNotificationPermission,
   setAutostartEnabled,
 } from "@/lib/osIntegration";
 import { readConfig, restartPerimeter, writeConfig } from "@/lib/tauri";
-import { useToast } from "@/lib/ToastContext";
 import {
   isAnthropicKeyLike,
   isTelegramTokenLike,
@@ -296,7 +296,7 @@ function NotificationsSection() {
   const { addToast } = useToast();
   const n = settings.notifications;
 
-  async function toggle<K extends keyof typeof n>(key: K, label: string) {
+  async function toggle(key: keyof typeof n, label: string) {
     const next = !n[key];
 
     // First-time enable of any notification — request OS permission so
@@ -467,7 +467,7 @@ function AdvancedModeSection() {
         Unlocks detailed views for developers, security researchers, and power
         users.
       </p>
-      <p className="mb-4 text-xs text-neutral-500">Most people won't need this.</p>
+      <p className="mb-4 text-xs text-neutral-500">Most people won’t need this.</p>
       <ToggleRow label="Enable Advanced Mode" checked={enabled} onChange={toggle} />
     </div>
   );

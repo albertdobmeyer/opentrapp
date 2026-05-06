@@ -32,7 +32,7 @@ export default function WelcomeStep({
           Welcome
         </h1>
         <p className="mx-auto mb-10 max-w-md text-base leading-relaxed text-neutral-400">
-          Your personal AI assistant, safe on your computer. Let's get you set
+          Your personal AI assistant, safe on your computer. Let’s get you set
           up — it takes about 3 minutes.
         </p>
 

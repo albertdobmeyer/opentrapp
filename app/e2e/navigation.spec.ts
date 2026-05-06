@@ -23,7 +23,7 @@ test.describe("Navigation and routing", () => {
   test("unknown route shows 404 page with navigation", async ({ page }) => {
     await page.goto("/nonexistent-page");
     await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
-    await expect(page.getByText("doesn't exist or has been moved")).toBeVisible();
+    await expect(page.getByText("doesn’t exist or has been moved")).toBeVisible();
     // UserSidebar is still visible for navigation — has a Preferences link.
     await expect(page.getByRole("link", { name: "Preferences" })).toBeVisible();
     // "Back home" link exists.

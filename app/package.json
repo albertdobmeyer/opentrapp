@@ -19,7 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint . --max-warnings 110"
+    "lint": "eslint . --max-warnings 28"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",
@@ -48,6 +48,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/eslint-plugin": "^1.6.16",
     "autoprefixer": "^10.5.0",
+    "esbuild": "^0.28.0",
     "eslint": "^9.39.4",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import": "^2.32.0",

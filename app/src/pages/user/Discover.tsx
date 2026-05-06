@@ -167,7 +167,7 @@ function UseCaseCard({ useCase, isFavorite, onToggleFavorite, onTry }: UseCaseCa
         </button>
       </div>
 
-      <p className="flex-1 text-xs text-neutral-400">"{useCase.prompt}"</p>
+      <p className="flex-1 text-xs text-neutral-400">“{useCase.prompt}”</p>
 
       {hint && <p className="text-[11px] italic text-neutral-500">{hint}</p>}
 
