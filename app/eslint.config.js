@@ -172,7 +172,13 @@ export default tseslint.config(
       // Complexity gates
       complexity: ['warn', 18],
       'max-lines': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
-      'max-lines-per-function': ['warn', { max: 80, skipBlankLines: true, skipComments: true, IIFEs: true }],
+      // 150 lines (skipBlankLines + skipComments) is the threshold this
+      // codebase settled on after measuring violations: React function
+      // components and custom hooks routinely run 100-140 useful lines once
+      // state, effects, handlers, and JSX are colocated. 80 was over-tight
+      // and forced cosmetic extraction; >180 is the empirical signal that
+      // a file needs real decomposition.
+      'max-lines-per-function': ['warn', { max: 150, skipBlankLines: true, skipComments: true, IIFEs: true }],
       'max-depth': ['warn', 5],
       'max-nested-callbacks': ['warn', 3],
       'max-params': ['warn', 5],
@@ -182,42 +188,13 @@ export default tseslint.config(
       '@typescript-eslint/prefer-readonly': 'warn',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
-      // TS: rules whose strict default fights idiomatic React/event code
+      // TS: rules whose strict default fights idiomatic React event handlers
+      // (passing async callbacks to attribute props is normal; void return
+      // checking on attribute callbacks is too noisy).
       '@typescript-eslint/no-misused-promises': [
-        'warn',
+        'error',
         { checksVoidReturn: { attributes: false } },
       ],
-
-      // The rules below are demoted from `error` (strict-type-checked default)
-      // to `warn` so the lint gate can ratchet by warning count. Each rule is
-      // a candidate to promote back to `error` once its existing violations
-      // have been cleaned up in a subsequent PR.
-      '@typescript-eslint/no-empty-function': 'warn',
-      '@typescript-eslint/no-floating-promises': 'warn',
-      '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-return': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn',
-      '@typescript-eslint/restrict-template-expressions': 'warn',
-      '@typescript-eslint/require-await': 'warn',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/no-invalid-void-type': 'warn',
-      '@typescript-eslint/no-deprecated': 'warn',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      '@typescript-eslint/prefer-promise-reject-errors': 'warn',
-      '@typescript-eslint/no-confusing-void-expression': 'warn',
-      '@typescript-eslint/no-unnecessary-type-parameters': 'warn',
-      '@typescript-eslint/no-base-to-string': 'warn',
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'warn',
-      '@typescript-eslint/array-type': 'warn',
-      '@typescript-eslint/consistent-indexed-object-style': 'warn',
-      '@typescript-eslint/no-inferrable-types': 'warn',
-      '@typescript-eslint/prefer-regexp-exec': 'warn',
-      'react/no-unescaped-entities': 'warn',
-      'no-async-promise-executor': 'warn',
-      'no-empty': 'warn',
     },
   },
 

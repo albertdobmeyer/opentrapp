@@ -1,5 +1,5 @@
-import { Check, Eye, EyeOff, Key, MessageCircle, ExternalLink } from "lucide-react";
-import { useEffect, useRef, useState, type ClipboardEvent } from "react";
+import { Check, ExternalLink, Eye, EyeOff, Key, MessageCircle } from "lucide-react";
+import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode, type Ref } from "react";
 
 import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
@@ -19,6 +19,8 @@ interface Props {
   onContinue: (opts: { skippedKeys: boolean }) => void;
   onBack: () => void;
 }
+
+type FieldKind = "anthropic" | "telegram";
 
 const ANTHROPIC_STEPS: HowToStep[] = [
   {
@@ -79,7 +81,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
   const [showTelegram, setShowTelegram] = useState(false);
   const [saving, setSaving] = useState(false);
   const [announcement, setAnnouncement] = useState("");
-  const [openModal, setOpenModal] = useState<"anthropic" | "telegram" | null>(null);
+  const [openModal, setOpenModal] = useState<FieldKind | null>(null);
 
   const anthropicInputRef = useRef<HTMLInputElement | null>(null);
   const telegramInputRef = useRef<HTMLInputElement | null>(null);
@@ -89,18 +91,14 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
     let cancelled = false;
     readConfig("openclaw-vault", ".env")
       .then((content) => {
+         
         if (cancelled) return;
-        const { anthropicKey: savedAnthropic, telegramToken: savedTelegram } =
-          parseEnvKeys(content);
+        const { anthropicKey: savedAnthropic, telegramToken: savedTelegram } = parseEnvKeys(content);
         if (savedAnthropic) setExistingAnthropicMask(maskKey(savedAnthropic));
         if (savedTelegram) setExistingTelegramMask(maskKey(savedTelegram));
       })
-      .catch(() => {
-        // .env doesn't exist yet — totally fine
-      });
-    return () => {
-      cancelled = true;
-    };
+      .catch(() => undefined);
+    return () => { cancelled = true; };
   }, []);
 
   // Clear the aria-live announcement after a beat so it doesn't stay stuck.
@@ -110,15 +108,10 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
     return () => { clearTimeout(t); };
   }, [announcement]);
 
-  function handlePaste(
-    e: ClipboardEvent<HTMLInputElement>,
-    targetField: "anthropic" | "telegram",
-  ) {
+  function handlePaste(e: ClipboardEvent<HTMLInputElement>, target: FieldKind) {
     const pasted = e.clipboardData.getData("text");
     const identified = identifyPastedKey(pasted);
-    if (!identified || identified === targetField) return;
-
-    // Swap to the correct field.
+    if (!identified || identified === target) return;
     e.preventDefault();
     if (identified === "anthropic") {
       setAnthropicKey(pasted.trim());
@@ -133,52 +126,10 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
     }
   }
 
-  async function persistKeys(): Promise<void> {
-    // If user didn't touch the inputs but has existing masked values, nothing
-    // to save — keep the .env as is.
-    if (!anthropicKey && !telegramToken) return;
+  const handleContinueClick = (skip: boolean) => {
+    void runContinue({ skip, anthropicKey, telegramToken, setSaving, addToast, onContinue });
+  };
 
-    let content = "";
-    try {
-      content = await readConfig("openclaw-vault", ".env");
-    } catch {
-      content = "# OpenClaw-Vault configuration\n";
-    }
-
-    if (anthropicKey) {
-      content = upsertEnvVar(content, "ANTHROPIC_API_KEY", anthropicKey);
-    }
-    if (telegramToken) {
-      content = upsertEnvVar(content, "TELEGRAM_BOT_TOKEN", telegramToken);
-    }
-
-    await writeConfig("openclaw-vault", ".env", content);
-  }
-
-  async function handleContinue(opts: { skip: boolean }) {
-    setSaving(true);
-    try {
-      if (!opts.skip) {
-        await persistKeys();
-      }
-      onContinue({ skippedKeys: opts.skip });
-    } catch (error) {
-      const classified = classifyError(error);
-      addToast({
-        type: "error",
-        title: classified.title === "Something went wrong"
-          ? "Couldn't save your keys"
-          : classified.title,
-        message: classified.userMessage,
-        duration: 0,
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const anthropicValid = isAnthropicKeyLike(anthropicKey);
-  const telegramValid = isTelegramTokenLike(telegramToken);
   const hasAnyKey =
     anthropicKey.length > 0 ||
     telegramToken.length > 0 ||
@@ -187,181 +138,69 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
 
   return (
     <div className="animate-fade-in mx-auto max-w-xl px-4 py-6">
-      <h1 className="mb-2 text-2xl font-semibold text-neutral-100">
-        Connect your accounts
-      </h1>
+      <h1 className="mb-2 text-2xl font-semibold text-neutral-100">Connect your accounts</h1>
       <p className="mb-8 text-sm text-neutral-400">
-        Your assistant needs two things to work. Enter them once and you’re
-        done. Nothing leaves your computer.
+        Your assistant needs two things to work. Enter them once and you’re done. Nothing leaves your computer.
       </p>
 
       {/* Live region — paste-swap announcements */}
-      <div aria-live="polite" className="sr-only">
-        {announcement}
-      </div>
+      <div aria-live="polite" className="sr-only">{announcement}</div>
 
-      {/* Anthropic card */}
-      <div className="card-raised mb-5">
-        <div className="mb-3 flex items-center gap-2">
-          <Key size={18} className="text-primary-400" />
-          <label
-            htmlFor="anthropic-key"
-            className="text-sm font-medium text-neutral-100"
-          >
-            Anthropic API key
-          </label>
-          {anthropicValid && (
-            <Check size={16} className="text-success-400" aria-label="Valid format" />
-          )}
-        </div>
-        <p className="mb-3 text-xs text-neutral-500">
-          The AI’s brain. Also how you’ll pay for its thoughts (about $5–20/month
-          for typical use).
-        </p>
+      <KeyCard
+        kind="anthropic"
+        icon={<Key size={18} className="text-primary-400" />}
+        label="Anthropic API key"
+        hint="The AI’s brain. Also how you’ll pay for its thoughts (about $5–20/month for typical use)."
+        placeholder="sk-ant-api03-..."
+        inputId="anthropic-key"
+        inputRef={anthropicInputRef}
+        value={anthropicKey}
+        onChange={setAnthropicKey}
+        onPaste={(e) => { handlePaste(e, "anthropic"); }}
+        show={showAnthropic}
+        toggleShow={() => { setShowAnthropic((v) => !v); }}
+        existingMask={existingAnthropicMask}
+        clearMask={() => { setExistingAnthropicMask(null); }}
+        isValid={isAnthropicKeyLike(anthropicKey)}
+        howToLabel="Don’t have one yet?"
+        howToCta="Show me how to get one (2 min)"
+        onOpenHowTo={() => { setOpenModal("anthropic"); }}
+        wrapperExtra="mb-5"
+      />
 
-        {existingAnthropicMask && !anthropicKey ? (
-          <div className="flex items-center justify-between gap-3 rounded-md bg-neutral-900 px-3 py-2">
-            <code className="text-sm text-neutral-300">{existingAnthropicMask}</code>
-            <button
-              type="button"
-              onClick={() => {
-                setExistingAnthropicMask(null);
-                setTimeout(() => anthropicInputRef.current?.focus(), 0);
-              }}
-              className="text-xs text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
-            >
-              Change
-            </button>
-          </div>
-        ) : (
-          <div className="relative">
-            <input
-              ref={anthropicInputRef}
-              id="anthropic-key"
-              type={showAnthropic ? "text" : "password"}
-              value={anthropicKey}
-              onChange={(e) => { setAnthropicKey(e.target.value); }}
-              onPaste={(e) => { handlePaste(e, "anthropic"); }}
-              placeholder="sk-ant-api03-..."
-              autoComplete="off"
-              aria-describedby="anthropic-hint"
-              className="input pr-10"
-            />
-            <button
-              type="button"
-              aria-label={showAnthropic ? "Hide key" : "Show key"}
-              onClick={() => { setShowAnthropic((v) => !v); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300"
-            >
-              {showAnthropic ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-        )}
-
-        <p id="anthropic-hint" className="mt-3 text-xs text-neutral-500">
-          Don’t have one yet?{" "}
-          <button
-            type="button"
-            onClick={() => { setOpenModal("anthropic"); }}
-            className="inline-flex items-center gap-1 text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
-          >
-            Show me how to get one (2 min)
-            <ExternalLink size={11} />
-          </button>
-        </p>
-      </div>
-
-      {/* Telegram card */}
-      <div className="card-raised mb-8">
-        <div className="mb-3 flex items-center gap-2">
-          <MessageCircle size={18} className="text-info-400" />
-          <label
-            htmlFor="telegram-token"
-            className="text-sm font-medium text-neutral-100"
-          >
-            Telegram bot
-          </label>
-          {telegramValid && (
-            <Check size={16} className="text-success-400" aria-label="Valid format" />
-          )}
-        </div>
-        <p className="mb-3 text-xs text-neutral-500">
-          How you’ll talk to your assistant.
-        </p>
-
-        {existingTelegramMask && !telegramToken ? (
-          <div className="flex items-center justify-between gap-3 rounded-md bg-neutral-900 px-3 py-2">
-            <code className="text-sm text-neutral-300">{existingTelegramMask}</code>
-            <button
-              type="button"
-              onClick={() => {
-                setExistingTelegramMask(null);
-                setTimeout(() => telegramInputRef.current?.focus(), 0);
-              }}
-              className="text-xs text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
-            >
-              Change
-            </button>
-          </div>
-        ) : (
-          <div className="relative">
-            <input
-              ref={telegramInputRef}
-              id="telegram-token"
-              type={showTelegram ? "text" : "password"}
-              value={telegramToken}
-              onChange={(e) => { setTelegramToken(e.target.value); }}
-              onPaste={(e) => { handlePaste(e, "telegram"); }}
-              placeholder="1234567890:ABCdefGHIjkl..."
-              autoComplete="off"
-              aria-describedby="telegram-hint"
-              className="input pr-10"
-            />
-            <button
-              type="button"
-              aria-label={showTelegram ? "Hide token" : "Show token"}
-              onClick={() => { setShowTelegram((v) => !v); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300"
-            >
-              {showTelegram ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-        )}
-
-        <p id="telegram-hint" className="mt-3 text-xs text-neutral-500">
-          Need to create one?{" "}
-          <button
-            type="button"
-            onClick={() => { setOpenModal("telegram"); }}
-            className="inline-flex items-center gap-1 text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
-          >
-            Walk me through it (3 min)
-            <ExternalLink size={11} />
-          </button>
-        </p>
-      </div>
+      <KeyCard
+        kind="telegram"
+        icon={<MessageCircle size={18} className="text-info-400" />}
+        label="Telegram bot"
+        hint="How you’ll talk to your assistant."
+        placeholder="1234567890:ABCdefGHIjkl..."
+        inputId="telegram-token"
+        inputRef={telegramInputRef}
+        value={telegramToken}
+        onChange={setTelegramToken}
+        onPaste={(e) => { handlePaste(e, "telegram"); }}
+        show={showTelegram}
+        toggleShow={() => { setShowTelegram((v) => !v); }}
+        existingMask={existingTelegramMask}
+        clearMask={() => { setExistingTelegramMask(null); }}
+        isValid={isTelegramTokenLike(telegramToken)}
+        howToLabel="Need to create one?"
+        howToCta="Walk me through it (3 min)"
+        onOpenHowTo={() => { setOpenModal("telegram"); }}
+        wrapperExtra="mb-8"
+      />
 
       <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="btn btn-md btn-ghost"
-          disabled={saving}
-        >
+        <button type="button" onClick={onBack} className="btn btn-md btn-ghost" disabled={saving}>
           Back
         </button>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => handleContinue({ skip: true })}
-            className="btn btn-md btn-ghost"
-            disabled={saving}
-          >
+          <button type="button" onClick={() => { handleContinueClick(true); }} className="btn btn-md btn-ghost" disabled={saving}>
             Skip
           </button>
           <button
             type="button"
-            onClick={() => handleContinue({ skip: false })}
+            onClick={() => { handleContinueClick(false); }}
             className="btn btn-md btn-primary"
             disabled={saving || !hasAnyKey}
           >
@@ -384,4 +223,143 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
       />
     </div>
   );
+}
+
+interface KeyCardProps {
+  kind: FieldKind;
+  icon: ReactNode;
+  label: string;
+  hint: string;
+  placeholder: string;
+  inputId: string;
+  inputRef: Ref<HTMLInputElement> & { current: HTMLInputElement | null };
+  value: string;
+  onChange: (v: string) => void;
+  onPaste: (e: ClipboardEvent<HTMLInputElement>) => void;
+  show: boolean;
+  toggleShow: () => void;
+  existingMask: string | null;
+  clearMask: () => void;
+  isValid: boolean;
+  howToLabel: string;
+  howToCta: string;
+  onOpenHowTo: () => void;
+  wrapperExtra: string;
+}
+
+function KeyCard({
+  icon, label, hint, placeholder, inputId, inputRef, value, onChange, onPaste,
+  show, toggleShow, existingMask, clearMask, isValid,
+  howToLabel, howToCta, onOpenHowTo, wrapperExtra,
+}: KeyCardProps) {
+  const showingMask = existingMask !== null && !value;
+  return (
+    <div className={`card-raised ${wrapperExtra}`}>
+      <div className="mb-3 flex items-center gap-2">
+        {icon}
+        <label htmlFor={inputId} className="text-sm font-medium text-neutral-100">{label}</label>
+        {isValid && <Check size={16} className="text-success-400" aria-label="Valid format" />}
+      </div>
+      <p className="mb-3 text-xs text-neutral-500">{hint}</p>
+
+      {showingMask ? (
+        <div className="flex items-center justify-between gap-3 rounded-md bg-neutral-900 px-3 py-2">
+          <code className="text-sm text-neutral-300">{existingMask}</code>
+          <button
+            type="button"
+            onClick={() => {
+              clearMask();
+              setTimeout(() => inputRef.current?.focus(), 0);
+            }}
+            className="text-xs text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
+          >
+            Change
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <input
+            ref={inputRef}
+            id={inputId}
+            type={show ? "text" : "password"}
+            value={value}
+            onChange={(e) => { onChange(e.target.value); }}
+            onPaste={onPaste}
+            placeholder={placeholder}
+            autoComplete="off"
+            aria-describedby={`${inputId}-hint`}
+            className="input pr-10"
+          />
+          <button
+            type="button"
+            aria-label={show ? "Hide key" : "Show key"}
+            onClick={toggleShow}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300"
+          >
+            {show ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+      )}
+
+      <p id={`${inputId}-hint`} className="mt-3 text-xs text-neutral-500">
+        {howToLabel}{" "}
+        <button
+          type="button"
+          onClick={onOpenHowTo}
+          className="inline-flex items-center gap-1 text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
+        >
+          {howToCta}
+          <ExternalLink size={11} />
+        </button>
+      </p>
+    </div>
+  );
+}
+
+interface RunContinueArgs {
+  skip: boolean;
+  anthropicKey: string;
+  telegramToken: string;
+  setSaving: (v: boolean) => void;
+  addToast: ReturnType<typeof useToast>["addToast"];
+  onContinue: (opts: { skippedKeys: boolean }) => void;
+}
+
+async function runContinue(args: RunContinueArgs): Promise<void> {
+  const { skip, anthropicKey, telegramToken, setSaving, addToast, onContinue } = args;
+  setSaving(true);
+  try {
+    if (!skip) {
+      await persistKeys({ anthropicKey, telegramToken });
+    }
+    onContinue({ skippedKeys: skip });
+  } catch (error) {
+    const classified = classifyError(error);
+    addToast({
+      type: "error",
+      title: classified.title === "Something went wrong" ? "Couldn't save your keys" : classified.title,
+      message: classified.userMessage,
+      duration: 0,
+    });
+  } finally {
+    setSaving(false);
+  }
+}
+
+async function persistKeys({ anthropicKey, telegramToken }: { anthropicKey: string; telegramToken: string }): Promise<void> {
+  // If user didn't touch the inputs but has existing masked values, nothing
+  // to save — keep the .env as is.
+  if (!anthropicKey && !telegramToken) return;
+
+  let content = "";
+  try {
+    content = await readConfig("openclaw-vault", ".env");
+  } catch {
+    content = "# OpenClaw-Vault configuration\n";
+  }
+
+  if (anthropicKey) content = upsertEnvVar(content, "ANTHROPIC_API_KEY", anthropicKey);
+  if (telegramToken) content = upsertEnvVar(content, "TELEGRAM_BOT_TOKEN", telegramToken);
+
+  await writeConfig("openclaw-vault", ".env", content);
 }
