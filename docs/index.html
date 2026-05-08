@@ -1080,29 +1080,64 @@
       });
     })();
 
-    // OS auto-detection for download button
+    // OS auto-detection for download button.
+    // The button starts pointing at /releases/latest as a safe fallback;
+    // we fetch the latest release from the GitHub API and rewrite the
+    // href to the OS-specific binary so a non-technical user lands on
+    // a single "save .msi" prompt instead of a 38-asset list.
+    //
+    // The unauthenticated GitHub API quota is 60 req/hr per IP — fine
+    // for landing-page traffic. If the call fails (offline, rate-limited,
+    // future asset-naming change), the fallback href still works.
     (function() {
       var ua = navigator.userAgent.toLowerCase();
+      var btn = document.getElementById('download-btn');
       var label = document.getElementById('download-label');
       var format = document.getElementById('download-format');
       var other = document.getElementById('other-platforms');
 
+      // Per OS: the regex that picks the "main" installer asset by
+      // filename, plus the user-facing copy. We deliberately pick the
+      // most non-technical-friendly format per platform: .msi (familiar
+      // Windows installer dialog), aarch64.dmg (Apple Silicon is dominant
+      // on Macs sold since 2020), .AppImage (works on any Linux distro
+      // without sudo).
+      var assetPattern = null;
       if (ua.indexOf('win') !== -1) {
+        assetPattern = /_x64_en-US\.msi$/;
         label.textContent = 'Download for Windows';
         format.textContent = '.msi installer';
         other.innerHTML = ' &middot; Also for <a href="#download">Linux & macOS</a>';
       } else if (ua.indexOf('mac') !== -1) {
+        assetPattern = /_aarch64\.dmg$/;
         label.textContent = 'Download for macOS';
-        format.textContent = '.dmg — ARM & Intel';
-        other.innerHTML = ' &middot; Also for <a href="#download">Linux & Windows</a>';
+        format.textContent = '.dmg — Apple Silicon';
+        other.innerHTML = ' &middot; <a href="#download">Intel Mac, Linux, Windows</a>';
       } else if (ua.indexOf('linux') !== -1) {
+        assetPattern = /_amd64\.AppImage$/;
         label.textContent = 'Download for Linux';
-        format.textContent = '.deb & .AppImage';
-        other.innerHTML = ' &middot; Also for <a href="#download">macOS & Windows</a>';
+        format.textContent = '.AppImage (universal)';
+        other.innerHTML = ' &middot; Also <a href="#download">.deb, .rpm, macOS, Windows</a>';
       } else {
         label.textContent = 'Download';
         format.textContent = 'Linux, macOS & Windows';
       }
+
+      if (!assetPattern || !btn) return;
+      fetch('https://api.github.com/repos/albertdobmeyer/lobster-trapp/releases/latest', {
+        headers: { 'Accept': 'application/vnd.github+json' }
+      })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(release) {
+          if (!release || !Array.isArray(release.assets)) return;
+          var asset = release.assets.find(function(a) {
+            return assetPattern.test(a.name);
+          });
+          if (asset && asset.browser_download_url) {
+            btn.href = asset.browser_download_url;
+          }
+        })
+        .catch(function() { /* keep the fallback href */ });
     })();
   </script>
 
