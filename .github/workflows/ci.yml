@@ -194,6 +194,69 @@ jobs:
         working-directory: app
         run: npm ci
 
+      # Compose a Karen-friendly release-notes body for tag builds. The
+      # default Tauri-action body ("See the assets below…") drops users
+      # onto a 38-row asset list dominated by .pem/.sig/SBOM noise — a
+      # known breaker moment for non-technical first-time users. This
+      # step builds a body that leads with one direct-download link per
+      # OS and tucks the verification artefacts behind <details>.
+      #
+      # When the workflow runs on a non-tag ref (e.g. workflow_dispatch
+      # without a tag) the step is skipped and the Tauri-action falls
+      # back to its hardcoded one-liner via the `||` in `releaseBody`.
+      - name: Compose release-notes body
+        id: notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          TAG="${GITHUB_REF_NAME}"
+          BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+          {
+            echo 'body<<NOTES_EOF'
+            cat <<EOF
+          ## Just install
+
+          Pick the row for your operating system and click the link. After downloading, double-click to install. The setup wizard takes over from there — Anthropic key, Telegram bot pairing, and the four-container perimeter download. No terminal needed.
+
+          | Your OS | Download |
+          |---|---|
+          | **Windows** | [Lobster-TrApp_${VERSION}_x64_en-US.msi](${BASE}/Lobster-TrApp_${VERSION}_x64_en-US.msi) |
+          | **macOS — Apple Silicon** | [Lobster-TrApp_${VERSION}_aarch64.dmg](${BASE}/Lobster-TrApp_${VERSION}_aarch64.dmg) |
+          | **macOS — Intel** | [Lobster-TrApp_${VERSION}_x64.dmg](${BASE}/Lobster-TrApp_${VERSION}_x64.dmg) |
+          | **Linux — Ubuntu / Debian** | [Lobster-TrApp_${VERSION}_amd64.deb](${BASE}/Lobster-TrApp_${VERSION}_amd64.deb) |
+          | **Linux — universal** | [Lobster-TrApp_${VERSION}_amd64.AppImage](${BASE}/Lobster-TrApp_${VERSION}_amd64.AppImage) |
+          | **Linux — Fedora / RHEL** | [Lobster-TrApp-${VERSION}-1.x86_64.rpm](${BASE}/Lobster-TrApp-${VERSION}-1.x86_64.rpm) |
+
+          The full release notes for this version live at [\`docs/release-notes-${TAG}.md\`](https://github.com/${{ github.repository }}/blob/${TAG}/docs/release-notes-${TAG}.md).
+
+          <details>
+          <summary><strong>Verification artefacts</strong> (for security auditors)</summary>
+
+          Each binary above is shipped alongside three companion files in the asset list:
+
+          - \`<filename>.sig\` — cosign keyless signature (Sigstore)
+          - \`<filename>.pem\` — signing certificate (Sigstore Fulcio)
+          - \`sbom-<platform>.cyclonedx.json\` — CycloneDX 1.5 software bill of materials
+
+          To verify a binary against its signature:
+
+          \`\`\`bash
+          cosign verify-blob \\
+            --certificate Lobster-TrApp_${VERSION}_x64_en-US.msi.pem \\
+            --signature   Lobster-TrApp_${VERSION}_x64_en-US.msi.sig \\
+            --certificate-identity-regexp 'https://github.com/${{ github.repository }}' \\
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \\
+            Lobster-TrApp_${VERSION}_x64_en-US.msi
+          \`\`\`
+
+          The SLSA Build Level 2 build-provenance attestation for this release is in the **Attestations** panel above the asset list.
+
+          The full asset list (including all signature, certificate, and SBOM files for every platform) is below.
+          </details>
+          EOF
+            echo 'NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and release
         id: tauri
         uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
@@ -206,7 +269,7 @@ jobs:
           args: ${{ matrix.platform.args }}
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('Lobster-TrApp {0}', github.ref_name) || '' }}
-          releaseBody: 'See the assets below to download and install.'
+          releaseBody: ${{ steps.notes.outputs.body || 'See the assets below to download and install.' }}
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
