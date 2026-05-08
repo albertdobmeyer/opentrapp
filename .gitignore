@@ -4,6 +4,11 @@ node_modules/
 # Local-only docs
 docs/code-signing-guide.md
 
+# Maintainer-only operational notes — kept out of the public repo because
+# they include adversarial-test recipes (e.g. registry-staging procedures)
+# that would weaken the security story if mirrored here.
+HUMAN-TODO.md
+
 # Build outputs
 app/src-tauri/target/
 app/src-tauri/gen/
