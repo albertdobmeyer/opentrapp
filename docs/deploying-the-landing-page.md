@@ -57,24 +57,30 @@ scp docs/index.html docs/bg-hero.png root@hetzner:/var/www/lobster-trapp.com/htm
 
 ### 4. Verify
 
-Run all four checks before declaring the deploy successful.
+Run all three checks before declaring the deploy successful.
 
 ```bash
-# 4a. SHA-256 match between local and remote
+# 4a. SHA-256 match between local and the file the server is serving from.
+#     This is the authoritative sync check — bypasses Cloudflare entirely.
 LOCAL_HASH=$(sha256sum docs/index.html | awk '{print $1}')
 REMOTE_HASH=$(ssh hetzner sha256sum /var/www/lobster-trapp.com/html/index.html | awk '{print $1}')
 [ "$LOCAL_HASH" = "$REMOTE_HASH" ] && echo "✓ sync confirmed" || echo "✗ MISMATCH"
 
-# 4b. nginx config still valid + service still active
+# 4b. nginx config still valid + service still active.
 ssh hetzner 'nginx -t 2>&1 && systemctl is-active nginx'
 
-# 4c. The live site (via Cloudflare) serves the new content
-curl -sS -L https://lobster-trapp.com/ -o /tmp/live.html
-diff /tmp/live.html docs/index.html >/dev/null && echo "✓ live matches local" || echo "✗ live diverges"
-
-# 4d. A specific change you made is present (substitute your own grep pattern)
+# 4c. The live site (via Cloudflare) returns 200 and contains the new
+#     content. Substitute your own distinguishing substring — something
+#     short and unique to *this* deploy (a function name, a new copy
+#     fragment, a specific URL).
+HTTP_CODE=$(curl -sS -L -o /tmp/live.html -w '%{http_code}' https://lobster-trapp.com/)
+echo "HTTP $HTTP_CODE"
 grep -c "<your-distinguishing-substring>" /tmp/live.html
 ```
+
+`grep -c` should print `1` (or higher) and `HTTP_CODE` should be `200`.
+
+**Why no byte-level diff against the live response.** Cloudflare auto-injects a small bot-management script (`__CF$cv$params`) just before `</body>` on every response, so the live HTML is intentionally a few hundred bytes longer than what nginx serves. A `diff /tmp/live.html docs/index.html` will always show one chunk of divergence even when the deploy is correct. The local-vs-server SHA in §4a is the authoritative check; the live-site grep in §4c is the *I-can-see-my-change-on-the-internet* check. Together they cover what a byte-level diff would, without the false positive.
 
 Cloudflare serves the page with `cf-cache-status: DYNAMIC`, which means the edge does not cache and pulls from origin on every request. **No cache purge is required** after a deploy — visitors see the new content immediately.
 
