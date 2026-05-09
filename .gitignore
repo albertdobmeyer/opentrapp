@@ -36,9 +36,14 @@ Desktop.ini
 *.session-journal
 tests/e2e-telegram/.venv/
 tests/e2e-telegram/.pytest_cache/
-tests/e2e-telegram/__pycache__/
-tests/e2e-telegram/**/__pycache__/
 tests/e2e-telegram/artifacts/
+
+# Python build artifacts (anywhere in the tree)
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
 
 # Claude Code local settings
 .claude/
