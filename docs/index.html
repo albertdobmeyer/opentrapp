@@ -174,31 +174,43 @@
         drop-shadow(0 2px 4px rgba(2, 6, 23, 0.6));
     }
 
+    /* Primary tagline directly under the logo — biggest, brightest text in the hero. */
     .hero-slogan {
-      font-size: 1.1rem;
+      font-size: 1.4rem;
       font-weight: 500;
-      color: #64748b;
-      letter-spacing: 0.01em;
-      margin: 0 auto 14px;
-      max-width: 580px;
-      line-height: 1.65;
+      color: #cbd5e1;
+      letter-spacing: 0.005em;
+      margin: 0 auto 28px;
+      max-width: 600px;
+      line-height: 1.45;
     }
 
-    .hero-badge {
+    /* Three USP claims — secondary to the tagline. Hand-tuned line breaks
+       after the em-dash via <br class="claim-br"> create a
+       "claim — punchline" rhythm; the break is hidden on small screens
+       so claims wrap naturally on mobile. */
+    .hero-sub {
+      font-size: 1.05rem;
+      color: #94a3b8;
+      margin: 0 auto 18px;
+      max-width: 620px;
+      line-height: 1.55;
+    }
+    .hero-sub:last-of-type { margin-bottom: 32px; }
+
+    /* Demoted version pill — small, low-contrast, sits below the platform
+       meta line. Reuses the .pulse animation. */
+    .hero-release {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 6px 14px;
-      border-radius: 20px;
-      background: rgba(37, 99, 235, 0.1);
-      border: 1px solid rgba(37, 99, 235, 0.2);
-      font-size: 0.78rem;
-      color: #60a5fa;
-      margin-bottom: 18px;
+      margin-top: 10px;
+      font-size: 0.72rem;
+      color: #475569;
       font-weight: 500;
+      letter-spacing: 0.01em;
     }
-
-    .hero-badge .pulse {
+    .hero-release .pulse {
       width: 6px;
       height: 6px;
       border-radius: 50%;
@@ -210,15 +222,6 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
     }
-
-    .hero-sub {
-      font-size: 1.1rem;
-      color: #64748b;
-      margin: 0 auto 14px;
-      max-width: 580px;
-      line-height: 1.65;
-    }
-    .hero-sub:last-of-type { margin-bottom: 36px; }
 
     /* Brand gradient highlight — matches the green→blue logo banner.
        Used inline on a single load-bearing word per pitch sentence. */
@@ -614,7 +617,7 @@
     /* ── Responsive ──────────────────────────────────── */
     @media (max-width: 768px) {
       .hero-logo { max-width: 360px; }
-      .hero-slogan,
+      .hero-slogan { font-size: 1.2rem; }
       .hero-sub { font-size: 1.0rem; }
       .section-title { font-size: 1.5rem; }
       .features-grid,
@@ -628,9 +631,15 @@
       .section { padding: 56px 20px; }
     }
 
+    @media (max-width: 640px) {
+      /* Hand-tuned line breaks inside each claim are desktop-only; let the
+         browser wrap naturally on narrow screens. */
+      .claim-br { display: none; }
+    }
+
     @media (max-width: 480px) {
       .hero-logo { max-width: 280px; }
-      .hero-slogan,
+      .hero-slogan { font-size: 1.1rem; }
       .hero-sub { font-size: 0.95rem; }
       .hero { padding-top: 90px; }
       .hero-actions { flex-direction: column; align-items: stretch; }
@@ -660,14 +669,11 @@
   <section class="hero">
     <img src="img/logo-banner.png" alt="Lobster-TrApp" class="hero-logo">
 
-    <div class="hero-badge">
-      <span class="pulse"></span>
-      v0.3.0 — Delightful Sloth release
-    </div>
+    <h1 class="hero-slogan">A safer way to run OpenClaw on your own computer.</h1>
 
-    <h1 class="hero-slogan">Runs <span class="brand-grad">locally</span> on your Mac, Windows, or Linux — no separate sandbox machine, no cloud-hosted agent.</h1>
-    <p class="hero-sub">Wraps OpenClaw in a four-container <span class="brand-grad">sandbox</span> — the bot, its tools, and its skills are isolated from your files.</p>
-    <p class="hero-sub">Scans every <span class="brand-grad">SKILL.md</span> against 87 malware and 16 prompt-injection signatures before it runs.</p>
+    <p class="hero-sub">Runs <span class="brand-grad">locally</span> on your Mac, Windows, or Linux —<br class="claim-br">no separate sandbox machine, no cloud-hosted agent.</p>
+    <p class="hero-sub">Wraps OpenClaw in a four-container <span class="brand-grad">sandbox</span> —<br class="claim-br">the bot, its tools, and its skills are isolated from your files.</p>
+    <p class="hero-sub">Scans every <span class="brand-grad">SKILL.md</span> against 87 malware and 16 prompt-injection signatures —<br class="claim-br">before it runs.</p>
 
     <div class="hero-actions">
       <a id="download-btn" href="https://github.com/albertdobmeyer/lobster-trapp/releases/latest" class="btn-primary">
@@ -684,6 +690,11 @@
       <span id="download-format"></span>
       <span id="other-platforms"></span>
       &middot; MIT License
+    </div>
+
+    <div class="hero-release">
+      <span class="pulse"></span>
+      v0.3.0 — Delightful Sloth release
     </div>
 
     <div class="trust">
