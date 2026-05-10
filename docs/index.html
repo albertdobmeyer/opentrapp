@@ -175,13 +175,13 @@
     }
 
     .hero-slogan {
-      font-size: 1.05rem;
+      font-size: 1.1rem;
       font-weight: 500;
-      color: #94a3b8;
+      color: #64748b;
       letter-spacing: 0.01em;
-      margin-bottom: 32px;
-      max-width: 520px;
-      line-height: 1.5;
+      margin: 0 auto 14px;
+      max-width: 580px;
+      line-height: 1.65;
     }
 
     .hero-badge {
@@ -194,7 +194,7 @@
       border: 1px solid rgba(37, 99, 235, 0.2);
       font-size: 0.78rem;
       color: #60a5fa;
-      margin-bottom: 24px;
+      margin-bottom: 18px;
       font-weight: 500;
     }
 
@@ -214,9 +214,20 @@
     .hero-sub {
       font-size: 1.1rem;
       color: #64748b;
-      margin-bottom: 36px;
-      max-width: 520px;
-      line-height: 1.7;
+      margin: 0 auto 14px;
+      max-width: 580px;
+      line-height: 1.65;
+    }
+    .hero-sub:last-of-type { margin-bottom: 36px; }
+
+    /* Brand gradient highlight — matches the green→blue logo banner.
+       Used inline on a single load-bearing word per pitch sentence. */
+    .brand-grad {
+      background: linear-gradient(135deg, #009966 0%, #0EA5E9 100%);
+      -webkit-background-clip: text;
+              background-clip: text;
+      color: transparent;
+      font-weight: 700;
     }
 
     .hero-actions {
@@ -603,7 +614,8 @@
     /* ── Responsive ──────────────────────────────────── */
     @media (max-width: 768px) {
       .hero-logo { max-width: 360px; }
-      .hero-slogan { font-size: 0.98rem; }
+      .hero-slogan,
+      .hero-sub { font-size: 1.0rem; }
       .section-title { font-size: 1.5rem; }
       .features-grid,
       .ecosystem-grid,
@@ -618,7 +630,8 @@
 
     @media (max-width: 480px) {
       .hero-logo { max-width: 280px; }
-      .hero-slogan { font-size: 0.92rem; }
+      .hero-slogan,
+      .hero-sub { font-size: 0.95rem; }
       .hero { padding-top: 90px; }
       .hero-actions { flex-direction: column; align-items: stretch; }
       .trust { flex-direction: column; align-items: center; gap: 12px; }
@@ -647,16 +660,14 @@
   <section class="hero">
     <img src="img/logo-banner.png" alt="Lobster-TrApp" class="hero-logo">
 
-    <h1 class="hero-slogan">A safer way to run OpenClaw on your own computer.</h1>
-
     <div class="hero-badge">
       <span class="pulse"></span>
       v0.3.0 — Delightful Sloth release
     </div>
 
-    <p class="hero-sub">
-      Lobster-TrApp installs the <strong>OpenClaw Clawbot</strong> on your machine inside a four-container sandbox, and lets you chat with it from Telegram. Every skill it loads is checked against 87 known malware patterns before it runs. The Clawbot's reasoning still goes through Anthropic's API — only its file work and tool execution stay local. We can't promise it's safe; we can show you what we did to make it safer.
-    </p>
+    <h1 class="hero-slogan">Runs <span class="brand-grad">locally</span> on your Mac, Windows, or Linux — no separate sandbox machine, no cloud-hosted agent.</h1>
+    <p class="hero-sub">Wraps OpenClaw in a four-container <span class="brand-grad">sandbox</span> — the bot, its tools, and its skills are isolated from your files.</p>
+    <p class="hero-sub">Scans every <span class="brand-grad">SKILL.md</span> against 87 malware and 16 prompt-injection signatures before it runs.</p>
 
     <div class="hero-actions">
       <a id="download-btn" href="https://github.com/albertdobmeyer/lobster-trapp/releases/latest" class="btn-primary">
