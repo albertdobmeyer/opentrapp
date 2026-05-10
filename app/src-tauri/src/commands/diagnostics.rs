@@ -49,24 +49,39 @@ pub async fn generate_diagnostic_bundle() -> Result<String, String> {
 
 fn collect_container_status() -> String {
     // Try podman first, then docker; surface unavailability cleanly.
+    // Filter by `com.docker.compose.service` label so we don't depend on the
+    // compose project name (which is directory-derived and varies by install).
+    const SERVICES: [&str; 4] =
+        ["vault-agent", "vault-proxy", "vault-forge", "vault-pioneer"];
     for tool in &["podman", "docker"] {
-        let out = Command::new(tool)
-            .args([
-                "ps",
-                "--filter",
-                "name=vault-",
-                "--format",
-                "{{.Names}}\t{{.Status}}",
-            ])
-            .output();
-        if let Ok(o) = out {
-            if o.status.success() {
-                let stdout = String::from_utf8_lossy(&o.stdout);
-                if stdout.trim().is_empty() {
-                    return format!("{}: no vault-* containers running\n", tool);
+        let mut lines: Vec<String> = Vec::new();
+        let mut tool_ok = false;
+        for service in SERVICES {
+            let out = Command::new(tool)
+                .args([
+                    "ps",
+                    "-a",
+                    "--filter",
+                    &format!("label=com.docker.compose.service={}", service),
+                    "--format",
+                    "{{.Names}}\t{{.Status}}",
+                ])
+                .output();
+            if let Ok(o) = out {
+                if o.status.success() {
+                    tool_ok = true;
+                    let stdout = String::from_utf8_lossy(&o.stdout);
+                    for line in stdout.lines().filter(|l| !l.trim().is_empty()) {
+                        lines.push(line.to_string());
+                    }
                 }
-                return format!("{}:\n{}\n", tool, stdout.trim());
             }
+        }
+        if tool_ok {
+            if lines.is_empty() {
+                return format!("{}: no perimeter containers found\n", tool);
+            }
+            return format!("{}:\n{}\n", tool, lines.join("\n"));
         }
     }
     "Container runtime not detected (Podman or Docker missing).\n".to_string()

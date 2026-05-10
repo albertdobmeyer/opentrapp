@@ -22,7 +22,10 @@ use tauri::{AppHandle, Emitter, Manager};
 
 pub const REDACTED: &str = "<REDACTED>";
 
-/// The 4 containers that constitute the perimeter. Names match `compose.yml`.
+/// The 4 compose *services* that constitute the perimeter. Container names
+/// are project-prefixed at runtime (e.g. `lobster-trapp_vault-proxy_1`); we
+/// filter by `com.docker.compose.service` label so the same code works
+/// regardless of project name.
 const PERIMETER_CONTAINERS: [&str; 4] =
     ["vault-agent", "vault-proxy", "vault-forge", "vault-pioneer"];
 
@@ -302,21 +305,22 @@ pub fn clear_runguard() {
 
 // ─── Container status probe ──────────────────────────────────────────
 
-fn is_container_running(name: &str) -> bool {
+fn is_service_running(service: &str) -> bool {
     for runtime in &["podman", "docker"] {
         let out = StdCommand::new(runtime)
             .args([
                 "ps",
                 "--filter",
-                &format!("name=^{}$", name),
+                &format!("label=com.docker.compose.service={}", service),
+                "--filter",
+                "status=running",
                 "--format",
                 "{{.Names}}",
             ])
             .output();
         if let Ok(o) = out {
-            if o.status.success() {
-                let stdout = String::from_utf8_lossy(&o.stdout);
-                return stdout.lines().any(|l| l.trim() == name);
+            if o.status.success() && !o.stdout.trim_ascii().is_empty() {
+                return true;
             }
         }
     }
@@ -334,7 +338,7 @@ fn compute_perimeter_status() -> PerimeterStatus {
     let mut containers = Vec::with_capacity(PERIMETER_CONTAINERS.len());
     let mut running_count = 0usize;
     for name in PERIMETER_CONTAINERS {
-        let running = is_container_running(name);
+        let running = is_service_running(name);
         if running {
             running_count += 1;
         }

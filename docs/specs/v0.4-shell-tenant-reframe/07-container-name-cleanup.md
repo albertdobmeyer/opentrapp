@@ -96,6 +96,22 @@ README.md, docs/trifecta.md, docs/diagrams.md may reference container names by t
 ### `app/e2e/` tests
 If any E2E test exec's into a container by exact name, update to label-based or use `compose exec` (which is project + service aware).
 
+### Submodule scripts (follow-up PR in `openclaw-vault`)
+
+The audit during PR-1 implementation surfaced four scripts inside the `components/openclaw-vault/scripts/` submodule that `inspect`/`exec` containers by hardcoded name. These will return false-negatives once the parent compose names are project-prefixed:
+
+- `verify.sh:308` — `$RUNTIME inspect "vault-proxy" --format ...`
+- `verify.sh:309` — `$RUNTIME exec vault-proxy sh -c ...`
+- `vault-audit.sh:27` + downstream — `PROXY_CONTAINER="vault-proxy"` then `exec_in_proxy`
+- `log-rotate.sh:29` + downstream — same pattern
+- `setup.sh:107` — `$RUNTIME exec vault-proxy sh -c ...`
+
+The fix mirrors `is_service_running`: replace the literal name with a `compose exec <service>` invocation (project + service aware) or a label lookup that resolves the runtime-generated container name.
+
+**Scope:** this fix is a separate PR in the `openclaw-vault` repo + a submodule reference bump in the parent. PR-1 in the parent ships the compose.yml change without it; the user-visible regression is the `verify` workflow returning "vault-proxy not running" until the submodule update lands. Track as PR-1.5.
+
+`kill.sh` and `kill.ps1` only reference the *volume* names (`openclaw-vault_vault-proxy-logs`), which are project-scoped and unaffected by `container_name:` removal — no change needed there.
+
 ## Migration concern: existing users
 
 Existing users have stopped containers from the v0.3 build with hardcoded names (`vault-agent`, etc.). On v0.4 first launch with this PR landed:
