@@ -98,17 +98,24 @@ If any E2E test exec's into a container by exact name, update to label-based or 
 
 ### Submodule scripts (follow-up PR in `openclaw-vault`)
 
-The audit during PR-1 implementation surfaced four scripts inside the `components/openclaw-vault/scripts/` submodule that `inspect`/`exec` containers by hardcoded name. These will return false-negatives once the parent compose names are project-prefixed:
+The audit during PR-1 implementation surfaced four scripts inside the `components/openclaw-vault/scripts/` submodule that `inspect`/`exec` containers by hardcoded name:
 
-- `verify.sh:308` — `$RUNTIME inspect "vault-proxy" --format ...`
-- `verify.sh:309` — `$RUNTIME exec vault-proxy sh -c ...`
-- `vault-audit.sh:27` + downstream — `PROXY_CONTAINER="vault-proxy"` then `exec_in_proxy`
-- `log-rotate.sh:29` + downstream — same pattern
-- `setup.sh:107` — `$RUNTIME exec vault-proxy sh -c ...`
+- `verify.sh:19` — `CONTAINER="openclaw-vault"`
+- `verify.sh:308-309` — `inspect "vault-proxy"` / `exec vault-proxy ...`
+- `vault-audit.sh:26-27` + downstream — `CONTAINER="openclaw-vault"`, `PROXY_CONTAINER="vault-proxy"`
+- `log-rotate.sh:29-30` + downstream — same pattern
+- `setup.sh:107` — `exec vault-proxy ...`
 
-The fix mirrors `is_service_running`: replace the literal name with a `compose exec <service>` invocation (project + service aware) or a label lookup that resolves the runtime-generated container name.
+**What PR-1.5 actually fixes (and what it doesn't):**
 
-**Scope:** this fix is a separate PR in the `openclaw-vault` repo + a submodule reference bump in the parent. PR-1 in the parent ships the compose.yml change without it; the user-visible regression is the `verify` workflow returning "vault-proxy not running" until the submodule update lands. Track as PR-1.5.
+| Service | Standalone name | Parent name | Pre-PR-1 parent behaviour | Post-PR-1, pre-PR-1.5 | Post-PR-1.5 |
+|---------|-----------------|-------------|---------------------------|------------------------|-------------|
+| Proxy | `vault-proxy` | `vault-proxy` (literal pre-PR-1, project-prefixed post-PR-1) | Worked by coincidence (matching `container_name:` overrides) | Broken — `vault-proxy` literal no longer matches | Works in both contexts via label lookup |
+| Vault/Agent | `vault` (service) → `openclaw-vault` (container_name) | `vault-agent` (service) → `vault-agent` literal pre-PR-1 | **Already broken** — `openclaw-vault` literal never existed in parent | Still broken (same reason) | Still broken (service-name mismatch is deeper) |
+
+So PR-1.5 restores the proxy-side checks for the parent context (the actual regression introduced by PR-1) but does **not** restore the agent-side checks — those have been broken in the parent context since the parent existed and reflect a deeper service-naming mismatch between the submodule's standalone `compose.yml` (service `vault`) and the parent's (service `vault-agent`). Reconciling that is out of scope here; tracked as a future architectural cleanup (likely a coordinated rename in one of the two compose files).
+
+The PR-1.5 fix uses a `resolve_service_container` helper that looks containers up by the `com.docker.compose.service` label. See [openclaw-vault `docs/specs/2026-05-10-script-container-resolution.md`](https://github.com/albertdobmeyer/openclaw-vault/blob/main/docs/specs/2026-05-10-script-container-resolution.md).
 
 `kill.sh` and `kill.ps1` only reference the *volume* names (`openclaw-vault_vault-proxy-logs`), which are project-scoped and unaffected by `container_name:` removal — no change needed there.
 
