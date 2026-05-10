@@ -1,0 +1,18 @@
+c) Ideal UX for Karen from HR
+Let me think through this from scratch, just from your prompt.
+The single biggest design move I'd make: treat the Telegram bot as the product, and the desktop app as a quiet guardian. After setup, Karen should largely forget the desktop app exists. She lives in Telegram on her phone — which she already uses, already trusts, already understands as "messaging." The app sits in the menu bar / system tray, glowing green when everything's fine. It surfaces only when something needs her, or when she wants to look. This also matches reality: Karen is on her couch, not at her workstation, when she actually wants productivity help.
+Now the staged flow:
+Landing → install. Auto-detected OS, one button, "5 minutes, no terminal, no GitHub." A 30-second silent loop video showing setup wizard → Telegram chat working. Set the expectation that she's about to install a desktop app and end up chatting on her phone.
+The Gatekeeper / SmartScreen warning is a UX cliff. Don't pretend it isn't there. The download page should pre-warn her with a screenshot: "You'll see this scary-looking warning. It's normal. Click 'Open anyway.' Here's why." Sign the build with a real cert as soon as you can afford it; until then, the pre-warning is the move.
+Setup wizard — this is the make-or-break. Three things have to happen and none of them can show a terminal:
+
+Container engine. Bundle Podman, install it silently behind a progress bar. Karen sees "Setting up your safe room…" not podman machine init.
+API key. Embedded webview that opens the provider's signup, highlights the exact button to click, watches for the key to appear in her clipboard, and pastes it for her. Validates with a green check.
+Telegram bot. The cruelest step, because BotFather is its own UX. The wizard opens Telegram via deep link directly into BotFather, shows a copy button for /newbot, walks her through the two prompts BotFather asks, then says "When you see a long string of letters and numbers, that's it — copy it back here." Validates the token by sending a test message that says "Hi Karen, I'm working." She sees the test arrive on her phone. That moment is when she believes the product works.
+
+Every step validates in real time with green checks. Every failure has a soft recovery: "That doesn't look right. Did you see this exact text? Try again."
+First chat. The bot's opening message on Telegram is the actual tutorial — three example prompts she can tap to send. Not a docs page. Not a YouTube video. A conversation. "Try one of these to start: Summarize a PDF I send you. Draft an email to my landlord. Plan my week from this list of tasks."
+Ongoing usage = Telegram on her phone. This is most of her life now. The desktop app is invisible.
+Dashboard, when she does open it. Plain-English activity, not logs. "Today: read 3 PDFs you sent, drafted 2 emails, blocked 1 unsafe skill from running." A big calm STOP button. A weekly digest that nudges trust: "We checked 47 outbound requests this week and blocked 3." Never a stack trace. Never a container ID. The security work is happening; the language is reassurance, not forensics.
+Updates. Auto, silent, signed. Skill updates from ClawHub auto-scanned; if something needs her attention, one-tap approve/deny in plain English: "A new skill called 'Calendar Helper' wants to read your calendar. Allow?"
+The emotional throughline: the lobster mascot, the word "Trapp," the menu-bar glow, the Telegram-first usage, the pre-warned Gatekeeper screen — all of it telling Karen this is going to be fine, and we already thought about the part that scared you. The product is a feeling: I have an assistant in my pocket and a quiet bouncer on my laptop, and I never had to learn what a container is.
