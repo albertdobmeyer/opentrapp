@@ -49,11 +49,18 @@ Replace `<reason>` with a short tag like `deeplink`, `hero-copy`, `bg-image-swap
 scp docs/index.html root@hetzner:/var/www/lobster-trapp.com/html/index.html
 ```
 
-If the deploy includes new image assets (e.g. `bg-hero.png`, `logo-banner.png`), upload them in the same `scp` invocation:
+If the deploy includes new image assets, upload them in the same `scp` invocation. Note that `docs/index.html` references logos and the favicon under `img/` (e.g. `<img src="img/logo-banner.png">`), so the `docs/img/` subdirectory must be synced whenever its contents change — `scp` won't recurse into directories without `-r`:
 
 ```bash
+# Top-level assets only (most common — copy edits, hero swaps):
 scp docs/index.html docs/bg-hero.png root@hetzner:/var/www/lobster-trapp.com/html/
+
+# Including img/ subdirectory (logos, favicon — use whenever docs/img/ changed):
+scp docs/index.html root@hetzner:/var/www/lobster-trapp.com/html/
+scp -r docs/img root@hetzner:/var/www/lobster-trapp.com/html/
 ```
+
+If you change an asset path in `index.html` (moving a file between root and `img/`, or introducing a new subdirectory), the matching files MUST be uploaded in the same deploy. A path change without the corresponding asset upload will leave every reference 404'ing — see `index.html.bak.*` on the server for examples of past drift.
 
 ### 4. Verify
 
