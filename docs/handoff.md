@@ -27,6 +27,12 @@ The implementation sequence is in the README; each PR has a natural review check
 
 ---
 
+## What landed this session (2026-05-11)
+
+**Pass 9 PR opened:** `pass-9/install-copy-polish` — removes "Podman Desktop" from MissingRuntimeCard macOS/Windows body copy (→ "the sandbox engine"), adds "Podman Desktop" to `BANNED_TERMS` enforcement, and re-scores rows 2 (8.4→8.6) and 13 (6.6→9.0) in the rubric. Row 13 re-score reflects the spec-06 failure cascade already shipped in v0.4.
+
+---
+
 ## What landed this session (2026-05-09)
 
 This session was scope/spec, not code. Output:

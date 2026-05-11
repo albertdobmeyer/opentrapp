@@ -24,6 +24,9 @@ import { test, expect } from "@playwright/test";
 //     "Show terminal command" disclosure on the install screen
 //     (Pass 5). Banning the bare strings catches accidental leaks
 //     into any other surface.
+// Pass 9 additions:
+//   "Podman Desktop" — product name replaced by "the sandbox engine" in
+//     MissingRuntimeCard (Pass 9). Banning prevents re-introduction.
 const BANNED_TERMS = [
   "OpenClaw Orchestrator",
   "OpenClaw Vault",
@@ -53,6 +56,7 @@ const BANNED_TERMS = [
   "Admin Key",
   "billing scope",
   "cost endpoint",
+  "Podman Desktop",
 ];
 
 /** Get visible text from the page, ignoring script/style/meta content */
