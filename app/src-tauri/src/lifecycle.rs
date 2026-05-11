@@ -66,15 +66,52 @@ pub enum TenantState {
     Errored,
 }
 
+/// Named steps in the 7-step bootstrap pipeline.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum BootstrapStep {
+    DetectRuntime,
+    InstallRuntime,
+    WriteEnv,
+    BuildImages,
+    PullImages,
+    UpShell,
+    VerifyShell,
+    /// Bring vault-agent up as part of auto-activation after shell is ready.
+    UpAgent,
+}
+
+impl BootstrapStep {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::DetectRuntime => "detect-runtime",
+            Self::InstallRuntime => "install-runtime",
+            Self::WriteEnv => "write-env",
+            Self::BuildImages => "build-images",
+            Self::PullImages => "pull-images",
+            Self::UpShell => "up-shell",
+            Self::VerifyShell => "verify-shell",
+            Self::UpAgent => "up-agent",
+        }
+    }
+}
+
 /// In-flight bootstrap pipeline step or failure cause. Set by the bootstrap
-/// subsystem (PR-3); nil until then. Stored in `PerimeterStateStore` so the
-/// watchdog can incorporate it into state computation without re-polling.
+/// subsystem; nil until bootstrap starts. Stored in `PerimeterStateStore` so
+/// the watchdog can incorporate it into state computation without re-polling.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub enum BootstrapProgress {
-    /// Which named step is currently running.
-    Step { name: String, step_index: u8 },
+    /// Step is running; includes optional percent (0-100) and detail string.
+    Step {
+        step: BootstrapStep,
+        step_index: u8,
+        total_steps: u8,
+        percent: Option<u8>,
+        detail: Option<String>,
+        started_at_unix_ms: u64,
+    },
     /// Pipeline halted; cause code for the RecoveryCard taxonomy.
-    Failed { cause: String },
+    Failed { cause: String, message: String, last_error: Option<String> },
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -497,9 +534,8 @@ fn compute_tenant_state(
     }
 
     // Activating: bootstrap subsystem reports agent bring-up in flight.
-    // This step name is set by PR-3; not reachable until then.
-    if let Some(BootstrapProgress::Step { name, .. }) = progress {
-        if name == "up-agent" {
+    if let Some(BootstrapProgress::Step { step, .. }) = progress {
+        if matches!(step, BootstrapStep::UpAgent) {
             return TenantState::Activating;
         }
     }
@@ -741,6 +777,8 @@ mod tests {
     fn compute_bootstrap_failed_progress_overrides_shell_up() {
         let progress = Some(BootstrapProgress::Failed {
             cause: "image-build-failed".into(),
+            message: "Build failed".into(),
+            last_error: None,
         });
         assert_eq!(
             compute_bootstrap_state(true, &progress, true),
@@ -751,8 +789,12 @@ mod tests {
     #[test]
     fn compute_bootstrap_step_in_flight_is_bootstrapping() {
         let progress = Some(BootstrapProgress::Step {
-            name: "build-images".into(),
+            step: BootstrapStep::BuildImages,
             step_index: 4,
+            total_steps: 7,
+            percent: None,
+            detail: None,
+            started_at_unix_ms: 0,
         });
         assert_eq!(
             compute_bootstrap_state(false, &progress, false),

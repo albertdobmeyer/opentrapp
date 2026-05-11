@@ -1,3 +1,4 @@
+mod bootstrap;
 mod commands;
 mod lifecycle;
 mod orchestrator;
@@ -47,8 +48,8 @@ use tauri::{
 };
 
 use lifecycle::{
-    bring_perimeter_down_sync, bring_perimeter_up_async, clear_runguard,
-    establish_runguard, install_signal_handlers, is_paused_persisted, spawn_watchdog,
+    bring_perimeter_down_sync, clear_runguard,
+    establish_runguard, install_signal_handlers, spawn_watchdog,
     PerimeterStateStore,
 };
 use status_aggregator::{spawn_status_evaluator, AssistantStatusStore};
@@ -186,6 +187,11 @@ pub fn run() {
     let perimeter_root_exit = monorepo_root.clone();
 
     tauri::Builder::default()
+        // Single-instance guard: second launch focuses the main window and exits.
+        // Must be registered first per tauri-plugin-single-instance docs.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main_window(app);
+        }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -200,23 +206,17 @@ pub fn run() {
         .manage(app_state)
         .setup(move |app| {
             setup_tray(app)?;
-            // Spawn perimeter bring-up on a background thread so the UI
-            // appears immediately even if a first-time pull is happening.
-            // Skip when the user explicitly paused — pausing yesterday
-            // shouldn't silently un-pause when the app reopens today.
-            if is_paused_persisted() {
-                eprintln!("[lifecycle] paused marker present — skipping perimeter bring-up");
-            } else {
-                bring_perimeter_up_async(perimeter_root_setup.clone());
-            }
             // Install Unix signal handlers (SIGTERM, SIGINT → graceful exit).
             install_signal_handlers(app.handle().clone());
             // Spawn the perimeter-state watchdog.
             spawn_watchdog(app.handle().clone(), WATCHDOG_INTERVAL);
-            // Spawn the status aggregator (Pass 7 Day 2): combines
-            // perimeter health + .env presence + Anthropic auth probe
-            // into AssistantStatus + alerts list.
+            // Spawn the status aggregator: combines perimeter health +
+            // .env presence + Anthropic auth probe into AssistantStatus + alerts.
             spawn_status_evaluator(app.handle().clone(), STATUS_INTERVAL);
+            // Spawn the bootstrap service. Idempotent 7-step pipeline that brings
+            // the security shell up; then auto_activate decides whether to start
+            // vault-agent based on activation + credentials markers.
+            bootstrap::spawn_bootstrap(app.handle().clone(), perimeter_root_setup.clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
