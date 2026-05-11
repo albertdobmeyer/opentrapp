@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Check, Eye, EyeOff, Key, MessageCircle, X } from "lucide-react";
 import { useEffect, useRef, useState, type ClipboardEvent } from "react";
@@ -93,13 +94,13 @@ function useTelegramFlow() {
 
   useEffect(() => {
     if (telegramPhase !== "deep_link") return;
-    let cancelled: boolean = false;
+    const cancel = { value: false };
     pollOffsetRef.current = 0;
     pollElapsedRef.current = 0;
     const token = telegramTokenRef.current;
     void (async () => {
-      while (true) {
-        if (cancelled) break;
+      for (;;) {
+        if (cancel.value) break;
         if (pollElapsedRef.current >= 90) {
           setTelegramPhase("timed_out");
           setPollElapsed(pollElapsedRef.current);
@@ -107,15 +108,15 @@ function useTelegramFlow() {
         }
         try {
           const update = await telegramPollForStart(token, pollOffsetRef.current, 30);
-          if (cancelled) break;
+          if (cancel.value) break;
           if (update !== null) {
             setPendingUpdate(update);
             setTelegramPhase("sending");
             try {
               await telegramSendMessage(token, update.chat_id, "Hi! I'm your new assistant. I'm working.");
-              if (!cancelled) setTelegramPhase("test_sent");
+              if (!cancel.value) setTelegramPhase("test_sent");
             } catch (error) {
-              if (!cancelled) {
+              if (!cancel.value) {
                 const msg = String(error);
                 setTelegramError(
                   msg === "conflict"
@@ -128,9 +129,9 @@ function useTelegramFlow() {
             break;
           }
           pollElapsedRef.current += 30;
-          if (!cancelled) setPollElapsed(pollElapsedRef.current);
+          if (!cancel.value) setPollElapsed(pollElapsedRef.current);
         } catch (error) {
-          if (!cancelled) {
+          if (!cancel.value) {
             const msg = String(error);
             setTelegramError(
               msg === "conflict"
@@ -143,8 +144,7 @@ function useTelegramFlow() {
         }
       }
     })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when phase transitions to deep_link
+    return () => { cancel.value = true; };
   }, [telegramPhase]);
 
   async function handleValidateTelegram() {
@@ -192,6 +192,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
   const [howToOpen, setHowToOpen] = useState<"anthropic" | "telegram" | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
   const telegram = useTelegramFlow();
+  const { setTelegramToken } = telegram;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -201,7 +202,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
 
   useEffect(() => {
     if (!reCredential) return;
-    let cancelled: boolean = false;
+    let cancelled = false;
     void readConfig("openclaw-vault", ".env")
       .then((content) => {
         if (cancelled) return;
@@ -211,7 +212,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
             const val = trimmed.slice("TELEGRAM_BOT_TOKEN=".length)
               .trim().replace(/^["']|["']$/g, "");
             if (val && !val.includes("REPLACE") && val.length >= 8) {
-              telegram.setTelegramToken(val);
+              setTelegramToken(val);
               break;
             }
           }
@@ -219,7 +220,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
       })
       .catch(() => { /* .env not readable */ });
     return () => { cancelled = true; };
-  }, [reCredential, telegram.setTelegramToken]);
+  }, [reCredential, setTelegramToken]);
 
   async function handleValidateAnthropic() {
     if (!isAnthropicKeyLike(anthropicKey)) return;
@@ -387,7 +388,7 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
 function StepDot({ active, done, label }: { active: boolean; done: boolean; label: string }) {
   return (
     <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
-      done ? "bg-success-500 text-white" : active ? "bg-primary-500 text-white" : "bg-neutral-700 text-neutral-400"
+      done ? "bg-success-500 text-white" : (active ? "bg-primary-500 text-white" : "bg-neutral-700 text-neutral-400")
     }`}>
       {done ? <Check size={13} /> : label}
     </div>
@@ -485,6 +486,7 @@ interface TelegramStepProps {
   commitError: string | null;
 }
 
+// eslint-disable-next-line complexity
 function TelegramStep({
   value, onChange, onPaste, show, toggleShow,
   phase, error, botUsername, botUrl, pollElapsed,

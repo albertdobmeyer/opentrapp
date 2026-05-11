@@ -147,6 +147,7 @@ const DEFAULT_RECOVERY: RecoveryCopy = {
   primaryLabel: "Try again",
 };
 
+// eslint-disable-next-line complexity, max-lines-per-function
 export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFailure }: Props) {
   const navigate = useNavigate();
   const { settings } = useSettings();
@@ -173,7 +174,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
 
   const handleStop = () => {
     setShowStopConfirm(false);
-    runPerimeterToggle({
+    void runPerimeterToggle({
       setLoading: setPauseLoading,
       addToast,
       removeToast,
@@ -319,7 +320,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
               <div className="rounded-lg border border-neutral-700 bg-neutral-800/60 px-4 py-3 text-center max-w-sm">
                 <p className="mb-1 text-sm font-medium text-neutral-200">Stop your assistant?</p>
                 <p className="mb-3 text-xs text-neutral-500">
-                  It'll stop responding on Telegram until you tap Resume. Your conversation history and installed skills stay safe.
+                  It&rsquo;ll stop responding on Telegram until you tap Resume. Your conversation history and installed skills stay safe.
                 </p>
                 <div className="flex justify-center gap-2">
                   <button

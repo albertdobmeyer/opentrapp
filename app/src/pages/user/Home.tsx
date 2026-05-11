@@ -50,7 +50,7 @@ export default function Home() {
       <HeroStatusCard
         state={state}
         loading={loading}
-        onLaunch={() => setActivationOpen(true)}
+        onLaunch={() => { setActivationOpen(true); }}
         bootstrapFailure={snapshot.bootstrap_failure}
       />
 
