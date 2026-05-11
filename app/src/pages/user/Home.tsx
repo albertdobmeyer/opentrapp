@@ -33,10 +33,13 @@ export default function Home() {
   // re-credential mode so the user only needs to re-enter the Anthropic key.
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    void listen("migration-needs-recredential", () => {
-      setReCredential(true);
-      setActivationOpen(true);
-    }).then((fn) => { unlisten = fn; });
+    const setup = async () => {
+      unlisten = await listen("migration-needs-recredential", () => {
+        setReCredential(true);
+        setActivationOpen(true);
+      });
+    };
+    void setup();
     return () => { unlisten?.(); };
   }, []);
 

@@ -28,10 +28,7 @@ const ANTHROPIC_STEPS: HowToStep[] = [
     href: "https://console.anthropic.com/",
   },
   { heading: "Go to API Keys", body: "In the left menu, click Settings → API Keys." },
-  {
-    heading: "Create a new key",
-    body: 'Click Create Key. Give it a name like "Lobster-TrApp".',
-  },
+  { heading: "Create a new key", body: 'Click Create Key. Give it a name like "Lobster-TrApp".' },
   {
     heading: "Copy the key immediately",
     body: "Anthropic shows it once. It starts with sk-ant-. Copy it now.",
@@ -57,10 +54,8 @@ const TELEGRAM_STEPS: HowToStep[] = [
 const ANTHROPIC_ERRORS: Record<string, string> = {
   auth_failure:
     "That key isn't being accepted. Double-check it's the latest one from console.anthropic.com.",
-  billing:
-    "Looks like there's an issue with your account. Check console.anthropic.com/billing.",
-  permission:
-    "Looks like there's an issue with your account. Check console.anthropic.com/billing.",
+  billing: "Looks like there's an issue with your account. Check console.anthropic.com/billing.",
+  permission: "Looks like there's an issue with your account. Check console.anthropic.com/billing.",
   rate: "Anthropic is rate-limiting right now. Wait a moment and try again.",
   server_error: "Anthropic's having a moment. Try again in a few seconds.",
   unknown: "Unexpected response. Try again.",
@@ -70,104 +65,161 @@ const ANTHROPIC_ERRORS: Record<string, string> = {
 // ─── Types ────────────────────────────────────────────────────────────────
 
 type FlowStep = "anthropic" | "telegram" | "committing";
-
 type AnthropicPhase = "idle" | "validating" | "valid" | "error";
-
 type TelegramPhase =
-  | "idle"
-  | "validating"
-  | "deep_link"
-  | "polling"
-  | "timed_out"
-  | "sending"
-  | "test_sent"
-  | "error";
+  | "idle" | "validating" | "deep_link" | "polling"
+  | "timed_out" | "sending" | "test_sent" | "error";
 
 interface Props {
   onClose: () => void;
-  /**
-   * When true, the user has a valid Telegram token from a prior install but
-   * needs to re-enter their Anthropic key (e.g. key was revoked). Step 2
-   * is skipped — the existing token is read from .env and reused.
-   */
   reCredential?: boolean;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────
+// ─── Telegram flow hook ───────────────────────────────────────────────────
 
-export default function ActivationModal({ onClose, reCredential = false }: Props) {
-  const { update: updateSettings } = useSettings();
-
-  // Flow step
-  const [step, setStep] = useState<FlowStep>("anthropic");
-
-  // Anthropic state
-  const [anthropicKey, setAnthropicKey] = useState("");
-  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
-  const [anthropicPhase, setAnthropicPhase] = useState<AnthropicPhase>("idle");
-  const [anthropicErrorKey, setAnthropicErrorKey] = useState<string | null>(null);
-
-  // Telegram state
+function useTelegramFlow() {
   const [telegramToken, setTelegramToken] = useState("");
   const [showTelegramToken, setShowTelegramToken] = useState(false);
   const [telegramPhase, setTelegramPhase] = useState<TelegramPhase>("idle");
   const [telegramError, setTelegramError] = useState<string | null>(null);
   const [botUsername, setBotUsername] = useState<string | null>(null);
   const [botUrl, setBotUrl] = useState<string | null>(null);
-  const [pollOffset] = useState(0);
   const [pollElapsed, setPollElapsed] = useState(0);
   const [pendingUpdate, setPendingUpdate] = useState<TelegramUpdate | null>(null);
-
-  // Refs to avoid stale closures inside polling effect
   const pollOffsetRef = useRef(0);
   const pollElapsedRef = useRef(0);
   const telegramTokenRef = useRef("");
   telegramTokenRef.current = telegramToken;
 
-  // How-to modals
-  const [howToOpen, setHowToOpen] = useState<"anthropic" | "telegram" | null>(null);
-
-  // Commit error
-  const [commitError, setCommitError] = useState<string | null>(null);
-
-  // ESC to close
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    if (telegramPhase !== "deep_link") return;
+    let cancelled: boolean = false;
+    pollOffsetRef.current = 0;
+    pollElapsedRef.current = 0;
+    const token = telegramTokenRef.current;
+    void (async () => {
+      while (true) {
+        if (cancelled) break;
+        if (pollElapsedRef.current >= 90) {
+          setTelegramPhase("timed_out");
+          setPollElapsed(pollElapsedRef.current);
+          break;
+        }
+        try {
+          const update = await telegramPollForStart(token, pollOffsetRef.current, 30);
+          if (cancelled) break;
+          if (update !== null) {
+            setPendingUpdate(update);
+            setTelegramPhase("sending");
+            try {
+              await telegramSendMessage(token, update.chat_id, "Hi! I'm your new assistant. I'm working.");
+              if (!cancelled) setTelegramPhase("test_sent");
+            } catch (error) {
+              if (!cancelled) {
+                const msg = String(error);
+                setTelegramError(
+                  msg === "conflict"
+                    ? "Another instance of this bot is active. Make sure you're using a fresh bot token from BotFather."
+                    : "Couldn't send the test message. Try again.",
+                );
+                setTelegramPhase("error");
+              }
+            }
+            break;
+          }
+          pollElapsedRef.current += 30;
+          if (!cancelled) setPollElapsed(pollElapsedRef.current);
+        } catch (error) {
+          if (!cancelled) {
+            const msg = String(error);
+            setTelegramError(
+              msg === "conflict"
+                ? "Another instance of this bot is active. Make sure you're using a fresh bot token from BotFather."
+                : classifyError(error).userMessage,
+            );
+            setTelegramPhase("error");
+          }
+          break;
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when phase transitions to deep_link
+  }, [telegramPhase]);
+
+  async function handleValidateTelegram() {
+    if (!isTelegramTokenLike(telegramToken)) return;
+    setTelegramPhase("validating");
+    setTelegramError(null);
+    try {
+      const bot = await deriveTelegramBotUrl(telegramToken);
+      setBotUsername(bot.username);
+      setBotUrl(bot.url);
+      await telegramDeleteWebhook(telegramToken);
+      setTelegramPhase("deep_link");
+    } catch (error) {
+      setTelegramPhase("error");
+      setTelegramError(classifyError(error).userMessage);
+    }
+  }
+
+  function handleTelegramPaste(e: ClipboardEvent<HTMLInputElement>) {
+    const pasted = e.clipboardData.getData("text").trim();
+    if (isTelegramTokenLike(pasted)) {
+      setTelegramToken(pasted);
+      setTelegramPhase("idle");
+    }
+  }
+
+  return {
+    telegramToken, setTelegramToken, showTelegramToken, setShowTelegramToken,
+    telegramPhase, setTelegramPhase, telegramError, setTelegramError,
+    botUsername, botUrl, pollElapsed, setPollElapsed,
+    pendingUpdate, pollOffsetRef,
+    handleValidateTelegram, handleTelegramPaste,
+  };
+}
+
+// ─── Activation flow hook ─────────────────────────────────────────────────
+
+function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reCredential: boolean }) {
+  const { update: updateSettings } = useSettings();
+  const [step, setStep] = useState<FlowStep>("anthropic");
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [anthropicPhase, setAnthropicPhase] = useState<AnthropicPhase>("idle");
+  const [anthropicErrorKey, setAnthropicErrorKey] = useState<string | null>(null);
+  const [howToOpen, setHowToOpen] = useState<"anthropic" | "telegram" | null>(null);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const telegram = useTelegramFlow();
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => { window.removeEventListener("keydown", handler); };
   }, [onClose]);
 
-  // Re-credential mode: load the existing Telegram token from .env so we can
-  // reuse it in the commit without forcing the user through Step 2 again.
   useEffect(() => {
     if (!reCredential) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const content = await readConfig("openclaw-vault", ".env");
+    let cancelled: boolean = false;
+    void readConfig("openclaw-vault", ".env")
+      .then((content) => {
         if (cancelled) return;
-        // Extract TELEGRAM_BOT_TOKEN line
         for (const line of content.split("\n")) {
           const trimmed = line.trim();
           if (trimmed.startsWith("TELEGRAM_BOT_TOKEN=")) {
             const val = trimmed.slice("TELEGRAM_BOT_TOKEN=".length)
-              .trim().replace(/^['"]|['"]$/g, "");
+              .trim().replace(/^["']|["']$/g, "");
             if (val && !val.includes("REPLACE") && val.length >= 8) {
-              setTelegramToken(val);
+              telegram.setTelegramToken(val);
               break;
             }
           }
         }
-      } catch {
-        // .env not readable; user will need to re-enter both keys
-      }
-    })();
+      })
+      .catch(() => { /* .env not readable */ });
     return () => { cancelled = true; };
-  }, [reCredential]);
-
-  // ─── Anthropic validation ────────────────────────────────────────────
+  }, [reCredential, telegram.setTelegramToken]);
 
   async function handleValidateAnthropic() {
     if (!isAnthropicKeyLike(anthropicKey)) return;
@@ -195,181 +247,75 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
     }
   }
 
-  // ─── Telegram validation (getMe) ─────────────────────────────────────
-
-  async function handleValidateTelegram() {
-    if (!isTelegramTokenLike(telegramToken)) return;
-    setTelegramPhase("validating");
-    setTelegramError(null);
-    try {
-      const bot = await deriveTelegramBotUrl(telegramToken);
-      setBotUsername(bot.username);
-      setBotUrl(bot.url);
-      // Delete any leftover webhook before we start polling.
-      await telegramDeleteWebhook(telegramToken);
-      setTelegramPhase("deep_link");
-    } catch (e) {
-      setTelegramPhase("error");
-      setTelegramError(classifyError(e).userMessage);
-    }
-  }
-
-  function handleTelegramPaste(e: ClipboardEvent<HTMLInputElement>) {
-    const pasted = e.clipboardData.getData("text").trim();
-    if (isTelegramTokenLike(pasted)) {
-      setTelegramToken(pasted);
-      setTelegramPhase("idle");
-    }
-  }
-
-  // ─── Polling effect (runs while telegramPhase === "deep_link") ────────
-
-  useEffect(() => {
-    if (telegramPhase !== "deep_link") return;
-
-    let cancelled = false;
-    pollOffsetRef.current = pollOffset;
-    pollElapsedRef.current = pollElapsed;
-
-    const token = telegramTokenRef.current;
-
-    void (async () => {
-      while (!cancelled) {
-        if (pollElapsedRef.current >= 90) {
-          if (!cancelled) {
-            setTelegramPhase("timed_out");
-            setPollElapsed(pollElapsedRef.current);
-          }
-          return;
-        }
-
-        try {
-          const update = await telegramPollForStart(token, pollOffsetRef.current, 30);
-          if (cancelled) return;
-
-          if (update !== null) {
-            // Found a /start — send the test message.
-            setPendingUpdate(update);
-            setTelegramPhase("sending");
-            try {
-              await telegramSendMessage(
-                token,
-                update.chat_id,
-                "Hi! I'm your new assistant. I'm working.",
-              );
-              if (!cancelled) setTelegramPhase("test_sent");
-            } catch (e) {
-              if (!cancelled) {
-                const msg = String(e);
-                setTelegramError(
-                  msg === "conflict"
-                    ? "Another instance of this bot is active. Make sure you're using a fresh bot token from BotFather."
-                    : "Couldn't send the test message. Try again.",
-                );
-                setTelegramPhase("error");
-              }
-            }
-            return;
-          } else {
-            // Timeout expired without /start.
-            pollElapsedRef.current += 30;
-            if (!cancelled) setPollElapsed(pollElapsedRef.current);
-          }
-        } catch (e) {
-          if (!cancelled) {
-            const msg = String(e);
-            setTelegramError(
-              msg === "conflict"
-                ? "Another instance of this bot is active. Make sure you're using a fresh bot token from BotFather."
-                : classifyError(e).userMessage,
-            );
-            setTelegramPhase("error");
-          }
-          return;
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only re-run when phase transitions to deep_link
-  }, [telegramPhase]);
-
-  // ─── Commit ───────────────────────────────────────────────────────────
-
   async function handleCommit(skipTelegramTest: boolean) {
     setStep("committing");
     setCommitError(null);
-
-    // Advance the Telegram offset so vault-agent doesn't replay /start.
-    if (!skipTelegramTest && pendingUpdate) {
+    if (!skipTelegramTest && telegram.pendingUpdate) {
       try {
-        await telegramAdvanceOffset(telegramToken, pendingUpdate.update_id);
-      } catch {
-        // Non-fatal — vault-agent handles duplicate /start gracefully.
-      }
+        await telegramAdvanceOffset(telegram.telegramToken, telegram.pendingUpdate.update_id);
+      } catch { /* non-fatal */ }
     }
-
-    // Write both keys to .env transactionally.
     try {
       let envContent = "";
-      try {
-        envContent = await readConfig("openclaw-vault", ".env");
-      } catch {
-        envContent = "# OpenClaw-Vault configuration\n";
-      }
+      try { envContent = await readConfig("openclaw-vault", ".env"); }
+      catch { envContent = "# OpenClaw-Vault configuration\n"; }
       envContent = upsertEnvVar(envContent, "ANTHROPIC_API_KEY", anthropicKey);
-      envContent = upsertEnvVar(envContent, "TELEGRAM_BOT_TOKEN", telegramToken);
+      envContent = upsertEnvVar(envContent, "TELEGRAM_BOT_TOKEN", telegram.telegramToken);
       await writeConfig("openclaw-vault", ".env", envContent);
-    } catch (e) {
-      setCommitError("Couldn't save your keys: " + classifyError(e).userMessage);
+    } catch (error) {
+      setCommitError("Couldn't save your keys: " + classifyError(error).userMessage);
       setStep("telegram");
       return;
     }
-
-    // Restart proxy + start agent + write markers.
     try {
       await commitActivation();
-    } catch (e) {
-      setCommitError(classifyError(e).userMessage);
+    } catch (error) {
+      setCommitError(classifyError(error).userMessage);
       setStep("telegram");
       return;
     }
-
-    // Mark setup complete for legacy compatibility.
     await updateSettings({ wizardCompleted: true });
-
     onClose();
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────
+  return {
+    step, setStep,
+    anthropicKey, setAnthropicKey,
+    showAnthropicKey, setShowAnthropicKey,
+    anthropicPhase, setAnthropicPhase,
+    anthropicErrorKey,
+    howToOpen, setHowToOpen,
+    commitError,
+    telegram,
+    handleValidateAnthropic,
+    handleAnthropicPaste,
+    handleCommit,
+  };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────
+
+export default function ActivationModal({ onClose, reCredential = false }: Props) {
+  const flow = useActivationFlow({ onClose, reCredential });
+  const { step, anthropicKey, showAnthropicKey, anthropicPhase, anthropicErrorKey,
+    howToOpen, setHowToOpen, commitError, telegram,
+    setAnthropicKey, setAnthropicPhase, setShowAnthropicKey,
+    handleValidateAnthropic, handleAnthropicPaste, handleCommit } = flow;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Launch your assistant"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      role="dialog" aria-modal="true" aria-label="Launch your assistant">
       <div className="relative w-full max-w-lg rounded-xl bg-neutral-900 p-6 shadow-2xl ring-1 ring-neutral-700">
-        {/* Close button */}
-        <button
-          type="button"
-          onClick={onClose}
+        <button type="button" onClick={onClose}
           className="absolute right-4 top-4 rounded p-1 text-neutral-500 hover:text-neutral-300"
-          aria-label="Cancel"
-        >
+          aria-label="Cancel">
           <X size={18} />
         </button>
-
-        {/* Step indicator */}
         <div className="mb-6 flex items-center gap-2">
           <StepDot active={step === "anthropic"} done={step === "telegram" || step === "committing"} label="1" />
           <div className="h-px flex-1 bg-neutral-700" />
           <StepDot active={step === "telegram"} done={step === "committing"} label="2" />
         </div>
-
         {step === "anthropic" && (
           <AnthropicStep
             value={anthropicKey}
@@ -381,57 +327,46 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
             errorKey={anthropicErrorKey}
             onValidate={() => { void handleValidateAnthropic(); }}
             onContinue={() => {
-              if (reCredential && telegramToken) {
-                // Skip Step 2 — existing Telegram token is already loaded.
+              if (reCredential && telegram.telegramToken) {
                 void handleCommit(true);
               } else {
-                setStep("telegram");
+                flow.setStep("telegram");
               }
             }}
-            continueLabel={reCredential && telegramToken ? "Launch my assistant" : "Continue"}
+            continueLabel={reCredential && telegram.telegramToken ? "Launch my assistant" : "Continue"}
             onHowTo={() => { setHowToOpen("anthropic"); }}
           />
         )}
-
         {step === "telegram" && (
           <TelegramStep
-            value={telegramToken}
-            onChange={(v) => { setTelegramToken(v); setTelegramPhase("idle"); }}
-            onPaste={handleTelegramPaste}
-            show={showTelegramToken}
-            toggleShow={() => { setShowTelegramToken((v) => !v); }}
-            phase={telegramPhase}
-            error={telegramError}
-            botUsername={botUsername}
-            botUrl={botUrl}
-            pollElapsed={pollElapsed}
-            onValidate={() => { void handleValidateTelegram(); }}
+            value={telegram.telegramToken}
+            onChange={(v) => { telegram.setTelegramToken(v); telegram.setTelegramPhase("idle"); }}
+            onPaste={telegram.handleTelegramPaste}
+            show={telegram.showTelegramToken}
+            toggleShow={() => { telegram.setShowTelegramToken((v) => !v); }}
+            phase={telegram.telegramPhase}
+            error={telegram.telegramError}
+            botUsername={telegram.botUsername}
+            botUrl={telegram.botUrl}
+            pollElapsed={telegram.pollElapsed}
+            onValidate={() => { void telegram.handleValidateTelegram(); }}
             onOpenBot={async () => {
-              try {
-                await openUrl(botUrl ?? "https://telegram.org");
-              } catch {
-                window.open(botUrl ?? "https://telegram.org", "_blank", "noopener,noreferrer");
-              }
+              try { await openUrl(telegram.botUrl ?? "https://telegram.org"); }
+              catch { window.open(telegram.botUrl ?? "https://telegram.org", "_blank", "noopener,noreferrer"); }
             }}
             onWaitMore={() => {
-              // Reset elapsed and re-enter deep_link phase so the polling effect restarts.
-              pollElapsedRef.current = 0;
-              setPollElapsed(0);
-              setTelegramPhase("polling");
-              // Micro-delay so the effect dependency sees a phase change.
-              setTimeout(() => { setTelegramPhase("deep_link"); }, 0);
+              telegram.pollOffsetRef.current = 0;
+              telegram.setPollElapsed(0);
+              telegram.setTelegramPhase("polling");
+              setTimeout(() => { telegram.setTelegramPhase("deep_link"); }, 0);
             }}
             onSkip={() => { void handleCommit(true); }}
             onConfirm={() => { void handleCommit(false); }}
-            onRetry={() => {
-              setTelegramPhase("idle");
-              setTelegramError(null);
-            }}
+            onRetry={() => { telegram.setTelegramPhase("idle"); telegram.setTelegramError(null); }}
             onHowTo={() => { setHowToOpen("telegram"); }}
             commitError={commitError}
           />
         )}
-
         {step === "committing" && (
           <div className="flex flex-col items-center gap-4 py-8">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-500" />
@@ -439,44 +374,21 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
           </div>
         )}
       </div>
-
-      <HowToModal
-        open={howToOpen === "anthropic"}
-        onClose={() => { setHowToOpen(null); }}
-        title="How to get an Anthropic API key"
-        steps={ANTHROPIC_STEPS}
-      />
-      <HowToModal
-        open={howToOpen === "telegram"}
-        onClose={() => { setHowToOpen(null); }}
-        title="How to create a Telegram bot"
-        steps={TELEGRAM_STEPS}
-      />
+      <HowToModal open={howToOpen === "anthropic"} onClose={() => { setHowToOpen(null); }}
+        title="How to get an Anthropic API key" steps={ANTHROPIC_STEPS} />
+      <HowToModal open={howToOpen === "telegram"} onClose={() => { setHowToOpen(null); }}
+        title="How to create a Telegram bot" steps={TELEGRAM_STEPS} />
     </div>
   );
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────
 
-function StepDot({
-  active,
-  done,
-  label,
-}: {
-  active: boolean;
-  done: boolean;
-  label: string;
-}) {
+function StepDot({ active, done, label }: { active: boolean; done: boolean; label: string }) {
   return (
-    <div
-      className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
-        done
-          ? "bg-success-500 text-white"
-          : active
-            ? "bg-primary-500 text-white"
-            : "bg-neutral-700 text-neutral-400"
-      }`}
-    >
+    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
+      done ? "bg-success-500 text-white" : active ? "bg-primary-500 text-white" : "bg-neutral-700 text-neutral-400"
+    }`}>
       {done ? <Check size={13} /> : label}
     </div>
   );
@@ -502,7 +414,6 @@ function AnthropicStep({
 }: AnthropicStepProps) {
   const formatOk = isAnthropicKeyLike(value);
   const canValidate = formatOk && phase !== "validating" && phase !== "valid";
-
   return (
     <div>
       <div className="mb-5 flex items-center gap-2">
@@ -513,56 +424,33 @@ function AnthropicStep({
       <p className="mb-4 text-sm text-neutral-400">
         Your assistant&rsquo;s brain — also how you&rsquo;ll pay for its thoughts (~$5–20/month for typical use).
       </p>
-
       <div className="relative mb-1">
-        <input
-          type={show ? "text" : "password"}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onPaste={onPaste}
-          placeholder="sk-ant-api03-…"
-          autoComplete="off"
-          className="input pr-10"
-        />
-        <button
-          type="button"
-          aria-label={show ? "Hide key" : "Show key"}
-          onClick={toggleShow}
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300"
-        >
+        <input type={show ? "text" : "password"} value={value}
+          onChange={(e) => { onChange(e.target.value); }} onPaste={onPaste}
+          placeholder="sk-ant-api03-…" autoComplete="off" className="input pr-10" />
+        <button type="button" aria-label={show ? "Hide key" : "Show key"} onClick={toggleShow}
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300">
           {show ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </div>
-
       <p className="mb-4 text-xs text-neutral-600">
-        Your key is stored in plain text on this computer. We're working on encrypted storage for a future release.
+        Your key is stored in plain text on this computer. We&rsquo;re working on encrypted storage for a future release.
       </p>
-
       {phase === "error" && errorKey && (
         <p className="mb-4 rounded-md bg-danger-500/10 px-3 py-2 text-sm text-danger-400">
-          {ANTHROPIC_ERRORS[errorKey] ?? ANTHROPIC_ERRORS["unknown"]}
+          {ANTHROPIC_ERRORS[errorKey] ?? ANTHROPIC_ERRORS.unknown}
         </p>
       )}
-
       <p className="mb-6 text-xs text-neutral-500">
-        Don't have one yet?{" "}
-        <button
-          type="button"
-          onClick={onHowTo}
-          className="text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
-        >
+        Don&rsquo;t have one yet?{" "}
+        <button type="button" onClick={onHowTo}
+          className="text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline">
           Show me how to get one (2 min)
         </button>
       </p>
-
       <div className="flex items-center justify-end gap-3">
         {phase !== "valid" && (
-          <button
-            type="button"
-            onClick={onValidate}
-            className="btn btn-md btn-primary"
-            disabled={!canValidate}
-          >
+          <button type="button" onClick={onValidate} className="btn btn-md btn-primary" disabled={!canValidate}>
             {phase === "validating" ? "Checking…" : "Validate key"}
           </button>
         )}
@@ -600,13 +488,11 @@ interface TelegramStepProps {
 function TelegramStep({
   value, onChange, onPaste, show, toggleShow,
   phase, error, botUsername, botUrl, pollElapsed,
-  onValidate, onOpenBot, onWaitMore, onSkip, onConfirm, onRetry, onHowTo,
-  commitError,
+  onValidate, onOpenBot, onWaitMore, onSkip, onConfirm, onRetry, onHowTo, commitError,
 }: TelegramStepProps) {
   const formatOk = isTelegramTokenLike(value);
   const canValidate = formatOk && phase !== "validating" && phase !== "deep_link" &&
     phase !== "polling" && phase !== "sending" && phase !== "test_sent";
-
   return (
     <div>
       <div className="mb-5 flex items-center gap-2">
@@ -614,136 +500,84 @@ function TelegramStep({
         <h2 className="text-lg font-semibold text-neutral-100">Telegram bot</h2>
       </div>
       <p className="mb-4 text-sm text-neutral-400">
-        How you'll talk to your assistant on your phone.
+        How you&rsquo;ll talk to your assistant on your phone.
       </p>
-
       {(phase === "idle" || phase === "validating" || phase === "error") && (
         <>
           <div className="relative mb-4">
-            <input
-              type={show ? "text" : "password"}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              onPaste={onPaste}
-              placeholder="1234567890:ABCdefGHIjkl…"
-              autoComplete="off"
-              className="input pr-10"
-            />
-            <button
-              type="button"
-              aria-label={show ? "Hide token" : "Show token"}
-              onClick={toggleShow}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300"
-            >
+            <input type={show ? "text" : "password"} value={value}
+              onChange={(e) => { onChange(e.target.value); }} onPaste={onPaste}
+              placeholder="1234567890:ABCdefGHIjkl…" autoComplete="off" className="input pr-10" />
+            <button type="button" aria-label={show ? "Hide token" : "Show token"} onClick={toggleShow}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-500 hover:text-neutral-300">
               {show ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-
           {phase === "error" && error && (
-            <p className="mb-4 rounded-md bg-danger-500/10 px-3 py-2 text-sm text-danger-400">
-              {error}
-            </p>
+            <p className="mb-4 rounded-md bg-danger-500/10 px-3 py-2 text-sm text-danger-400">{error}</p>
           )}
-
           <p className="mb-6 text-xs text-neutral-500">
             Need to create one?{" "}
-            <button
-              type="button"
-              onClick={onHowTo}
-              className="text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline"
-            >
+            <button type="button" onClick={onHowTo}
+              className="text-primary-400 hover:text-primary-300 underline-offset-4 hover:underline">
               Walk me through it (3 min)
             </button>
           </p>
-
           <div className="flex items-center justify-between">
             {phase === "error" && (
-              <button type="button" onClick={onRetry} className="btn btn-md btn-ghost">
-                Change token
-              </button>
+              <button type="button" onClick={onRetry} className="btn btn-md btn-ghost">Change token</button>
             )}
             <div className="ml-auto flex gap-3">
-              <button
-                type="button"
-                onClick={onValidate}
-                className="btn btn-md btn-primary"
-                disabled={!canValidate}
-              >
+              <button type="button" onClick={onValidate} className="btn btn-md btn-primary" disabled={!canValidate}>
                 {phase === "validating" ? "Checking…" : "Validate bot"}
               </button>
             </div>
           </div>
         </>
       )}
-
       {(phase === "deep_link" || phase === "polling" || phase === "timed_out") && (
         <div className="text-center">
-          <p className="mb-4 text-sm text-neutral-300">
-            Open your bot in Telegram and tap <strong>Start</strong>.
-          </p>
+          <p className="mb-4 text-sm text-neutral-300">Open your bot in Telegram and tap <strong>Start</strong>.</p>
           {botUrl && (
-            <button
-              type="button"
-              onClick={onOpenBot}
-              className="btn btn-md btn-primary mb-6"
-            >
+            <button type="button" onClick={onOpenBot} className="btn btn-md btn-primary mb-6">
               <MessageCircle size={16} />
               Open @{botUsername} in Telegram
             </button>
           )}
-
           {phase === "timed_out" ? (
             <div>
-              <p className="mb-4 text-sm text-neutral-500">
-                Still waiting for your /start in Telegram.
-              </p>
+              <p className="mb-4 text-sm text-neutral-500">Still waiting for your /start in Telegram.</p>
               <div className="flex justify-center gap-3">
-                <button type="button" onClick={onSkip} className="btn btn-md btn-ghost">
-                  Skip and test later
-                </button>
-                <button type="button" onClick={onWaitMore} className="btn btn-md btn-primary">
-                  Wait another 90s
-                </button>
+                <button type="button" onClick={onSkip} className="btn btn-md btn-ghost">Skip and test later</button>
+                <button type="button" onClick={onWaitMore} className="btn btn-md btn-primary">Wait another 90s</button>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
               <div className="flex items-center gap-2 text-xs text-neutral-500">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-primary-500" />
-                Waiting for your /start{pollElapsed > 0 ? ` (${pollElapsed}s)` : ""}…
+                Waiting for your /start{pollElapsed > 0 ? ` (${String(pollElapsed)}s)` : ""}…
               </div>
-              <button type="button" onClick={onSkip} className="btn btn-sm btn-ghost">
-                Skip and test later
-              </button>
+              <button type="button" onClick={onSkip} className="btn btn-sm btn-ghost">Skip and test later</button>
             </div>
           )}
         </div>
       )}
-
       {phase === "sending" && (
         <div className="flex flex-col items-center gap-3 py-4">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-500/30 border-t-primary-500" />
           <p className="text-sm text-neutral-400">Sending test message…</p>
         </div>
       )}
-
       {phase === "test_sent" && (
         <div className="text-center">
-          <p className="mb-6 text-sm text-neutral-300">
-            Did you see the message from your bot in Telegram?
-          </p>
+          <p className="mb-6 text-sm text-neutral-300">Did you see the message from your bot in Telegram?</p>
           {commitError && (
-            <p className="mb-4 rounded-md bg-danger-500/10 px-3 py-2 text-sm text-danger-400">
-              {commitError}
-            </p>
+            <p className="mb-4 rounded-md bg-danger-500/10 px-3 py-2 text-sm text-danger-400">{commitError}</p>
           )}
           <div className="flex justify-center gap-3">
-            <button type="button" onClick={onSkip} className="btn btn-md btn-ghost">
-              No, skip for now
-            </button>
-            <button type="button" onClick={onConfirm} className="btn btn-md btn-primary">
-              Yes, launch my assistant
-            </button>
+            <button type="button" onClick={onSkip} className="btn btn-md btn-ghost">No, skip for now</button>
+            <button type="button" onClick={onConfirm} className="btn btn-md btn-primary">Yes, launch my assistant</button>
           </div>
         </div>
       )}
