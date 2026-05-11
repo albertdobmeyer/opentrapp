@@ -34,7 +34,6 @@ services:
     build:
       context: ./components/openclaw-vault
       dockerfile: Containerfile
-    container_name: vault-agent
     read_only: true
     tmpfs:
       - /tmp:size=256m,noexec,nosuid,mode=1777
@@ -73,7 +72,6 @@ services:
   # Bridges all internal networks — routes traffic between containers.
   vault-proxy:
     image: docker.io/mitmproxy/mitmproxy@sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1
-    container_name: vault-proxy
     command: >
       mitmdump
         --listen-host 0.0.0.0
@@ -123,7 +121,6 @@ services:
     build:
       context: ./components/clawhub-forge
       dockerfile: Containerfile
-    container_name: vault-forge
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -161,7 +158,6 @@ services:
     build:
       context: ./components/moltbook-pioneer
       dockerfile: Containerfile
-    container_name: vault-pioneer
     security_opt:
       - no-new-privileges:true
     cap_drop:
