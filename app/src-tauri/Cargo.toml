@@ -9,7 +9,7 @@ repository = "https://github.com/albertdobmeyer/lobster-trapp"
 homepage = "https://github.com/albertdobmeyer/lobster-trapp#readme"
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-single-instance = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-store = "2"

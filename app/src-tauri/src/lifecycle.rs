@@ -624,6 +624,19 @@ pub fn spawn_watchdog(handle: AppHandle, interval: Duration) {
     });
 }
 
+// Tray icons embedded at compile time — amber/green/red circle PNGs.
+static TRAY_AMBER: &[u8] = include_bytes!("../icons/tray-amber.png");
+static TRAY_GREEN: &[u8] = include_bytes!("../icons/tray-green.png");
+static TRAY_RED:   &[u8] = include_bytes!("../icons/tray-red.png");
+
+fn tray_icon_bytes(bootstrap: &BootstrapState, tenant: &TenantState) -> &'static [u8] {
+    match (bootstrap, tenant) {
+        (BootstrapState::ShellReady, TenantState::Running) => TRAY_GREEN,
+        (BootstrapState::ShellFailed, _) | (BootstrapState::ShellReady, TenantState::Errored) => TRAY_RED,
+        _ => TRAY_AMBER,
+    }
+}
+
 fn tray_label_for(bootstrap: &BootstrapState, tenant: &TenantState) -> &'static str {
     match (bootstrap, tenant) {
         (BootstrapState::Installing, _) => "Assistant — setting up…",
@@ -639,8 +652,12 @@ fn tray_label_for(bootstrap: &BootstrapState, tenant: &TenantState) -> &'static 
 
 fn update_tray_for_state(handle: &AppHandle, bootstrap: &BootstrapState, tenant: &TenantState) {
     let label = tray_label_for(bootstrap, tenant);
+    let icon_bytes = tray_icon_bytes(bootstrap, tenant);
     if let Some(tray) = handle.tray_by_id("main-tray") {
         let _ = tray.set_tooltip(Some(label));
+        if let Ok(image) = tauri::image::Image::from_bytes(icon_bytes) {
+            let _ = tray.set_icon(Some(image));
+        }
     }
 }
 
