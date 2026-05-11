@@ -11,15 +11,18 @@ import { useSettings } from "./useSettings";
 
 /**
  * The hero card on Home renders one of these states. This is a *user-facing*
- * state — derived from the backend `AssistantStatus` plus session context
- * (was the perimeter ever healthy this session? has the wizard run?).
+ * state — derived from the backend `AssistantStatus` plus session context.
  *
- * Mapping rules live in docs/specs/2026-04-30-pass-6-roadmap.md. As of
- * Pass 7 Day 2, `error_key` is reachable (backend probes Anthropic auth);
- * `paused_by_user` remains reserved for Day 4 (needs a "Pause" affordance
- * + intent flag).
+ * v0.4 adds four new values for the two-axis bootstrap×tenant model:
+ * - installing / bootstrapping — first-launch setup in progress
+ * - shell_ready_absent — shell up, user hasn't activated yet
+ * - shell_failed — shell setup failed; recovery card shown
  */
 export type HeroState =
+  | "installing"
+  | "bootstrapping"
+  | "shell_ready_absent"
+  | "shell_failed"
   | "not_setup"
   | "starting"
   | "running_safely"
@@ -37,9 +40,10 @@ export interface Hero {
 }
 
 const EMPTY_SNAPSHOT: AssistantStatusSnapshot = {
-  status: "not_setup",
+  status: "installing",
   alerts: [],
   last_checked_unix_ms: 0,
+  bootstrap_failure: null,
 };
 
 export function useHero(): Hero {
@@ -98,12 +102,20 @@ function derive(
   wizardCompleted: boolean,
 ): HeroState {
   switch (status) {
+    case "installing":
+      return "installing";
+    case "bootstrapping":
+      return "bootstrapping";
+    case "shell_ready_absent":
+      return "shell_ready_absent";
+    case "shell_failed":
+      return "shell_failed";
     case "ok":
       return "running_safely";
     case "starting":
       return "starting";
     case "recovering":
-      // First time we see a partial state, present it as "starting" — Karen
+      // First time we see a partial state, present it as "starting" — the user
       // hasn't seen healthy yet, so "recovering" would be misleading copy.
       return hasBeenRunning ? "recovering" : "starting";
     case "error_perimeter":

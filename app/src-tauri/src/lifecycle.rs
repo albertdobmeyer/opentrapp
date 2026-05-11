@@ -31,30 +31,87 @@ const PERIMETER_CONTAINERS: [&str; 4] =
 
 // ─── State types (frontend-visible) ───────────────────────────────────
 
-/// High-level perimeter state. Maps to the 6-state hero machine in
-/// `docs/specs/2026-04-29-delightful-sloth-target-ux.md`. The `Paused` and
-/// `ErrorKey` states are user-initiated / user-driven and aren't yet
-/// inferable purely from container status; they'll be wired in once the
-/// frontend Home rebuild lands (Pass 6).
+/// Bootstrap axis. Encodes whether the 3-container security shell
+/// (proxy + forge + pioneer) is set up and healthy, independent of whether
+/// the tenant (vault-agent) is running.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum PerimeterState {
-    /// Wizard hasn't run; no containers exist.
-    NotSetup,
-    /// Compose-up is in progress; not all containers are visible yet.
-    /// Reserved for Pass 6 hero-state-machine wiring; not currently
-    /// emitted by the watchdog (which uses `Recovering` for any partial
-    /// state, including bring-up).
-    #[allow(dead_code)]
-    Starting,
-    /// All 4 containers running.
-    RunningSafely,
-    /// 1–3 of 4 containers running. Transient or under recovery via
-    /// `restart: unless-stopped`.
-    Recovering,
-    /// All 4 containers stopped — could be paused (user-initiated) or
-    /// fully crashed. Refined post-Pass-6 when we track user intent.
-    Stopped,
+pub enum BootstrapState {
+    /// First-launch: writing .env, no containers yet.
+    Installing,
+    /// Podman install / image build+pull / shell-up in progress.
+    /// Set by the bootstrap subsystem (PR-3); computed from container
+    /// presence alone until then.
+    Bootstrapping,
+    /// Proxy + forge + pioneer all up; shell is healthy.
+    ShellReady,
+    /// Bootstrap halted or shell containers missing; recovery card surfaces.
+    ShellFailed,
+}
+
+/// Tenant axis. Encodes the state of vault-agent (the OpenClaw runtime),
+/// which only runs after the user has activated their assistant.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TenantState {
+    /// No agent container; not yet activated, or post-stop.
+    Absent,
+    /// Wizard committed, bringing agent up. Set by bootstrap subsystem (PR-3).
+    Activating,
+    /// Agent container up; bot operational.
+    Running,
+    /// User-initiated stop; persisted via `~/.lobster-trapp/paused` marker.
+    Paused,
+    /// Agent expected up (activated marker present, not paused) but absent.
+    Errored,
+}
+
+/// Named steps in the 7-step bootstrap pipeline.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum BootstrapStep {
+    DetectRuntime,
+    InstallRuntime,
+    WriteEnv,
+    BuildImages,
+    PullImages,
+    UpShell,
+    VerifyShell,
+    /// Bring vault-agent up as part of auto-activation after shell is ready.
+    UpAgent,
+}
+
+impl BootstrapStep {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::DetectRuntime => "detect-runtime",
+            Self::InstallRuntime => "install-runtime",
+            Self::WriteEnv => "write-env",
+            Self::BuildImages => "build-images",
+            Self::PullImages => "pull-images",
+            Self::UpShell => "up-shell",
+            Self::VerifyShell => "verify-shell",
+            Self::UpAgent => "up-agent",
+        }
+    }
+}
+
+/// In-flight bootstrap pipeline step or failure cause. Set by the bootstrap
+/// subsystem; nil until bootstrap starts. Stored in `PerimeterStateStore` so
+/// the watchdog can incorporate it into state computation without re-polling.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub enum BootstrapProgress {
+    /// Step is running; includes optional percent (0-100) and detail string.
+    Step {
+        step: BootstrapStep,
+        step_index: u8,
+        total_steps: u8,
+        percent: Option<u8>,
+        detail: Option<String>,
+        started_at_unix_ms: u64,
+    },
+    /// Pipeline halted; cause code for the RecoveryCard taxonomy.
+    Failed { cause: String, message: String, last_error: Option<String> },
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -65,7 +122,8 @@ pub struct ContainerStatus {
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct PerimeterStatus {
-    pub state: PerimeterState,
+    pub bootstrap: BootstrapState,
+    pub tenant: TenantState,
     pub containers: Vec<ContainerStatus>,
     /// Unix-millis timestamp of the most recent watchdog poll. Lets the
     /// frontend show a "last checked" hint and detect a stalled watchdog.
@@ -75,7 +133,8 @@ pub struct PerimeterStatus {
 impl PerimeterStatus {
     fn empty() -> Self {
         Self {
-            state: PerimeterState::NotSetup,
+            bootstrap: BootstrapState::Installing,
+            tenant: TenantState::Absent,
             containers: Vec::new(),
             last_checked_unix_ms: 0,
         }
@@ -83,12 +142,22 @@ impl PerimeterStatus {
 }
 
 /// Tauri-managed shared state. Read by the `get_perimeter_state` command
-/// and updated by the watchdog. Includes a `paused` flag separate from the
-/// container-derived state so a user-initiated stop is distinguishable from
-/// a crash.
+/// and updated by the watchdog. Marker-file mirrors (`paused`, `activated`)
+/// are kept in sync here so command handlers can read/write without file I/O
+/// on every access.
 pub struct PerimeterStateStore {
     pub status: Mutex<PerimeterStatus>,
+    /// Mirrors `~/.lobster-trapp/paused`. User-initiated stop.
     pub paused: RwLock<bool>,
+    /// Mirrors `~/.lobster-trapp/activated`. Set after first successful activation.
+    pub activated: RwLock<bool>,
+    /// Unix-ms of last successful credential validation; `None` = unverified.
+    pub credentials_ok_at: RwLock<Option<u64>>,
+    /// In-flight bootstrap pipeline step. Set by bootstrap subsystem (PR-3).
+    pub bootstrap_progress: RwLock<Option<BootstrapProgress>>,
+    /// True when migration detected an existing v0.3 install with an invalid
+    /// Anthropic key. Cleared when new credentials are committed successfully.
+    pub migration_credential_warning: RwLock<bool>,
 }
 
 impl PerimeterStateStore {
@@ -96,6 +165,10 @@ impl PerimeterStateStore {
         Self {
             status: Mutex::new(PerimeterStatus::empty()),
             paused: RwLock::new(is_paused_persisted()),
+            activated: RwLock::new(is_activated_persisted()),
+            credentials_ok_at: RwLock::new(read_credentials_ok_ts()),
+            bootstrap_progress: RwLock::new(None),
+            migration_credential_warning: RwLock::new(false),
         }
     }
 
@@ -108,12 +181,25 @@ impl PerimeterStateStore {
             *g = value;
         }
     }
+
+    pub fn is_activated(&self) -> bool {
+        self.activated.read().map(|g| *g).unwrap_or(false)
+    }
+
+    pub fn set_activated(&self, value: bool) {
+        if let Ok(mut g) = self.activated.write() {
+            *g = value;
+        }
+    }
 }
 
-/// Persisted pause flag — file presence at `~/.lobster-trapp/paused` means
-/// the user paused their assistant and expects it to stay paused across
-/// app restarts. Best-effort: a missing file (the default) means "not
-/// paused", so a corrupted home dir simply resumes normal behavior.
+// ─── Marker file helpers ───────────────────────────────────────────────
+
+fn runguard_dir() -> PathBuf {
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
+    PathBuf::from(home).join(".lobster-trapp")
+}
+
 fn paused_marker_path() -> PathBuf {
     runguard_dir().join("paused")
 }
@@ -132,6 +218,48 @@ pub fn write_paused_marker() -> std::io::Result<()> {
 
 pub fn clear_paused_marker() {
     let _ = std::fs::remove_file(paused_marker_path());
+}
+
+fn activated_marker_path() -> PathBuf {
+    runguard_dir().join("activated")
+}
+
+pub fn is_activated_persisted() -> bool {
+    activated_marker_path().exists()
+}
+
+pub fn write_activated_marker() -> std::io::Result<()> {
+    let path = activated_marker_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, "1")
+}
+
+pub fn clear_activated_marker() {
+    let _ = std::fs::remove_file(activated_marker_path());
+}
+
+fn credentials_ok_marker_path() -> PathBuf {
+    runguard_dir().join("credentials-ok")
+}
+
+fn read_credentials_ok_ts() -> Option<u64> {
+    std::fs::read_to_string(credentials_ok_marker_path())
+        .ok()
+        .and_then(|s| s.trim().parse::<u64>().ok())
+}
+
+pub fn write_credentials_ok_marker() -> std::io::Result<()> {
+    let path = credentials_ok_marker_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, now_unix_ms().to_string())
+}
+
+pub fn clear_credentials_ok_marker() {
+    let _ = std::fs::remove_file(credentials_ok_marker_path());
 }
 
 // ─── Secret redaction (defensive) ─────────────────────────────────────
@@ -239,11 +367,6 @@ pub fn bring_perimeter_down_sync(root: &Path) {
 
 // ─── RunGuard (orphan reap on next launch after SIGKILL) ──────────────
 
-fn runguard_dir() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
-    PathBuf::from(home).join(".lobster-trapp")
-}
-
 fn runguard_path() -> PathBuf {
     runguard_dir().join("runguard.pid")
 }
@@ -334,29 +457,103 @@ fn now_unix_ms() -> u64 {
         .unwrap_or(0)
 }
 
-fn compute_perimeter_status() -> PerimeterStatus {
-    let mut containers = Vec::with_capacity(PERIMETER_CONTAINERS.len());
-    let mut running_count = 0usize;
-    for name in PERIMETER_CONTAINERS {
-        let running = is_service_running(name);
-        if running {
-            running_count += 1;
-        }
-        containers.push(ContainerStatus {
+// ─── State compute ────────────────────────────────────────────────────
+
+/// Store-state snapshot passed into the blocking compute function so it
+/// can derive the full `(bootstrap, tenant)` pair without touching the
+/// store's locks from a blocking thread.
+struct ShellSnapshot {
+    paused: bool,
+    activated: bool,
+    bootstrap_progress: Option<BootstrapProgress>,
+}
+
+fn compute_perimeter_status(snap: ShellSnapshot) -> PerimeterStatus {
+    let containers: Vec<ContainerStatus> = PERIMETER_CONTAINERS
+        .iter()
+        .map(|&name| ContainerStatus {
             name: name.to_string(),
-            running,
-        });
-    }
-    let state = match running_count {
-        0 => PerimeterState::Stopped,
-        n if n == PERIMETER_CONTAINERS.len() => PerimeterState::RunningSafely,
-        _ => PerimeterState::Recovering,
-    };
+            running: is_service_running(name),
+        })
+        .collect();
+
+    let shell_up = containers
+        .iter()
+        .filter(|c| c.name != "vault-agent")
+        .all(|c| c.running);
+    let agent_up = containers
+        .iter()
+        .find(|c| c.name == "vault-agent")
+        .map_or(false, |c| c.running);
+
+    let bootstrap = compute_bootstrap_state(shell_up, &snap.bootstrap_progress, snap.activated);
+    let tenant = compute_tenant_state(agent_up, snap.paused, snap.activated, &snap.bootstrap_progress, &bootstrap);
+
     PerimeterStatus {
-        state,
+        bootstrap,
+        tenant,
         containers,
         last_checked_unix_ms: now_unix_ms(),
     }
+}
+
+fn compute_bootstrap_state(
+    shell_up: bool,
+    progress: &Option<BootstrapProgress>,
+    activated: bool,
+) -> BootstrapState {
+    match progress {
+        Some(BootstrapProgress::Failed { .. }) => BootstrapState::ShellFailed,
+        Some(BootstrapProgress::Step { .. }) => BootstrapState::Bootstrapping,
+        None => {
+            if shell_up {
+                BootstrapState::ShellReady
+            } else if activated {
+                // Shell was previously working (activated marker present) but
+                // now no shell containers are running → something failed.
+                BootstrapState::ShellFailed
+            } else {
+                // No bootstrap in-flight, no shell containers, never activated →
+                // first launch, still in initial setup.
+                BootstrapState::Installing
+            }
+        }
+    }
+}
+
+fn compute_tenant_state(
+    agent_up: bool,
+    paused: bool,
+    activated: bool,
+    progress: &Option<BootstrapProgress>,
+    bootstrap: &BootstrapState,
+) -> TenantState {
+    // Tenant can only be non-Absent on a healthy shell.
+    if !matches!(bootstrap, BootstrapState::ShellReady) {
+        return TenantState::Absent;
+    }
+
+    if paused {
+        return TenantState::Paused;
+    }
+
+    // Activating: bootstrap subsystem reports agent bring-up in flight.
+    if let Some(BootstrapProgress::Step { step, .. }) = progress {
+        if matches!(step, BootstrapStep::UpAgent) {
+            return TenantState::Activating;
+        }
+    }
+
+    if agent_up {
+        return TenantState::Running;
+    }
+
+    if activated {
+        // Was activated, not paused, shell ready, but agent isn't running.
+        return TenantState::Errored;
+    }
+
+    TenantState::Absent
 }
 
 // ─── Watchdog ─────────────────────────────────────────────────────────
@@ -369,26 +566,49 @@ fn compute_perimeter_status() -> PerimeterStatus {
 /// The watchdog is a REPORTER, not a controller. Auto-restart of dead
 /// containers is owned by the `restart: unless-stopped` policy in
 /// `compose.yml`. If a sustained outage is detected, the user sees it via
-/// the tray + the (Pass-6) hero state — they take action, not us.
+/// the tray + the hero state — they take action, not us.
 pub fn spawn_watchdog(handle: AppHandle, interval: Duration) {
     tauri::async_runtime::spawn(async move {
         // First tick fires immediately (tokio::time::interval fires the first
         // tick at t=0, then every `interval` after).
         let mut ticker = tokio::time::interval(interval);
-        let mut last_state: Option<PerimeterState> = None;
+        let mut last_state: Option<(BootstrapState, TenantState)> = None;
 
         loop {
             ticker.tick().await;
 
+            // Snapshot store-side fields before handing off to blocking thread.
+            let snap = if let Some(store) = handle.try_state::<PerimeterStateStore>() {
+                let progress = store
+                    .bootstrap_progress
+                    .read()
+                    .ok()
+                    .and_then(|g| g.clone());
+                ShellSnapshot {
+                    paused: store.is_paused(),
+                    activated: store.is_activated(),
+                    bootstrap_progress: progress,
+                }
+            } else {
+                ShellSnapshot {
+                    paused: is_paused_persisted(),
+                    activated: is_activated_persisted(),
+                    bootstrap_progress: None,
+                }
+            };
+
             // Run the synchronous status probe on a blocking thread so
             // we don't stall the tokio reactor on slow podman calls.
             let status =
-                tokio::task::spawn_blocking(compute_perimeter_status).await.ok();
+                tokio::task::spawn_blocking(move || compute_perimeter_status(snap))
+                    .await
+                    .ok();
             let Some(status) = status else { continue };
 
             // Update the store + decide whether to emit + update tray.
-            let state_changed = last_state.as_ref() != Some(&status.state);
-            last_state = Some(status.state.clone());
+            let pair = (status.bootstrap.clone(), status.tenant.clone());
+            let state_changed = last_state.as_ref() != Some(&pair);
+            last_state = Some(pair);
 
             if let Some(store) = handle.try_state::<PerimeterStateStore>() {
                 if let Ok(mut guard) = store.status.lock() {
@@ -399,29 +619,46 @@ pub fn spawn_watchdog(handle: AppHandle, interval: Duration) {
             if state_changed {
                 let _ = handle.emit("perimeter-state-changed", &status);
             }
-            update_tray_for_state(&handle, &status.state);
+            update_tray_for_state(&handle, &status.bootstrap, &status.tenant);
         }
     });
 }
 
-fn tray_label_for(state: &PerimeterState) -> &'static str {
-    match state {
-        PerimeterState::NotSetup => "Assistant — not set up",
-        PerimeterState::Starting => "Assistant — starting…",
-        PerimeterState::RunningSafely => "Assistant — running safely",
-        PerimeterState::Recovering => "Assistant — recovering",
-        PerimeterState::Stopped => "Assistant — stopped",
+// Tray icons embedded at compile time — amber/green/red circle PNGs.
+static TRAY_AMBER: &[u8] = include_bytes!("../icons/tray-amber.png");
+static TRAY_GREEN: &[u8] = include_bytes!("../icons/tray-green.png");
+static TRAY_RED:   &[u8] = include_bytes!("../icons/tray-red.png");
+
+fn tray_icon_bytes(bootstrap: &BootstrapState, tenant: &TenantState) -> &'static [u8] {
+    match (bootstrap, tenant) {
+        (BootstrapState::ShellReady, TenantState::Running) => TRAY_GREEN,
+        (BootstrapState::ShellFailed, _) | (BootstrapState::ShellReady, TenantState::Errored) => TRAY_RED,
+        _ => TRAY_AMBER,
     }
 }
 
-fn update_tray_for_state(handle: &AppHandle, state: &PerimeterState) {
-    let label = tray_label_for(state);
+fn tray_label_for(bootstrap: &BootstrapState, tenant: &TenantState) -> &'static str {
+    match (bootstrap, tenant) {
+        (BootstrapState::Installing, _) => "Assistant — setting up…",
+        (BootstrapState::Bootstrapping, _) => "Assistant — setting up…",
+        (BootstrapState::ShellFailed, _) => "Assistant — setup needs attention",
+        (BootstrapState::ShellReady, TenantState::Absent) => "Assistant — ready to launch",
+        (BootstrapState::ShellReady, TenantState::Activating) => "Assistant — starting…",
+        (BootstrapState::ShellReady, TenantState::Running) => "Assistant — running safely",
+        (BootstrapState::ShellReady, TenantState::Paused) => "Assistant — stopped",
+        (BootstrapState::ShellReady, TenantState::Errored) => "Assistant — needs attention",
+    }
+}
+
+fn update_tray_for_state(handle: &AppHandle, bootstrap: &BootstrapState, tenant: &TenantState) {
+    let label = tray_label_for(bootstrap, tenant);
+    let icon_bytes = tray_icon_bytes(bootstrap, tenant);
     if let Some(tray) = handle.tray_by_id("main-tray") {
         let _ = tray.set_tooltip(Some(label));
+        if let Ok(image) = tauri::image::Image::from_bytes(icon_bytes) {
+            let _ = tray.set_icon(Some(image));
+        }
     }
-    // Note: updating the menu's "status" item text requires a stored
-    // handle to that MenuItem; deferred until Pass 4 wrap-up if needed.
-    // The tooltip update covers the primary user-visible signal.
 }
 
 // ─── Signal handlers (Unix) ──────────────────────────────────────────
@@ -497,7 +734,8 @@ mod tests {
     #[test]
     fn perimeter_status_serializes_to_snake_case() {
         let s = PerimeterStatus {
-            state: PerimeterState::RunningSafely,
+            bootstrap: BootstrapState::ShellReady,
+            tenant: TenantState::Running,
             containers: vec![ContainerStatus {
                 name: "vault-agent".into(),
                 running: true,
@@ -505,22 +743,118 @@ mod tests {
             last_checked_unix_ms: 1_000_000,
         };
         let json = serde_json::to_string(&s).unwrap();
-        assert!(json.contains("\"running_safely\""));
+        assert!(json.contains("\"shell_ready\""));
+        assert!(json.contains("\"running\""));
         assert!(json.contains("\"vault-agent\""));
     }
 
     #[test]
-    fn tray_label_covers_all_states() {
-        for state in [
-            PerimeterState::NotSetup,
-            PerimeterState::Starting,
-            PerimeterState::RunningSafely,
-            PerimeterState::Recovering,
-            PerimeterState::Stopped,
-        ] {
-            let label = tray_label_for(&state);
-            assert!(label.starts_with("Assistant"));
+    fn tray_label_covers_all_state_pairs() {
+        let pairs = [
+            (BootstrapState::Installing, TenantState::Absent),
+            (BootstrapState::Bootstrapping, TenantState::Absent),
+            (BootstrapState::ShellFailed, TenantState::Absent),
+            (BootstrapState::ShellReady, TenantState::Absent),
+            (BootstrapState::ShellReady, TenantState::Activating),
+            (BootstrapState::ShellReady, TenantState::Running),
+            (BootstrapState::ShellReady, TenantState::Paused),
+            (BootstrapState::ShellReady, TenantState::Errored),
+        ];
+        for (bootstrap, tenant) in pairs {
+            let label = tray_label_for(&bootstrap, &tenant);
+            assert!(
+                label.starts_with("Assistant"),
+                "bad label for {bootstrap:?}/{tenant:?}"
+            );
             assert!(!label.is_empty());
         }
+    }
+
+    #[test]
+    fn compute_bootstrap_no_containers_not_activated_is_installing() {
+        assert_eq!(
+            compute_bootstrap_state(false, &None, false),
+            BootstrapState::Installing
+        );
+    }
+
+    #[test]
+    fn compute_bootstrap_no_containers_but_activated_is_shell_failed() {
+        assert_eq!(
+            compute_bootstrap_state(false, &None, true),
+            BootstrapState::ShellFailed
+        );
+    }
+
+    #[test]
+    fn compute_bootstrap_shell_up_is_shell_ready() {
+        assert_eq!(
+            compute_bootstrap_state(true, &None, false),
+            BootstrapState::ShellReady
+        );
+    }
+
+    #[test]
+    fn compute_bootstrap_failed_progress_overrides_shell_up() {
+        let progress = Some(BootstrapProgress::Failed {
+            cause: "image-build-failed".into(),
+            message: "Build failed".into(),
+            last_error: None,
+        });
+        assert_eq!(
+            compute_bootstrap_state(true, &progress, true),
+            BootstrapState::ShellFailed
+        );
+    }
+
+    #[test]
+    fn compute_bootstrap_step_in_flight_is_bootstrapping() {
+        let progress = Some(BootstrapProgress::Step {
+            step: BootstrapStep::BuildImages,
+            step_index: 4,
+            total_steps: 7,
+            percent: None,
+            detail: None,
+            started_at_unix_ms: 0,
+        });
+        assert_eq!(
+            compute_bootstrap_state(false, &progress, false),
+            BootstrapState::Bootstrapping
+        );
+    }
+
+    #[test]
+    fn compute_tenant_paused_overrides_running_agent() {
+        let tenant =
+            compute_tenant_state(true, true, true, &None, &BootstrapState::ShellReady);
+        assert_eq!(tenant, TenantState::Paused);
+    }
+
+    #[test]
+    fn compute_tenant_not_shell_ready_is_absent() {
+        let tenant =
+            compute_tenant_state(true, false, true, &None, &BootstrapState::Installing);
+        assert_eq!(tenant, TenantState::Absent);
+    }
+
+    #[test]
+    fn compute_tenant_activated_no_agent_is_errored() {
+        let tenant =
+            compute_tenant_state(false, false, true, &None, &BootstrapState::ShellReady);
+        assert_eq!(tenant, TenantState::Errored);
+    }
+
+    #[test]
+    fn compute_tenant_not_activated_no_agent_is_absent() {
+        let tenant =
+            compute_tenant_state(false, false, false, &None, &BootstrapState::ShellReady);
+        assert_eq!(tenant, TenantState::Absent);
+    }
+
+    #[test]
+    fn compute_tenant_agent_running_not_paused_is_running() {
+        let tenant =
+            compute_tenant_state(true, false, true, &None, &BootstrapState::ShellReady);
+        assert_eq!(tenant, TenantState::Running);
     }
 }

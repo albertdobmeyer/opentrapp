@@ -3,10 +3,10 @@ import { test, expect } from "@playwright/test";
 test.describe("Navigation and routing", () => {
   test("sidebar links are rendered or wizard is shown", async ({ page }) => {
     await page.goto("/");
-    // On first run, the app shows the setup wizard (no sidebar); otherwise sidebar with Settings link
-    const settingsLink = page.getByRole("link", { name: /settings/i });
+    // On first run, the app shows the setup wizard (no sidebar); otherwise sidebar with Preferences link
+    const prefsLink = page.getByRole("link", { name: /preferences/i });
     const setup = page.getByText(/welcome|setup|prerequisites/i);
-    await expect(settingsLink.or(setup)).toBeVisible();
+    await expect(prefsLink.or(setup)).toBeVisible();
   });
 
   test("preferences page has controls", async ({ page }) => {
@@ -50,19 +50,13 @@ test.describe("Navigation and routing", () => {
     await expect(page.getByRole("button", { name: /get started/i })).toBeVisible();
   });
 
-  test("dashboard empty state has setup wizard link", async ({ page }) => {
-    // Navigate to dashboard (may redirect to /setup if wizard not completed)
+  test("home page loads or setup wizard is shown", async ({ page }) => {
+    // Navigate to home (may redirect to /setup if wizard not completed)
     await page.goto("/");
-    const dashboard = page.getByRole("heading", { name: "Dashboard" });
-    const wizardLink = page.getByRole("link", { name: "Run Setup Wizard" });
+    const homeLoaded = page.getByRole("link", { name: /preferences/i });
     const setup = page.getByText(/welcome/i);
-    // Either shows dashboard with wizard link, or redirects to setup
-    await expect(dashboard.or(setup)).toBeVisible();
-    // If on dashboard, the empty state should have a wizard link
-    if (await dashboard.isVisible()) {
-      await expect(page.getByText("No assistant detected")).toBeVisible();
-      await expect(wizardLink).toBeVisible();
-    }
+    // Either shows home page (with sidebar) or redirects to setup wizard
+    await expect(homeLoaded.or(setup)).toBeVisible();
   });
 });
 

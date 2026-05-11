@@ -27,6 +27,7 @@ const EMPTY_SNAPSHOT: AssistantStatusSnapshot = {
   status: "not_setup",
   alerts: [],
   last_checked_unix_ms: 0,
+  bootstrap_failure: null,
 };
 
 /**

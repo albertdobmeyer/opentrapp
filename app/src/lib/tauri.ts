@@ -205,6 +205,32 @@ export async function generateDiagnosticBundle(): Promise<string> {
 }
 
 /**
+ * Bootstrap axis — state of the 3-container security shell
+ * (proxy + forge + pioneer). Snake-case matches Rust serde rename.
+ */
+export type BootstrapState =
+  | "installing"
+  | "bootstrapping"
+  | "shell_ready"
+  | "shell_failed";
+
+/**
+ * Tenant axis — state of vault-agent (the OpenClaw runtime).
+ * Snake-case matches Rust serde rename.
+ */
+export type TenantState =
+  | "absent"
+  | "activating"
+  | "running"
+  | "paused"
+  | "errored";
+
+export interface ContainerStatus {
+  name: string;
+  running: boolean;
+}
+
+/**
  * Live state of the 4-container perimeter. Updated by the Rust watchdog
  * every 30s and emitted as a `perimeter-state-changed` event on each
  * transition. The frontend can either read the latest cached value via
@@ -212,20 +238,9 @@ export async function generateDiagnosticBundle(): Promise<string> {
  *
  * Snake-case matches Rust's serde rename. See `app/src-tauri/src/lifecycle.rs`.
  */
-export type PerimeterState =
-  | "not_setup"
-  | "starting"
-  | "running_safely"
-  | "recovering"
-  | "stopped";
-
-export interface ContainerStatus {
-  name: string;
-  running: boolean;
-}
-
 export interface PerimeterStatus {
-  state: PerimeterState;
+  bootstrap: BootstrapState;
+  tenant: TenantState;
   containers: ContainerStatus[];
   /** Unix-millis timestamp of the last watchdog poll. 0 if watchdog hasn't ticked yet. */
   last_checked_unix_ms: number;
@@ -236,17 +251,16 @@ export async function getPerimeterState(): Promise<PerimeterStatus> {
 }
 
 /**
- * Aggregated user-facing status. Backend evaluator (Pass 7 Day 2)
- * combines perimeter state + .env presence + Anthropic auth probe into
- * a single value driving the Home hero state machine. Snake-case
- * matches Rust serde rename.
- *
- * `paused_by_user` is reserved for Day 4. `starting` is currently
- * unused by the backend (which maps any partial state to `recovering`)
- * — the frontend's `useHero` hasBeenRunning ref flips the first
- * occurrence to "starting" for nicer first-run copy.
+ * Aggregated user-facing status. Backend evaluator combines the
+ * (BootstrapState, TenantState) pair with .env presence and an Anthropic
+ * auth probe into a single value driving the Home hero state machine.
+ * Snake-case matches Rust serde rename.
  */
 export type AssistantStatus =
+  | "installing"
+  | "bootstrapping"
+  | "shell_ready_absent"
+  | "shell_failed"
   | "not_setup"
   | "starting"
   | "recovering"
@@ -269,10 +283,23 @@ export interface BackendAlert {
   suppress_during_wizard: boolean;
 }
 
+/**
+ * Summary of a bootstrap pipeline failure. Populated only when
+ * `status === "shell_failed"`. Lets the recovery card show cause-appropriate
+ * copy without a separate IPC call.
+ */
+export interface BootstrapFailureSummary {
+  cause: string;
+  message: string;
+  last_error: string | null;
+}
+
 export interface AssistantStatusSnapshot {
   status: AssistantStatus;
   alerts: BackendAlert[];
   last_checked_unix_ms: number;
+  /** Populated only when status === "shell_failed". */
+  bootstrap_failure: BootstrapFailureSummary | null;
 }
 
 export async function getAssistantStatus(): Promise<AssistantStatusSnapshot> {
@@ -313,6 +340,15 @@ export async function resumePerimeter(): Promise<void> {
 }
 
 /**
+ * Re-run the bootstrap pipeline from scratch after a failure. Returns
+ * immediately — the pipeline runs in the background. The frontend observes
+ * progress via the `bootstrap-step-started` / `bootstrap-step-failed` events.
+ */
+export async function retryBootstrap(): Promise<void> {
+  await invoke("retry_bootstrap");
+}
+
+/**
  * Resolved Telegram bot identity. Both fields come from a single `getMe`
  * call and are always populated together.
  */
@@ -330,4 +366,90 @@ export interface TelegramBot {
  */
 export async function deriveTelegramBotUrl(token: string): Promise<TelegramBot> {
   return invoke<TelegramBot>("derive_telegram_bot_url", { token });
+}
+
+// ─── Activation flow ─────────────────────────────────────────────
+
+/**
+ * Outcome of a live Anthropic key validation ping. Structured so the
+ * frontend can show exact guidance per error class.
+ */
+export type ValidationOutcome =
+  | "ok"
+  | "auth_failure"
+  | "billing"
+  | "permission"
+  | "rate"
+  | "server_error"
+  | "unknown";
+
+/**
+ * Live-pings Anthropic to verify the key is accepted. Makes a direct
+ * host → api.anthropic.com request (not via vault-proxy) as a pre-flight
+ * check. Returns a structured outcome — never throws on API-level errors.
+ * Rejects only on complete network failure.
+ */
+export async function validateAnthropicKey(key: string): Promise<ValidationOutcome> {
+  return invoke<ValidationOutcome>("validate_anthropic_key", { key });
+}
+
+/**
+ * A Telegram update that contains a /start message.
+ */
+export interface TelegramUpdate {
+  update_id: number;
+  chat_id: number;
+}
+
+/** Clears any leftover webhook so subsequent getUpdates long-polls work. */
+export async function telegramDeleteWebhook(token: string): Promise<void> {
+  return invoke("telegram_delete_webhook", { token });
+}
+
+/**
+ * Long-polls Telegram for the first /start message at or after `offset`.
+ * Returns the update when found, or `null` if the poll timed out.
+ * Rejects on network errors or HTTP 409 (conflict: another instance is polling).
+ */
+export async function telegramPollForStart(
+  token: string,
+  offset: number,
+  timeoutSecs: number,
+): Promise<TelegramUpdate | null> {
+  return invoke<TelegramUpdate | null>("telegram_poll_for_start", {
+    token,
+    offset,
+    timeoutSecs,
+  });
+}
+
+/** Sends a text message to the given chat. Rejects with "conflict" on HTTP 409. */
+export async function telegramSendMessage(
+  token: string,
+  chatId: number,
+  text: string,
+): Promise<void> {
+  return invoke("telegram_send_message", { token, chatId, text });
+}
+
+/**
+ * Advances the server-side getUpdates offset past `updateId` so vault-agent
+ * doesn't re-process the /start on its first poll.
+ */
+export async function telegramAdvanceOffset(
+  token: string,
+  updateId: number,
+): Promise<void> {
+  return invoke("telegram_advance_offset", { token, updateId });
+}
+
+/**
+ * Finalises activation: force-recreates vault-proxy (picks up new .env keys),
+ * brings vault-agent up, and writes the activated + credentials-ok marker files.
+ *
+ * The frontend must write both keys to `.env` via `writeConfig` BEFORE
+ * calling this — the commit is transactional from the user's perspective.
+ */
+export async function commitActivation(): Promise<void> {
+  return invoke("commit_activation");
 }

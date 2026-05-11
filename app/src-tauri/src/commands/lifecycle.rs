@@ -10,7 +10,7 @@
 
 use std::time::Duration;
 
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::lifecycle::{
     bring_perimeter_down_sync, clear_paused_marker, run_compose, write_paused_marker,
@@ -115,6 +115,33 @@ pub async fn pause_perimeter(
         return Err("Couldn't pause your assistant. Try again in a moment.".to_string());
     }
 
+    Ok(())
+}
+
+/// Re-run the bootstrap pipeline from scratch after a failure.
+///
+/// Clears the `BootstrapProgress::Failed` state so the UI shows
+/// "bootstrapping" immediately, then spawns a fresh pipeline run. Returns
+/// immediately — the pipeline runs asynchronously.
+#[tauri::command]
+pub fn retry_bootstrap(
+    handle: AppHandle,
+    state: State<'_, AppState>,
+    store: State<'_, PerimeterStateStore>,
+) -> Result<(), String> {
+    let root = state
+        .monorepo_root
+        .read()
+        .map(|g| g.clone())
+        .map_err(|e| format!("monorepo root lock poisoned: {e}"))?;
+
+    // Clear failure state so the watchdog and status aggregator see "bootstrapping"
+    // instead of "shell_failed" during the retry run.
+    if let Ok(mut g) = store.bootstrap_progress.write() {
+        *g = None;
+    }
+
+    crate::bootstrap::spawn_bootstrap(handle, root);
     Ok(())
 }
 

@@ -1,18 +1,20 @@
 import { open as openUrl } from "@tauri-apps/plugin-shell";
-import { MessageCircle, Pause, Play, RotateCcw } from "lucide-react";
+import { MessageCircle, Play, RotateCcw, StopCircle } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useSettings } from "@/hooks/useSettings";
 import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
-import { pausePerimeter, resumePerimeter } from "@/lib/tauri";
+import { pausePerimeter, resumePerimeter, retryBootstrap, type BootstrapFailureSummary } from "@/lib/tauri";
 
 import type { HeroState } from "@/hooks/useHero";
 
 interface Props {
   state: HeroState;
   loading: boolean;
+  onLaunch?: () => void;
+  bootstrapFailure?: BootstrapFailureSummary | null;
 }
 
 interface Copy {
@@ -25,9 +27,33 @@ interface Copy {
 }
 
 const COPY: Record<HeroState, Copy> = {
+  installing: {
+    title: "Getting your assistant ready…",
+    subline: "We're setting things up in the background.",
+    ringTint: "border-primary-500/40 border-primary-500/60",
+    dotTint: "bg-primary-500",
+  },
+  bootstrapping: {
+    title: "Setting up your safe room…",
+    subline: "First-time setup, ~5 minutes. You can keep working.",
+    ringTint: "border-warning-500/40 border-warning-500/60",
+    dotTint: "bg-warning-500",
+  },
+  shell_ready_absent: {
+    title: "Ready to launch your assistant",
+    subline: "Two quick steps and you're chatting on Telegram.",
+    ringTint: "border-primary-500/40 border-primary-500/60",
+    dotTint: "bg-primary-500",
+  },
+  shell_failed: {
+    title: "Background setup needs your help",
+    subline: "Something stopped the setup. We can try to fix it.",
+    ringTint: "border-danger-500/40 border-danger-500/60",
+    dotTint: "bg-danger-500",
+  },
   running_safely: {
     title: "Your assistant is running safely",
-    subline: "Everything looks good.",
+    subline: "Open Telegram to start chatting.",
     ringTint: "border-success-500/40 border-success-500/60",
     dotTint: "bg-success-500",
   },
@@ -44,8 +70,8 @@ const COPY: Record<HeroState, Copy> = {
     dotTint: "bg-warning-500",
   },
   error_perimeter: {
-    title: "Your assistant didn't fully recover",
-    subline: "Let's try to fix it together.",
+    title: "Your assistant didn't recover",
+    subline: "Something stopped it from running. We can try to fix it.",
     ringTint: "border-danger-500/40 border-danger-500/60",
     dotTint: "bg-danger-500",
   },
@@ -62,19 +88,75 @@ const COPY: Record<HeroState, Copy> = {
     dotTint: "bg-primary-500",
   },
   paused_by_user: {
-    title: "Your assistant is paused",
-    subline: "It won't respond on Telegram until you resume it.",
+    title: "Your assistant is stopped",
+    subline: "Tap Resume when you're ready.",
     ringTint: "border-neutral-500/40 border-neutral-500/60",
     dotTint: "bg-neutral-500",
   },
 };
 
-export default function HeroStatusCard({ state, loading }: Props) {
+// ─── Recovery copy taxonomy ───────────────────────────────────────────────
+
+interface RecoveryCopy {
+  title: string;
+  body: string;
+  primaryLabel: string;
+  secondaryLabel?: string;
+  secondaryHref?: string;
+}
+
+const RECOVERY_COPY: Record<string, RecoveryCopy> = {
+  "no-container-runtime": {
+    title: "Couldn't find a container runtime",
+    body: "We need Podman or Docker to keep your assistant in a sealed room. Make sure it's installed and running.",
+    primaryLabel: "Try again",
+  },
+  "image-build-failed": {
+    title: "Couldn't build the safe-room components",
+    body: "Something stopped us from preparing the safe room on your computer.",
+    primaryLabel: "Try again",
+    secondaryLabel: "Show details",
+  },
+  "image-pull-failed": {
+    title: "Couldn't download a safe-room component",
+    body: "Network hiccup while downloading. Check your connection and try again.",
+    primaryLabel: "Try again now",
+  },
+  "env-write-failed": {
+    title: "Couldn't write the configuration file",
+    body: "We couldn't create the configuration file. Check disk space and permissions.",
+    primaryLabel: "Try again",
+  },
+  "shell-up-failed": {
+    title: "Couldn't start the safe room",
+    body: "The safe room couldn't start up. We can try again.",
+    primaryLabel: "Try again",
+    secondaryLabel: "Get help",
+  },
+  "shell-verify-failed": {
+    title: "Couldn't verify the safe room",
+    body: "The safe room started but isn't responding correctly.",
+    primaryLabel: "Try again",
+    secondaryLabel: "Get help",
+  },
+};
+
+const DEFAULT_RECOVERY: RecoveryCopy = {
+  title: "Background setup needs your help",
+  body: "Something stopped the setup. We can try to fix it.",
+  primaryLabel: "Try again",
+};
+
+// eslint-disable-next-line complexity, max-lines-per-function
+export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFailure }: Props) {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const { addToast, removeToast } = useToast();
   const copy = COPY[state];
   const [pauseLoading, setPauseLoading] = useState(false);
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
+  const [retryLoading, setRetryLoading] = useState(false);
+  const [showFailureDetails, setShowFailureDetails] = useState(false);
 
   const telegramLink =
     settings.telegramBotUrl ??
@@ -90,17 +172,32 @@ export default function HeroStatusCard({ state, loading }: Props) {
     }
   }
 
-  const handlePause = () =>
-    runPerimeterToggle({
+  const handleStop = () => {
+    setShowStopConfirm(false);
+    void runPerimeterToggle({
       setLoading: setPauseLoading,
       addToast,
       removeToast,
       action: pausePerimeter,
-      pendingTitle: "Pausing your assistant…",
+      pendingTitle: "Stopping your assistant…",
       pendingMessage: undefined,
-      successTitle: "Your assistant is paused",
-      successMessage: "It won't respond on Telegram until you resume it.",
-      errorFallbackTitle: "Couldn't pause",
+      successTitle: "Stopped. Your data is safe. Tap Resume any time.",
+      successMessage: undefined,
+      errorFallbackTitle: "Couldn't stop",
+    });
+  };
+
+  const handleRetryBootstrap = () =>
+    runPerimeterToggle({
+      setLoading: setRetryLoading,
+      addToast,
+      removeToast,
+      action: retryBootstrap,
+      pendingTitle: "Retrying setup…",
+      pendingMessage: undefined,
+      successTitle: "Retrying in the background",
+      successMessage: "We'll update you when it's done.",
+      errorFallbackTitle: "Couldn't restart setup",
     });
 
   const handleResume = () =>
@@ -138,35 +235,116 @@ export default function HeroStatusCard({ state, loading }: Props) {
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
-        {state === "running_safely" && (
-          <>
-            <button
-              type="button"
-              onClick={handleOpenTelegram}
-              className="btn btn-lg btn-primary"
-            >
-              <MessageCircle size={18} />
-              Open Telegram
-            </button>
-            <button
-              type="button"
-              onClick={handlePause}
-              className="btn btn-lg btn-ghost"
-              disabled={pauseLoading}
-            >
-              <Pause size={18} />
-              {pauseLoading ? "Pausing…" : "Pause"}
-            </button>
-          </>
-        )}
-
-        {state === "starting" && (
+        {(state === "installing" || state === "bootstrapping") && (
           <span className="text-xs text-neutral-500">
             Working on it — no action needed.
           </span>
         )}
 
-        {state === "recovering" && (
+        {state === "shell_ready_absent" && (
+          <button
+            type="button"
+            onClick={() => { onLaunch?.(); }}
+            className="btn btn-lg btn-primary"
+          >
+            Launch your assistant
+          </button>
+        )}
+
+        {state === "shell_failed" && (() => {
+          const recovery = (bootstrapFailure?.cause ? RECOVERY_COPY[bootstrapFailure.cause] : undefined) ?? DEFAULT_RECOVERY;
+          return (
+            <>
+              <button
+                type="button"
+                onClick={handleRetryBootstrap}
+                className="btn btn-lg btn-primary"
+                disabled={retryLoading}
+              >
+                <RotateCcw size={18} />
+                {retryLoading ? "Retrying…" : recovery.primaryLabel}
+              </button>
+              {recovery.secondaryLabel && (
+                recovery.secondaryHref ? (
+                  <a href={recovery.secondaryHref} target="_blank" rel="noopener noreferrer" className="btn btn-lg btn-ghost">
+                    {recovery.secondaryLabel}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setShowFailureDetails((v) => !v); }}
+                    className="btn btn-lg btn-ghost"
+                  >
+                    {showFailureDetails ? "Hide details" : recovery.secondaryLabel}
+                  </button>
+                )
+              )}
+              {!recovery.secondaryLabel && (
+                <button type="button" onClick={() => { navigate("/help"); }} className="btn btn-lg btn-ghost">
+                  Get help
+                </button>
+              )}
+              {showFailureDetails && bootstrapFailure?.last_error && (
+                <div className="mt-4 w-full rounded-md bg-neutral-950 p-3 text-left text-xs text-neutral-400 font-mono whitespace-pre-wrap break-all">
+                  {bootstrapFailure.last_error}
+                </div>
+              )}
+            </>
+          );
+        })()}
+
+        {state === "running_safely" && (
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleOpenTelegram}
+                className="btn btn-lg btn-primary"
+              >
+                <MessageCircle size={18} />
+                Open Telegram
+              </button>
+              {!showStopConfirm && (
+                <button
+                  type="button"
+                  onClick={() => { setShowStopConfirm(true); }}
+                  className="btn btn-lg btn-ghost"
+                  disabled={pauseLoading}
+                >
+                  <StopCircle size={18} />
+                  {pauseLoading ? "Stopping…" : "Stop your assistant"}
+                </button>
+              )}
+            </div>
+            {showStopConfirm && (
+              <div className="rounded-lg border border-neutral-700 bg-neutral-800/60 px-4 py-3 text-center max-w-sm">
+                <p className="mb-1 text-sm font-medium text-neutral-200">Stop your assistant?</p>
+                <p className="mb-3 text-xs text-neutral-500">
+                  It&rsquo;ll stop responding on Telegram until you tap Resume. Your conversation history and installed skills stay safe.
+                </p>
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowStopConfirm(false); }}
+                    className="btn btn-sm btn-ghost"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleStop}
+                    className="btn btn-sm btn-danger"
+                    disabled={pauseLoading}
+                  >
+                    {pauseLoading ? "Stopping…" : "Stop now"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {(state === "starting" || state === "recovering") && (
           <span className="text-xs text-neutral-500">
             Working on it — no action needed.
           </span>

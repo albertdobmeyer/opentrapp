@@ -26,7 +26,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use crate::lifecycle::{PerimeterState, PerimeterStateStore};
+use crate::lifecycle::{BootstrapProgress, BootstrapState, TenantState, PerimeterStateStore};
 use crate::orchestrator::state::AppState;
 
 const ANTHROPIC_MODELS_URL: &str = "https://api.anthropic.com/v1/models";
@@ -36,31 +36,37 @@ const HTTP_TIMEOUT: Duration = Duration::from_secs(10);
 
 // ─── Public types (frontend-visible) ──────────────────────────────────
 
-/// Aggregated user-facing status. Maps directly to the 7-state hero
-/// machine in `docs/specs/2026-04-29-delightful-sloth-target-ux.md`.
+/// Aggregated user-facing status. Each value maps to one hero card state
+/// in `HeroStatusCard.tsx`. Snake-case matches Rust serde rename.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum AssistantStatus {
-    /// Wizard hasn't run, or .env is missing the Anthropic key.
-    NotSetup,
-    /// Compose-up is in progress; not all containers are visible yet.
-    /// Reserved for future wiring; this evaluator currently maps any
-    /// partial-perimeter state to `Recovering` and lets the frontend's
-    /// `hasBeenRunning` ref flip the first occurrence to "Starting".
+    /// First-launch setup; .env being written. Passive — no user action.
+    Installing,
+    /// First-time image build/pull/shell-up in progress (~5 min).
+    Bootstrapping,
+    /// Shell ready; user hasn't activated their assistant yet.
+    ShellReadyAbsent,
+    /// Shell failed or partially up; recovery card surfaced.
+    ShellFailed,
+    /// Wizard committed, bringing vault-agent up. Brief.
     #[allow(dead_code)]
     Starting,
-    /// 1–3 of 4 containers running.
-    Recovering,
-    /// All 4 containers running, key probe says auth is valid.
+    /// Agent running, key probe says auth is valid.
     Ok,
-    /// All 4 containers stopped.
-    ErrorPerimeter,
-    /// Containers are healthy but Anthropic rejected the key.
-    ErrorKey,
-    /// User-initiated pause via `pause_perimeter`. Persists across app
-    /// restarts via the `~/.lobster-trapp/paused` marker. Cleared by
-    /// `resume_perimeter`.
+    /// User-initiated stop; persists via `~/.lobster-trapp/paused`.
     PausedByUser,
+    /// Agent expected up but absent; auto-restart hasn't recovered.
+    ErrorPerimeter,
+    /// Containers healthy but Anthropic rejected the key.
+    ErrorKey,
+    /// Wizard hasn't run, or .env is missing the Anthropic key.
+    /// Retained for backward compatibility; v0.4 flow reaches this via
+    /// `(ShellReady, Running)` with no Anthropic key present.
+    NotSetup,
+    /// 1–3 of 4 containers running. Legacy; retained for compat.
+    #[allow(dead_code)]
+    Recovering,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -87,19 +93,33 @@ pub struct Alert {
     pub suppress_during_wizard: bool,
 }
 
+/// Summary of a bootstrap pipeline failure. Surfaced to the frontend so
+/// the recovery card can show cause-appropriate copy and a "Show details"
+/// disclosure without requiring a separate IPC call.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct BootstrapFailureSummary {
+    pub cause: String,
+    pub message: String,
+    pub last_error: Option<String>,
+}
+
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct AssistantStatusSnapshot {
     pub status: AssistantStatus,
     pub alerts: Vec<Alert>,
     pub last_checked_unix_ms: u64,
+    /// Populated only when `status == "shell_failed"`. Lets the frontend
+    /// show cause-appropriate recovery copy without a separate IPC call.
+    pub bootstrap_failure: Option<BootstrapFailureSummary>,
 }
 
 impl AssistantStatusSnapshot {
     fn empty() -> Self {
         Self {
-            status: AssistantStatus::NotSetup,
+            status: AssistantStatus::Installing,
             alerts: Vec::new(),
             last_checked_unix_ms: 0,
+            bootstrap_failure: None,
         }
     }
 }
@@ -171,15 +191,18 @@ pub fn spawn_status_evaluator(handle: AppHandle, interval: Duration) {
 
 async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> AssistantStatusSnapshot {
     // 1. Snapshot the perimeter state (set by the watchdog every 30s).
-    let perimeter = handle
+    let (bootstrap, tenant) = handle
         .try_state::<PerimeterStateStore>()
-        .and_then(|store| store.status.lock().ok().map(|g| g.state.clone()))
-        .unwrap_or(PerimeterState::NotSetup);
+        .and_then(|store| {
+            store
+                .status
+                .lock()
+                .ok()
+                .map(|g| (g.bootstrap.clone(), g.tenant.clone()))
+        })
+        .unwrap_or((BootstrapState::Installing, TenantState::Absent));
 
-    let paused = handle
-        .try_state::<PerimeterStateStore>()
-        .map(|store| store.is_paused())
-        .unwrap_or(false);
+    let paused = matches!(tenant, TenantState::Paused);
 
     // 2. Read .env for key presence + Anthropic key value.
     let env_path = vault_env_path(handle);
@@ -193,42 +216,70 @@ async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> Assist
         None
     };
 
-    // 4. Derive aggregated status. Pause overrides everything else: a
-    //    user-initiated stop should never read as "didn't recover".
-    let status = derive_status(&perimeter, has_anthropic, key_valid, paused);
+    // 4. Derive aggregated status. Pause is already encoded in TenantState::Paused.
+    let status = derive_status(&bootstrap, &tenant, has_anthropic, key_valid);
 
     // 5. Compose the alerts list. Suppressed entirely when paused — the
     //    user knows their assistant is off; nothing to alarm about.
+    let migration_warn = handle
+        .try_state::<PerimeterStateStore>()
+        .and_then(|s| s.migration_credential_warning.read().ok().map(|g| *g))
+        .unwrap_or(false);
+
     let alerts = if paused {
         Vec::new()
     } else {
-        build_alerts(&perimeter, has_anthropic, has_telegram, key_valid)
+        build_alerts(&bootstrap, &tenant, has_anthropic, has_telegram, key_valid, migration_warn)
+    };
+
+    // When the shell failed, surface the failure cause from the store so the
+    // frontend recovery card can show appropriate copy without a separate call.
+    let bootstrap_failure = if matches!(status, AssistantStatus::ShellFailed) {
+        handle
+            .try_state::<PerimeterStateStore>()
+            .and_then(|store| {
+                store.bootstrap_progress.read().ok().and_then(|g| {
+                    match g.as_ref() {
+                        Some(BootstrapProgress::Failed { cause, message, last_error }) => {
+                            Some(BootstrapFailureSummary {
+                                cause: cause.clone(),
+                                message: message.clone(),
+                                last_error: last_error.clone(),
+                            })
+                        }
+                        _ => None,
+                    }
+                })
+            })
+    } else {
+        None
     };
 
     AssistantStatusSnapshot {
         status,
         alerts,
         last_checked_unix_ms: now_unix_ms(),
+        bootstrap_failure,
     }
 }
 
 // ─── Pure helpers (unit-testable) ─────────────────────────────────────
 
 fn derive_status(
-    perimeter: &PerimeterState,
+    bootstrap: &BootstrapState,
+    tenant: &TenantState,
     has_anthropic: bool,
     key_valid: Option<bool>,
-    paused: bool,
 ) -> AssistantStatus {
-    if paused {
-        return AssistantStatus::PausedByUser;
-    }
-    match perimeter {
-        PerimeterState::NotSetup => AssistantStatus::NotSetup,
-        PerimeterState::Starting => AssistantStatus::Starting,
-        PerimeterState::Recovering => AssistantStatus::Recovering,
-        PerimeterState::Stopped => AssistantStatus::ErrorPerimeter,
-        PerimeterState::RunningSafely => {
+    match (bootstrap, tenant) {
+        (BootstrapState::Installing, _) => AssistantStatus::Installing,
+        (BootstrapState::Bootstrapping, _) => AssistantStatus::Bootstrapping,
+        (BootstrapState::ShellFailed, _) => AssistantStatus::ShellFailed,
+        (BootstrapState::ShellReady, TenantState::Absent) => AssistantStatus::ShellReadyAbsent,
+        (BootstrapState::ShellReady, TenantState::Activating) => AssistantStatus::Starting,
+        (BootstrapState::ShellReady, TenantState::Paused) => AssistantStatus::PausedByUser,
+        (BootstrapState::ShellReady, TenantState::Errored) => AssistantStatus::ErrorPerimeter,
+        (BootstrapState::ShellReady, TenantState::Running) => {
             if !has_anthropic {
                 AssistantStatus::NotSetup
             } else if key_valid == Some(false) {
@@ -241,12 +292,22 @@ fn derive_status(
 }
 
 fn build_alerts(
-    perimeter: &PerimeterState,
+    bootstrap: &BootstrapState,
+    tenant: &TenantState,
     has_anthropic: bool,
     has_telegram: bool,
     key_valid: Option<bool>,
+    migration_credential_warning: bool,
 ) -> Vec<Alert> {
     let mut alerts = Vec::new();
+
+    // No actionable alerts while bootstrapping or installing.
+    if matches!(
+        bootstrap,
+        BootstrapState::Installing | BootstrapState::Bootstrapping
+    ) {
+        return alerts;
+    }
 
     if !has_anthropic {
         alerts.push(Alert {
@@ -293,7 +354,9 @@ fn build_alerts(
         });
     }
 
-    if matches!(perimeter, PerimeterState::Stopped) {
+    if matches!(bootstrap, BootstrapState::ShellFailed)
+        || matches!(tenant, TenantState::Errored)
+    {
         alerts.push(Alert {
             id: "perimeter-error".to_string(),
             severity: AlertSeverity::Danger,
@@ -301,6 +364,25 @@ fn build_alerts(
             body: Some("Try restarting the app. If it keeps happening, get help.".to_string()),
             cta_label: Some("Get help".to_string()),
             cta_to: Some("/help".to_string()),
+            dismissable: false,
+            suppress_during_wizard: false,
+        });
+    }
+
+    // Migration: existing v0.3 install found a revoked Anthropic key on first launch.
+    if migration_credential_warning
+        && matches!(bootstrap, BootstrapState::ShellReady)
+        && matches!(tenant, TenantState::Absent)
+    {
+        alerts.push(Alert {
+            id: "migration-credential-warning".to_string(),
+            severity: AlertSeverity::Warning,
+            title: "Your Anthropic key needs updating".to_string(),
+            body: Some(
+                "It used to work, but it doesn't anymore — likely the key was rotated or revoked. Tap Launch to update it.".to_string(),
+            ),
+            cta_label: None,
+            cta_to: None,
             dismissable: false,
             suppress_during_wizard: false,
         });
@@ -438,7 +520,7 @@ mod tests {
     #[test]
     fn derive_running_with_valid_key_is_ok() {
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, true, Some(true), false),
+            derive_status(&BootstrapState::ShellReady, &TenantState::Running, true, Some(true)),
             AssistantStatus::Ok
         );
     }
@@ -446,7 +528,7 @@ mod tests {
     #[test]
     fn derive_running_with_invalid_key_is_error_key() {
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, true, Some(false), false),
+            derive_status(&BootstrapState::ShellReady, &TenantState::Running, true, Some(false)),
             AssistantStatus::ErrorKey
         );
     }
@@ -455,7 +537,7 @@ mod tests {
     fn derive_running_with_inconclusive_probe_stays_ok() {
         // Optimistic on transient issues — don't alarm on network errors.
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, true, None, false),
+            derive_status(&BootstrapState::ShellReady, &TenantState::Running, true, None),
             AssistantStatus::Ok
         );
     }
@@ -463,59 +545,56 @@ mod tests {
     #[test]
     fn derive_running_without_anthropic_key_is_not_setup() {
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, false, None, false),
+            derive_status(&BootstrapState::ShellReady, &TenantState::Running, false, None),
             AssistantStatus::NotSetup
         );
     }
 
     #[test]
-    fn derive_stopped_perimeter_is_error_perimeter() {
+    fn derive_errored_tenant_is_error_perimeter() {
         assert_eq!(
-            derive_status(&PerimeterState::Stopped, true, Some(true), false),
+            derive_status(&BootstrapState::ShellReady, &TenantState::Errored, true, Some(true)),
             AssistantStatus::ErrorPerimeter
         );
     }
 
     #[test]
-    fn derive_recovering_passes_through() {
+    fn derive_shell_failed_is_shell_failed() {
         assert_eq!(
-            derive_status(&PerimeterState::Recovering, true, Some(true), false),
-            AssistantStatus::Recovering
+            derive_status(&BootstrapState::ShellFailed, &TenantState::Absent, true, Some(true)),
+            AssistantStatus::ShellFailed
         );
     }
 
     #[test]
-    fn derive_not_setup_passes_through() {
+    fn derive_shell_ready_absent_is_shell_ready_absent() {
         assert_eq!(
-            derive_status(&PerimeterState::NotSetup, false, None, false),
-            AssistantStatus::NotSetup
+            derive_status(&BootstrapState::ShellReady, &TenantState::Absent, true, Some(true)),
+            AssistantStatus::ShellReadyAbsent
+        );
+    }
+
+    #[test]
+    fn derive_installing_is_installing() {
+        assert_eq!(
+            derive_status(&BootstrapState::Installing, &TenantState::Absent, false, None),
+            AssistantStatus::Installing
+        );
+    }
+
+    #[test]
+    fn derive_bootstrapping_is_bootstrapping() {
+        assert_eq!(
+            derive_status(&BootstrapState::Bootstrapping, &TenantState::Absent, false, None),
+            AssistantStatus::Bootstrapping
         );
     }
 
     #[test]
     fn derive_paused_overrides_running() {
-        // Even when containers are healthy, pause wins.
+        // TenantState::Paused should yield PausedByUser regardless of key state.
         assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, true, Some(true), true),
-            AssistantStatus::PausedByUser
-        );
-    }
-
-    #[test]
-    fn derive_paused_overrides_stopped() {
-        // The whole point of pause: a stopped perimeter that the user
-        // chose isn't an error.
-        assert_eq!(
-            derive_status(&PerimeterState::Stopped, true, Some(true), true),
-            AssistantStatus::PausedByUser
-        );
-    }
-
-    #[test]
-    fn derive_paused_overrides_error_key() {
-        // Pause is louder than auth issues; user clearly opted out.
-        assert_eq!(
-            derive_status(&PerimeterState::RunningSafely, true, Some(false), true),
+            derive_status(&BootstrapState::ShellReady, &TenantState::Paused, true, Some(true)),
             AssistantStatus::PausedByUser
         );
     }
@@ -524,49 +603,137 @@ mod tests {
 
     #[test]
     fn alerts_when_no_anthropic_key() {
-        let alerts = build_alerts(&PerimeterState::NotSetup, false, true, None);
+        let alerts = build_alerts(
+            &BootstrapState::ShellReady,
+            &TenantState::Running,
+            false,
+            true,
+            None,
+            false,
+        );
         assert!(alerts.iter().any(|a| a.id == "missing-anthropic-key"));
         assert!(!alerts.iter().any(|a| a.id == "invalid-anthropic-key"));
     }
 
     #[test]
     fn alerts_when_key_invalid_but_present() {
-        let alerts =
-            build_alerts(&PerimeterState::RunningSafely, true, true, Some(false));
+        let alerts = build_alerts(
+            &BootstrapState::ShellReady,
+            &TenantState::Running,
+            true,
+            true,
+            Some(false),
+            false,
+        );
         assert!(alerts.iter().any(|a| a.id == "invalid-anthropic-key"));
         assert!(!alerts.iter().any(|a| a.id == "missing-anthropic-key"));
     }
 
     #[test]
     fn alerts_when_no_telegram_token() {
-        let alerts =
-            build_alerts(&PerimeterState::RunningSafely, true, false, Some(true));
+        let alerts = build_alerts(
+            &BootstrapState::ShellReady,
+            &TenantState::Running,
+            true,
+            false,
+            Some(true),
+            false,
+        );
         assert!(alerts.iter().any(|a| a.id == "missing-telegram-token"));
     }
 
     #[test]
-    fn alerts_when_perimeter_stopped() {
-        let alerts = build_alerts(&PerimeterState::Stopped, true, true, Some(true));
+    fn alerts_when_shell_failed() {
+        let alerts = build_alerts(
+            &BootstrapState::ShellFailed,
+            &TenantState::Absent,
+            true,
+            true,
+            Some(true),
+            false,
+        );
         assert!(alerts.iter().any(|a| a.id == "perimeter-error"));
     }
 
     #[test]
+    fn alerts_when_tenant_errored() {
+        let alerts = build_alerts(
+            &BootstrapState::ShellReady,
+            &TenantState::Errored,
+            true,
+            true,
+            Some(true),
+            false,
+        );
+        assert!(alerts.iter().any(|a| a.id == "perimeter-error"));
+    }
+
+    #[test]
+    fn no_alerts_during_installing() {
+        let alerts = build_alerts(
+            &BootstrapState::Installing,
+            &TenantState::Absent,
+            false,
+            false,
+            None,
+            false,
+        );
+        assert!(alerts.is_empty());
+    }
+
+    #[test]
+    fn no_alerts_during_bootstrapping() {
+        let alerts = build_alerts(
+            &BootstrapState::Bootstrapping,
+            &TenantState::Absent,
+            false,
+            false,
+            None,
+            false,
+        );
+        assert!(alerts.is_empty());
+    }
+
+    #[test]
     fn no_alerts_when_all_good() {
-        let alerts =
-            build_alerts(&PerimeterState::RunningSafely, true, true, Some(true));
+        let alerts = build_alerts(
+            &BootstrapState::ShellReady,
+            &TenantState::Running,
+            true,
+            true,
+            Some(true),
+            false,
+        );
         assert!(alerts.is_empty());
     }
 
     #[test]
     fn missing_key_alert_suppresses_during_wizard() {
-        let alerts = build_alerts(&PerimeterState::NotSetup, false, true, None);
-        let missing = alerts.iter().find(|a| a.id == "missing-anthropic-key").unwrap();
+        let alerts = build_alerts(
+            &BootstrapState::ShellReady,
+            &TenantState::Running,
+            false,
+            true,
+            None,
+            false,
+        );
+        let missing = alerts
+            .iter()
+            .find(|a| a.id == "missing-anthropic-key")
+            .unwrap();
         assert!(missing.suppress_during_wizard);
     }
 
     #[test]
     fn perimeter_error_alert_does_not_suppress_during_wizard() {
-        let alerts = build_alerts(&PerimeterState::Stopped, true, true, Some(true));
+        let alerts = build_alerts(
+            &BootstrapState::ShellFailed,
+            &TenantState::Absent,
+            true,
+            true,
+            Some(true),
+            false,
+        );
         let p = alerts.iter().find(|a| a.id == "perimeter-error").unwrap();
         assert!(!p.suppress_during_wizard);
     }
