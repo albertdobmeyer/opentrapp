@@ -109,14 +109,17 @@ function useTelegramFlow() {
         }
         try {
           const update = await telegramPollForStart(token, pollOffsetRef.current, 30);
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (cancelRef.current) break;
           if (update !== null) {
             setPendingUpdate(update);
             setTelegramPhase("sending");
             try {
               await telegramSendMessage(token, update.chat_id, "Hi! I'm your new assistant. I'm working.");
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
               if (!cancelRef.current) setTelegramPhase("test_sent");
             } catch (error) {
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
               if (!cancelRef.current) {
                 const msg = String(error);
                 setTelegramError(
@@ -130,8 +133,10 @@ function useTelegramFlow() {
             break;
           }
           pollElapsedRef.current += 30;
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelRef.current) setPollElapsed(pollElapsedRef.current);
         } catch (error) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!cancelRef.current) {
             const msg = String(error);
             setTelegramError(
