@@ -136,7 +136,7 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => { window.removeEventListener("keydown", handler); };
   }, [onClose]);
 
   // Re-credential mode: load the existing Telegram token from .env so we can
@@ -376,10 +376,10 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
             onChange={(v) => { setAnthropicKey(v); setAnthropicPhase("idle"); }}
             onPaste={handleAnthropicPaste}
             show={showAnthropicKey}
-            toggleShow={() => setShowAnthropicKey((v) => !v)}
+            toggleShow={() => { setShowAnthropicKey((v) => !v); }}
             phase={anthropicPhase}
             errorKey={anthropicErrorKey}
-            onValidate={() => void handleValidateAnthropic()}
+            onValidate={() => { void handleValidateAnthropic(); }}
             onContinue={() => {
               if (reCredential && telegramToken) {
                 // Skip Step 2 — existing Telegram token is already loaded.
@@ -389,7 +389,7 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
               }
             }}
             continueLabel={reCredential && telegramToken ? "Launch my assistant" : "Continue"}
-            onHowTo={() => setHowToOpen("anthropic")}
+            onHowTo={() => { setHowToOpen("anthropic"); }}
           />
         )}
 
@@ -399,13 +399,13 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
             onChange={(v) => { setTelegramToken(v); setTelegramPhase("idle"); }}
             onPaste={handleTelegramPaste}
             show={showTelegramToken}
-            toggleShow={() => setShowTelegramToken((v) => !v)}
+            toggleShow={() => { setShowTelegramToken((v) => !v); }}
             phase={telegramPhase}
             error={telegramError}
             botUsername={botUsername}
             botUrl={botUrl}
             pollElapsed={pollElapsed}
-            onValidate={() => void handleValidateTelegram()}
+            onValidate={() => { void handleValidateTelegram(); }}
             onOpenBot={async () => {
               try {
                 await openUrl(botUrl ?? "https://telegram.org");
@@ -419,15 +419,15 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
               setPollElapsed(0);
               setTelegramPhase("polling");
               // Micro-delay so the effect dependency sees a phase change.
-              setTimeout(() => setTelegramPhase("deep_link"), 0);
+              setTimeout(() => { setTelegramPhase("deep_link"); }, 0);
             }}
-            onSkip={() => void handleCommit(true)}
-            onConfirm={() => void handleCommit(false)}
+            onSkip={() => { void handleCommit(true); }}
+            onConfirm={() => { void handleCommit(false); }}
             onRetry={() => {
               setTelegramPhase("idle");
               setTelegramError(null);
             }}
-            onHowTo={() => setHowToOpen("telegram")}
+            onHowTo={() => { setHowToOpen("telegram"); }}
             commitError={commitError}
           />
         )}
@@ -442,13 +442,13 @@ export default function ActivationModal({ onClose, reCredential = false }: Props
 
       <HowToModal
         open={howToOpen === "anthropic"}
-        onClose={() => setHowToOpen(null)}
+        onClose={() => { setHowToOpen(null); }}
         title="How to get an Anthropic API key"
         steps={ANTHROPIC_STEPS}
       />
       <HowToModal
         open={howToOpen === "telegram"}
-        onClose={() => setHowToOpen(null)}
+        onClose={() => { setHowToOpen(null); }}
         title="How to create a Telegram bot"
         steps={TELEGRAM_STEPS}
       />
@@ -511,7 +511,7 @@ function AnthropicStep({
         {phase === "valid" && <Check size={16} className="text-success-400" />}
       </div>
       <p className="mb-4 text-sm text-neutral-400">
-        Your assistant's brain — also how you'll pay for its thoughts (~$5–20/month for typical use).
+        Your assistant&rsquo;s brain — also how you&rsquo;ll pay for its thoughts (~$5–20/month for typical use).
       </p>
 
       <div className="relative mb-1">
