@@ -1,5 +1,7 @@
 import { Shield } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
+import ActivationModal from "@/components/ActivationModal";
 import HeroStatusCard from "@/components/user/HeroStatusCard";
 import ProactiveAlertsBanner from "@/components/user/ProactiveAlertsBanner";
 import SpendingTile from "@/components/user/SpendingTile";
@@ -11,11 +13,32 @@ export default function Home() {
   const { state, loading } = useHero();
   const security = securityFromHero(state);
 
+  const [activationOpen, setActivationOpen] = useState(false);
+  const autoOpenFiredRef = useRef(false);
+
+  // Auto-open the activation modal on first load when the shell is ready
+  // but the user hasn't activated yet. Only fires once; if the user closes
+  // it the button in HeroStatusCard lets them reopen it.
+  useEffect(() => {
+    if (!loading && state === "shell_ready_absent" && !autoOpenFiredRef.current) {
+      autoOpenFiredRef.current = true;
+      setActivationOpen(true);
+    }
+  }, [loading, state]);
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 animate-fade-in">
       <ProactiveAlertsBanner />
 
-      <HeroStatusCard state={state} loading={loading} />
+      <HeroStatusCard
+        state={state}
+        loading={loading}
+        onLaunch={() => setActivationOpen(true)}
+      />
+
+      {activationOpen && (
+        <ActivationModal onClose={() => setActivationOpen(false)} />
+      )}
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <StatTile

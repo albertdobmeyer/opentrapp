@@ -345,3 +345,89 @@ export interface TelegramBot {
 export async function deriveTelegramBotUrl(token: string): Promise<TelegramBot> {
   return invoke<TelegramBot>("derive_telegram_bot_url", { token });
 }
+
+// ─── Activation flow ─────────────────────────────────────────────
+
+/**
+ * Outcome of a live Anthropic key validation ping. Structured so the
+ * frontend can show exact guidance per error class.
+ */
+export type ValidationOutcome =
+  | "ok"
+  | "auth_failure"
+  | "billing"
+  | "permission"
+  | "rate"
+  | "server_error"
+  | "unknown";
+
+/**
+ * Live-pings Anthropic to verify the key is accepted. Makes a direct
+ * host → api.anthropic.com request (not via vault-proxy) as a pre-flight
+ * check. Returns a structured outcome — never throws on API-level errors.
+ * Rejects only on complete network failure.
+ */
+export async function validateAnthropicKey(key: string): Promise<ValidationOutcome> {
+  return invoke<ValidationOutcome>("validate_anthropic_key", { key });
+}
+
+/**
+ * A Telegram update that contains a /start message.
+ */
+export interface TelegramUpdate {
+  update_id: number;
+  chat_id: number;
+}
+
+/** Clears any leftover webhook so subsequent getUpdates long-polls work. */
+export async function telegramDeleteWebhook(token: string): Promise<void> {
+  return invoke("telegram_delete_webhook", { token });
+}
+
+/**
+ * Long-polls Telegram for the first /start message at or after `offset`.
+ * Returns the update when found, or `null` if the poll timed out.
+ * Rejects on network errors or HTTP 409 (conflict: another instance is polling).
+ */
+export async function telegramPollForStart(
+  token: string,
+  offset: number,
+  timeoutSecs: number,
+): Promise<TelegramUpdate | null> {
+  return invoke<TelegramUpdate | null>("telegram_poll_for_start", {
+    token,
+    offset,
+    timeoutSecs,
+  });
+}
+
+/** Sends a text message to the given chat. Rejects with "conflict" on HTTP 409. */
+export async function telegramSendMessage(
+  token: string,
+  chatId: number,
+  text: string,
+): Promise<void> {
+  return invoke("telegram_send_message", { token, chatId, text });
+}
+
+/**
+ * Advances the server-side getUpdates offset past `updateId` so vault-agent
+ * doesn't re-process the /start on its first poll.
+ */
+export async function telegramAdvanceOffset(
+  token: string,
+  updateId: number,
+): Promise<void> {
+  return invoke("telegram_advance_offset", { token, updateId });
+}
+
+/**
+ * Finalises activation: force-recreates vault-proxy (picks up new .env keys),
+ * brings vault-agent up, and writes the activated + credentials-ok marker files.
+ *
+ * The frontend must write both keys to `.env` via `writeConfig` BEFORE
+ * calling this — the commit is transactional from the user's perspective.
+ */
+export async function commitActivation(): Promise<void> {
+  return invoke("commit_activation");
+}

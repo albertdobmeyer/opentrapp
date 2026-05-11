@@ -13,6 +13,7 @@ import type { HeroState } from "@/hooks/useHero";
 interface Props {
   state: HeroState;
   loading: boolean;
+  onLaunch?: () => void;
 }
 
 interface Copy {
@@ -93,7 +94,7 @@ const COPY: Record<HeroState, Copy> = {
   },
 };
 
-export default function HeroStatusCard({ state, loading }: Props) {
+export default function HeroStatusCard({ state, loading, onLaunch }: Props) {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const { addToast, removeToast } = useToast();
@@ -171,7 +172,7 @@ export default function HeroStatusCard({ state, loading }: Props) {
         {state === "shell_ready_absent" && (
           <button
             type="button"
-            onClick={() => { navigate("/setup"); }}
+            onClick={() => { onLaunch?.(); }}
             className="btn btn-lg btn-primary"
           >
             Launch your assistant

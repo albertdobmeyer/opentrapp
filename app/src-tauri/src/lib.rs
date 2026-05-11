@@ -243,6 +243,12 @@ pub fn run() {
             commands::workflow_cmds::execute_workflow,
             commands::diagnostics::generate_diagnostic_bundle,
             commands::telegram::derive_telegram_bot_url,
+            commands::telegram::telegram_delete_webhook,
+            commands::telegram::telegram_poll_for_start,
+            commands::telegram::telegram_send_message,
+            commands::telegram::telegram_advance_offset,
+            commands::credentials::validate_anthropic_key,
+            commands::credentials::commit_activation,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

@@ -111,11 +111,9 @@ export default function App() {
                 element={
                   mode === "developer" ? (
                     <Navigate to="/dev" replace />
-                  ) : (!settings.wizardCompleted ? (
-                    <Navigate to="/setup" replace />
                   ) : (
                     <Home />
-                  ))
+                  )
                 }
               />
               <Route path="/security" element={<SecurityMonitor />} />

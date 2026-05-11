@@ -1,4 +1,5 @@
 pub mod config;
+pub mod credentials;
 pub mod diagnostics;
 pub mod execute;
 pub mod health;
