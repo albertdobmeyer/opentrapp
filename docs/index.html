@@ -552,6 +552,81 @@
       margin-top: 8px;
     }
 
+    /* ── Bypass guide <details> ──────────────────────── */
+    .bypass-guide {
+      max-width: 560px;
+      margin: 0 auto 24px;
+      text-align: left;
+    }
+
+    .bypass-guide summary {
+      font-size: 0.82rem;
+      color: #60a5fa;
+      cursor: pointer;
+      user-select: none;
+      list-style: none; /* hide default triangle in Firefox */
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bypass-guide summary::-webkit-details-marker { display: none; }
+
+    .bypass-guide summary::before {
+      content: '▶';
+      font-size: 0.6rem;
+      transition: transform 0.15s;
+      display: inline-block;
+    }
+
+    .bypass-guide[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .bypass-content {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .bypass-platform {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.3);
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+
+    .bypass-platform strong:first-child {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    .bypass-platform p {
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.55;
+    }
+
+    .bypass-platform strong {
+      color: #cbd5e1;
+    }
+
+    .bypass-platform code {
+      font-size: 0.78rem;
+      background: rgba(51, 65, 85, 0.4);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #94a3b8;
+    }
+
+    @media (max-width: 560px) {
+      .bypass-content { grid-template-columns: 1fr; }
+    }
+
     /* ── Disclaimer ──────────────────────────────────── */
     .disclaimer {
       max-width: 720px;
@@ -694,7 +769,7 @@
 
     <div class="hero-release">
       <span class="pulse"></span>
-      v0.3.0 — Delightful Sloth release
+      v0.4.0 — Shellfish Reframe release
     </div>
 
     <div class="trust">
@@ -946,7 +1021,21 @@
   <section id="download" class="section download-section">
     <div class="section-label">Download</div>
     <h2 class="section-title">Get Lobster-TrApp for your platform</h2>
-    <p class="section-subtitle" style="margin-left: auto; margin-right: auto;">Built from source in GitHub Actions on every release. The Tauri auto-updater signs each build with our updater key — but we don't have OS-level code-signing certificates yet, so macOS Gatekeeper and Windows SmartScreen will warn you on first launch. That's expected, not a sign of tampering. Requires Podman or Docker installed on your system.</p>
+    <p class="section-subtitle" style="margin-left: auto; margin-right: auto;">Built from source in GitHub Actions on every release. The Tauri auto-updater signs each build with our updater key — but we don't have OS-level code-signing certificates yet, so macOS Gatekeeper and Windows SmartScreen will warn you on first launch. That's expected, not a sign of tampering.</p>
+
+    <details class="bypass-guide">
+      <summary>First launch: how to get past the security warning</summary>
+      <div class="bypass-content">
+        <div class="bypass-platform">
+          <strong>Windows — SmartScreen</strong>
+          <p>When the installer opens, click <strong>"More info"</strong> in the lower-left of the dialog, then click <strong>"Run anyway"</strong>. You will only see this once.</p>
+        </div>
+        <div class="bypass-platform">
+          <strong>macOS — Gatekeeper</strong>
+          <p>After opening the <code>.dmg</code>, right-click (or Control-click) the app icon and choose <strong>Open</strong>. Click <strong>Open</strong> again in the confirmation dialog. You will only see this once.</p>
+        </div>
+      </div>
+    </details>
 
     <div class="platform-grid">
       <!-- Linux -->
