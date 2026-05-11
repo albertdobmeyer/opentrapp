@@ -235,6 +235,7 @@ pub fn run() {
             commands::lifecycle::restart_perimeter,
             commands::lifecycle::pause_perimeter,
             commands::lifecycle::resume_perimeter,
+            commands::lifecycle::retry_bootstrap,
             status_aggregator::get_assistant_status,
             commands::prerequisites::check_prerequisites,
             commands::prerequisites::init_submodules,

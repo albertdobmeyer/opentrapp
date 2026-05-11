@@ -43,6 +43,7 @@ const EMPTY_SNAPSHOT: AssistantStatusSnapshot = {
   status: "installing",
   alerts: [],
   last_checked_unix_ms: 0,
+  bootstrap_failure: null,
 };
 
 export function useHero(): Hero {

@@ -10,7 +10,7 @@ import TipOfTheDay from "@/components/user/TipOfTheDay";
 import { useHero, type HeroState } from "@/hooks/useHero";
 
 export default function Home() {
-  const { state, loading } = useHero();
+  const { state, loading, snapshot } = useHero();
   const security = securityFromHero(state);
 
   const [activationOpen, setActivationOpen] = useState(false);
@@ -34,6 +34,7 @@ export default function Home() {
         state={state}
         loading={loading}
         onLaunch={() => setActivationOpen(true)}
+        bootstrapFailure={snapshot.bootstrap_failure}
       />
 
       {activationOpen && (

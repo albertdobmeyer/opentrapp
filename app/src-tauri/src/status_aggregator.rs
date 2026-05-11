@@ -26,7 +26,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
-use crate::lifecycle::{BootstrapState, TenantState, PerimeterStateStore};
+use crate::lifecycle::{BootstrapProgress, BootstrapState, TenantState, PerimeterStateStore};
 use crate::orchestrator::state::AppState;
 
 const ANTHROPIC_MODELS_URL: &str = "https://api.anthropic.com/v1/models";
@@ -93,11 +93,24 @@ pub struct Alert {
     pub suppress_during_wizard: bool,
 }
 
+/// Summary of a bootstrap pipeline failure. Surfaced to the frontend so
+/// the recovery card can show cause-appropriate copy and a "Show details"
+/// disclosure without requiring a separate IPC call.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub struct BootstrapFailureSummary {
+    pub cause: String,
+    pub message: String,
+    pub last_error: Option<String>,
+}
+
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 pub struct AssistantStatusSnapshot {
     pub status: AssistantStatus,
     pub alerts: Vec<Alert>,
     pub last_checked_unix_ms: u64,
+    /// Populated only when `status == "shell_failed"`. Lets the frontend
+    /// show cause-appropriate recovery copy without a separate IPC call.
+    pub bootstrap_failure: Option<BootstrapFailureSummary>,
 }
 
 impl AssistantStatusSnapshot {
@@ -106,6 +119,7 @@ impl AssistantStatusSnapshot {
             status: AssistantStatus::Installing,
             alerts: Vec::new(),
             last_checked_unix_ms: 0,
+            bootstrap_failure: None,
         }
     }
 }
@@ -213,10 +227,34 @@ async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> Assist
         build_alerts(&bootstrap, &tenant, has_anthropic, has_telegram, key_valid)
     };
 
+    // When the shell failed, surface the failure cause from the store so the
+    // frontend recovery card can show appropriate copy without a separate call.
+    let bootstrap_failure = if matches!(status, AssistantStatus::ShellFailed) {
+        handle
+            .try_state::<PerimeterStateStore>()
+            .and_then(|store| {
+                store.bootstrap_progress.read().ok().and_then(|g| {
+                    match g.as_ref() {
+                        Some(BootstrapProgress::Failed { cause, message, last_error }) => {
+                            Some(BootstrapFailureSummary {
+                                cause: cause.clone(),
+                                message: message.clone(),
+                                last_error: last_error.clone(),
+                            })
+                        }
+                        _ => None,
+                    }
+                })
+            })
+    } else {
+        None
+    };
+
     AssistantStatusSnapshot {
         status,
         alerts,
         last_checked_unix_ms: now_unix_ms(),
+        bootstrap_failure,
     }
 }
 

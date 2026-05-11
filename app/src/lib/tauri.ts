@@ -283,10 +283,23 @@ export interface BackendAlert {
   suppress_during_wizard: boolean;
 }
 
+/**
+ * Summary of a bootstrap pipeline failure. Populated only when
+ * `status === "shell_failed"`. Lets the recovery card show cause-appropriate
+ * copy without a separate IPC call.
+ */
+export interface BootstrapFailureSummary {
+  cause: string;
+  message: string;
+  last_error: string | null;
+}
+
 export interface AssistantStatusSnapshot {
   status: AssistantStatus;
   alerts: BackendAlert[];
   last_checked_unix_ms: number;
+  /** Populated only when status === "shell_failed". */
+  bootstrap_failure: BootstrapFailureSummary | null;
 }
 
 export async function getAssistantStatus(): Promise<AssistantStatusSnapshot> {
@@ -324,6 +337,15 @@ export async function pausePerimeter(): Promise<void> {
  */
 export async function resumePerimeter(): Promise<void> {
   await invoke("resume_perimeter");
+}
+
+/**
+ * Re-run the bootstrap pipeline from scratch after a failure. Returns
+ * immediately — the pipeline runs in the background. The frontend observes
+ * progress via the `bootstrap-step-started` / `bootstrap-step-failed` events.
+ */
+export async function retryBootstrap(): Promise<void> {
+  await invoke("retry_bootstrap");
 }
 
 /**
