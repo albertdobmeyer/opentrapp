@@ -114,23 +114,20 @@ test.describe("Non-technical user experience", () => {
     expect(text).not.toMatch(/security-first desktop GUI/i);
   });
 
-  test("dashboard uses assistant-first language", async ({ page }) => {
+  test("home page uses assistant-first language", async ({ page }) => {
     await page.goto("/");
 
-    // Either shows dashboard or redirects to setup wizard — both are valid
-    const dashboard = page.getByRole("heading", { name: "Dashboard" });
+    // Either shows home page (sidebar visible) or redirects to setup wizard — both are valid
+    const homeLoaded = page.getByRole("link", { name: /preferences/i });
     const setup = page.getByText(/welcome/i);
-    await expect(dashboard.or(setup)).toBeVisible();
+    await expect(homeLoaded.or(setup)).toBeVisible();
 
     const text = await getVisibleText(page);
-    assertNoBannedTerms(text, "Dashboard");
+    assertNoBannedTerms(text, "Home");
 
-    // If on dashboard with empty state
-    if (await dashboard.isVisible()) {
-      // Empty state should say "assistant" not "components"
-      const emptyState = page.getByText("No assistant detected");
-      const onboarding = page.getByText(/assistant/i);
-      await expect(emptyState.or(onboarding)).toBeVisible();
+    // If on home page, assistant-first language should be present
+    if (await homeLoaded.isVisible()) {
+      await expect(page.getByText(/assistant/i)).toBeVisible();
     }
   });
 
