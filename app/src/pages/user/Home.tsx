@@ -43,6 +43,13 @@ interface SecurityCell {
 
 function securityFromHero(state: HeroState): SecurityCell {
   switch (state) {
+    case "installing":
+    case "bootstrapping":
+      return { value: "Setting up…", subline: "Sandbox is being built.", tone: "neutral" };
+    case "shell_ready_absent":
+      return { value: "Ready", subline: "Sandbox is up. Launch your assistant.", tone: "neutral" };
+    case "shell_failed":
+      return { value: "Needs attention", subline: "Sandbox setup failed.", tone: "danger" };
     case "running_safely":
       return { value: "Safe", subline: "Sandbox is active.", tone: "neutral" };
     case "starting":
@@ -65,6 +72,6 @@ function securityFromHero(state: HeroState): SecurityCell {
     case "not_setup":
       return { value: "Not set up", subline: "Run setup to begin.", tone: "neutral" };
     case "paused_by_user":
-      return { value: "Paused", subline: "Sandbox is stopped on purpose.", tone: "neutral" };
+      return { value: "Stopped", subline: "Sandbox is stopped on purpose.", tone: "neutral" };
   }
 }

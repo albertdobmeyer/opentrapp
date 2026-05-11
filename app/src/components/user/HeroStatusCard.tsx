@@ -25,9 +25,33 @@ interface Copy {
 }
 
 const COPY: Record<HeroState, Copy> = {
+  installing: {
+    title: "Getting your assistant ready…",
+    subline: "We're setting things up in the background.",
+    ringTint: "border-primary-500/40 border-primary-500/60",
+    dotTint: "bg-primary-500",
+  },
+  bootstrapping: {
+    title: "Setting up your safe room…",
+    subline: "First-time setup, ~5 minutes. You can keep working.",
+    ringTint: "border-warning-500/40 border-warning-500/60",
+    dotTint: "bg-warning-500",
+  },
+  shell_ready_absent: {
+    title: "Ready to launch your assistant",
+    subline: "Two quick steps and you're chatting on Telegram.",
+    ringTint: "border-primary-500/40 border-primary-500/60",
+    dotTint: "bg-primary-500",
+  },
+  shell_failed: {
+    title: "Background setup needs your help",
+    subline: "Something stopped the setup. We can try to fix it.",
+    ringTint: "border-danger-500/40 border-danger-500/60",
+    dotTint: "bg-danger-500",
+  },
   running_safely: {
     title: "Your assistant is running safely",
-    subline: "Everything looks good.",
+    subline: "Open Telegram to start chatting.",
     ringTint: "border-success-500/40 border-success-500/60",
     dotTint: "bg-success-500",
   },
@@ -44,8 +68,8 @@ const COPY: Record<HeroState, Copy> = {
     dotTint: "bg-warning-500",
   },
   error_perimeter: {
-    title: "Your assistant didn't fully recover",
-    subline: "Let's try to fix it together.",
+    title: "Your assistant didn't recover",
+    subline: "Something stopped it from running. We can try to fix it.",
     ringTint: "border-danger-500/40 border-danger-500/60",
     dotTint: "bg-danger-500",
   },
@@ -62,8 +86,8 @@ const COPY: Record<HeroState, Copy> = {
     dotTint: "bg-primary-500",
   },
   paused_by_user: {
-    title: "Your assistant is paused",
-    subline: "It won't respond on Telegram until you resume it.",
+    title: "Your assistant is stopped",
+    subline: "Tap Resume when you're ready.",
     ringTint: "border-neutral-500/40 border-neutral-500/60",
     dotTint: "bg-neutral-500",
   },
@@ -138,6 +162,42 @@ export default function HeroStatusCard({ state, loading }: Props) {
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3">
+        {(state === "installing" || state === "bootstrapping") && (
+          <span className="text-xs text-neutral-500">
+            Working on it — no action needed.
+          </span>
+        )}
+
+        {state === "shell_ready_absent" && (
+          <button
+            type="button"
+            onClick={() => { navigate("/setup"); }}
+            className="btn btn-lg btn-primary"
+          >
+            Launch your assistant
+          </button>
+        )}
+
+        {state === "shell_failed" && (
+          <>
+            <button
+              type="button"
+              onClick={() => { window.location.reload(); }}
+              className="btn btn-lg btn-primary"
+            >
+              <RotateCcw size={18} />
+              Try again
+            </button>
+            <button
+              type="button"
+              onClick={() => { navigate("/help"); }}
+              className="btn btn-lg btn-ghost"
+            >
+              Get help
+            </button>
+          </>
+        )}
+
         {state === "running_safely" && (
           <>
             <button
@@ -155,18 +215,12 @@ export default function HeroStatusCard({ state, loading }: Props) {
               disabled={pauseLoading}
             >
               <Pause size={18} />
-              {pauseLoading ? "Pausing…" : "Pause"}
+              {pauseLoading ? "Stopping…" : "Stop your assistant"}
             </button>
           </>
         )}
 
-        {state === "starting" && (
-          <span className="text-xs text-neutral-500">
-            Working on it — no action needed.
-          </span>
-        )}
-
-        {state === "recovering" && (
+        {(state === "starting" || state === "recovering") && (
           <span className="text-xs text-neutral-500">
             Working on it — no action needed.
           </span>

@@ -205,6 +205,32 @@ export async function generateDiagnosticBundle(): Promise<string> {
 }
 
 /**
+ * Bootstrap axis — state of the 3-container security shell
+ * (proxy + forge + pioneer). Snake-case matches Rust serde rename.
+ */
+export type BootstrapState =
+  | "installing"
+  | "bootstrapping"
+  | "shell_ready"
+  | "shell_failed";
+
+/**
+ * Tenant axis — state of vault-agent (the OpenClaw runtime).
+ * Snake-case matches Rust serde rename.
+ */
+export type TenantState =
+  | "absent"
+  | "activating"
+  | "running"
+  | "paused"
+  | "errored";
+
+export interface ContainerStatus {
+  name: string;
+  running: boolean;
+}
+
+/**
  * Live state of the 4-container perimeter. Updated by the Rust watchdog
  * every 30s and emitted as a `perimeter-state-changed` event on each
  * transition. The frontend can either read the latest cached value via
@@ -212,20 +238,9 @@ export async function generateDiagnosticBundle(): Promise<string> {
  *
  * Snake-case matches Rust's serde rename. See `app/src-tauri/src/lifecycle.rs`.
  */
-export type PerimeterState =
-  | "not_setup"
-  | "starting"
-  | "running_safely"
-  | "recovering"
-  | "stopped";
-
-export interface ContainerStatus {
-  name: string;
-  running: boolean;
-}
-
 export interface PerimeterStatus {
-  state: PerimeterState;
+  bootstrap: BootstrapState;
+  tenant: TenantState;
   containers: ContainerStatus[];
   /** Unix-millis timestamp of the last watchdog poll. 0 if watchdog hasn't ticked yet. */
   last_checked_unix_ms: number;
@@ -236,17 +251,16 @@ export async function getPerimeterState(): Promise<PerimeterStatus> {
 }
 
 /**
- * Aggregated user-facing status. Backend evaluator (Pass 7 Day 2)
- * combines perimeter state + .env presence + Anthropic auth probe into
- * a single value driving the Home hero state machine. Snake-case
- * matches Rust serde rename.
- *
- * `paused_by_user` is reserved for Day 4. `starting` is currently
- * unused by the backend (which maps any partial state to `recovering`)
- * — the frontend's `useHero` hasBeenRunning ref flips the first
- * occurrence to "starting" for nicer first-run copy.
+ * Aggregated user-facing status. Backend evaluator combines the
+ * (BootstrapState, TenantState) pair with .env presence and an Anthropic
+ * auth probe into a single value driving the Home hero state machine.
+ * Snake-case matches Rust serde rename.
  */
 export type AssistantStatus =
+  | "installing"
+  | "bootstrapping"
+  | "shell_ready_absent"
+  | "shell_failed"
   | "not_setup"
   | "starting"
   | "recovering"
