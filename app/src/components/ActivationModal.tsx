@@ -90,17 +90,18 @@ function useTelegramFlow() {
   const pollOffsetRef = useRef(0);
   const pollElapsedRef = useRef(0);
   const telegramTokenRef = useRef("");
+  const cancelRef = useRef<boolean>(false);
   telegramTokenRef.current = telegramToken;
 
   useEffect(() => {
     if (telegramPhase !== "deep_link") return;
-    const cancel = { value: false };
+    cancelRef.current = false;
     pollOffsetRef.current = 0;
     pollElapsedRef.current = 0;
     const token = telegramTokenRef.current;
     void (async () => {
       for (;;) {
-        if (cancel.value) break;
+        if (cancelRef.current) break;
         if (pollElapsedRef.current >= 90) {
           setTelegramPhase("timed_out");
           setPollElapsed(pollElapsedRef.current);
@@ -108,15 +109,15 @@ function useTelegramFlow() {
         }
         try {
           const update = await telegramPollForStart(token, pollOffsetRef.current, 30);
-          if (cancel.value) break;
+          if (cancelRef.current) break;
           if (update !== null) {
             setPendingUpdate(update);
             setTelegramPhase("sending");
             try {
               await telegramSendMessage(token, update.chat_id, "Hi! I'm your new assistant. I'm working.");
-              if (!cancel.value) setTelegramPhase("test_sent");
+              if (!cancelRef.current) setTelegramPhase("test_sent");
             } catch (error) {
-              if (!cancel.value) {
+              if (!cancelRef.current) {
                 const msg = String(error);
                 setTelegramError(
                   msg === "conflict"
@@ -129,9 +130,9 @@ function useTelegramFlow() {
             break;
           }
           pollElapsedRef.current += 30;
-          if (!cancel.value) setPollElapsed(pollElapsedRef.current);
+          if (!cancelRef.current) setPollElapsed(pollElapsedRef.current);
         } catch (error) {
-          if (!cancel.value) {
+          if (!cancelRef.current) {
             const msg = String(error);
             setTelegramError(
               msg === "conflict"
@@ -144,7 +145,7 @@ function useTelegramFlow() {
         }
       }
     })();
-    return () => { cancel.value = true; };
+    return () => { cancelRef.current = true; };
   }, [telegramPhase]);
 
   async function handleValidateTelegram() {
@@ -192,7 +193,6 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
   const [howToOpen, setHowToOpen] = useState<"anthropic" | "telegram" | null>(null);
   const [commitError, setCommitError] = useState<string | null>(null);
   const telegram = useTelegramFlow();
-  const { setTelegramToken } = telegram;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -212,7 +212,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
             const val = trimmed.slice("TELEGRAM_BOT_TOKEN=".length)
               .trim().replace(/^["']|["']$/g, "");
             if (val && !val.includes("REPLACE") && val.length >= 8) {
-              setTelegramToken(val);
+              telegram.setTelegramToken(val);
               break;
             }
           }
@@ -220,7 +220,8 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
       })
       .catch(() => { /* .env not readable */ });
     return () => { cancelled = true; };
-  }, [reCredential, setTelegramToken]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setTelegramToken is a stable state setter
+  }, [reCredential, telegram.setTelegramToken]);
 
   async function handleValidateAnthropic() {
     if (!isAnthropicKeyLike(anthropicKey)) return;
