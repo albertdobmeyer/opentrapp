@@ -27,12 +27,12 @@ const RECIPES: Record<Platform, InstallRecipe> = {
   },
   mac: {
     title: "macOS",
-    body: "Download Podman Desktop and run the installer.",
+    body: "Download the sandbox engine and run the installer.",
     href: "https://podman-desktop.io/downloads",
   },
   windows: {
     title: "Windows",
-    body: "Download Podman Desktop and run the installer.",
+    body: "Download the sandbox engine and run the installer.",
     href: "https://podman-desktop.io/downloads",
   },
   other: {

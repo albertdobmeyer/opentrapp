@@ -213,12 +213,12 @@
 
 ## Score Matrix (19 Surfaces × 13 Principles)
 
-Originally scored 2026-04-20 (rows 1–13). Re-scored 2026-04-29 with P11–P13 added; rows 14–19 added (5 user-mode placeholder pages + Telegram first-chat surface from Pass 1.5). **Wizard rows 2–5 re-scored 2026-04-29 (Pass 5)** after the MissingRuntimeCard rebrand, codename translations, error-pattern routing, and context-aware fallback. P2/P4 holdouts on row #4 (Configuration) reflect deferred P2 nice-to-haves ("Anthropic API key" → "AI account key" rename) and the unchanged transparency level. **Rows 14–18 re-scored 2026-04-30 (Pass 6)** after the Home / Discover / Preferences rebuilds + Security / Help friendlier-placeholder pattern. Tier-0 cliff resolved across all five surfaces.
+Originally scored 2026-04-20 (rows 1–13). Re-scored 2026-04-29 with P11–P13 added; rows 14–19 added (5 user-mode placeholder pages + Telegram first-chat surface from Pass 1.5). **Wizard rows 2–5 re-scored 2026-04-29 (Pass 5)** after the MissingRuntimeCard rebrand, codename translations, error-pattern routing, and context-aware fallback. P2/P4 holdouts on row #4 (Configuration) reflect deferred P2 nice-to-haves ("Anthropic API key" → "AI account key" rename) and the unchanged transparency level. **Rows 14–18 re-scored 2026-04-30 (Pass 6)** after the Home / Discover / Preferences rebuilds + Security / Help friendlier-placeholder pattern. Tier-0 cliff resolved across all five surfaces. **Rows 2 and 13 re-scored 2026-05-11 (Pass 9)** — row 2 P1 lifted after removing "Podman Desktop" from MissingRuntimeCard macOS/Windows copy; row 13 fully re-scored after the spec-06 failure cascade (FriendlyRetry + ContactSupport + per-class `classifyError`) was shipped as part of v0.4.
 
 | # | Surface | P1 | P2 | P3 | P4 | P5 | P6 | P7 | P8 | P9 | P10 | P11 | P12 | P13 | Avg |
 |---|---------|----|----|----|----|----|----|----|----|----|----|----|----|----|-----|
 | 1 | Setup: Welcome | 10 | 10 | N/A | N/A | N/A | 10 | 10 | N/A | N/A | 10 | N/A | N/A | N/A | **10.0** |
-| 2 | Setup: System Check | 9 | 8 | 8 | 8 | 7 | 9 | 8 | N/A | 9 | 10 | N/A | N/A | N/A | **8.4** |
+| 2 | Setup: System Check | **10** | 8 | 8 | 8 | 7 | 9 | 8 | N/A | 9 | 10 | N/A | N/A | N/A | **8.6** |
 | 3 | Setup: Assistant Modules | 9 | 9 | 8 | 7 | 9 | 9 | 9 | N/A | N/A | 10 | N/A | N/A | N/A | **8.8** |
 | 4 | Setup: Configuration | 8 | 8 | 8 | 6 | 9 | 7 | 8 | 9 | N/A | 9 | N/A | N/A | N/A | **8.0** |
 | 5 | Setup: Setting Up Your Assistant | 9 | 8 | 9 | 9 | 9 | 10 | 8 | N/A | 9 | 10 | 6 | N/A | N/A | **8.7** |
@@ -229,7 +229,7 @@ Originally scored 2026-04-20 (rows 1–13). Re-scored 2026-04-29 with P11–P13 
 | 10 | Component Detail (Network) | 9 | 9 | N/A | N/A | 10 | 10 | 10 | N/A | N/A | 10 | N/A | N/A | 7 | **9.3** |
 | 11 | Settings | 8 | 7 | N/A | N/A | 9 | 9 | 8 | 6 | N/A | 9 | N/A | 8 | N/A | **8.0** |
 | 12 | 404 Page | 10 | 10 | 10 | N/A | N/A | N/A | 10 | N/A | N/A | 10 | N/A | N/A | N/A | **10.0** |
-| 13 | ErrorBoundary | 7 | 5 | 7 | 6 | 4 | N/A | 8 | N/A | N/A | 9 | N/A | N/A | N/A | **6.6** |
+| 13 | ErrorBoundary | **9** | **9** | **9** | **9** | **9** | N/A | **9** | N/A | N/A | 9 | N/A | N/A | N/A | **9.0** |
 | 14 | Home | 9 | 9 | N/A | 8 | 9 | 10 | 9 | N/A | 8 | 10 | **10** | **9** | 8 | **9.0** |
 | 15 | Security Monitor (friendlier placeholder) | 8 | 8 | N/A | N/A | N/A | 9 | 8 | N/A | N/A | 10 | N/A | N/A | N/A | **8.5** |
 | 16 | Discover | 9 | 9 | N/A | N/A | 9 | 10 | 9 | N/A | 8 | 10 | N/A | N/A | 8 | **9.0** |
@@ -242,6 +242,8 @@ Originally scored 2026-04-20 (rows 1–13). Re-scored 2026-04-29 with P11–P13 
 **Bold scores changed in the 2026-04-29 re-score** — primarily lifecycle (P11) and notification (P12) drops on Dashboard, plus the 5 placeholder pages added.
 
 **Bold scores changed in the 2026-05-02 Pass 7 Day 4 re-score** — Home P11 jumped 9 → 10 (the `paused_by_user` hero state shipped, closing the last gap from the 7-state hero machine — every state in `docs/specs/2026-04-29-delightful-sloth-target-ux.md` is now reachable). Home P12 jumped 8 → 9 (backend status aggregator runs every 60s, fires `assistant-status-changed` events on transitions, drives both the proactive alerts banner and the hero card; OS-permission gate added). Preferences P12 jumped 8 → 9 (notification toggle now requests OS permission on first enable, falls back gracefully to in-app toasts on denial; autostart toggle now actually wires through `tauri-plugin-autostart` instead of just persisting the preference).
+
+**Bold scores changed in the 2026-05-11 Pass 9 re-score** — Row 2 P1 jumped 9 → 10: MissingRuntimeCard no longer names "Podman Desktop" in macOS/Windows body text; uses "the sandbox engine" instead (download URL unchanged). Row 13 fully rebuilt: all seven scored principles lifted from the 6.6 average to 9.0 — raw `error.message` is now hidden behind a "Show technical details" disclosure; per-class `classifyError` maps every known error shape to a plain-English `userMessage` + actionable `suggestedAction`; retryable errors go through `FriendlyRetry` (reassuring tone, prominent Try Again); unrecoverable errors escalate to `ContactSupport` (diagnostic bundle + email + GitHub links). The spec-06 failure cascade was implemented during v0.4 development (landed as part of PR #49); this re-score records the improvement retroactively.
 
 ---
 
