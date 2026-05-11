@@ -15,11 +15,12 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use tauri::{AppHandle, Manager as _};
+use tauri::{AppHandle, Emitter as _, Manager as _};
 
 use crate::lifecycle::{
-    is_activated_persisted, is_paused_persisted, run_compose, write_credentials_ok_marker,
-    clear_credentials_ok_marker, BootstrapProgress, BootstrapStep, PerimeterStateStore,
+    is_activated_persisted, is_paused_persisted, run_compose, write_activated_marker,
+    write_credentials_ok_marker, clear_credentials_ok_marker,
+    BootstrapProgress, BootstrapStep, PerimeterStateStore,
 };
 use crate::orchestrator::state::AppState;
 
@@ -29,9 +30,20 @@ pub async fn after_shell_ready(handle: AppHandle, root: PathBuf) {
     let activated = is_activated_persisted();
     let paused = is_paused_persisted();
 
-    // Branch 1: not activated yet (first launch or user reset).
-    // State computes to (ShellReady, Absent); user clicks "Launch your assistant".
+    // Branch 1: markers absent — check for v0.3 migration before staying Absent.
     if !activated {
+        let env_path = vault_env_path(&handle);
+        let anthropic_key = read_anthropic_key(&env_path);
+        let has_telegram = read_env_value(&env_path, "TELEGRAM_BOT_TOKEN").is_some();
+
+        if let (Some(key), true) = (anthropic_key, has_telegram) {
+            // v0.3 existing install: real keys present but no activated marker.
+            eprintln!("[auto-activate] v0.3 install detected — running migration check");
+            migrate_existing_install(handle, root, key).await;
+            return;
+        }
+
+        // Fresh install: no real keys in .env.
         eprintln!("[auto-activate] not activated — staying (ShellReady, Absent)");
         return;
     }
@@ -148,6 +160,53 @@ async fn commit_agent(handle: &AppHandle, root: &Path) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
+// ─── Migration ────────────────────────────────────────────────────────
+
+/// Verify an existing v0.3 install's Anthropic key and, if valid, bring the
+/// agent up silently. Called once per launch until markers are written.
+async fn migrate_existing_install(handle: AppHandle, root: PathBuf, anthropic_key: String) {
+    // Honor user's explicit pause before attempting migration.
+    if is_paused_persisted() {
+        eprintln!("[migration] paused marker present — honoring pause, skipping agent start");
+        return;
+    }
+
+    match probe_key(&anthropic_key).await {
+        Some(true) => {
+            eprintln!("[migration] key valid — writing markers and bringing agent up");
+            let _ = write_activated_marker();
+            let _ = write_credentials_ok_marker();
+            if let Some(store) = handle.try_state::<PerimeterStateStore>() {
+                if let Ok(mut g) = store.activated.write() { *g = true; }
+                if let Ok(mut g) = store.credentials_ok_at.write() {
+                    *g = Some(now_unix_ms());
+                }
+                // Clear any prior credential warning.
+                if let Ok(mut g) = store.migration_credential_warning.write() {
+                    *g = false;
+                }
+            }
+            commit_agent(&handle, &root).await;
+            let _ = handle.emit("migration-completed", ());
+        }
+        Some(false) => {
+            // Key revoked since last use — user must re-enter.
+            eprintln!("[migration] key rejected — signaling re-credential needed");
+            if let Some(store) = handle.try_state::<PerimeterStateStore>() {
+                if let Ok(mut g) = store.migration_credential_warning.write() {
+                    *g = true;
+                }
+            }
+            let _ = handle.emit("migration-needs-recredential", ());
+        }
+        None => {
+            // Network error or inconclusive — don't block; retry on next launch.
+            eprintln!("[migration] validation inconclusive — deferring to next launch");
+            let _ = handle.emit("migration-deferred", ());
+        }
+    }
+}
+
 fn vault_env_path(handle: &AppHandle) -> PathBuf {
     handle
         .try_state::<AppState>()
@@ -158,7 +217,7 @@ fn vault_env_path(handle: &AppHandle) -> PathBuf {
         .join(".env")
 }
 
-fn read_anthropic_key(env_path: &Path) -> Option<String> {
+fn read_env_value(env_path: &Path, key_name: &str) -> Option<String> {
     let content = std::fs::read_to_string(env_path).ok()?;
     for line in content.lines() {
         let line = line.trim();
@@ -166,15 +225,19 @@ fn read_anthropic_key(env_path: &Path) -> Option<String> {
             continue;
         }
         if let Some((k, v)) = line.split_once('=') {
-            if k.trim() == "ANTHROPIC_API_KEY" {
+            if k.trim() == key_name {
                 let v = v.trim().trim_matches(|c| c == '"' || c == '\'');
-                if !v.is_empty() && !v.contains("REPLACE") {
+                if !v.is_empty() && !v.contains("REPLACE") && v.len() >= 8 {
                     return Some(v.to_string());
                 }
             }
         }
     }
     None
+}
+
+fn read_anthropic_key(env_path: &Path) -> Option<String> {
+    read_env_value(env_path, "ANTHROPIC_API_KEY")
 }
 
 fn credentials_ok_stale(handle: &AppHandle) -> bool {

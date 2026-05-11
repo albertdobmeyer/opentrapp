@@ -134,6 +134,10 @@ pub async fn commit_activation(handle: AppHandle) -> Result<(), String> {
         if let Ok(mut g) = store.credentials_ok_at.write() {
             *g = Some(now_unix_ms());
         }
+        // Clear any migration credential warning — new keys just validated.
+        if let Ok(mut g) = store.migration_credential_warning.write() {
+            *g = false;
+        }
     }
 
     Ok(())

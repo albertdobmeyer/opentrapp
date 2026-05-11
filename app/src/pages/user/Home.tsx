@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { Shield } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,6 +15,7 @@ export default function Home() {
   const security = securityFromHero(state);
 
   const [activationOpen, setActivationOpen] = useState(false);
+  const [reCredential, setReCredential] = useState(false);
   const autoOpenFiredRef = useRef(false);
 
   // Auto-open the activation modal on first load when the shell is ready
@@ -25,6 +27,18 @@ export default function Home() {
       setActivationOpen(true);
     }
   }, [loading, state]);
+
+  // Listen for the migration re-credential event emitted by auto_activate
+  // when the migrated Anthropic key is rejected — open the modal in
+  // re-credential mode so the user only needs to re-enter the Anthropic key.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void listen("migration-needs-recredential", () => {
+      setReCredential(true);
+      setActivationOpen(true);
+    }).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
+  }, []);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 animate-fade-in">
@@ -38,7 +52,10 @@ export default function Home() {
       />
 
       {activationOpen && (
-        <ActivationModal onClose={() => setActivationOpen(false)} />
+        <ActivationModal
+          onClose={() => { setActivationOpen(false); setReCredential(false); }}
+          reCredential={reCredential}
+        />
       )}
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">

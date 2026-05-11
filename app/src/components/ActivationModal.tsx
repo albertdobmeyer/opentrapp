@@ -85,11 +85,17 @@ type TelegramPhase =
 
 interface Props {
   onClose: () => void;
+  /**
+   * When true, the user has a valid Telegram token from a prior install but
+   * needs to re-enter their Anthropic key (e.g. key was revoked). Step 2
+   * is skipped — the existing token is read from .env and reused.
+   */
+  reCredential?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────
 
-export default function ActivationModal({ onClose }: Props) {
+export default function ActivationModal({ onClose, reCredential = false }: Props) {
   const { update: updateSettings } = useSettings();
 
   // Flow step
@@ -132,6 +138,34 @@ export default function ActivationModal({ onClose }: Props) {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
+
+  // Re-credential mode: load the existing Telegram token from .env so we can
+  // reuse it in the commit without forcing the user through Step 2 again.
+  useEffect(() => {
+    if (!reCredential) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const content = await readConfig("openclaw-vault", ".env");
+        if (cancelled) return;
+        // Extract TELEGRAM_BOT_TOKEN line
+        for (const line of content.split("\n")) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith("TELEGRAM_BOT_TOKEN=")) {
+            const val = trimmed.slice("TELEGRAM_BOT_TOKEN=".length)
+              .trim().replace(/^['"]|['"]$/g, "");
+            if (val && !val.includes("REPLACE") && val.length >= 8) {
+              setTelegramToken(val);
+              break;
+            }
+          }
+        }
+      } catch {
+        // .env not readable; user will need to re-enter both keys
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [reCredential]);
 
   // ─── Anthropic validation ────────────────────────────────────────────
 
@@ -346,7 +380,15 @@ export default function ActivationModal({ onClose }: Props) {
             phase={anthropicPhase}
             errorKey={anthropicErrorKey}
             onValidate={() => void handleValidateAnthropic()}
-            onContinue={() => setStep("telegram")}
+            onContinue={() => {
+              if (reCredential && telegramToken) {
+                // Skip Step 2 — existing Telegram token is already loaded.
+                void handleCommit(true);
+              } else {
+                setStep("telegram");
+              }
+            }}
+            continueLabel={reCredential && telegramToken ? "Launch my assistant" : "Continue"}
             onHowTo={() => setHowToOpen("anthropic")}
           />
         )}
@@ -450,12 +492,13 @@ interface AnthropicStepProps {
   errorKey: string | null;
   onValidate: () => void;
   onContinue: () => void;
+  continueLabel?: string;
   onHowTo: () => void;
 }
 
 function AnthropicStep({
   value, onChange, onPaste, show, toggleShow,
-  phase, errorKey, onValidate, onContinue, onHowTo,
+  phase, errorKey, onValidate, onContinue, continueLabel = "Continue", onHowTo,
 }: AnthropicStepProps) {
   const formatOk = isAnthropicKeyLike(value);
   const canValidate = formatOk && phase !== "validating" && phase !== "valid";
@@ -525,7 +568,7 @@ function AnthropicStep({
         )}
         {phase === "valid" && (
           <button type="button" onClick={onContinue} className="btn btn-md btn-primary">
-            Continue
+            {continueLabel}
           </button>
         )}
       </div>

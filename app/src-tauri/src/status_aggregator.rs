@@ -221,10 +221,15 @@ async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> Assist
 
     // 5. Compose the alerts list. Suppressed entirely when paused — the
     //    user knows their assistant is off; nothing to alarm about.
+    let migration_warn = handle
+        .try_state::<PerimeterStateStore>()
+        .and_then(|s| s.migration_credential_warning.read().ok().map(|g| *g))
+        .unwrap_or(false);
+
     let alerts = if paused {
         Vec::new()
     } else {
-        build_alerts(&bootstrap, &tenant, has_anthropic, has_telegram, key_valid)
+        build_alerts(&bootstrap, &tenant, has_anthropic, has_telegram, key_valid, migration_warn)
     };
 
     // When the shell failed, surface the failure cause from the store so the
@@ -292,6 +297,7 @@ fn build_alerts(
     has_anthropic: bool,
     has_telegram: bool,
     key_valid: Option<bool>,
+    migration_credential_warning: bool,
 ) -> Vec<Alert> {
     let mut alerts = Vec::new();
 
@@ -358,6 +364,25 @@ fn build_alerts(
             body: Some("Try restarting the app. If it keeps happening, get help.".to_string()),
             cta_label: Some("Get help".to_string()),
             cta_to: Some("/help".to_string()),
+            dismissable: false,
+            suppress_during_wizard: false,
+        });
+    }
+
+    // Migration: existing v0.3 install found a revoked Anthropic key on first launch.
+    if migration_credential_warning
+        && matches!(bootstrap, BootstrapState::ShellReady)
+        && matches!(tenant, TenantState::Absent)
+    {
+        alerts.push(Alert {
+            id: "migration-credential-warning".to_string(),
+            severity: AlertSeverity::Warning,
+            title: "Your Anthropic key needs updating".to_string(),
+            body: Some(
+                "It used to work, but it doesn't anymore — likely the key was rotated or revoked. Tap Launch to update it.".to_string(),
+            ),
+            cta_label: None,
+            cta_to: None,
             dismissable: false,
             suppress_during_wizard: false,
         });
@@ -584,6 +609,7 @@ mod tests {
             false,
             true,
             None,
+            false,
         );
         assert!(alerts.iter().any(|a| a.id == "missing-anthropic-key"));
         assert!(!alerts.iter().any(|a| a.id == "invalid-anthropic-key"));
@@ -597,6 +623,7 @@ mod tests {
             true,
             true,
             Some(false),
+            false,
         );
         assert!(alerts.iter().any(|a| a.id == "invalid-anthropic-key"));
         assert!(!alerts.iter().any(|a| a.id == "missing-anthropic-key"));
@@ -610,6 +637,7 @@ mod tests {
             true,
             false,
             Some(true),
+            false,
         );
         assert!(alerts.iter().any(|a| a.id == "missing-telegram-token"));
     }
@@ -622,6 +650,7 @@ mod tests {
             true,
             true,
             Some(true),
+            false,
         );
         assert!(alerts.iter().any(|a| a.id == "perimeter-error"));
     }
@@ -634,6 +663,7 @@ mod tests {
             true,
             true,
             Some(true),
+            false,
         );
         assert!(alerts.iter().any(|a| a.id == "perimeter-error"));
     }
@@ -646,6 +676,7 @@ mod tests {
             false,
             false,
             None,
+            false,
         );
         assert!(alerts.is_empty());
     }
@@ -658,6 +689,7 @@ mod tests {
             false,
             false,
             None,
+            false,
         );
         assert!(alerts.is_empty());
     }
@@ -670,6 +702,7 @@ mod tests {
             true,
             true,
             Some(true),
+            false,
         );
         assert!(alerts.is_empty());
     }
@@ -682,6 +715,7 @@ mod tests {
             false,
             true,
             None,
+            false,
         );
         let missing = alerts
             .iter()
@@ -698,6 +732,7 @@ mod tests {
             true,
             true,
             Some(true),
+            false,
         );
         let p = alerts.iter().find(|a| a.id == "perimeter-error").unwrap();
         assert!(!p.suppress_during_wizard);

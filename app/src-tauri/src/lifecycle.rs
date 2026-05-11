@@ -155,6 +155,9 @@ pub struct PerimeterStateStore {
     pub credentials_ok_at: RwLock<Option<u64>>,
     /// In-flight bootstrap pipeline step. Set by bootstrap subsystem (PR-3).
     pub bootstrap_progress: RwLock<Option<BootstrapProgress>>,
+    /// True when migration detected an existing v0.3 install with an invalid
+    /// Anthropic key. Cleared when new credentials are committed successfully.
+    pub migration_credential_warning: RwLock<bool>,
 }
 
 impl PerimeterStateStore {
@@ -165,6 +168,7 @@ impl PerimeterStateStore {
             activated: RwLock::new(is_activated_persisted()),
             credentials_ok_at: RwLock::new(read_credentials_ok_ts()),
             bootstrap_progress: RwLock::new(None),
+            migration_credential_warning: RwLock::new(false),
         }
     }
 
