@@ -1,9 +1,9 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-05-09 (v0.4 spec set landed; implementation has not started)
-**Current phase:** v0.4 reframe — spec set finalized, ready for implementation. The mission has shifted from post-launch maintenance to the shell/tenant architectural reframe captured in 8 specs.
-**Branch:** `main` at `c59b3db` — pushed to `origin/main`. Working tree has the new `docs/specs/v0.4-shell-tenant-reframe/` directory (8 specs + README + the "Karen from HR" source brainstorm).
-**Tag:** `v0.3.2` is the shipped baseline. v0.4 is the next minor; no tag yet.
+**Last updated:** 2026-05-13 (maintenance session — security hardening, landing page, cert renewal; v0.4 implementation not started)
+**Current phase:** v0.4 reframe — spec set finalized, ready for implementation. This session was maintenance, not v0.4 code.
+**Branch:** `main` at `e1e1bf3` — pushed to `origin/main`.
+**Tag:** `v0.4.0` is the current shipped version (tagged and released). openclaw-vault submodule at `a5a46ad`.
 
 ---
 
@@ -27,21 +27,43 @@ The implementation sequence is in the README; each PR has a natural review check
 
 ---
 
-## What landed this session (2026-05-09)
+## What landed this session (2026-05-13)
 
-This session was scope/spec, not code. Output:
+Maintenance session — no v0.4 feature code. All changes on `main`, no feature branches.
 
-- `docs/specs/v0.4-shell-tenant-reframe/` — 10 files: 8 numbered specs (`00`–`07`) + `README.md` + `_source-karen-from-hr.md` (the original brainstorm — Karen-from-HR persona, Telegram-first, app as quiet guardian — that seeded the spec set)
+### Security: skill clearance enforcement (openclaw-vault)
 
-No code changes. No submodule reference bumps.
+ADR-0003 claimed "agent rejects unscanned skills" — this was never actually implemented. `install-skill.sh` had a soft y/N bypass prompt. Two changes close the gap:
 
-Working tree at session end (after the spec-set commit):
-```
-M .gitignore                                  (pre-existing)
-M app/src-tauri/Cargo.lock                    (pre-existing)
-```
+- **`install-skill.sh`** (`ecb3269`, `a5a46ad`): bypass prompt replaced with hard `exit 1`. A forge clearance report is now required to install any skill. Auto-detects `clearance-report.json` from the skill directory when the path is the forge export dir (which is the GUI call path — `component.yml` passes only `skill_path`). Writes a `.trust` file (`VERIFY_HASH=sha256:...`) into the container after successful install.
+- **`entrypoint.sh`** (`ecb3269`): step 5.5 added before OpenClaw starts — iterates every installed skill directory, checks `.trust` exists, verifies `VERIFY_HASH` matches current `sha256sum` of `SKILL.md`. Any failure aborts container startup. Skills dropped in without going through `install-skill.sh` can never reach the agent.
 
-The new directory + this handoff rewrite were committed together as `docs(specs): land v0.4 shell/tenant reframe spec set`.
+Both commits pushed to openclaw-vault remote (`a5a46ad`). Submodule reference updated in lobster-trapp (`2c189bc`).
+
+### Landing page
+
+- Version pill updated: `v0.3.0` → `v0.4.0 — Shellfish Reframe release`
+- SmartScreen/Gatekeeper bypass guide added as a `<details>` block in the download section
+- SignPath Foundation credit line added (required by their OSS terms)
+- Full audit of skill scanner claims against actual clawhub-forge source code — four locations corrected: "before it runs" → "pre-install only", `16` → `17` injection signatures, "SKILL.md only" → "every file in the bundle", added honest limitation ("pipeline is not automatic; patterns unknown to scanner can still slip through")
+- **4-gate vetting pipeline SVG diagram** added to the Ecosystem section — shows the full clawhub-forge sequence (untrusted skill → Lint → Scan → Verify → Test → Clearance → Vault) with red fail rail. Rendered and verified in browser.
+- Deployed to Hetzner
+
+### Supporting docs
+
+- `docs/code-signing-policy.md` — new file required for SignPath Foundation application
+- `docs/release-notes-v0.4.0.md` — v0.4.0 release notes
+- `app/src-tauri/tauri.conf.json` — version bumped `0.3.2` → `0.4.0`
+
+### Infrastructure
+
+- **Dependabot alerts dismissed**: glib `RUSTSEC-2024-0429` (unsoundness in `VariantStrIter`, locked by Tauri GTK3 stack, no update path) and a second transitive alert — both marked `tolerable_risk`.
+- **Cloudflare Origin Certificate expired** (May 12, 17:49 UTC — the day before this session). Replaced with a Let's Encrypt certificate issued via certbot DNS challenge using the token in `/etc/letsencrypt/cloudflare.ini`. Auto-renews every 90 days (cron registered by certbot). nginx updated: `ssl_certificate/ssl_certificate_key` now point to `/etc/letsencrypt/live/lobster-trapp.com/{fullchain.pem,privkey.pem}`. Site verified live (HTTP 200, content confirmed).
+- **SignPath Foundation application submitted** — awaiting approval email at `albertkdobmeyer@gmail.com`. When approved: set up project in SignPath dashboard, add `SIGNPATH_API_TOKEN` and `SIGNPATH_ORGANIZATION_ID` GitHub secrets, restructure the Windows CI job to use post-build signing (see plan in `~/.claude/plans/ethereal-wiggling-rocket.md`), then update `bundle.windows.certificateThumbprint` in `tauri.conf.json`.
+
+### Architecture audit
+
+Investigated whether the 4-container architecture was an accidental Claude drift or deliberate design. Finding: it was deliberate, documented in ADR-0006 (April 2026) driven by a real security gap. vault-pioneer is intentionally parked (Moltbook acquired by Meta, API unstable since April 2026) — kept in compose.yml for completeness, same as moltbook-pioneer submodule.
 
 ---
 
@@ -114,21 +136,25 @@ These items are unchanged from the previous handoff. They're operator-driven; th
 ## Working state at session end
 
 ```
-$ git status
-On branch main
-Your branch is up to date with 'origin/main'.
-
-Changes not staged for commit:
-  modified:   .gitignore                                            (pre-existing)
-  modified:   app/src-tauri/Cargo.lock                              (pre-existing)
+$ git log --oneline -5
+e1e1bf3 feat(landing): add 4-gate skill vetting pipeline diagram to ecosystem section
+2c189bc chore(submodule): update openclaw-vault — auto-detect clearance report fix
+4be54fa chore(submodule): update openclaw-vault to clearance-enforcement commit
+9699cf4 docs(landing): correct skill scanner claims to match implementation
+5785dd9 chore(release): bump version to 0.4.0, add release notes and v0.4 specs
 
 $ git submodule status
- 30d8fea  components/openclaw-vault    (heads/main)
+ a5a46ad  components/openclaw-vault    (heads/main)
  911b677  components/clawhub-forge     (heads/main)
  52b3db2  components/moltbook-pioneer  (heads/main, parked)
 ```
 
-All five test gates green on `main` (last checked previous session).
+Working tree clean. All five test gates green on `main` (last checked 2026-05-11 pre-release).
+
+### Pending (not blocking v0.4)
+
+- SignPath approval — check `albertkdobmeyer@gmail.com`. See plan at `~/.claude/plans/ethereal-wiggling-rocket.md` for the full CI integration steps once approved.
+- Dead Cloudflare API token in `/root/.secrets/certbot/cloudflare.ini` on Hetzner — worth regenerating next time you're in the Cloudflare dashboard.
 
 ---
 
