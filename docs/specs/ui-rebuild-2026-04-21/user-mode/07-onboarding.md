@@ -16,7 +16,7 @@ The current setup wizard is 6 steps and ~25 clicks. This spec condenses it to 4 
 
 ## User Story
 
-> As Karen, after I download and install Lobster-TrApp, I want to see an obviously friendly welcome screen, answer the two or three questions only I can answer, watch the app set itself up, and then open Telegram and say hi to my new assistant. I never want to see a terminal, a component name, a file path, or a container.
+> As Karen, after I download and install OpenTrApp, I want to see an obviously friendly welcome screen, answer the two or three questions only I can answer, watch the app set itself up, and then open Telegram and say hi to my new assistant. I never want to see a terminal, a component name, a file path, or a container.
 
 ---
 
@@ -44,11 +44,11 @@ The current "System Check" and "Assistant Modules" steps are folded into step 3 
 │                                                         │
 │                                                         │
 │            [illustration-welcome.svg                    │
-│             friendly lobster + shield,                  │
+│             friendly logo + shield,                  │
 │             320×240]                                    │
 │                                                         │
 │                                                         │
-│          Welcome to Lobster-TrApp                       │
+│          Welcome to OpenTrApp                       │
 │                                                         │
 │       Your personal AI assistant, safe on your         │
 │       computer. Let's get you set up — it takes         │
@@ -64,7 +64,7 @@ The current "System Check" and "Assistant Modules" steps are folded into step 3 
 
 ### Copy
 
-- **Title:** "Welcome to Lobster-TrApp"
+- **Title:** "Welcome to OpenTrApp"
 - **Subtitle:** "Your personal AI assistant, safe on your computer. Let's get you set up — it takes about 3 minutes."
 - **Primary CTA:** "Get Started" (large, brand primary color)
 - **Secondary link:** "Already set up? Skip to dashboard" (visible only if detect a complete install)
@@ -82,9 +82,9 @@ The current "System Check" and "Assistant Modules" steps are folded into step 3 
 
 ### Accessibility
 
-- h1 = "Welcome to Lobster-TrApp"
+- h1 = "Welcome to OpenTrApp"
 - Button has keyboard focus on load
-- Illustration has alt text: "A friendly lobster next to a shield, representing your safe AI assistant"
+- Illustration has alt text: "A friendly logo next to a shield, representing your safe AI assistant"
 
 ### State
 
@@ -284,7 +284,7 @@ The current "System Check" and "Assistant Modules" steps are folded into step 3 
 │ ●──●──●──●                                              │ ← progress: step 4 of 4 (all filled)
 │                                                        │
 │          [illustration-ready.svg                       │
-│           confetti + lobster waving,                   │
+│           confetti + logo waving,                   │
 │           celebratory colors,                          │
 │           320×240]                                     │
 │                                                        │
@@ -379,7 +379,7 @@ All strings to use in the wizard. Implementer should not invent new text; use th
 
 ```json
 {
-  "welcome.title": "Welcome to Lobster-TrApp",
+  "welcome.title": "Welcome to OpenTrApp",
   "welcome.subtitle": "Your personal AI assistant, safe on your computer. Let's get you set up — it takes about 3 minutes.",
   "welcome.cta": "Get Started",
   "welcome.skipToDashboard": "Already set up? Skip to dashboard",

@@ -19,19 +19,19 @@ A small, separable PR that removes the hardcoded `container_name:` lines from [`
 This breaks `--project-name` isolation. When two compose invocations target different project names, they should produce different container names (`<project>_<service>_<n>`); explicit `container_name:` overrides this and forces a fixed string.
 
 Practical consequences:
-1. **Integration tests can't run safely on a developer's machine** while a live perimeter is up. The investigation in this overhaul hit exactly this — the planned partial-shell dryrun aborted because `--project-name lobster-trapp-dryrun up -d vault-proxy ...` would have collided with or terminated the running `vault-proxy` container.
+1. **Integration tests can't run safely on a developer's machine** while a live perimeter is up. The investigation in this overhaul hit exactly this — the planned partial-shell dryrun aborted because `--project-name opentrapp-dryrun up -d vault-proxy ...` would have collided with or terminated the running `vault-proxy` container.
 2. **Future multi-tenant work is blocked.** If we ever ship a second tenant variant alongside OpenClaw, two parallel compose graphs need distinct container names — impossible with hardcoded names.
 3. **podman-compose's recreate logic is dangerous in this configuration.** With name conflicts, podman-compose 1.0.6 may remove the existing container (with the user's session data) to "make room" for the new one.
 
 ## The fix
 
-Remove the four `container_name:` lines. Compose will generate names of the form `<project>_<service>_<n>`. Default project name is the directory name (`lobster-trapp`), so containers become:
-- `lobster-trapp_vault-agent_1`
-- `lobster-trapp_vault-proxy_1`
-- `lobster-trapp_vault-forge_1`
-- `lobster-trapp_vault-pioneer_1`
+Remove the four `container_name:` lines. Compose will generate names of the form `<project>_<service>_<n>`. Default project name is the directory name (`opentrapp`), so containers become:
+- `opentrapp_vault-agent_1`
+- `opentrapp_vault-proxy_1`
+- `opentrapp_vault-forge_1`
+- `opentrapp_vault-pioneer_1`
 
-Test isolation becomes trivial: `--project-name lobster-trapp-dryrun` produces `lobster-trapp-dryrun_vault-proxy_1` etc., zero collision.
+Test isolation becomes trivial: `--project-name opentrapp-dryrun` produces `opentrapp-dryrun_vault-proxy_1` etc., zero collision.
 
 ## Code that references container names by string
 
@@ -53,9 +53,9 @@ fn is_container_running(name: &str) -> bool {
                 ...
 ```
 
-The `name=^vault-proxy$` filter expects the literal name. After cleanup, the actual container name is `lobster-trapp_vault-proxy_1`. Three options:
+The `name=^vault-proxy$` filter expects the literal name. After cleanup, the actual container name is `opentrapp_vault-proxy_1`. Three options:
 
-1. **Use partial-match filter:** `name=vault-proxy` (matches `lobster-trapp_vault-proxy_1`). Simple, but matches *any* container with that substring (foo-vault-proxy-bar would also match).
+1. **Use partial-match filter:** `name=vault-proxy` (matches `opentrapp_vault-proxy_1`). Simple, but matches *any* container with that substring (foo-vault-proxy-bar would also match).
 2. **Use compose-aware filter:** `--filter "label=com.docker.compose.service=vault-proxy"` (uses the compose-set label). Requires no name knowledge; works regardless of project name. **Preferred.**
 3. **Compute the exact name:** `format!("{}_{}_1", project_name, service)` and compare exactly. Brittle if the project name changes.
 
@@ -142,7 +142,7 @@ fn reap_legacy_hardcoded_containers() {
 }
 ```
 
-Run this once during migration ([`06-migration.md`](06-migration.md)), gated on a `~/.lobster-trapp/legacy-reaped` marker so it doesn't run on every launch. The volumes attached to the old containers stay intact (volumes are project-scoped, not container-scoped) — `vault-data`, `forge-deliveries`, `vault-proxy-logs`, `proxy-ca` survive the `rm -f` of the containers because volumes are independent of container lifecycle.
+Run this once during migration ([`06-migration.md`](06-migration.md)), gated on a `~/.opentrapp/legacy-reaped` marker so it doesn't run on every launch. The volumes attached to the old containers stay intact (volumes are project-scoped, not container-scoped) — `vault-data`, `forge-deliveries`, `vault-proxy-logs`, `proxy-ca` survive the `rm -f` of the containers because volumes are independent of container lifecycle.
 
 After reap, `compose up -d` against the new project mounts the same volumes and the user's session history is preserved.
 

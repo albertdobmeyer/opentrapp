@@ -1,7 +1,7 @@
 # tests/e2e-telegram
 
-Python + Telethon test harness that drives `@LobsterTrappBot` as the user's
-own Telegram account and probes the Lobster-TrApp perimeter end-to-end.
+Python + Telethon test harness that drives `@LogoTrappBot` as the user's
+own Telegram account and probes the OpenTrApp perimeter end-to-end.
 Produces pass/fail/unclear findings about whether the perimeter is too
 permissive (Swiss cheese), too restrictive (refuses everything regardless
 of policy), or correctly calibrated.
@@ -25,7 +25,7 @@ tests/e2e-telegram/
 ├── FIRST_RUN.md              ← one-time setup + the 3 commands to run the suite
 ├── requirements.txt          ← telethon, pytest, pytest-asyncio, python-dotenv
 ├── pytest.ini                ← asyncio auto mode + category markers
-├── conftest.py               ← fixtures (env, telegram_client, NewLobsterTrappBot, budget, proxy_log)
+├── conftest.py               ← fixtures (env, telegram_client, NewLogoTrappBot, budget, proxy_log)
 ├── helpers/
 │   ├── bot_client.py         ← send-and-wait over Telethon with [TEST] prefix
 │   ├── log_tail.py           ← async tail of `podman logs vault-proxy`, JSON event parser

@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://lobster-trapp.dev/schemas/component.schema.json",
+  "$id": "https://opentrapp.dev/schemas/component.schema.json",
   "title": "Component Manifest",
-  "description": "Self-describing manifest for Lobster-TrApp components. Each sub-repo publishes a component.yml that the GUI discovers and renders generically.",
+  "description": "Self-describing manifest for OpenTrApp components. Each sub-repo publishes a component.yml that the GUI discovers and renders generically.",
   "type": "object",
   "required": ["identity"],
   "additionalProperties": false,

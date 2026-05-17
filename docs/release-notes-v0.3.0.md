@@ -1,4 +1,4 @@
-# Lobster-TrApp v0.3.0 — Release Notes
+# OpenTrApp v0.3.0 — Release Notes
 
 **Tagged:** 2026-05-02 (commit `7ebdd8b`; subsequently `75dbccb` after a release-build correction)
 **Container baseline:** four-container perimeter as in v0.2.0; default Split Shell.
@@ -29,7 +29,7 @@ The desktop application now owns the lifetime of the four-container perimeter:
 - Application start triggers `compose up -d` on a background thread.
 - Graceful exit (window close, tray Quit, SIGTERM, SIGINT) triggers `compose down` synchronously, with a 30-second ceiling.
 - Following SIGKILL, orphan containers are detected and stopped on the next launch via a PID-file mechanism (`RunGuard`).
-- A new `paused_by_user` state allows the user to suspend the perimeter without exiting the application; the state survives application restart via the `~/.lobster-trapp/paused` marker file.
+- A new `paused_by_user` state allows the user to suspend the perimeter without exiting the application; the state survives application restart via the `~/.opentrapp/paused` marker file.
 
 Seven distinct termination paths were validated as cleanly tearing down the perimeter.
 
@@ -108,4 +108,4 @@ The eight passes of the Delightful-Sloth phase, with their resulting commits:
 | 8 | Pre-ship walkthrough + ship recommendation | `7ebdd8b` |
 | Release-build correction | Lockfile-integrity fix + version-string alignment | `104e2c4`, `75dbccb` |
 
-The mid-phase scope review that removed the admin-API spending feature is documented in [`memory/feedback_lobster_trapp_scope.md`](../.claude/projects/-home-albertd-Repositories-lobster-trapp/memory/feedback_lobster_trapp_scope.md) and applied to every Pass 8 surface review.
+The mid-phase scope review that removed the admin-API spending feature is documented in [`memory/feedback_opentrapp_scope.md`](../.claude/projects/-home-albertd-Repositories-opentrapp/memory/feedback_opentrapp_scope.md) and applied to every Pass 8 surface review.

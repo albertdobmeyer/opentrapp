@@ -7,9 +7,9 @@
 
 ## Product Identity — The Invisible Security Wrapper
 
-Lobster-TrApp is **not** an AI assistant. Lobster-TrApp is **not** a chat client. Lobster-TrApp is **not** an agent framework.
+OpenTrApp is **not** an AI assistant. OpenTrApp is **not** a chat client. OpenTrApp is **not** an agent framework.
 
-**Lobster-TrApp is the invisible security wrapper that makes it safe for a non-technical person to run OpenClaw on their personal computer.**
+**OpenTrApp is the invisible security wrapper that makes it safe for a non-technical person to run OpenClaw on their personal computer.**
 
 Compare:
 
@@ -19,14 +19,14 @@ Compare:
 | 1Password (desktop) | Invisible credential vault | Low — unlocks automatically |
 | Little Snitch | Network firewall | Low — alerts when needed |
 | Tailscale | Secure private networking | Low — runs in tray |
-| **Lobster-TrApp** | **Invisible security wrapper for OpenClaw** | **Low — user talks to OpenClaw via Telegram, not via us** |
+| **OpenTrApp** | **Invisible security wrapper for OpenClaw** | **Low — user talks to OpenClaw via Telegram, not via us** |
 
 The app's job is to:
 1. **Get OpenClaw installed safely** (setup wizard, container perimeter, manifest-driven orchestration)
 2. **Keep it running safely** (security monitoring, allowlist enforcement, skill scanning)
 3. **Stay out of the way** (system tray, minimal check-ins, automation-first)
 
-The user's relationship with OpenClaw happens on Telegram. The user's relationship with Lobster-TrApp is: "something that keeps me safe while I use my AI assistant."
+The user's relationship with OpenClaw happens on Telegram. The user's relationship with OpenTrApp is: "something that keeps me safe while I use my AI assistant."
 
 ---
 
@@ -129,7 +129,7 @@ When they toggle to Advanced Mode:
 
 ## The North Star
 
-> **Karen should forget Lobster-TrApp exists after week 1. A developer should prefer it over raw podman.**
+> **Karen should forget OpenTrApp exists after week 1. A developer should prefer it over raw podman.**
 
 If the app delights Karen, she will recommend it to her sister. If the app satisfies developers, they will contribute to it. Both audiences need to feel the app was built for them, specifically.
 

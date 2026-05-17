@@ -1,4 +1,4 @@
-# Lobster-TrApp v0.2.0 — Release Notes
+# OpenTrApp v0.2.0 — Release Notes
 
 **Status:** Draft, pending tag
 **Target audience:** prosumer (tech-savvy users who can install Tauri + Podman locally)
@@ -84,7 +84,7 @@ The four-day campaign catalogued 14 findings. State at v0.2.0 ship:
 These don't change anything a Karen-tier user does, but they unblock v0.3.0:
 
 - **F11 (HIGH)** — `tool-manifest.yml` gained `also_allow:` for the soft preset; `tool-control-core.py` now emits `tools.alsoAllow` for tools whose OpenClaw `profiles` array is empty (web_fetch, web_search, cron, canvas, message). Confirmed live: at Soft Shell the bot now reports access to web_search, web_fetch, canvas, message, process — none of which were previously visible.
-- **F13 (LOW)** — `tool-control.sh` honours `OPENCLAW_CONTAINER` env var. Embedders (lobster-trapp uses `vault-agent`) can target the right container without forking.
+- **F13 (LOW)** — `tool-control.sh` honours `OPENCLAW_CONTAINER` env var. Embedders (opentrapp uses `vault-agent`) can target the right container without forking.
 - **F14 (MEDIUM)** — `tool-control.sh --apply --no-restart` writes config + allowlist and returns; the parent orchestrator owns lifecycle. No more rogue parallel container.
 
 ## What's deferred to v0.3.0

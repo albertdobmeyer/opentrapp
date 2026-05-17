@@ -40,7 +40,7 @@ async fn check_migration(env_path: &Path) -> MigrationDisposition {
 
 ## Verification flow (one live ping)
 
-The migration writes `~/.lobster-trapp/credentials-ok` only after a verified live `/v1/messages` ping using the existing key. **Never trust past success without checking.**
+The migration writes `~/.opentrapp/credentials-ok` only after a verified live `/v1/messages` ping using the existing key. **Never trust past success without checking.**
 
 ```rust
 async fn migrate_existing_install(anthropic_key: String, app: AppHandle) {
@@ -107,8 +107,8 @@ Karen doesn't see an error explicitly; from her perspective the app is just "sti
 ## Marker files written
 
 On successful migration:
-- `~/.lobster-trapp/activated` — file presence; no content
-- `~/.lobster-trapp/credentials-ok` — file with unix-millis timestamp of the validation
+- `~/.opentrapp/activated` — file presence; no content
+- `~/.opentrapp/credentials-ok` — file with unix-millis timestamp of the validation
 
 On failed re-credential or deferred: nothing is written. State stays `(ShellReady, Absent)` until a successful activation.
 
@@ -133,11 +133,11 @@ If the old build crashed without a clean shutdown, RunGuard ([`lifecycle.rs:266-
 ### User had a custom .env with extra keys (OPENAI_API_KEY etc.)
 We only check for `ANTHROPIC_API_KEY` and `TELEGRAM_BOT_TOKEN` (the required pair). Other env entries pass through unchanged in `.env`.
 
-### User had v0.3's `~/.lobster-trapp/paused` marker
+### User had v0.3's `~/.opentrapp/paused` marker
 Migration honors it — we don't bring up the agent if the user explicitly paused. State computes to `(ShellReady, Paused)`. Karen sees "Stopped" with the Resume button.
 
 ### container_name cleanup interaction
-If migration runs *before* [`07-container-name-cleanup`](07-container-name-cleanup.md) lands, the existing perimeter has hardcoded container names. After 07 lands, container names change to `lobster-trapp_vault-X_1` style. Existing volumes are scoped to compose project name (already `lobster-trapp` by default), so they migrate cleanly. Run a one-time `podman container rm` for the old hardcoded-name containers if they still exist in stopped state — handled by `compose down` before the new bring-up.
+If migration runs *before* [`07-container-name-cleanup`](07-container-name-cleanup.md) lands, the existing perimeter has hardcoded container names. After 07 lands, container names change to `opentrapp_vault-X_1` style. Existing volumes are scoped to compose project name (already `opentrapp` by default), so they migrate cleanly. Run a one-time `podman container rm` for the old hardcoded-name containers if they still exist in stopped state — handled by `compose down` before the new bring-up.
 
 ## Test coverage
 
@@ -146,18 +146,18 @@ Unit tests:
 - `is_placeholder` matches all known placeholder patterns and rejects real keys
 
 Integration tests:
-- Fresh `~/.lobster-trapp/`, valid `.env` → migration writes both markers, brings up agent, state is `(ShellReady, Running)`
-- Fresh `~/.lobster-trapp/`, `.env` with revoked key (mocked 401) → no markers, agent doesn't start, state is `(ShellReady, Absent)` with re-credential banner
-- Fresh `~/.lobster-trapp/`, `.env` with valid key, network unavailable → migration deferred, retried on next launch
+- Fresh `~/.opentrapp/`, valid `.env` → migration writes both markers, brings up agent, state is `(ShellReady, Running)`
+- Fresh `~/.opentrapp/`, `.env` with revoked key (mocked 401) → no markers, agent doesn't start, state is `(ShellReady, Absent)` with re-credential banner
+- Fresh `~/.opentrapp/`, `.env` with valid key, network unavailable → migration deferred, retried on next launch
 
 Manual dogfood (per [`tests/dogfood/CHECKLIST.md`](../../../tests/dogfood/CHECKLIST.md)):
 - Take a v0.3 install, upgrade to v0.4, verify silent successful migration
 - Take a v0.3 install, revoke the API key in console.anthropic.com, upgrade — verify re-credential prompt
-- Take a v0.3 install with `~/.lobster-trapp/paused` marker, upgrade — verify state is `(ShellReady, Paused)`
+- Take a v0.3 install with `~/.opentrapp/paused` marker, upgrade — verify state is `(ShellReady, Paused)`
 
 ## Out of scope
 
 - **Migrating from versions older than v0.3** — v0.3 is the floor; pre-v0.3 users go through fresh-install flow
 - **Migration UI** — there is no migration UI; success is silent, failure surfaces via the standard re-credential banner
-- **Backup/restore of marker files** across reinstalls — markers live in `~/.lobster-trapp/`; reinstalling the app preserves them, uninstalling does not
+- **Backup/restore of marker files** across reinstalls — markers live in `~/.opentrapp/`; reinstalling the app preserves them, uninstalling does not
 - **Cross-machine migration** — installing on a new machine is a fresh install; no copy-from-old-machine flow in v0.4

@@ -23,7 +23,7 @@ use tauri::{AppHandle, Emitter, Manager};
 pub const REDACTED: &str = "<REDACTED>";
 
 /// The 4 compose *services* that constitute the perimeter. Container names
-/// are project-prefixed at runtime (e.g. `lobster-trapp_vault-proxy_1`); we
+/// are project-prefixed at runtime (e.g. `opentrapp_vault-proxy_1`); we
 /// filter by `com.docker.compose.service` label so the same code works
 /// regardless of project name.
 const PERIMETER_CONTAINERS: [&str; 4] =
@@ -60,7 +60,7 @@ pub enum TenantState {
     Activating,
     /// Agent container up; bot operational.
     Running,
-    /// User-initiated stop; persisted via `~/.lobster-trapp/paused` marker.
+    /// User-initiated stop; persisted via `~/.opentrapp/paused` marker.
     Paused,
     /// Agent expected up (activated marker present, not paused) but absent.
     Errored,
@@ -147,9 +147,9 @@ impl PerimeterStatus {
 /// on every access.
 pub struct PerimeterStateStore {
     pub status: Mutex<PerimeterStatus>,
-    /// Mirrors `~/.lobster-trapp/paused`. User-initiated stop.
+    /// Mirrors `~/.opentrapp/paused`. User-initiated stop.
     pub paused: RwLock<bool>,
-    /// Mirrors `~/.lobster-trapp/activated`. Set after first successful activation.
+    /// Mirrors `~/.opentrapp/activated`. Set after first successful activation.
     pub activated: RwLock<bool>,
     /// Unix-ms of last successful credential validation; `None` = unverified.
     pub credentials_ok_at: RwLock<Option<u64>>,
@@ -197,7 +197,7 @@ impl PerimeterStateStore {
 
 fn runguard_dir() -> PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
-    PathBuf::from(home).join(".lobster-trapp")
+    PathBuf::from(home).join(".opentrapp")
 }
 
 fn paused_marker_path() -> PathBuf {

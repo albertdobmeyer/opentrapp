@@ -21,7 +21,7 @@ import time
 from dataclasses import dataclass, field
 
 
-PROXY_LOGS_VOLUME = "lobster-trapp_vault-proxy-logs"
+PROXY_LOGS_VOLUME = "opentrapp_vault-proxy-logs"
 LOG_FILE_NAME = "requests.jsonl"
 
 

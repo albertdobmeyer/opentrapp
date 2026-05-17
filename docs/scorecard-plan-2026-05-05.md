@@ -138,14 +138,14 @@ The questionnaire at [bestpractices.dev](https://www.bestpractices.dev/) covers 
 
 | Criterion | Evidence |
 |---|---|
-| Project URL | https://github.com/albertdobmeyer/lobster-trapp |
+| Project URL | https://github.com/albertdobmeyer/opentrapp |
 | Open-source license | `LICENSE` (MIT) |
 | FSF/OSI-approved license | yes (MIT) |
 | Project page lists license | README.md badge row + License section |
 | Documentation: how to install | README.md §"Requirements" + §"Installation" |
 | Documentation: getting started | README.md §"Capabilities" + GitHub Releases page |
 | Documentation: how to contribute | `CONTRIBUTING.md` |
-| Project tracks bugs | https://github.com/albertdobmeyer/lobster-trapp/issues |
+| Project tracks bugs | https://github.com/albertdobmeyer/opentrapp/issues |
 | Code of Conduct published | `CODE_OF_CONDUCT.md` |
 | Welcoming community | `CODE_OF_CONDUCT.md` (adapted from Contributor Covenant 2.1) |
 
@@ -153,7 +153,7 @@ The questionnaire at [bestpractices.dev](https://www.bestpractices.dev/) covers 
 
 | Criterion | Evidence |
 |---|---|
-| Public repository | https://github.com/albertdobmeyer/lobster-trapp |
+| Public repository | https://github.com/albertdobmeyer/opentrapp |
 | Version-control system | Git (GitHub) |
 | Unique version IDs | tags follow SemVer (`v0.3.0`, `v0.3.1`); `RELEASING.md` §"Versioning" |
 | Release notes published | `docs/release-notes-v0.3.0.md`, `docs/release-notes-v0.3.1.md` |
@@ -206,14 +206,14 @@ The questionnaire at [bestpractices.dev](https://www.bestpractices.dev/) covers 
 
 | Criterion | Evidence |
 |---|---|
-| Project sites use HTTPS | https://lobster-trapp.com (GitHub Pages) |
+| Project sites use HTTPS | https://opentrapp.com (GitHub Pages) |
 | Multi-factor authentication on the maintainer account | yes (GitHub enforces 2FA for maintainers of public repos with submitted attestation as of 2024-Q4) |
 
 ### Filling out the form
 
 1. Sign in at https://www.bestpractices.dev/ with GitHub.
 2. Click **Get badges** → **Submit a New Project**.
-3. Repository URL: `https://github.com/albertdobmeyer/lobster-trapp`.
+3. Repository URL: `https://github.com/albertdobmeyer/opentrapp`.
 4. The form auto-detects most criteria from the repository contents. Confirm each, paste the relevant URL from the table above when asked for evidence, and use a one-line written justification when no URL applies (e.g. "MFA is enforced on the maintainer's GitHub account").
 5. Save progress every few criteria. The form auto-saves but explicit saves are insurance.
 6. On submit, the project is awarded the **Passing** badge if all required criteria are met.

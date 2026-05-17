@@ -143,8 +143,8 @@ Sequence after both steps validate:
 2. `podman compose up -d --force-recreate vault-proxy` — proxy reads env at process start; SIGHUP only reloads allowlist per [`vault-proxy.py:49`](../../../components/openclaw-vault/proxy/vault-proxy.py). `--force-recreate` is the correct primitive. Brief restart (~2s) is invisible because the agent isn't running yet.
 3. `podman compose up -d vault-agent`
 4. Write marker files:
-   - `~/.lobster-trapp/activated` (file presence; no content)
-   - `~/.lobster-trapp/credentials-ok` (unix-millis timestamp)
+   - `~/.opentrapp/activated` (file presence; no content)
+   - `~/.opentrapp/credentials-ok` (unix-millis timestamp)
 5. Update settings store: `wizardCompleted: true` (for legacy compatibility; the marker files are the new source of truth)
 6. Watchdog observes `vault-agent` running; emits `(ShellReady, Running)` state
 7. Modal closes; home screen shows "Your assistant is running safely" with **Open Telegram** primary action
@@ -170,8 +170,8 @@ After Phase 3 has succeeded once (markers + `.env` present, `credentials-ok < 7 
 5. Karen sees the home screen go straight to "running safely"
 
 The wizard re-shows only when:
-- `~/.lobster-trapp/activated` is missing (first time, or user reset)
-- `~/.lobster-trapp/credentials-ok` is missing (last activation failed key validation)
+- `~/.opentrapp/activated` is missing (first time, or user reset)
+- `~/.opentrapp/credentials-ok` is missing (last activation failed key validation)
 - `credentials-ok` is older than 7 days → run a one-token live-ping; if 401, clear marker and open wizard
 - Anthropic returns 401 during a real request (proxy logs it; Tauri command clears the marker; next launch goes through wizard)
 - User clicks "Reset assistant" in Preferences
@@ -182,7 +182,7 @@ The wizard re-shows only when:
 
 The activation modal includes a small disclosure line beneath the Anthropic input:
 
-> Your key is stored in plain text on this computer at `~/lobster-trapp/.env`. We're working on encrypted storage for a future release.
+> Your key is stored in plain text on this computer at `~/opentrapp/.env`. We're working on encrypted storage for a future release.
 
 Honest, non-alarming. Honesty here builds trust more than vague reassurance.
 

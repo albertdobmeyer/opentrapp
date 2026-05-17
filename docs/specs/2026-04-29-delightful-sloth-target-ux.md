@@ -93,12 +93,12 @@ Forbidden: "Component vault-agent transitioned to state RUNNING," "Health check 
 
 | State | When | Hero illustration / copy | Primary action | Secondary action |
 |---|---|---|---|---|
-| `running_safely` | All health probes green; perimeter up; key valid | Calm lobster, steady glow. "Your assistant is running safely." | "Open Telegram" | "Pause" |
-| `paused` | User-initiated pause; containers stopped on purpose | Sleeping lobster. "You paused your assistant. It's not running right now." | "Wake it up" | — |
-| `recovering` | Watchdog is restarting one or more containers | Lobster with wrench. "Your assistant is taking a moment — back in a few seconds." | (disabled) "Try to fix" | "Show details" |
-| `error_perimeter` | Perimeter down, repeated restart failures | Lobster with bandage. "Your assistant ran into trouble starting up. Let's try together." | "Try to fix" | "Get help" |
-| `error_key` | API key missing / invalid / no credit | Lobster waiting. "Your assistant needs an updated key to think." | "Update key" (→ Preferences) | — |
-| `not_setup` | Wizard not completed yet (first launch fallback) | Welcoming lobster. "Let's get your assistant set up." | "Start setup" (→ /setup) | — |
+| `running_safely` | All health probes green; perimeter up; key valid | Calm logo, steady glow. "Your assistant is running safely." | "Open Telegram" | "Pause" |
+| `paused` | User-initiated pause; containers stopped on purpose | Sleeping logo. "You paused your assistant. It's not running right now." | "Wake it up" | — |
+| `recovering` | Watchdog is restarting one or more containers | Logo with wrench. "Your assistant is taking a moment — back in a few seconds." | (disabled) "Try to fix" | "Show details" |
+| `error_perimeter` | Perimeter down, repeated restart failures | Logo with bandage. "Your assistant ran into trouble starting up. Let's try together." | "Try to fix" | "Get help" |
+| `error_key` | API key missing / invalid / no credit | Logo waiting. "Your assistant needs an updated key to think." | "Update key" (→ Preferences) | — |
+| `not_setup` | Wizard not completed yet (first launch fallback) | Welcoming logo. "Let's get your assistant set up." | "Start setup" (→ /setup) | — |
 
 **Rule for P11 verification:** A `Pause` from this list always succeeds; a `Wake it up` always either succeeds or transitions to `error_perimeter` with one clear action.
 
@@ -112,7 +112,7 @@ Forbidden: "Component vault-agent transitioned to state RUNNING," "Health check 
 |---|---|---|---|
 | **Threat-blocked** | vault-proxy logs an `EXFIL_BLOCKED` or `BLOCKED` event AND the request was initiated by the agent (not by Karen) AND the destination would have been observably dangerous | "Blocked an attempt to upload your address book — your assistant won't be allowed to do that." | OS notification (sticky 8s) + persistent in-app banner on Home until dismissed |
 | **State-recovery** | Perimeter went `error_perimeter` and recovered to `running_safely`; OR a single container had to be restarted ≥2× in 5 minutes | "Your assistant came back online." | OS notification (transient 4s); no in-app banner |
-| **Action-required** | API key invalid OR Anthropic credit balance error returned by upstream OR the OS denied a permission Lobster-TrApp needs (notification, autostart) | "Your assistant key isn't working — open Preferences to update." | OS notification (sticky) + in-app banner with `Update key` button |
+| **Action-required** | API key invalid OR Anthropic credit balance error returned by upstream OR the OS denied a permission OpenTrApp needs (notification, autostart) | "Your assistant key isn't working — open Preferences to update." | OS notification (sticky) + in-app banner with `Update key` button |
 
 **Forbidden** (must never fire):
 
@@ -120,7 +120,7 @@ Forbidden: "Component vault-agent transitioned to state RUNNING," "Health check 
 - Health-probe pass/fail transitions
 - Anything with a component name (`vault-agent`, `clawhub-forge`)
 - Anything with a numerical diagnostic (`exit code 137`, `HTTP 503`)
-- Anything Karen can't act on within Lobster-TrApp's UI
+- Anything Karen can't act on within OpenTrApp's UI
 
 **Default volume:** All three trigger categories ON by default. Karen can disable each individually in Preferences (`10-preferences.md` section 3) but the defaults respect P12 (the app earns the right to speak by being mostly silent).
 
@@ -185,7 +185,7 @@ No notification unless recovery takes >60s. Karen's Telegram chat resumes seamle
 
 Each moment defines: target score (≥, where the rubric goes), cardinal experiences (what Karen feels), surfaces (which files own this), and acceptance signals (how Pass 8 verifies).
 
-### Moment 1 — Discovery (lobster-trapp.com)
+### Moment 1 — Discovery (opentrapp.com)
 
 **Target score:** ≥8.5/10 (was 6.2 in Pass 1; landing page was the lowest-scoring user-facing surface).
 

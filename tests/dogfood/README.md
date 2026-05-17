@@ -1,6 +1,6 @@
 # Dogfood Test Rig — Full Karen Arc
 
-A test rig that simulates a non-technical user ("Karen") downloading the Lobster-TrApp desktop app, going through the wizard, and getting jobs done by chatting with the OpenClaw Telegram bot. Runs from a source build today; will run against a real binary once `v0.3.2` ships.
+A test rig that simulates a non-technical user ("Karen") downloading the OpenTrApp desktop app, going through the wizard, and getting jobs done by chatting with the OpenClaw Telegram bot. Runs from a source build today; will run against a real binary once `v0.3.2` ships.
 
 ## What's here
 

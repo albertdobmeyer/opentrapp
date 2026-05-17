@@ -5,7 +5,7 @@
 
 ## Context
 
-Today's mental model — encoded in [`app/src/pages/Setup.tsx`](../../../app/src/pages/Setup.tsx) gating all first-run users behind a `<Navigate to="/setup" replace/>` redirect at [`app/src/App.tsx:114`](../../../app/src/App.tsx) — is *Lobster-TrApp = OpenClaw installer with a wizard*. Install ends with the perimeter up and the agent running.
+Today's mental model — encoded in [`app/src/pages/Setup.tsx`](../../../app/src/pages/Setup.tsx) gating all first-run users behind a `<Navigate to="/setup" replace/>` redirect at [`app/src/App.tsx:114`](../../../app/src/App.tsx) — is *OpenTrApp = OpenClaw installer with a wizard*. Install ends with the perimeter up and the agent running.
 
 This contradicts the architecture's own vocabulary. From [`CLAUDE.md`](../../../CLAUDE.md) §1: *"The application is the perimeter orchestrator: it composes the four containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations."* From [`config/orchestrator-workflows.yml`](../../../config/orchestrator-workflows.yml) existing as a top-level cross-component layer: the codebase already thinks of itself as a *host that composes tenants*. The wizard-as-entry has been working *against* that architecture, not with it.
 
@@ -46,7 +46,7 @@ Today's happy path. Hero status shows "running safely" with three affordances: *
 The bot's *first* message to Karen on Telegram is its tutorial: warm welcome + three tappable example prompts as an inline keyboard. See [`05-bot-first-message.md`](05-bot-first-message.md).
 
 ### Subsequent activations are one-click
-After Phase 3 has succeeded once, marker files persist. Subsequent app launches: install (already done) → bootstrap (idempotent, fast) → if `~/.lobster-trapp/activated` and `credentials-ok < 7 days old`: bring up agent automatically, no wizard. See [`06-migration.md`](06-migration.md).
+After Phase 3 has succeeded once, marker files persist. Subsequent app launches: install (already done) → bootstrap (idempotent, fast) → if `~/.opentrapp/activated` and `credentials-ok < 7 days old`: bring up agent automatically, no wizard. See [`06-migration.md`](06-migration.md).
 
 ## Refactor / rebuild / new (honest categorization)
 

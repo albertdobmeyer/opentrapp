@@ -12,10 +12,10 @@ The full criteria are at [github.com/coreinfrastructure/best-practices-badge](ht
 
 | Field | Value |
 |---|---|
-| Project name | Lobster-TrApp |
+| Project name | OpenTrApp |
 | Description | A desktop application that runs the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer, with a Telegram interface for chat. |
-| Project URL | https://github.com/albertdobmeyer/lobster-trapp |
-| Project home page | https://lobster-trapp.com |
+| Project URL | https://github.com/albertdobmeyer/opentrapp |
+| Project home page | https://opentrapp.com |
 | License | MIT |
 
 ## Basic project information
@@ -27,7 +27,7 @@ The full criteria are at [github.com/coreinfrastructure/best-practices-badge](ht
 
 ## Change control
 
-- **`repo_public`:** Yes. `git@github.com:albertdobmeyer/lobster-trapp.git`.
+- **`repo_public`:** Yes. `git@github.com:albertdobmeyer/opentrapp.git`.
 - **`repo_track`:** Yes. Git, every commit traceable.
 - **`repo_distributed`:** Yes. Git is distributed.
 - **`version_unique`:** Yes. Tags are immutable per `RELEASING.md` §"Yanked releases".

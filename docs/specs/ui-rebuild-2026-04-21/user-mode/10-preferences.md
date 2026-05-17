@@ -55,7 +55,7 @@ Expose **only** the settings Karen cares about. Everything technical lives in de
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │ ⚡ Startup                                              │ │
 │  │                                                        │ │
-│  │ ☑ Start Lobster-TrApp when I turn on my computer       │ │
+│  │ ☑ Start OpenTrApp when I turn on my computer       │ │
 │  │ ☑ Keep it running in the background                    │ │
 │  └────────────────────────────────────────────────────────┘ │
 │                                                              │
@@ -79,7 +79,7 @@ Expose **only** the settings Karen cares about. Everything technical lives in de
 │  │ ☐ Enable Advanced Mode                                 │ │
 │  └────────────────────────────────────────────────────────┘ │
 │                                                              │
-│  Lobster-TrApp v0.2.0                                        │
+│  OpenTrApp v0.2.0                                        │
 │  Made with care for people who want AI without the stress.   │
 │                                                              │
 └──────────────────────────────────────────────────────────────┘
@@ -121,14 +121,14 @@ When user changes the limit:
 Three toggles, default all ON. Each toggle reflects the Tauri permission status; if system notifications aren't permitted, show:
 
 ```
-⚠️ Lobster-TrApp needs permission to send notifications.
+⚠️ OpenTrApp needs permission to send notifications.
    [ Grant permission ]
 ```
 
 ### 4. Startup
 
 Two toggles:
-- "Start Lobster-TrApp when I turn on my computer" — uses `tauri-plugin-autostart`
+- "Start OpenTrApp when I turn on my computer" — uses `tauri-plugin-autostart`
 - "Keep it running in the background" — controls close-to-tray behavior
 
 ### 5. Re-run setup
@@ -191,11 +191,11 @@ Minor changes (slider positions) update silently.
   "section.notifications.security": "Security alerts",
   "section.notifications.spending": "Spending warnings",
   "section.notifications.updates": "App updates",
-  "section.notifications.permissionNeeded": "Lobster-TrApp needs permission to send notifications.",
+  "section.notifications.permissionNeeded": "OpenTrApp needs permission to send notifications.",
   "section.notifications.grantBtn": "Grant permission",
 
   "section.startup.title": "Startup",
-  "section.startup.autostart": "Start Lobster-TrApp when I turn on my computer",
+  "section.startup.autostart": "Start OpenTrApp when I turn on my computer",
   "section.startup.background": "Keep it running in the background",
 
   "section.resetup.title": "Re-run setup",
@@ -211,7 +211,7 @@ Minor changes (slider positions) update silently.
   "section.advanced.warning": "Most people won't need this.",
   "section.advanced.toggle": "Enable Advanced Mode",
 
-  "footer.version": "Lobster-TrApp v{version}",
+  "footer.version": "OpenTrApp v{version}",
   "footer.tagline": "Made with care for people who want AI without the stress."
 }
 ```

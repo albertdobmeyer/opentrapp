@@ -141,17 +141,17 @@ Every failure in the app flows through this cascade:
 1. **Copy diagnostic info button** — primary action. Generates a redacted bundle (see below) and copies to clipboard. Toast: "Copied! Now paste it in an email or GitHub issue."
 
 2. **Email support link** — opens `mailto:` with:
-   - `To: support@lobster-trapp.com` (or equivalent)
-   - `Subject: Lobster-TrApp needs help [{app_version}]`
+   - `To: support@opentrapp.com` (or equivalent)
+   - `Subject: OpenTrApp needs help [{app_version}]`
    - `Body: [Paste the copied diagnostic info here]\n\nWhat were you trying to do when this happened?`
 
-3. **GitHub issue link** — opens `https://github.com/albertdobmeyer/lobster-trapp/issues/new?template=bug.md&title=...` pre-filled with app version.
+3. **GitHub issue link** — opens `https://github.com/albertdobmeyer/opentrapp/issues/new?template=bug.md&title=...` pre-filled with app version.
 
 4. **"Show technical details" toggle** — collapsed by default. When expanded, shows:
    - Error message (one-line)
    - Component involved
    - Timestamp
-   - Link to the full diagnostic bundle file (saved to `~/.lobster-trapp/diagnostics/{timestamp}.txt`)
+   - Link to the full diagnostic bundle file (saved to `~/.opentrapp/diagnostics/{timestamp}.txt`)
 
 5. **"Try Again" link** at the bottom — always available as a fallback (maybe it's transient).
 
@@ -164,7 +164,7 @@ A text file containing everything a support person needs to understand the issue
 ### Contents
 
 ```
-=== LOBSTER-TRAPP DIAGNOSTICS ===
+=== LOGO-TRAPP DIAGNOSTICS ===
 Generated: 2026-04-21T15:30:00Z
 App version: 0.2.0
 OS: Linux Ubuntu 24.04.2 LTS
@@ -348,7 +348,7 @@ Every Level 2 and Level 3 failure screen includes a collapsible "Show technical 
   make: *** [Makefile:21: setup] Error 137
 
   Full logs saved to:
-  ~/.lobster-trapp/diagnostics/2026-04-21_15-29.txt
+  ~/.opentrapp/diagnostics/2026-04-21_15-29.txt
 ```
 
 Not a stack trace. A structured, human-readable summary that a tech-savvy user can copy-paste.

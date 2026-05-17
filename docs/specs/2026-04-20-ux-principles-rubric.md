@@ -1,7 +1,7 @@
 # UX Principles Rubric for Non-Technical Users
 
 **Date:** 2026-04-20 (extended 2026-04-29 with P11–P13 + placeholder-page scores per Pass 3 of the Delightful Sloth phase)
-**Scope:** The Lobster-TrApp desktop GUI + the Telegram first-chat surface (added in Pass 1.5)
+**Scope:** The OpenTrApp desktop GUI + the Telegram first-chat surface (added in Pass 1.5)
 **Purpose:** A scoring tool, not a manifesto. Use this to audit screens and prioritize rebuilds.
 
 ---

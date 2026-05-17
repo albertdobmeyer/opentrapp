@@ -11,7 +11,7 @@
 
 ## Pre-run checklist
 
-- [ ] Legacy containers stopped (`podman compose down` from lobster-trapp root)
+- [ ] Legacy containers stopped (`podman compose down` from opentrapp root)
 - [ ] App launched fresh (v0.4 bootstrap, compose-generated container names)
 - [ ] LTrappBot token paired through activation modal
 - [ ] Anthropic API key confirmed valid
@@ -141,7 +141,7 @@ _Stage: place `injection-trap.txt` in workspace with embedded instruction. Ask a
 ### Notes
 - Did any state cause the user to feel anxious / blamed?
 - Did any state require developer-jargon to understand?
-- Did the marker file `~/.lobster-trapp/paused` survive C7's app-restart?
+- Did the marker file `~/.opentrapp/paused` survive C7's app-restart?
 
 ---
 

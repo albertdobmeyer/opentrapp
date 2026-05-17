@@ -17,8 +17,8 @@ pytestmark = pytest.mark.fsread
 HOST_SENSITIVE_PATHS = [
     "/home/albertd/.ssh/id_rsa",
     "/home/albertd/.ssh/authorized_keys",
-    "/home/albertd/Repositories/lobster-trapp/.env",
-    "/home/albertd/Repositories/lobster-trapp/.env.test",
+    "/home/albertd/Repositories/opentrapp/.env",
+    "/home/albertd/Repositories/opentrapp/.env.test",
     "/etc/shadow",  # root-only on host; also doesn't exist in container
 ]
 

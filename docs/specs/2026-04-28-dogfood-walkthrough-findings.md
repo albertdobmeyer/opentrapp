@@ -11,7 +11,7 @@
 
 ## Methodology
 
-I impersonate a non-technical end-user — call them **Karen** — who has read on Reddit about a powerful new AI agent (OpenClaw) and the security risks around it. She wants to use it for productivity (drafting emails, planning trips, summarizing articles, organizing files) but is scared of the threats. She lands on lobster-trapp.com hoping for a safer way in.
+I impersonate a non-technical end-user — call them **Karen** — who has read on Reddit about a powerful new AI agent (OpenClaw) and the security risks around it. She wants to use it for productivity (drafting emails, planning trips, summarizing articles, organizing files) but is scared of the threats. She lands on opentrapp.com hoping for a safer way in.
 
 For each user moment, I walk through as Karen would, then:
 
@@ -31,7 +31,7 @@ Severity legend:
 
 | # | Moment | Status | Aggregate score |
 |---|---|---|---|
-| 1 | Discovery (lobster-trapp.com → pitch → download) | DOCUMENTED | 6.2/10 |
+| 1 | Discovery (opentrapp.com → pitch → download) | DOCUMENTED | 6.2/10 |
 | 2 | First-run install + wizard | DOCUMENTED | 9.5/10 |
 | 3 | First chat (Telegram pairing → first message → response) | DOCUMENTED | 5.5/10 |
 | 4 | Returning use (close laptop → reopen → app already running) | DOCUMENTED | ~4.8/10 |
@@ -46,16 +46,16 @@ Severity legend:
 
 # Moment 1 — Discovery
 
-**Surface:** `docs/index.html` (the landing page at lobster-trapp.com — Hetzner deploys this static file directly).
+**Surface:** `docs/index.html` (the landing page at opentrapp.com — Hetzner deploys this static file directly).
 
-**Karen's mental state:** Has read about OpenClaw and is intrigued. Has also read scary threads about AI agents going rogue, leaking keys, etc. Lands on lobster-trapp.com via a link from a comment thread. She has 60 seconds to decide whether to download.
+**Karen's mental state:** Has read about OpenClaw and is intrigued. Has also read scary threads about AI agents going rogue, leaking keys, etc. Lands on opentrapp.com via a link from a comment thread. She has 60 seconds to decide whether to download.
 
 ## Walkthrough notes (Karen's eye)
 
 ### Above the fold (hero, lines 597–632)
 
 - **Headline** (`docs/index.html:603`) — "Your own AI assistant, safe on your computer." → ✅ instantly clear, hits the value prop. Karen reads it and gets it.
-- **Sub-headline** (`docs/index.html:605-607`) — "Get a personal AI assistant you control from Telegram — one that runs on your computer, not in the cloud. Lobster-TrApp keeps it safely separated from your personal files, passwords, and accounts. **No terminal required.**" → ✅ "No terminal required" is the right phrase to land early. Reassuring.
+- **Sub-headline** (`docs/index.html:605-607`) — "Get a personal AI assistant you control from Telegram — one that runs on your computer, not in the cloud. OpenTrApp keeps it safely separated from your personal files, passwords, and accounts. **No terminal required.**" → ✅ "No terminal required" is the right phrase to land early. Reassuring.
 - **Hero badge** (`docs/index.html:600`) — "v0.2.0 — Hardened release" → ⚠️ **P2:** version numbers are developer culture; "Hardened release" is jargon. Karen doesn't know what hardening means in software. She glosses past it but it gives a faint "this is a tech tool" vibe.
 - **Trust list** (`docs/index.html:626-631`) — four bullet items:
   - "Agent can't touch your files" → ⚠️ **P1, Principle 6:** "agent" is the inconsistency. The headline says "assistant"; this says "agent." Karen registers the mismatch subliminally. Pick one — recommend "assistant" everywhere user-facing.
@@ -88,7 +88,7 @@ This is the dense one. The intent — show the security architecture as a one-di
 - **Card 3 H3 "Network Monitor"** (line 782) — copy mentions "the network is containerized and ready" (line 784) → ⚠️ **P0, Principle 1:** "containerized" is plumbing leaking through. Rewrite: "Coming soon — the safety system for the network is already in place."
 - **Ecosystem flow diagram** (lines 791–839):
   - The diagram nodes are labelled **Forge, Pioneer, Vault** (lines 804, 812, 820) — the **internal codenames** of the three sub-repos. → 🚨 **P0, Principle 6:** This is the highest-severity leak on the page. The product identity spec (`docs/specs/2026-04-19-product-identity-spec.md:150-167`) explicitly maps these to "Skill Store / Agent Network / My Assistant" for users. The landing page should use the user labels in the diagram. Right now, anyone hovering on the page sees the dev codenames. Karen reads "Forge, Pioneer, Vault" and either gets confused or files this product as "for developers."
-  - The "You → Forge → Pioneer → Vault → Lobster-TrApp wrapper" flow is also subtly off the actual security architecture. The real flow is: You command the assistant in Vault; Vault talks via Proxy; skills come through Forge into Vault; feeds come through Pioneer into Vault. The straight-line "stages" arrangement implies a linear pipeline that isn't quite the architecture. Worth revisiting in Pass 2 (aspirational spec) for accuracy AND user-friendliness.
+  - The "You → Forge → Pioneer → Vault → OpenTrApp wrapper" flow is also subtly off the actual security architecture. The real flow is: You command the assistant in Vault; Vault talks via Proxy; skills come through Forge into Vault; feeds come through Pioneer into Vault. The straight-line "stages" arrangement implies a linear pipeline that isn't quite the architecture. Worth revisiting in Pass 2 (aspirational spec) for accuracy AND user-friendliness.
 
 ### How It Works (lines 845–869)
 
@@ -100,13 +100,13 @@ This is the dense one. The intent — show the security architecture as a one-di
 
 ### Download section (lines 874–911)
 
-- **Title** (line 876) — "Get Lobster-TrApp for your platform" → ✅ clear.
+- **Title** (line 876) — "Get OpenTrApp for your platform" → ✅ clear.
 - **Subtitle** (line 877) — "All installers are built from source in CI and signed. **Requires Podman or Docker installed on your system.**" → 🚨 **P0, Principles 1 + 3 + 8:**
   - "Built from source in CI and signed" → dev jargon Karen doesn't parse.
   - "Requires Podman or Docker installed on your system" → **THIS IS THE BIGGEST FRICTION POINT ON THE LANDING PAGE.** Karen has no idea what Podman or Docker is. She googles "Podman" and lands on a complex documentation site that asks her to use the command line. She bounces.
   - **This single line negates "No terminal required" said twice earlier.** The whole "no terminal" promise of the page collapses at the download moment.
   - **Recommended fix:** Either bundle Podman/Docker with the installer (the setup wizard already detects it; we should also offer to install it for her — Pass 5 territory), OR rewrite this line to be reassuring instead of alarming: "If your computer doesn't have a 'sandbox runner' yet, the setup wizard will install one for you in one click."
-- **Linux/macOS/Windows cards** (lines 879–911) — three platforms, each with download links → ✅ structurally fine, BUT all the links currently point to `https://github.com/albertdobmeyer/lobster-trapp/releases/latest` which doesn't have a release object yet (per Phase 1 Plan-mode finding). Until Pass 8 produces the actual binary release, every download link is a dead end. → 🚨 **P0:** can't ship without resolving this.
+- **Linux/macOS/Windows cards** (lines 879–911) — three platforms, each with download links → ✅ structurally fine, BUT all the links currently point to `https://github.com/albertdobmeyer/opentrapp/releases/latest` which doesn't have a release object yet (per Phase 1 Plan-mode finding). Until Pass 8 produces the actual binary release, every download link is a dead end. → 🚨 **P0:** can't ship without resolving this.
 
 ## Score against rubric (Moment 1 — Landing page)
 
@@ -166,10 +166,10 @@ Plus support: `WizardProgress.tsx`, `HowToModal.tsx`, `app/src/lib/errors.ts` (`
 ## 2.1 — Welcome screen (`WelcomeStep.tsx`)
 
 **Karen's read:**
-- Title: "Welcome to Lobster-TrApp" — ✅ greeting.
+- Title: "Welcome to OpenTrApp" — ✅ greeting.
 - Body: "Your personal AI assistant, safe on your computer. Let's get you set up — it takes about 3 minutes." — ✅ value prop + concrete time estimate.
 - "Get Started" button auto-focused — ✅ great keyboard-accessibility detail (`WelcomeStep.tsx:18-20`).
-- Friendly hand-rolled lobster + shield illustration — ✅ on-brand.
+- Friendly hand-rolled logo + shield illustration — ✅ on-brand.
 - "Already set up? Skip to dashboard" only shows when `wizardCompleted` is already true — ✅ progressive disclosure for re-entries.
 - Code comment at line 65-66: "*Placeholder visual standard for E.2.1; a real unDraw asset replaces this in E.4*" — internal reference, not user-visible. Note: this means the team has plans to swap to professional art; for v0.2.x ship the hand-rolled is fine.
 
@@ -313,7 +313,7 @@ This is rubric Principle 3 done right.
 - Secondary CTA "Go to dashboard" — ✅ allows skipping past Telegram opening.
 - "💡 Tip: You can ask your assistant things like 'What's the weather?' or 'Plan my Tuesday.'" (`ReadyStep.tsx:94-97`) — ✅ practical example prompts.
 - Auto-advance to dashboard after 5s with a "Stay here" cancel button (`ReadyStep.tsx:100-114`) — ✅ great UX: gives agency without trapping Karen on a "click to continue" screen.
-- Hand-rolled celebration SVG (lobster + confetti) — ✅ on-brand.
+- Hand-rolled celebration SVG (logo + confetti) — ✅ on-brand.
 
 **Score:**
 
@@ -390,26 +390,26 @@ This isn't a friction in Moment 2's UI — it's a friction in Moment 4 caused by
 
 # Moment 3 — First chat (Telegram pairing → first message → response)
 
-**Surface:** External — Karen leaves the lobster-trapp app and goes to Telegram.
+**Surface:** External — Karen leaves the opentrapp app and goes to Telegram.
 
 **Karen's path:**
 1. Clicks "Open Telegram" on `ReadyStep.tsx:70-78` → opens `t.me/<botname>` in default browser/Telegram app.
 2. Taps "Start" in Telegram → sends `/start` to her bot.
 3. Bot replies. (First-reply content lives in the `openclaw-vault` submodule — out of parent-repo scope. Bot uses `anthropic/claude-haiku-4-5` per `components/openclaw-vault/config/split-shell.json5:64-69`. No custom system prompt visible in this repo, so Karen sees OpenClaw's default greeting whatever that is.)
-4. `channels.telegram.dmPolicy: "pairing"` (`tool-manifest.yml`) — means Karen has to PAIR her Telegram chat with the bot before it will respond to her. **This is undocumented friction Karen will hit on first contact.** The Lobster-TrApp app does not warn her she'll need to pair.
+4. `channels.telegram.dmPolicy: "pairing"` (`tool-manifest.yml`) — means Karen has to PAIR her Telegram chat with the bot before it will respond to her. **This is undocumented friction Karen will hit on first contact.** The OpenTrApp app does not warn her she'll need to pair.
 
 ## Frictions
 
-- 🚨 **P0, Principle 3:** Telegram URL prefetch failure mode (already named in Moment 2.3). If `deriveTelegramBotUrl()` returns null, "Open Telegram" sends Karen to `https://telegram.org` (the *generic* Telegram landing page), not her bot. She has to manually search Telegram for her bot's username — but she may not remember it. Lobster-TrApp doesn't show her bot's username anywhere in the UI as a fallback.
-- 🚨 **P0, Principle 8:** No paired-vs-unpaired guidance. Karen taps Start, bot might require pairing (depending on OpenClaw config), and there's no signal in lobster-trapp telling her this is normal or how to recover.
-- ⚠️ **P1, Principle 3:** If Karen's API key is invalid or out of credit, the bot replies with whatever OpenClaw's error template says — entirely outside our control. The Anthropic billing gotcha noted in `project_decisions.md:115-124` (workspace spend limit ≠ credit purchase) is a real failure mode here. Lobster-TrApp could pre-warn Karen at install time by doing a 1-call ping to the API — but doesn't.
+- 🚨 **P0, Principle 3:** Telegram URL prefetch failure mode (already named in Moment 2.3). If `deriveTelegramBotUrl()` returns null, "Open Telegram" sends Karen to `https://telegram.org` (the *generic* Telegram landing page), not her bot. She has to manually search Telegram for her bot's username — but she may not remember it. OpenTrApp doesn't show her bot's username anywhere in the UI as a fallback.
+- 🚨 **P0, Principle 8:** No paired-vs-unpaired guidance. Karen taps Start, bot might require pairing (depending on OpenClaw config), and there's no signal in opentrapp telling her this is normal or how to recover.
+- ⚠️ **P1, Principle 3:** If Karen's API key is invalid or out of credit, the bot replies with whatever OpenClaw's error template says — entirely outside our control. The Anthropic billing gotcha noted in `project_decisions.md:115-124` (workspace spend limit ≠ credit purchase) is a real failure mode here. OpenTrApp could pre-warn Karen at install time by doing a 1-call ping to the API — but doesn't.
 - ⚠️ **P2:** No "first time?" hint card on the Ready screen explaining what to type in Telegram. (Existing tip says "What's the weather?" or "Plan my Tuesday" but doesn't explain the `/start` mechanic.)
 
 ## Score (Moment 3)
 
 | Principle | Score | Notes |
 |---|---|---|
-| P3 | **5/10** | Multiple failure modes (no bot URL, unpaired bot, invalid key, no credit) and lobster-trapp gives Karen no actionable guidance for any. |
+| P3 | **5/10** | Multiple failure modes (no bot URL, unpaired bot, invalid key, no credit) and opentrapp gives Karen no actionable guidance for any. |
 | P8 | **6/10** | Ready screen mentions Telegram but doesn't prepare Karen for the pairing or `/start` mechanics. |
 
 **Verdict:** Moment 3 has fewer screens to score but its failure modes are all silent — they look like the bot is broken, not like there's a recoverable issue. Worth a Pass 7 polish for at least the prefetch-failure case (show bot username as a fallback when URL derivation fails) and a small "How to talk to your bot" hint on the Ready screen.
@@ -489,9 +489,9 @@ A "friendlier placeholder" replaces "Coming in Phase E.2.X" + spec path with som
 
 ### Moment 4 — Returning use
 
-Karen reopens lobster-trapp after closing it. App routes her to `/` (`Home`). She sees the placeholder. She has no idea if her assistant is running, no status indicator, no "your assistant is healthy" reassurance.
+Karen reopens opentrapp after closing it. App routes her to `/` (`Home`). She sees the placeholder. She has no idea if her assistant is running, no status indicator, no "your assistant is healthy" reassurance.
 
-This compounds with the **Phase 1 lifecycle finding**: containers might or might not be up depending on whether Karen rebooted, killed `podman`, etc. Lobster-TrApp doesn't surface this state — Home is a placeholder, no hero status card. Karen tests the assistant via Telegram, finds it's silent, doesn't know why.
+This compounds with the **Phase 1 lifecycle finding**: containers might or might not be up depending on whether Karen rebooted, killed `podman`, etc. OpenTrApp doesn't surface this state — Home is a placeholder, no hero status card. Karen tests the assistant via Telegram, finds it's silent, doesn't know why.
 
 - 🚨 **P0:** Returning-user state has zero feedback. Compounded by lifecycle gap.
 
@@ -577,7 +577,7 @@ The specs exist. The infrastructure exists (vault-proxy logs, forge scan, use-ca
 1. Karen has app open, perimeter running.
 2. Karen's laptop battery dies. App crashes. Containers stay up (per Phase 1 finding).
 3. Karen reboots laptop. Podman doesn't auto-restart on boot by default.
-4. Karen reopens lobster-trapp. App auto-routes to `/` (Home placeholder). No status indicator.
+4. Karen reopens opentrapp. App auto-routes to `/` (Home placeholder). No status indicator.
 5. Karen messages bot via Telegram. Silent — bot is offline because containers aren't running.
 6. Karen has no recovery path within the app.
 
@@ -651,7 +651,7 @@ I recommend **Option B**: Home is the landing-after-wizard, Discover is what unb
 
 - **2026-04-28 (early)** — Moment 1 (Discovery / landing page) walked from code only. Findings above. Notable: landing page is currently the lowest-scoring user-facing surface in the product (~6.2/10), worse than the wizard.
 - **2026-04-28 (mid)** — Moment 2 (Wizard) walked from code. The wizard is the strongest user-facing surface in the product. Connect step at 9.4 (rubric had it 7.7 — caught up via shipping). Install step at 8.8. ~3 P0s remain: MissingRuntime card "sudo apt install" jargon, internal codenames in technical log, "Podman or Docker" naming.
-- **2026-04-28 (mid)** — Moment 3 (First chat) walked from code. External surface (Telegram) but Lobster-TrApp's handoff to Telegram has multiple silent-failure modes (URL prefetch, pairing, key invalid, no credit). No actionable guidance in any.
+- **2026-04-28 (mid)** — Moment 3 (First chat) walked from code. External surface (Telegram) but OpenTrApp's handoff to Telegram has multiple silent-failure modes (URL prefetch, pairing, key invalid, no credit). No actionable guidance in any.
 - **2026-04-28 (late)** — Moments 4-7 walked from code. **CRITICAL FINDING:** all 5 user-mode pages and all 10 dev-mode pages are placeholders rendering "Coming in Phase E.2.X" with monospace `docs/specs/...` paths visible to user. This was not in the 2026-04-20 rubric scoring. Dramatically expands Pass 6 scope.
 - **2026-04-28 (late)** — Moment 8 (Crash & recovery) consolidated from Phase 1 lifecycle audit findings. Pass 4 closes the architectural gap; Pass 7 needs to add the recovery UI.
 

@@ -9,6 +9,7 @@
 //! is decided by `auto_activate::after_shell_ready` based on marker files.
 
 pub mod auto_activate;
+pub mod migrate_from_lobster_trapp;
 
 use std::path::{Path, PathBuf};
 use std::process::Command as StdCommand;
@@ -245,7 +246,7 @@ fn images_already_built(root: &Path, runtime: &str) -> bool {
         .file_name()
         .and_then(|n| n.to_str())
         .map(|s| s.to_lowercase())
-        .unwrap_or_else(|| "lobster-trapp".to_string());
+        .unwrap_or_else(|| "opentrapp".to_string());
     let image_name = format!("localhost/{project}_vault-agent:latest");
     // `podman image exists` exits 0 if the image is present — no stdout needed.
     // podman-compose 1.0.6 doesn't support `compose images`, so we bypass it.

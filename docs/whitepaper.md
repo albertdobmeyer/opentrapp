@@ -1,11 +1,11 @@
-# Lobster-TrApp: Defense-in-Depth Containment for an Autonomous AI Agent
+# OpenTrApp: Defense-in-Depth Containment for an Autonomous AI Agent
 
 **A practical perimeter architecture for running [OpenClaw](https://www.getopenclaw.ai) on a personal computer without unrestricted host access.**
 
 Albert Dobmeyer, independent
 albertdobmeyer@proton.me
 
-Version 1.0 · 2026-05-04 · Companion repository: [github.com/albertdobmeyer/lobster-trapp](https://github.com/albertdobmeyer/lobster-trapp)
+Version 1.0 · 2026-05-04 · Companion repository: [github.com/albertdobmeyer/opentrapp](https://github.com/albertdobmeyer/opentrapp)
 
 ---
 
@@ -13,7 +13,7 @@ Version 1.0 · 2026-05-04 · Companion repository: [github.com/albertdobmeyer/lo
 
 Autonomous AI agents that can execute shell commands, read user files, browse the web, and load third-party skills present a containment problem of practical concern: their default operating mode grants them the same operating-system privileges as the human user, so any compromise — through prompt injection, a malicious skill, or a flaw in the agent itself — translates directly into damage to the user's host. Existing hardening guidance for the open-source OpenClaw runtime treats containment as a configuration problem (set `tools.deny`, set `sandbox.mode`, restrict the API key); empirical evidence suggests this layer alone is insufficient. The ClawHavoc study of 2026-Q1 classified 11.9 % of published ClawHub skills as malicious; CVE-2026-25253 demonstrated a one-click remote-code-execution vector through OpenClaw's own management API; the Moltbook database breach exposed 1.5 M API tokens via a single misconfiguration.
 
-This paper describes Lobster-TrApp, a desktop application that runs the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The architecture provides defense-in-depth across three independent threat categories (runtime compromise, supply-chain attack, hostile network or social-feed content), exposes a stateful adaptive shell that allows the agent's privilege level to be modulated per task context, and ensures that the user's API credentials are held by a dedicated proxy container and never reach the agent's runtime. Two design choices in particular distinguish this work from prior hardening guidance: *proxy-side credential injection*, which keeps the literal API-key value invisible to the agent regardless of compromise, and *Content Disarm and Reconstruction* applied to skills, which discards the original artefact and rebuilds a clean version from the parsed semantic intent.
+This paper describes OpenTrApp, a desktop application that runs the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The architecture provides defense-in-depth across three independent threat categories (runtime compromise, supply-chain attack, hostile network or social-feed content), exposes a stateful adaptive shell that allows the agent's privilege level to be modulated per task context, and ensures that the user's API credentials are held by a dedicated proxy container and never reach the agent's runtime. Two design choices in particular distinguish this work from prior hardening guidance: *proxy-side credential injection*, which keeps the literal API-key value invisible to the agent regardless of compromise, and *Content Disarm and Reconstruction* applied to skills, which discards the original artefact and rebuilds a clean version from the parsed semantic intent.
 
 The implementation runs in two-container (vault-agent + vault-proxy) and four-container (adding vault-forge for skill scanning and vault-pioneer for social-content analysis) configurations. As of v0.3.0, the perimeter passes a 24-point startup verification, a 42-check manifest-orchestration suite, and a 25-test end-to-end browser harness. The application owns the perimeter's lifecycle: every termination path validated in dogfooding (graceful exit, SIGTERM, SIGINT, SIGKILL, OS reboot) tears down the perimeter cleanly or recovers it on next launch.
 
@@ -74,8 +74,8 @@ A planned threat-model document (see [`docs/roadmap-post-launch.md`](roadmap-pos
 
 The architecture organises components into three trust tiers, each with a single well-scoped responsibility:
 
-- **Tier 1 (trusted).** Components running on the user's host with full filesystem and network access: the user, an optional trusted CLI coordinator (e.g. Anthropic's Claude Code), and the Lobster-TrApp desktop GUI. Tier 1 makes decisions and issues commands.
-- **Tier 2 (infrastructure).** The container perimeter. Enforces boundaries mechanically; does not make security decisions. Implemented by Lobster-TrApp's compose orchestration plus the four `vault-*` containers.
+- **Tier 1 (trusted).** Components running on the user's host with full filesystem and network access: the user, an optional trusted CLI coordinator (e.g. Anthropic's Claude Code), and the OpenTrApp desktop GUI. Tier 1 makes decisions and issues commands.
+- **Tier 2 (infrastructure).** The container perimeter. Enforces boundaries mechanically; does not make security decisions. Implemented by OpenTrApp's compose orchestration plus the four `vault-*` containers.
 - **Tier 3 (contained).** The OpenClaw agent process, the Telegram gateway, loaded skills, and any fetched network content. Performs the work the user requests, within the boundaries Tier 2 enforces.
 
 The separation matters because each tier has a different *kind* of failure mode. Tier 1 fails through human error or through a compromise of the coordinator's reasoning. Tier 2 fails through misconfiguration of the compose stack or a kernel-level escape. Tier 3 is *expected* to fail (the agent is the contained dangerous element); the architecture is designed assuming it will. Crossing two tiers' failure modes simultaneously is required for an end-to-end compromise — a property defense-in-depth makes plausible.
@@ -93,7 +93,7 @@ The four containers each run on their own Docker `internal: true` network. Only 
 
 ### 3.3 Lifecycle ownership
 
-The Lobster-TrApp desktop application owns the perimeter's lifetime. Application start triggers `compose up -d` on a background thread; graceful exit (window close, tray Quit, SIGTERM, SIGINT) triggers `compose down` synchronously with a 30-second ceiling; following SIGKILL, orphan containers are detected and stopped on the next launch via a PID-file mechanism (`RunGuard`). A user-initiated *paused* state allows the perimeter to be suspended without exiting the application; the state survives application restart via the `~/.lobster-trapp/paused` marker file. Seven distinct termination paths were validated as cleanly tearing down the perimeter in the dogfood walkthrough (§8).
+The OpenTrApp desktop application owns the perimeter's lifetime. Application start triggers `compose up -d` on a background thread; graceful exit (window close, tray Quit, SIGTERM, SIGINT) triggers `compose down` synchronously with a 30-second ceiling; following SIGKILL, orphan containers are detected and stopped on the next launch via a PID-file mechanism (`RunGuard`). A user-initiated *paused* state allows the perimeter to be suspended without exiting the application; the state survives application restart via the `~/.opentrapp/paused` marker file. Seven distinct termination paths were validated as cleanly tearing down the perimeter in the dogfood walkthrough (§8).
 
 This is non-obvious in a way that affects security: a configuration-only hardening guide cannot make the same guarantee. The OpenClaw runtime configured in a hardening blog post is started at the user's discretion and stopped (or not) at the user's discretion; an enthusiastic user who clicks Quit may leave the runtime active in the background indefinitely, and a system that crashes leaves no record. The application-owns-perimeter discipline turns "is the agent currently exposed?" from a question of user vigilance into a structural property of the application's process lifetime.
 
@@ -213,7 +213,7 @@ The four components — vault-agent, vault-forge, vault-pioneer, vault-proxy —
 
 Schema alignment across three implementations (the JSON Schema, the Rust serde structs, the TypeScript types) is verified by [`tests/orchestrator-check.sh`](../tests/orchestrator-check.sh) on every commit. The 42-check suite covers manifest parsing, cross-reference validation (commands referenced from workflows, states referenced from `available_when`, orchestrator-workflow steps referencing component commands), and frontend-backend command parity (every Rust command handler has a matching TypeScript invoke wrapper).
 
-The perimeter lifecycle is owned by the Tauri backend. The application registers handlers for `RunEvent::Exit` (graceful exit), `SIGTERM`, and `SIGINT`, each of which runs `compose down` synchronously with a 30-second ceiling. Following `SIGKILL`, the next launch reads `~/.lobster-trapp/runguard.pid`, observes that the previous PID is no longer alive, and runs `compose down` to reap any orphan containers before bringing the perimeter back up. A user-initiated *paused* state is persisted as a marker file (`~/.lobster-trapp/paused`); the perimeter is not auto-started while the marker is present. The status aggregator (a Tokio interval task) re-evaluates the assistant's status — `ok` / `starting` / `recovering` / `error_perimeter` / `error_key` / `paused_by_user` / `not_setup` — every 60 seconds and emits a Tauri event on transition; the frontend Home view's hero state machine subscribes to this event.
+The perimeter lifecycle is owned by the Tauri backend. The application registers handlers for `RunEvent::Exit` (graceful exit), `SIGTERM`, and `SIGINT`, each of which runs `compose down` synchronously with a 30-second ceiling. Following `SIGKILL`, the next launch reads `~/.opentrapp/runguard.pid`, observes that the previous PID is no longer alive, and runs `compose down` to reap any orphan containers before bringing the perimeter back up. A user-initiated *paused* state is persisted as a marker file (`~/.opentrapp/paused`); the perimeter is not auto-started while the marker is present. The status aggregator (a Tokio interval task) re-evaluates the assistant's status — `ok` / `starting` / `recovering` / `error_perimeter` / `error_key` / `paused_by_user` / `not_setup` — every 60 seconds and emits a Tauri event on transition; the frontend Home view's hero state machine subscribes to this event.
 
 The Anthropic-key validity check is performed against the free `/v1/models` endpoint (rather than the billable `/v1/messages` endpoint), with a five-minute TTL cache that is invalidated on key rotation. This is a small but operationally significant implementation choice: the alternative — pinging `/v1/messages` — would charge the user a fraction of a token per minute for the lifetime of the application, which would be a non-zero ongoing cost even when the user is not actively using the agent.
 
@@ -245,7 +245,7 @@ The architecture is honest about what it does not address.
 
 **The host is trusted.** Container-level isolation does not survive a compromised kernel. A Linux-kernel zero-day (uncommon but not impossible) defeats the perimeter at every layer. Users who require stronger isolation are directed to run the perimeter on a disposable virtual machine with a disposable API key and a hard spending cap. The README and the per-module documentation make this trade-off explicit.
 
-**The reasoning is not local.** OpenClaw's reasoning runs on Anthropic's API. Operating Lobster-TrApp without internet access to Anthropic is not supported. This is a non-negotiable property of OpenClaw itself, not of this perimeter.
+**The reasoning is not local.** OpenClaw's reasoning runs on Anthropic's API. Operating OpenTrApp without internet access to Anthropic is not supported. This is a non-negotiable property of OpenClaw itself, not of this perimeter.
 
 **Allowlisted destinations can be abused during a live session.** A compromised agent can issue arbitrary API calls to the allowlisted hosts using the proxy-injected credentials. It cannot read the literal key value, but it can use it. Mitigation: configure a hard spending cap on the API key and treat the cap as part of the security boundary, not as a billing convenience.
 
@@ -295,7 +295,7 @@ Future work falls into three categories.
 
 **Ecosystem.** Pioneer is parked pending a stable target API. If the agent-social-network category re-emerges (under Meta's continued operation of Moltbook, under a successor platform, or under an entirely new ecosystem), the architectural slot is preserved and re-activation requires only the API integration; the perimeter layer is in place.
 
-The implementation is open-source under the MIT licence at [github.com/albertdobmeyer/lobster-trapp](https://github.com/albertdobmeyer/lobster-trapp) and the four-component family of repositories. All code, configuration, manifest schemas, verification scripts, and design documents are public. We invite review.
+The implementation is open-source under the MIT licence at [github.com/albertdobmeyer/opentrapp](https://github.com/albertdobmeyer/opentrapp) and the four-component family of repositories. All code, configuration, manifest schemas, verification scripts, and design documents are public. We invite review.
 
 ---
 

@@ -2,9 +2,9 @@
 
 ## Scope
 
-This policy covers the four repositories that compose the Lobster-TrApp distribution:
+This policy covers the four repositories that compose the OpenTrApp distribution:
 
-- [`lobster-trapp`](https://github.com/albertdobmeyer/lobster-trapp) — desktop application and perimeter orchestrator
+- [`opentrapp`](https://github.com/albertdobmeyer/opentrapp) — desktop application and perimeter orchestrator
 - [`openclaw-vault`](https://github.com/albertdobmeyer/openclaw-vault) — runtime-containment module (`vault-agent`, `vault-proxy`)
 - [`clawhub-forge`](https://github.com/albertdobmeyer/clawhub-forge) — supply-chain defense module (`vault-forge`)
 - [`moltbook-pioneer`](https://github.com/albertdobmeyer/moltbook-pioneer) — social-content analysis module (`vault-pioneer`); **parked since 2026-05-03**, see the repository's README
@@ -31,7 +31,7 @@ Reports are acknowledged within 48 hours. Severity is assessed using a CVSS-styl
 The following classes of issue are accepted:
 
 - Container-escape vectors in `openclaw-vault` (capability gain, mount escape, kernel-namespace escape, seccomp bypass)
-- Privilege escalation through the Lobster-TrApp manifest runner (command injection, path traversal, environment-variable leakage)
+- Privilege escalation through the OpenTrApp manifest runner (command injection, path traversal, environment-variable leakage)
 - Credential exposure (API keys or tokens visible to a container that should not have them, leakage to logs or stderr)
 - Supply-chain bypasses in `clawhub-forge` (skill-scanner false negatives, CDR pipeline bypass, manifest tampering between scan and delivery)
 - Network-allowlist bypasses through `vault-proxy` (egress to denylisted hosts, request smuggling, header injection enabling unauthorised endpoints)

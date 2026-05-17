@@ -1,4 +1,4 @@
-# Lobster-TrApp — Contributor Guide
+# OpenTrApp — Contributor Guide
 
 Project documentation for AI coding assistants and human contributors working in this repository.
 
@@ -8,14 +8,14 @@ For end-user documentation, see [`README.md`](README.md). For the full architect
 
 ## 1. What this project is
 
-Lobster-TrApp is a Tauri 2 desktop application that runs the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The application is the perimeter orchestrator: it composes the four containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations.
+OpenTrApp is a Tauri 2 desktop application that runs the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The application is the perimeter orchestrator: it composes the four containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations.
 
 The agent's reasoning is delegated to Anthropic's API. The agent's execution layer (file work, tool calls, skill loading) runs locally inside `vault-agent`. The application can never claim to make running an autonomous agent absolutely safe; it raises the cost of compromise via defense-in-depth and is open about the residual risks.
 
 ## 2. Repository layout
 
 ```
-lobster-trapp/                          (this repository — public)
+opentrapp/                          (this repository — public)
 ├── components/
 │   ├── openclaw-vault/                 git submodule — runtime containment (vault-agent + vault-proxy)
 │   ├── clawhub-forge/                  git submodule — supply-chain defense (vault-forge)
@@ -148,7 +148,7 @@ podman compose down                     # stop perimeter
 Each component exists in two places on a contributor's machine:
 
 - **Standalone clone:** `~/<component>/` (focused development on one component)
-- **Submodule copy:** `~/lobster-trapp/components/<component>/` (orchestrator integration)
+- **Submodule copy:** `~/opentrapp/components/<component>/` (orchestrator integration)
 
 These are independent git checkouts. Changes in one do not propagate to the other automatically.
 

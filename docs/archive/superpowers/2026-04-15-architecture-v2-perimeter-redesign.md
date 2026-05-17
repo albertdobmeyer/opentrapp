@@ -1,4 +1,4 @@
-# Lobster-TrApp Architecture v2 — Perimeter Redesign
+# OpenTrApp Architecture v2 — Perimeter Redesign
 
 **Date:** 2026-04-15
 **Supersedes:** Implicit architecture from `docs/trifecta.md` (module separation model)
@@ -37,13 +37,13 @@ This contradicts the documented product vision: "API key + Telegram, everything 
 
 ### The Conceptual Gap
 
-Lobster-TrApp is documented as a "monorepo orchestrator" — a dashboard that discovers components via manifests. But it should be the **security infrastructure** itself. The vault, forge, pioneer, and proxy are not independent products displayed in a GUI. They are parts of one containment system.
+OpenTrApp is documented as a "monorepo orchestrator" — a dashboard that discovers components via manifests. But it should be the **security infrastructure** itself. The vault, forge, pioneer, and proxy are not independent products displayed in a GUI. They are parts of one containment system.
 
 ---
 
 ## The Multi-Agent Trust Chain
 
-Lobster-TrApp exists in a multi-agent orchestration system with three trust tiers:
+OpenTrApp exists in a multi-agent orchestration system with three trust tiers:
 
 ```
 TIER 1: TRUSTED (full host access, makes decisions)
@@ -53,7 +53,7 @@ TIER 1: TRUSTED (full host access, makes decisions)
         │  manages via CLI, API, or GUI
         ▼
 TIER 2: INFRASTRUCTURE (enforces the security boundary)
-└── Lobster-TrApp (containment system — walls, gate, workshop, monitoring)
+└── OpenTrApp (containment system — walls, gate, workshop, monitoring)
         │
         │  contains, monitors, controls
         ▼
@@ -77,7 +77,7 @@ All components that handle untrusted content run inside containers in one isolat
 USER'S HOST (protected — never touched by untrusted content)
 │
 ├── Claude Code / trusted CLI agent (the warden)
-├── Lobster-TrApp Tauri GUI (warden's control panel)
+├── OpenTrApp Tauri GUI (warden's control panel)
 │
 └── PERIMETER (Docker/Podman compose network)
     │
@@ -191,7 +191,7 @@ Claude Opus (the warden): understands the request, determines
     language: "Your assistant now has calendar access. It asked
     to also read your email — I blocked that. Want me to allow it?"
     ↓
-Lobster-TrApp (infrastructure): enforces the shell configuration
+OpenTrApp (infrastructure): enforces the shell configuration
     the warden chose, runs the containers, blocks unauthorized
     actions at the container/proxy level
     ↓
@@ -288,7 +288,7 @@ orchestrator_workflows:
 
 ### First Run
 
-1. User downloads Lobster-TrApp installer (one file, one app)
+1. User downloads OpenTrApp installer (one file, one app)
 2. App opens → setup wizard:
    - **Container runtime**: "This app needs Docker Desktop to keep your AI safe. [Download Docker Desktop] — click Continue when installed." (or auto-detects if already present)
    - **API key**: "Enter your Anthropic API key. [Where do I find this?]"
@@ -306,17 +306,17 @@ orchestrator_workflows:
 ### Warden Use (Claude Code)
 
 Claude Code can manage the same infrastructure programmatically:
-- `lobster-trapp status` — show all container states, agent activity
-- `lobster-trapp shell soft` — change to Soft Shell
-- `lobster-trapp install-skill <url>` — run the full scan→install pipeline
-- `lobster-trapp logs` — stream monitoring data
+- `opentrapp status` — show all container states, agent activity
+- `opentrapp shell soft` — change to Soft Shell
+- `opentrapp install-skill <url>` — run the full scan→install pipeline
+- `opentrapp logs` — stream monitoring data
 - Or via MCP tools exposed by the Tauri app
 
 ---
 
 ## What Changes in Each Repo
 
-### lobster-trapp (this repo)
+### opentrapp (this repo)
 
 - `CLAUDE.md`: Reframe from "monorepo orchestrator" to "security infrastructure for AI agents"
 - `schemas/component.schema.json`: Add `workflows` section

@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-25
 **Status:** Design proposal, post-v0.2.0
-**Prompted by:** "Could `@NewLobsterTrappBot` call my cellphone and talk to me about scheduling a Google Calendar appointment, in a secure LobsterTrApp way that never exposes my phone number to OpenClaw?"
+**Prompted by:** "Could `@NewLogoTrappBot` call my cellphone and talk to me about scheduling a Google Calendar appointment, in a secure OpenTrApp way that never exposes my phone number to OpenClaw?"
 
 ---
 
@@ -33,7 +33,7 @@ If any of these enter the `vault-agent` env or filesystem, a successful prompt i
 
 ```
                         ┌────────────────────────────────────┐
-                        │  HOST (Lobster-TrApp Tauri app)    │
+                        │  HOST (OpenTrApp Tauri app)    │
                         │  - User configures phone, OAuth    │
                         │  - Stores encrypted secrets in     │
                         │    Tauri stronghold                │

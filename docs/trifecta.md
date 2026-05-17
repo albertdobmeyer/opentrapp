@@ -4,7 +4,7 @@
 **Supersedes:** Previous version (2026-04-15)
 **Origin design spec (archived):** [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) — the seminal architecture-v2 design document. This document supersedes it.
 
-This document describes the security architecture of Lobster-TrApp: the problem it addresses, the threat model, the container topology, and how the components compose into a single defensive perimeter around an autonomous AI agent.
+This document describes the security architecture of OpenTrApp: the problem it addresses, the threat model, the container topology, and how the components compose into a single defensive perimeter around an autonomous AI agent.
 
 ---
 
@@ -30,10 +30,10 @@ A second design choice is **adaptive restriction**: the agent's privilege level 
 TIER 1 — TRUSTED (host)
   user (issues high-level instructions)
   trusted CLI coordinator (Claude Code or equivalent — translates intent into operations)
-  Lobster-TrApp desktop GUI
+  OpenTrApp desktop GUI
 
 TIER 2 — INFRASTRUCTURE (perimeter)
-  Lobster-TrApp container orchestrator
+  OpenTrApp container orchestrator
   4 containers: vault-agent, vault-forge, vault-pioneer, vault-proxy
 
 TIER 3 — CONTAINED (inside perimeter)
@@ -55,7 +55,7 @@ A Mermaid drawing of the topology, the network-isolation matrix, the trust tiers
 flowchart TB
     subgraph HOST["Host (Tier 1 — trusted)"]
         USER[User]
-        GUI["Lobster-TrApp GUI<br/>(Tauri 2 + Rust)"]
+        GUI["OpenTrApp GUI<br/>(Tauri 2 + Rust)"]
     end
 
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
@@ -81,7 +81,7 @@ The ASCII tree below preserves the same content for readers on platforms without
 ```
 HOST
 │
-├── Lobster-TrApp GUI (Tauri 2 + Rust)
+├── OpenTrApp GUI (Tauri 2 + Rust)
 │
 └── Perimeter (Podman/Docker compose network)
     │
@@ -248,7 +248,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 | openclaw-vault     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
 | clawhub-forge      | vault-forge                      | Active. 87-pattern scanner + CDR pipeline operational. |
 | moltbook-pioneer   | vault-pioneer                    | **Parked since 2026-05-03.** Code preserved; target API intermittent following Meta's acquisition of Moltbook. |
-| lobster-trapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
+| opentrapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
 
 **Current implementation:**
 
@@ -291,8 +291,8 @@ Each capability has exactly one owning module to avoid duplication or ambiguity.
 | Zero-trust line verification | forge | vault-forge |
 | Content Disarm & Reconstruction | forge | vault-forge |
 | Feed-injection scanning (25 patterns) | pioneer (parked) | vault-pioneer |
-| Workflow orchestration | lobster-trapp | GUI / CLI |
-| Cross-component workflows | lobster-trapp | `config/orchestrator-workflows.yml` |
+| Workflow orchestration | opentrapp | GUI / CLI |
+| Cross-component workflows | opentrapp | `config/orchestrator-workflows.yml` |
 
 ---
 

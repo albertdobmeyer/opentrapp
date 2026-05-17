@@ -405,7 +405,7 @@ git push origin main
 
 Then update parent repo:
 ```bash
-cd lobster-trapp
+cd opentrapp
 git add components/openclaw-vault
 git commit -m "chore: update openclaw-vault — Phase 2 (Gear 1 formalized)"
 git push origin main

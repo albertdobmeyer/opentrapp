@@ -10,7 +10,7 @@ This handoff is scoped to the code-quality workstream. The general session-state
 - **Branch:** `main` clean and aligned with `origin/main` at `9fee9b8` ("fix(ci): replace github/codeql-action tag-object SHA with commit SHA (#17)").
 - **Submodules:** synchronised against the recorded pointers (`clawhub-forge`, `moltbook-pioneer`, `openclaw-vault`).
 - **Open pull requests:** zero.
-- **Preserved local-only branch:** `feat/brand-assets-blue-gradient` carries an unmerged commit (`596e8d2`) introducing the gradient FontLogo, the LobsterTrApp-Blue accent token, and supporting render scripts. Either land it as a PR or delete it deliberately; do not let it drift further out of date.
+- **Preserved local-only branch:** `feat/brand-assets-blue-gradient` carries an unmerged commit (`596e8d2`) introducing the gradient FontLogo, the OpenTrApp-Blue accent token, and supporting render scripts. Either land it as a PR or delete it deliberately; do not let it drift further out of date.
 
 ## 2. The constraint a code-quality session must work within
 
@@ -140,14 +140,14 @@ If the rebase cascade becomes a real obstacle (e.g. five queued PRs after a Depe
 - **Threat model:** [`docs/threat-model.md`](threat-model.md) — relevant when judging whether a refactor changes any security-affecting surface
 - **Release process:** [`RELEASING.md`](../RELEASING.md) — version bumps, tag procedure, release-note conventions
 - **Scorecard posture:** [`SCORECARD.md`](../SCORECARD.md) — what is earned, what is pending, what auto-resolves
-- **Saved memories:** brand colours (LobsterTrApp-Green / -Red / -Blue), documentation tone (academic, professional, objective), parallel-agent scope (do not touch project-professionalisation files without checking first), brand-asset locations
+- **Saved memories:** brand colours (OpenTrApp-Green / -Red / -Blue), documentation tone (academic, professional, objective), parallel-agent scope (do not touch project-professionalisation files without checking first), brand-asset locations
 - **The orphan branch:** `feat/brand-assets-blue-gradient` (`596e8d2`) — decide whether to PR it or delete it before starting code-quality work; do not let it interact with refactors that touch the same files
 
 ## 9. First commands when the session begins
 
 ```bash
 # Verify state
-cd /b/A5DS-HQ/REPOS/lobster-trapp
+cd /b/A5DS-HQ/REPOS/opentrapp
 git fetch origin
 git status                                         # should show: clean, on main, up to date with origin/main
 gh pr list --state open                            # should show: empty, or only the brand-asset PR if turned into one

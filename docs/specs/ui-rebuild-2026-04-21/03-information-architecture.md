@@ -7,7 +7,7 @@
 
 ## The Dual-Mode Concept
 
-Lobster-TrApp has two first-class UI modes inside a single Tauri app:
+OpenTrApp has two first-class UI modes inside a single Tauri app:
 
 | Mode | Audience | Default? | Routes |
 |------|----------|----------|--------|
@@ -101,7 +101,7 @@ When a user first enables Advanced Mode, show a one-time **welcome dialog**:
 
 > **Welcome to Advanced Mode**
 >
-> You're now seeing Lobster-TrApp's full technical controls. This view shows you every component, log, configuration, and security check.
+> You're now seeing OpenTrApp's full technical controls. This view shows you every component, log, configuration, and security check.
 >
 > **Things to know:**
 > - Changes here can break your setup. Be careful.
@@ -214,7 +214,7 @@ When user toggles mode:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  [🦞 Lobster-TrApp · Advanced Mode]    [Exit Advanced] [⌘⇧D]  │ ← top bar (40px)
+│  [OpenTrApp · Advanced Mode]    [Exit Advanced] [⌘⇧D]  │ ← top bar (40px)
 ├───────────────┬──────────────────────────────────────────────┤
 │               │                                              │
 │   Sidebar     │   Main content                               │
@@ -248,7 +248,7 @@ Add to `app/src-tauri/tauri.conf.json`:
     "trayIcon": {
       "iconPath": "icons/tray-icon.png",
       "menuOnLeftClick": false,
-      "title": "Lobster-TrApp"
+      "title": "OpenTrApp"
     }
   }
 }
@@ -270,7 +270,7 @@ Add Rust tray handling in `app/src-tauri/src/lib.rs`.
 ─────────────────────────────────
 🔧 Advanced Mode                   → toggles + opens /dev
 ─────────────────────────────────
-Quit Lobster-TrApp
+Quit OpenTrApp
 ```
 
 ### Tray status indicator
@@ -323,7 +323,7 @@ Send system notifications for:
 - **Security alerts**: "Your assistant tried to visit a blocked site." (user-configurable)
 - **Monthly spending approaching limit**: "You've used 80% of your monthly spending limit."
 - **Update available**: "A new version is ready."
-- **Assistant paused unexpectedly**: "Something isn't working — open Lobster-TrApp to check."
+- **Assistant paused unexpectedly**: "Something isn't working — open OpenTrApp to check."
 
 ### Dev mode notifications
 

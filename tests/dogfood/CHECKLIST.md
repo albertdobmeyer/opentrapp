@@ -17,7 +17,7 @@ Estimated wall-clock: **70 minutes** (Tier A is the longest by far at ~35 min). 
 - [ ] **`main` is at the latest commit.** `git log --oneline -1` matches `origin/main`.
 - [ ] **All CI is green** on the latest `main` commit. Check `gh run list --branch main --limit 5`.
 - [ ] **Submodules synced.** `git submodule status` shows all three at `heads/main`, no `-`/`+` prefixes.
-- [ ] **Containers are down.** `podman ps` empty; `~/.lobster-trapp/runguard.pid` absent (`ls -la ~/.lobster-trapp/`).
+- [ ] **Containers are down.** `podman ps` empty; `~/.opentrapp/runguard.pid` absent (`ls -la ~/.opentrapp/`).
 - [ ] **`.env.test` exists at repo root** with the harness credentials. See [`tests/e2e-telegram/SECONDARY_ACCOUNT_SETUP.md`](../e2e-telegram/SECONDARY_ACCOUNT_SETUP.md) for the format. Required keys: `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_PHONE`, `BOT_HANDLE`, `TELEGRAM_SESSION_PATH`.
 - [ ] **A fresh, dedicated Telegram bot.** Not a shared dev bot. Create via @BotFather; record the token in `.env` (the production credentials, separate from `.env.test`).
 - [ ] **A fresh Anthropic API key with $1 hard spending cap** at `console.anthropic.com/settings/limits`. Recorded in `.env`. **Never reuse a personal key.**
@@ -155,10 +155,10 @@ For each: **screenshot the Home hero card** in each state, label the file `c<N>-
 
 ### C1 — `not_setup`
 - [ ] Quit app.
-- [ ] `mv ~/.lobster-trapp/.env ~/.lobster-trapp/.env.dogfood-backup`
+- [ ] `mv ~/.opentrapp/.env ~/.opentrapp/.env.dogfood-backup`
 - [ ] Launch app. Screenshot.
 - [ ] Look for: "Set up your assistant" CTA. **Banned-term check:** no `containers`, `submodule`, `manifest`, etc.
-- [ ] `mv ~/.lobster-trapp/.env.dogfood-backup ~/.lobster-trapp/.env`
+- [ ] `mv ~/.opentrapp/.env.dogfood-backup ~/.opentrapp/.env`
 
 ### C2 — `starting`
 - [ ] Quit app + `podman compose down`.
@@ -194,7 +194,7 @@ For each: **screenshot the Home hero card** in each state, label the file `c<N>-
 - [ ] Open Preferences → Pause Assistant.
 - [ ] Confirm hero card shows paused.
 - [ ] Quit app.
-- [ ] **Confirm marker file:** `ls -la ~/.lobster-trapp/paused` (should exist).
+- [ ] **Confirm marker file:** `ls -la ~/.opentrapp/paused` (should exist).
 - [ ] Launch app. Confirm hero **STILL shows paused**.
 - [ ] Resume.
 
@@ -214,7 +214,7 @@ Mostly operator-driven; some optionally scriptable.
 - [ ] Same setup, but right-click tray icon → Quit. Then `podman ps`.
 
 ### D3 — SIGTERM
-- [ ] Launch app. Note the PID (`pgrep -f lobster-trapp`).
+- [ ] Launch app. Note the PID (`pgrep -f opentrapp`).
 - [ ] `kill -TERM <pid>`.
 - [ ] Watch — sync teardown should complete in ≤30s.
 - [ ] `podman ps` empty?
@@ -228,7 +228,7 @@ Mostly operator-driven; some optionally scriptable.
 - [ ] `podman ps` — orphans should be present (KILL bypasses cleanup).
 - [ ] Launch app again.
 - [ ] `podman ps` — RunGuard reaped the orphans; the new instance came up clean.
-- [ ] Confirm `~/.lobster-trapp/runguard.pid` is fresh (modification time within last few seconds).
+- [ ] Confirm `~/.opentrapp/runguard.pid` is fresh (modification time within last few seconds).
 
 ### D6 — OS reboot simulation
 - [ ] Cheap simulation: `podman system prune -f` + relaunch app.
@@ -244,7 +244,7 @@ Mostly operator-driven; some optionally scriptable.
 - [ ] **`verify.sh` end-of-session snapshot.** Run `podman exec vault-agent /vault/scripts/verify.sh` and paste the output into findings as the "session end" snapshot. **Diff against the start snapshot — should be identical.**
 - [ ] **Spend reconciliation.** Read the `BudgetTracker` summary from harness stdout. Compare with Anthropic console. Variance > 20 %? Investigate.
 - [ ] **Banned-term audit across the full session.** Search the harness artefact JSON files: `grep -l "banned_term_hits.*\[.\+\]" tests/dogfood/artifacts/*.json`. Any hits → log in findings as a P0/P1 finding.
-- [ ] **Container teardown clean.** `podman ps` empty. `~/.lobster-trapp/runguard.pid` absent. `~/.lobster-trapp/paused` absent (unless C7 was the last scenario).
+- [ ] **Container teardown clean.** `podman ps` empty. `~/.opentrapp/runguard.pid` absent. `~/.opentrapp/paused` absent (unless C7 was the last scenario).
 - [ ] **Findings doc complete.** Every scenario has a verdict. Per-tier aggregate scores. Rubric re-score. Deserve-to-exist sweep. Ship/no-ship recommendation.
 - [ ] **Commit findings.** `git add docs/specs/2026-05-DD-dogfood-full-arc-findings.md`, push, open a follow-up PR for review.
 

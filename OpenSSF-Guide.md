@@ -2,7 +2,7 @@
 
   1. Go to https://www.bestpractices.dev/
   2. Sign in with GitHub
-  3. Click "Add a project" → enter https://github.com/albertdobmeyer/lobster-trapp
+  3. Click "Add a project" → enter https://github.com/albertdobmeyer/opentrapp
   4. Fill out the questionnaire. Most criteria you already meet:
     - ✅ Free/libre/open-source license (MIT)
     - ✅ Source repository public + version controlled

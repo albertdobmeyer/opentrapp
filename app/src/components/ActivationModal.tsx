@@ -29,7 +29,7 @@ const ANTHROPIC_STEPS: HowToStep[] = [
     href: "https://console.anthropic.com/",
   },
   { heading: "Go to API Keys", body: "In the left menu, click Settings → API Keys." },
-  { heading: "Create a new key", body: 'Click Create Key. Give it a name like "Lobster-TrApp".' },
+  { heading: "Create a new key", body: 'Click Create Key. Give it a name like "OpenTrApp".' },
   {
     heading: "Copy the key immediately",
     body: "Anthropic shows it once. It starts with sk-ant-. Copy it now.",

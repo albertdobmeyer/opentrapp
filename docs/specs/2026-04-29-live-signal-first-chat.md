@@ -15,7 +15,7 @@
 
 Pass 1 walked Karen's 8 user moments by reading code only — and explicitly recommended a follow-up live-run sub-pass to capture the dynamic friction code-reading misses (Pass 1 doc lines 43, 634, 661). Moment 3 (First chat) scored **5.5/10** in Pass 1, the second-lowest moment in the journey, but it was the moment with the least evidence: code-reading can't tell you what the bot's voice sounds like or how long Karen waits for a reply.
 
-This pass uses the existing `tests/e2e-telegram/` Telethon harness to send 8 Karen-flavored messages to the live bot (`@NewLobsterTrappBot`), with the 4-container perimeter running, real Anthropic key, real Telegram round-trip — and records first-byte latency, full reply text, banned-term leaks, and per-scenario Anthropic call counts.
+This pass uses the existing `tests/e2e-telegram/` Telethon harness to send 8 Karen-flavored messages to the live bot (`@NewLogoTrappBot`), with the 4-container perimeter running, real Anthropic key, real Telegram round-trip — and records first-byte latency, full reply text, banned-term leaks, and per-scenario Anthropic call counts.
 
 **Output of this pass feeds the deferred Pass 6 rebudget decision** (A/B/C — ship 5/3/1 user-mode pages real). Pass 1 wanted to know whether Telegram-side was healthy enough to make the post-wizard placeholder cliff *the* gap. This pass answers: yes.
 

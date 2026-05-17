@@ -185,7 +185,7 @@ For each, one paragraph: what they offer, what they don't, the differential agai
 
 ## 7. Demo recording on the landing page — **SCAFFOLDED 2026-05-04 (recording itself queued)**
 
-**Deliverable:** A short video (≤30 seconds) on the `lobster-trapp.com` landing page showing the setup-wizard flow plus first Telegram chat. [`docs/demo/README.md`](demo/README.md) contains the shooting script (four scenes + a phone cut, 30 seconds total), the recording-environment recipe, the `ffmpeg` conversion commands (MP4 → GIF → WebM → poster), the size-cap targets, and the pre-publish checklist. [`docs/index.html`](index.html) carries a commented-out `<video>` block ready to enable when the assets land. The recording itself needs a clean machine and a maintainer session; that session is the only outstanding work for this item.
+**Deliverable:** A short video (≤30 seconds) on the `opentrapp.com` landing page showing the setup-wizard flow plus first Telegram chat. [`docs/demo/README.md`](demo/README.md) contains the shooting script (four scenes + a phone cut, 30 seconds total), the recording-environment recipe, the `ffmpeg` conversion commands (MP4 → GIF → WebM → poster), the size-cap targets, and the pre-publish checklist. [`docs/index.html`](index.html) carries a commented-out `<video>` block ready to enable when the assets land. The recording itself needs a clean machine and a maintainer session; that session is the only outstanding work for this item.
 
 **Scope:**
 

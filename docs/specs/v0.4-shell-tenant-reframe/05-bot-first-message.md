@@ -93,7 +93,7 @@ This is a submodule change, not a parent-repo change. Per [`CLAUDE.md`](../../..
 3. Commit + push to openclaw-vault's GitHub remote
 4. Open submodule PR; review focuses on whether the new section conflicts with existing constraints (it shouldn't — it's purely additive behavior)
 5. Merge submodule PR
-6. Bump submodule reference in parent repo: `cd /home/albertd/Repositories/lobster-trapp && git add components/openclaw-vault && git commit -m "Update openclaw-vault submodule reference"`
+6. Bump submodule reference in parent repo: `cd /home/albertd/Repositories/opentrapp && git add components/openclaw-vault && git commit -m "Update openclaw-vault submodule reference"`
 7. Open parent PR
 
 The parent PR is small (one submodule SHA bump); the substance is in the submodule PR.

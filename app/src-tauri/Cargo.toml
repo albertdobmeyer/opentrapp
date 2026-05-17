@@ -1,12 +1,12 @@
 [package]
-name = "lobster-trapp"
+name = "opentrapp"
 version = "0.3.2"
 edition = "2021"
-description = "Security-first desktop GUI for the OpenClaw ecosystem"
+description = "Containerization perimeter + skill scanner for autonomous CLI agents"
 authors = ["Albert Dobmeyer"]
 license = "MIT"
-repository = "https://github.com/albertdobmeyer/lobster-trapp"
-homepage = "https://github.com/albertdobmeyer/lobster-trapp#readme"
+repository = "https://github.com/albertdobmeyer/opentrapp"
+homepage = "https://github.com/albertdobmeyer/opentrapp#readme"
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
@@ -31,7 +31,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 tauri-build = { version = "2", features = [] }
 
 [lib]
-name = "lobster_trapp_lib"
+name = "opentrapp_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [features]

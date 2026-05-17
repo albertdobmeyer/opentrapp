@@ -1,4 +1,4 @@
-# Lobster-TrApp Master Roadmap v2 — DEPRECATED
+# OpenTrApp Master Roadmap v2 — DEPRECATED
 
 > **This document is superseded by [`2026-04-04-master-roadmap-v3.md`](2026-04-04-master-roadmap-v3.md).** Phases 3-6 listed below as future work were completed between 2026-03-27 and 2026-04-03. The v3 roadmap reflects the actual state.
 
@@ -7,9 +7,9 @@
 
 **Product:** A desktop app that lets anyone safely run OpenClaw on their personal computer, controlled from their phone, without risking their digital life.
 
-**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + lobster-trapp (GUI + landing page)
+**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + opentrapp (GUI + landing page)
 
-**Domain:** lobster-trapp.com
+**Domain:** opentrapp.com
 
 ---
 
@@ -25,7 +25,7 @@
 
 ## What's Next (Priority Order)
 
-### Phase 3: Make NewLobsterTrappBot Useful — Gear 2 (Semi-Auto)
+### Phase 3: Make NewLogoTrappBot Useful — Gear 2 (Semi-Auto)
 
 **Why:** Gear 1 is a chatbot. Gear 2 is an assistant. Without Gear 2, there's no product worth downloading.
 
@@ -53,16 +53,16 @@
 
 ### Phase 4: Monitoring Dashboard
 
-**Why:** Before Gear 3 (broad access), users must be able to see what NewLobsterTrappBot is doing. The GUI must render activity in plain language, not raw JSON logs.
+**Why:** Before Gear 3 (broad access), users must be able to see what NewLogoTrappBot is doing. The GUI must render activity in plain language, not raw JSON logs.
 
 **Engineering work:**
 - Implement `monitoring/network-log-parser.py` (parse proxy JSONL → human-readable)
-- Implement `monitoring/session-report.sh` (what did NewLobsterTrappBot do this session?)
+- Implement `monitoring/session-report.sh` (what did NewLogoTrappBot do this session?)
 - Implement `monitoring/activity-feed.sh` (live feed for the GUI)
 - Update `component.yml` with monitoring commands
-- Verify rendering in Lobster-TrApp GUI
+- Verify rendering in OpenTrApp GUI
 
-**Exit criteria:** A non-technical user can open the GUI and see, in plain English, every action NewLobsterTrappBot took, every website it contacted, and every request that was blocked.
+**Exit criteria:** A non-technical user can open the GUI and see, in plain English, every action NewLogoTrappBot took, every website it contacted, and every request that was blocked.
 
 ---
 
@@ -83,7 +83,7 @@
 
 ### Phase 6: Gear 3 (Full-Auto) — Broad Autonomy
 
-**Why:** The power mode. NewLobsterTrappBot can operate broadly — shell commands, file system, web, messaging — while the driver seat (root, SSH keys, passwords) stays permanently locked.
+**Why:** The power mode. NewLogoTrappBot can operate broadly — shell commands, file system, web, messaging — while the driver seat (root, SSH keys, passwords) stays permanently locked.
 
 **Engineering work:**
 - Broad host mounts (user home minus protected resources)
@@ -93,11 +93,11 @@
 - Agent self-modification prevention
 - Full end-to-end testing
 
-**Exit criteria:** NewLobsterTrappBot operates autonomously. Protected resources verified inaccessible at maximum autonomy. User can downshift to Gear 1 at any time.
+**Exit criteria:** NewLogoTrappBot operates autonomously. Protected resources verified inaccessible at maximum autonomy. User can downshift to Gear 1 at any time.
 
 ---
 
-### Phase 7: Lobster-TrApp GUI — Setup Wizard + Gear Controls
+### Phase 7: OpenTrApp GUI — Setup Wizard + Gear Controls
 
 **Why:** The current setup requires 8 terminal steps. A non-technical user cannot do this. The GUI must handle everything: Podman detection, container building, API key entry, Telegram bot setup, gear switching, and monitoring.
 
@@ -109,11 +109,11 @@
 - Kill switch button (always visible, works in any gear)
 - Connect gear-switching to vault's `component.yml` commands
 
-**Exit criteria:** A non-technical user can download Lobster-TrApp, click through a setup wizard, and have a working NewLobsterTrappBot on Telegram within 10 minutes — no terminal commands needed.
+**Exit criteria:** A non-technical user can download OpenTrApp, click through a setup wizard, and have a working NewLogoTrappBot on Telegram within 10 minutes — no terminal commands needed.
 
 ---
 
-### Phase 8: Landing Page — lobster-trapp.com
+### Phase 8: Landing Page — opentrapp.com
 
 **Why:** People need to find the product and understand it before downloading.
 
@@ -125,9 +125,9 @@
 - Comparison table (vs raw OpenClaw, vs Claude.ai, vs ChatGPT)
 - Trust section: open source, all traffic logged, you're always in control
 
-**Tech:** Static HTML/CSS/JS, hosted on GitHub Pages or Vercel, connected to lobster-trapp.com domain.
+**Tech:** Static HTML/CSS/JS, hosted on GitHub Pages or Vercel, connected to opentrapp.com domain.
 
-**Exit criteria:** A stranger landing on lobster-trapp.com understands what the product does and can download it within 30 seconds.
+**Exit criteria:** A stranger landing on opentrapp.com understands what the product does and can download it within 30 seconds.
 
 ---
 
@@ -151,7 +151,7 @@
 - [ ] All four repos have clean README.md matching actual functionality
 - [ ] All security claims verified with test evidence
 - [ ] Setup wizard works end-to-end for non-technical users
-- [ ] Landing page live at lobster-trapp.com
+- [ ] Landing page live at opentrapp.com
 - [ ] GitHub releases with pre-built binaries (Linux, macOS, Windows)
 - [ ] All repos made public
 - [ ] Post to: Hacker News, Reddit r/selfhosted, OpenClaw Discord
@@ -161,7 +161,7 @@
 ## Dependency Graph
 
 ```
-DONE ──→ Phase 3 (Gear 2 — make NewLobsterTrappBot useful)
+DONE ──→ Phase 3 (Gear 2 — make NewLogoTrappBot useful)
               |
          Phase 4 (Monitoring dashboard)
               |

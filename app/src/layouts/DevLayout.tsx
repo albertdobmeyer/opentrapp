@@ -73,7 +73,7 @@ export default function DevLayout() {
       <header className="h-10 flex items-center justify-between px-4 border-b border-neutral-800 bg-neutral-900">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Activity size={14} className="text-info-400" aria-hidden />
-          <span>Lobster-TrApp</span>
+          <span>OpenTrApp</span>
           <span className="text-neutral-500">·</span>
           <span className="text-neutral-400">Advanced Mode</span>
         </div>

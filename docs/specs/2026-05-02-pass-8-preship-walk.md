@@ -16,7 +16,7 @@ The pre-ship full re-walk specified by the Pass 8 entry in the master plan
 1. **Rubric re-walk** — every reachable user surface scored against the
    13-principle rubric (`docs/specs/2026-04-20-ux-principles-rubric.md`).
 2. **Deserve-to-exist sweep** — added by the 2026-05-02 vision recheck
-   (`memory/feedback_lobster_trapp_scope.md`). For every surface, ask:
+   (`memory/feedback_opentrapp_scope.md`). For every surface, ask:
    *Does this duplicate something the user already has (Anthropic
    Console / Telegram), or is it unique to running OpenClaw safely on
    this machine?* If duplicate without a strong discoverability
@@ -287,7 +287,7 @@ in front of Karen.
 2. Build release binaries for Linux / macOS / Windows.
 3. Hetzner landing page: update download links, version badge.
 4. Announcement: short post explaining what changed since v0.2.0
-   (single sentence: "Lobster-TrApp grew up — every screen is now
+   (single sentence: "OpenTrApp grew up — every screen is now
    a real surface, not a placeholder").
 5. Set up a "first-week feedback" channel (Linear project? Discord?).
 6. Schedule Pass 9 kickoff after a 1-week soak.

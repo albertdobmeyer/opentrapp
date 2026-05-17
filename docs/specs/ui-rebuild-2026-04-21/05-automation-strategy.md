@@ -29,7 +29,7 @@ Find what already exists on the user's system without asking.
 | Thing | How to detect | Fallback if not found |
 |-------|---------------|----------------------|
 | **Container runtime** (Podman/Docker) | `which podman` → `which docker` → query version | Guide user to install (with platform-specific links + one-click opener) |
-| **Monorepo path** (where lobster-trapp lives) | Canonical parent of Tauri binary | Auto-create at `~/.lobster-trapp/` |
+| **Monorepo path** (where opentrapp lives) | Canonical parent of Tauri binary | Auto-create at `~/.opentrapp/` |
 | **Submodule status** | Check git submodule summary | Auto-init via `git submodule update --init --recursive` |
 | **Existing `.env` keys** | Read `components/openclaw-vault/.env` if present | Show empty form |
 | **Telegram bot already paired** | Read `pairing-status.json` in vault workspace | Show connect button |
@@ -189,7 +189,7 @@ The app detects states requiring user action and surfaces them:
 |-------|---------|------------|-----|
 | Spending approaching limit | 80% of monthly | "You've used 80% of your spending limit this month." | "Adjust limit" / "View usage" |
 | API key expired/invalid | Validation fails | "Your API key needs updating." | "Update key" |
-| Update available | Updater check | "A new version of Lobster-TrApp is ready." | "Update now" / "Remind me later" |
+| Update available | Updater check | "A new version of OpenTrApp is ready." | "Update now" / "Remind me later" |
 | Security alert | Blocked site attempt | "Your assistant tried to visit a blocked site." | "View details" / "Dismiss" |
 | Pending skill scan | New skill from forge | "A new skill is waiting to be scanned." | "Scan now" |
 | Assistant paused unexpectedly | Container crashed | "Your assistant stopped. We tried to restart it." | "Open support" |

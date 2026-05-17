@@ -61,7 +61,7 @@ FAQ is the primary surface. Contact is the escape hatch.
 │                                                              │
 │  ─── About ───                                               │
 │                                                              │
-│  Lobster-TrApp v0.2.0                                        │
+│  OpenTrApp v0.2.0                                        │
 │  By Albert Dobmeyer. Built on OpenClaw, ClawHub, and        │
 │  Moltbook. Illustrations by unDraw.                          │
 │                                                              │
@@ -81,7 +81,7 @@ Six illustrated category cards. Clicking one opens a drill-down screen (or modal
 
 #### 🏁 Getting started
 - How do I get started?
-- What does Lobster-TrApp do?
+- What does OpenTrApp do?
 - Do I need a special computer?
 - Why does it need to run in the background?
 - Can I use it offline?
@@ -156,7 +156,7 @@ Example — "How do I create a Telegram bot?":
 │  5. Follow the prompts to pick a name and username.        │
 │                                                            │
 │  6. BotFather will give you a token — copy that long       │
-│     string and paste it into Lobster-TrApp.                │
+│     string and paste it into OpenTrApp.                │
 │     [screenshot: the token in the chat]                    │
 │                                                            │
 │  That's it! Your bot is ready to be your assistant's       │
@@ -246,7 +246,7 @@ Future: add a search box above the category grid. For v0.2.0, categories are eno
   "contact.githubBtn": "Post on GitHub",
   "contact.copied": "Copied! Now paste it in an email or GitHub issue.",
 
-  "about.version": "Lobster-TrApp v{version}",
+  "about.version": "OpenTrApp v{version}",
   "about.credits": "By {author}. Built on OpenClaw, ClawHub, and Moltbook. Illustrations by unDraw.",
   "about.privacy": "Privacy policy",
   "about.repos": "Open source repos",

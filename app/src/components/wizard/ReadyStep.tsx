@@ -128,8 +128,7 @@ export default function ReadyStep({ onGoToDashboard }: Props) {
 }
 
 /**
- * Celebration SVG — lobster waving surrounded by confetti. Hand-rolled
- * placeholder until E.4 swaps in real art.
+ * Celebration illustration — OpenTrApp square logo surrounded by confetti.
  */
 function CelebrationIllustration({ className }: { className?: string }) {
   return (
@@ -139,21 +138,14 @@ function CelebrationIllustration({ className }: { className?: string }) {
       height="200"
       viewBox="0 0 240 200"
       role="img"
-      aria-label="A celebrating lobster surrounded by confetti"
+      aria-label="OpenTrApp logo surrounded by celebratory confetti"
     >
-      <defs>
-        <linearGradient id="lobster-ready" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#ff8a5c" />
-          <stop offset="100%" stopColor="#e55527" />
-        </linearGradient>
-      </defs>
-
       {/* Confetti */}
       {[
         { x: 30, y: 30, c: "#60a5fa", r: 4 },
         { x: 210, y: 40, c: "#f59e0b", r: 5 },
         { x: 50, y: 160, c: "#34d399", r: 3 },
-        { x: 200, y: 150, c: "#ff6b35", r: 4 },
+        { x: 200, y: 150, c: "#cc3333", r: 4 },
         { x: 120, y: 20, c: "#fbbf24", r: 3 },
         { x: 20, y: 100, c: "#f87171", r: 3 },
         { x: 220, y: 90, c: "#a78bfa", r: 4 },
@@ -162,64 +154,14 @@ function CelebrationIllustration({ className }: { className?: string }) {
         <circle key={i} cx={c.x} cy={c.y} r={c.r} fill={c.c} opacity="0.85" />
       ))}
 
-      {/* Lobster body */}
-      <g transform="translate(70 50)">
-        <ellipse cx="50" cy="60" rx="50" ry="34" fill="url(#lobster-ready)" />
-        {/* Tail */}
-        <path d="M2 60 Q -12 48 -10 32 Q 10 40 14 54 Z" fill="#ff6b35" />
-        {/* Waving claw — raised up */}
-        <g transform="translate(94 10) rotate(-20)">
-          <ellipse cx="10" cy="8" rx="16" ry="10" fill="#ff6b35" />
-          <path
-            d="M 22 2 L 32 -6 M 22 14 L 32 22"
-            stroke="#ff6b35"
-            strokeWidth="6"
-            strokeLinecap="round"
-          />
-        </g>
-        {/* Resting claw */}
-        <g transform="translate(88 68)">
-          <ellipse cx="14" cy="8" rx="18" ry="10" fill="#ff6b35" />
-        </g>
-        {/* Antennae */}
-        <path
-          d="M 20 38 Q 10 12 24 6"
-          fill="none"
-          stroke="#b84520"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 30 38 Q 30 10 44 4"
-          fill="none"
-          stroke="#b84520"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        {/* Eyes — happy closed */}
-        <path
-          d="M 26 48 Q 30 44 34 48"
-          fill="none"
-          stroke="#0b1120"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <path
-          d="M 42 48 Q 46 44 50 48"
-          fill="none"
-          stroke="#0b1120"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        {/* Big smile */}
-        <path
-          d="M 26 60 Q 38 74 50 60"
-          fill="none"
-          stroke="#0b1120"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </g>
+      {/* Logo */}
+      <image
+        href="/logo-square.png"
+        x="70"
+        y="40"
+        width="100"
+        height="100"
+      />
     </svg>
   );
 }

@@ -7,7 +7,7 @@ const isTauri = !!(window as unknown as Record<string, unknown>).__TAURI_INTERNA
 // ─── Autostart ───────────────────────────────────────────────────────
 
 /**
- * Register or unregister Lobster-TrApp with the OS so it launches at
+ * Register or unregister OpenTrApp with the OS so it launches at
  * login. Idempotent — safe to call when the desired state already matches.
  * Returns whether the change was actually applied (vs already in the
  * right state, or browser mode where it's a no-op).

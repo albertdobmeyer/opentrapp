@@ -38,7 +38,7 @@ Defined as CSS custom properties in `app/src/styles/globals.css`, referenced by 
 --color-neutral-100: #f3f4f6;   /* text-emphasis */
 --color-neutral-50:  #f9fafb;   /* text-inverse */
 
-/* Brand — Lobster red-orange */
+/* Brand — Logo red-orange */
 --color-primary-50:  #fff5f0;
 --color-primary-200: #ffcbb0;
 --color-primary-400: #ff8a5c;

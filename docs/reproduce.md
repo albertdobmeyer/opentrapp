@@ -14,7 +14,7 @@ The document is structured in three groups: counted artefacts (1–8), test-suit
 
 ## Conventions
 
-- **Working directory:** every command assumes a fresh clone at `lobster-trapp/` and starts from that directory unless stated otherwise.
+- **Working directory:** every command assumes a fresh clone at `opentrapp/` and starts from that directory unless stated otherwise.
 - **Recursive clone required:** several rows cite files inside submodules; clone with `--recurse-submodules` (see [`CONTRIBUTING.md`](../CONTRIBUTING.md) "Cloning the repository").
 - **Runtime ceilings:** "≤ N s" is the upper bound on the maintainer's dev machine (Lenovo ideapad 320, AMD A12-9720P, 7.2 GB RAM). Faster machines arrive sooner.
 - **Test-count drift:** test counts grow as features are added. The numbers below are the released-version counts at v0.3.0; the rows describe the *measurement command* and a *floor* — running the suite at any tagged version should produce a count at or above the floor. The exact tag-time count is in [`docs/handoff.md`](handoff.md).

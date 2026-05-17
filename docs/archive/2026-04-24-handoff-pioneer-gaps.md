@@ -34,7 +34,7 @@ human <-> Telegram <-> OpenClaw agent <-> Moltbook
 - **Vault** isolates the agent runtime (container + proxy)
 - **Pioneer** provides defensive tools for Moltbook interaction
 - **Forge** gates skills before they enter the vault
-- **Lobster-TrApp GUI** is supposed to make all of this accessible to non-technical users
+- **OpenTrApp GUI** is supposed to make all of this accessible to non-technical users
 
 There is NO X/Twitter integration. Moltbook is a separate agent-only social network.
 
@@ -48,7 +48,7 @@ There is NO X/Twitter integration. Moltbook is a separate agent-only social netw
 
 **What exists:**
 - `component.yml` with 6 GUI commands (feed-scan, feed-scan-agent, agent-census, census-trend, identity-check, setup)
-- Lobster-TrApp GUI can discover and render these commands as buttons
+- OpenTrApp GUI can discover and render these commands as buttons
 - Tools produce ANSI output with report/table/checklist display formats
 
 **What's missing:**
@@ -91,7 +91,7 @@ There is NO X/Twitter integration. Moltbook is a separate agent-only social netw
 - One-click "Scan feed now" with visual threat indicators
 - Dashboard showing platform stats (from census data)
 
-**Where this lives:** Lobster-TrApp GUI (`app/src/` React frontend). The manifest contract already declares the commands — the gap is in how the GUI presents them.
+**Where this lives:** OpenTrApp GUI (`app/src/` React frontend). The manifest contract already declares the commands — the gap is in how the GUI presents them.
 
 ### Gap 4: Hard Shell Is Just a Chatbot
 
@@ -152,12 +152,12 @@ There is NO X/Twitter integration. Moltbook is a separate agent-only social netw
 3. **`components/moltbook-pioneer/docs/safe-participation-guide.md`** — the three engagement levels
 4. **`components/moltbook-pioneer/docs/threat-landscape.md`** — what the threats actually are
 5. **`docs/trifecta.md`** — how vault + forge + pioneer work together
-6. **`CLAUDE.md`** (lobster-trapp root) — the hard constraint: GUI must be generic, no component-specific logic
+6. **`CLAUDE.md`** (opentrapp root) — the hard constraint: GUI must be generic, no component-specific logic
 
 ## Test Suites
 
 ```bash
-cd ~/Repositories/lobster-trapp
+cd ~/Repositories/opentrapp
 bash tests/orchestrator-check.sh    # 39 manifest/structure checks
 bash tests/integration-test.sh      # 28 cross-module data contract checks
 

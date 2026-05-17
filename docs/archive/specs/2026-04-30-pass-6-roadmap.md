@@ -58,7 +58,7 @@ Read those before code; this doc *only* covers what's adapted, scope-cut, or seq
 - **Status aggregator** — combines container health + API key validity + proxy readiness into a single `assistant_status` enum (per `08-home-dashboard.md` Backend additions §3). Pass 6 reuses `PerimeterState` directly.
 - **Add-tool / Get-more-abilities affordance** — Moment 6 in the Pass 2 spec calls for either folding into Discover or adding a 6th sidebar item. Pass 6 leaves Discover at "browse + deep-link"; install-from-Discover slips to Pass 7.
 - **Skeleton loading states** — the spec calls for `<SkeletonCard>` / `<SkeletonText>` on first open. Pass 6 uses a brief spinner; skeleton polish slips to Pass 7.
-- **Status illustrations** (`status-{state}.svg`) — the spec calls for 6 illustrations. Pass 6 reuses the existing pulsing-rings / lobster art from the wizard for now; bespoke illustrations slip to Pass 7.
+- **Status illustrations** (`status-{state}.svg`) — the spec calls for 6 illustrations. Pass 6 reuses the existing pulsing-rings / logo art from the wizard for now; bespoke illustrations slip to Pass 7.
 
 ### Out-of-scope this phase (master-plan locked, do not reopen)
 

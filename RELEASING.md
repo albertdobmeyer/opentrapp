@@ -1,6 +1,6 @@
 # Release process
 
-This document specifies the procedure for cutting and publishing a release of Lobster-TrApp. The procedure is auditable: every step is either codified in CI or recorded in a versioned artifact.
+This document specifies the procedure for cutting and publishing a release of OpenTrApp. The procedure is auditable: every step is either codified in CI or recorded in a versioned artifact.
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ Releases are cut by a maintainer with push access to the `main` branch and the a
 
 ## Versioning
 
-Lobster-TrApp follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+OpenTrApp follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
 - **MAJOR** — incompatible manifest contract change (schema enum removal, breaking field rename), or end-user data migration required
 - **MINOR** — new feature, additive manifest schema change, or substantial UX rework that does not break existing manifests
@@ -53,7 +53,7 @@ The checklist below is the canonical procedure. Each step is reproducible from t
 End users who wish to verify a downloaded binary can do so without installing the application. The procedure is documented in `SECURITY.md`. In summary:
 
 - Each artifact has an associated `*.sig` (signature) and `*.pem` (certificate) in the same release.
-- `cosign verify-blob --certificate <file>.pem --signature <file>.sig --certificate-identity-regexp 'https://github.com/albertdobmeyer/lobster-trapp/.+' --certificate-oidc-issuer https://token.actions.githubusercontent.com <file>` confirms that the artifact was produced by the project's GitHub Actions workflow.
+- `cosign verify-blob --certificate <file>.pem --signature <file>.sig --certificate-identity-regexp 'https://github.com/albertdobmeyer/opentrapp/.+' --certificate-oidc-issuer https://token.actions.githubusercontent.com <file>` confirms that the artifact was produced by the project's GitHub Actions workflow.
 - The SLSA build-provenance attestation is verifiable via `gh attestation verify <file> --owner albertdobmeyer`.
 - The CycloneDX SBOM enumerates every dependency that was linked into the build.
 

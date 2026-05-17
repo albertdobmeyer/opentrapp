@@ -2,7 +2,7 @@
 
 **Created:** 2026-05-06
 **Status:** Audit complete. One known false positive recorded; rest clean.
-**Trigger:** Following the targeted CONSTRAINTS.md fix (openclaw-vault PR #1, lobster-trapp PR #35), audit the *remaining* workspace prompt files against the same 28-banned-terms list to surface any other vocabulary leaks the dogfood test didn't probe directly.
+**Trigger:** Following the targeted CONSTRAINTS.md fix (openclaw-vault PR #1, opentrapp PR #35), audit the *remaining* workspace prompt files against the same 28-banned-terms list to surface any other vocabulary leaks the dogfood test didn't probe directly.
 
 ## Method
 

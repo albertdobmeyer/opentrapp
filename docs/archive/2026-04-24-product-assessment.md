@@ -1,4 +1,4 @@
-# Lobster-TrApp — Honest Product Assessment
+# OpenTrApp — Honest Product Assessment
 
 **Date:** 2026-03-25
 **Purpose:** Answer the question "What are we building and is it even useful?" before investing more engineering time.
@@ -16,7 +16,7 @@
 | **openclaw-vault** | Contains the agent in a hardened sandbox with proxy-gated network, tool restrictions, and kill switches | Everyone who runs OpenClaw |
 | **clawhub-forge** | Scans downloaded skills for malware before they can execute (87 patterns, MITRE ATT&CK mapped) | Anyone who wants agent capabilities beyond chat |
 | **moltbook-pioneer** | Safe exploration tools for the Moltbook agent social network (feed scanner, census, identity checklist) | Users who want their agent on the social network |
-| **lobster-trapp** (GUI) | Ties it all together in a Tauri desktop app with manifest-driven dashboards | Everyone — the user-facing product |
+| **opentrapp** (GUI) | Ties it all together in a Tauri desktop app with manifest-driven dashboards | Everyone — the user-facing product |
 
 ---
 
@@ -65,7 +65,7 @@ The manifest-driven GUI (component.yml) means anyone can add new components. If 
 ## The Honest Cons
 
 ### 1. Gear 1 is not compelling
-Right now, NewLobsterTrappBot is a Telegram chatbot that can have conversations. That's it. You can do this with Claude.ai, ChatGPT, or any other AI service — without installing Podman, building containers, or managing pairing codes. **Until Gear 2 is working, there's no reason to use Lobster-TrApp over free alternatives.**
+Right now, NewLogoTrappBot is a Telegram chatbot that can have conversations. That's it. You can do this with Claude.ai, ChatGPT, or any other AI service — without installing Podman, building containers, or managing pairing codes. **Until Gear 2 is working, there's no reason to use OpenTrApp over free alternatives.**
 
 ### 2. The setup is too complex for non-technical users
 Our target audience "can barely find a download button" but our setup requires:
@@ -77,7 +77,7 @@ Our target audience "can barely find a download button" but our setup requires:
 - Running compose commands
 - Approving pairing codes via terminal
 
-This is 8 steps, most requiring a terminal. A truly non-technical user cannot do this. **The Lobster-TrApp desktop GUI is supposed to handle this**, but it's not connected to the vault yet.
+This is 8 steps, most requiring a terminal. A truly non-technical user cannot do this. **The OpenTrApp desktop GUI is supposed to handle this**, but it's not connected to the vault yet.
 
 ### 3. We're building security for a moving target
 OpenClaw releases new versions every few days (2026.2.17 → 2026.2.26 → 2026.3.23). Each update could break our patches, change the config schema (Zod-validated), or add new tools we haven't restricted. **We're permanently one upstream update away from a broken build.**
@@ -126,7 +126,7 @@ OpenClaw already has built-in security (sandbox mode, tool policies, exec contro
 - Simpler alternatives exist for basic AI chat (Claude.ai, ChatGPT)
 
 ### The honest answer:
-**The product is useful IF we reach Gear 2 AND simplify the setup.** Gear 1 alone is not compelling. The value unlocks when users can say "remind me to call the dentist" from Telegram and NewLobsterTrappBot actually does it — safely, without the ability to read their SSH keys or drain their API budget. That's a real product. A chatbot that can only chat is not.
+**The product is useful IF we reach Gear 2 AND simplify the setup.** Gear 1 alone is not compelling. The value unlocks when users can say "remind me to call the dentist" from Telegram and NewLogoTrappBot actually does it — safely, without the ability to read their SSH keys or drain their API budget. That's a real product. A chatbot that can only chat is not.
 
 ---
 
@@ -154,13 +154,13 @@ Even if OpenClaw improves its built-in security, our vault adds defense-in-depth
 
 Based on this assessment, here's what matters most:
 
-### Priority 1: Make NewLobsterTrappBot useful (Gear 2)
-Without this, there's no product. Users need to be able to DO things through NewLobsterTrappBot — schedule tasks, manage files, browse the web. Gear 1 proved the security. Gear 2 proves the value.
+### Priority 1: Make NewLogoTrappBot useful (Gear 2)
+Without this, there's no product. Users need to be able to DO things through NewLogoTrappBot — schedule tasks, manage files, browse the web. Gear 1 proved the security. Gear 2 proves the value.
 
-### Priority 2: Simplify setup (Lobster-TrApp GUI)
+### Priority 2: Simplify setup (OpenTrApp GUI)
 The desktop GUI must handle Podman installation, container building, API key entry, Telegram bot creation, and pairing — all through buttons, not terminals. Without this, "for non-technical users" is a lie.
 
-### Priority 3: Landing page (lobster-trapp.com)
+### Priority 3: Landing page (opentrapp.com)
 Explain the product to potential users. Show the value proposition. Provide download links. This is marketing, but it's necessary for adoption.
 
 ### Priority 4: Skill scanning (clawhub-forge)
@@ -171,9 +171,9 @@ Lowest priority. The agent social network is interesting but not essential for t
 
 ---
 
-## Comparison: Lobster-TrApp vs Alternatives
+## Comparison: OpenTrApp vs Alternatives
 
-| Need | Lobster-TrApp | Claude.ai / ChatGPT | Claude Code | Raw OpenClaw |
+| Need | OpenTrApp | Claude.ai / ChatGPT | Claude Code | Raw OpenClaw |
 |------|--------------|---------------------|-------------|-------------|
 | Chat with AI | Yes (Telegram) | Yes (browser) | Yes (terminal) | Yes (Telegram) |
 | Schedule tasks | Yes (Gear 2+) | No | No | Yes (dangerous) |

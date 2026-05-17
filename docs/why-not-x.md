@@ -23,7 +23,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 - **Single layer (no defense-in-depth).** A misconfiguration of `tools.deny`, a regression in `sandbox.mode`'s container-spec, or a vulnerability in the runtime itself exposes the entire surface.
 - **Lifecycle is the user's responsibility.** The container may be left running after the OpenClaw CLI exits; cleanup is the user's vigilance.
 
-**Differential against this work.** Lobster-TrApp uses `sandbox.mode` (the runtime's native containerisation) as **layer 1 of 6** for T1. Layers 2–6 (proxy allowlist, tool policy, exec controls, workspace restriction, kill switch) are this perimeter's contribution. T2's six layers (scanner, line verifier, CDR, allowlist, network isolation, container hardening) and the proxy-side credential injection are entirely absent from the standalone-`sandbox.mode` approach.
+**Differential against this work.** OpenTrApp uses `sandbox.mode` (the runtime's native containerisation) as **layer 1 of 6** for T1. Layers 2–6 (proxy allowlist, tool policy, exec controls, workspace restriction, kill switch) are this perimeter's contribution. T2's six layers (scanner, line verifier, CDR, allowlist, network isolation, container hardening) and the proxy-side credential injection are entirely absent from the standalone-`sandbox.mode` approach.
 
 **Reference.** [OpenClaw documentation, `sandbox.mode`](https://www.getopenclaw.ai/docs/configuration#sandbox).
 
@@ -172,7 +172,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 | Allowlist proxy only | None | None | Strong | Optional | Yes |
 | Tools-deny config only | None | None | Allowlist only | No | Yes |
 | Capsicum / capability OS | Strong (research) | None | None | No | FreeBSD only |
-| **This perimeter (Lobster-TrApp)** | **Strong (6 layers)** | **Strong (6 layers + CDR)** | **Allowlist + logging** | **Yes (proxy-side)** | **Yes** |
+| **This perimeter (OpenTrApp)** | **Strong (6 layers)** | **Strong (6 layers + CDR)** | **Allowlist + logging** | **Yes (proxy-side)** | **Yes** |
 
 The "Strong" / "Partial" / "None" classification follows the [`threat-model.md`](threat-model.md) attacker-capability matrix: "Strong" means the attacker category has multiple independent mitigating layers each backed by an evidence cell; "Partial" means a subset of capabilities are addressed; "None" means the alternative does not address the category. The "Cross-platform" column is for the user-installable target platform set (Linux, macOS, Windows on x86-64 / Apple Silicon).
 

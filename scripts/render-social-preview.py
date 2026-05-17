@@ -1,4 +1,4 @@
-"""Render the GitHub social-preview card for the Lobster-TrApp repo.
+"""Render the GitHub social-preview card for the OpenTrApp repo.
 
 Produces a 1280x640 PNG composed of:
   - a diagonal slate gradient (slate-900 -> slate-800)
@@ -7,7 +7,7 @@ Produces a 1280x640 PNG composed of:
   - a tagline in muted slate
   - a monospace author footer
 
-Output is written to docs/social-preview/lobster-trapp.png. Upload via
+Output is written to docs/social-preview/opentrapp.png. Upload via
 GitHub repo Settings -> General -> Social preview.
 """
 
@@ -16,8 +16,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 REPO = Path(__file__).resolve().parent.parent
-BANNER_SRC = REPO / "logos" / "Lobster-TrApp-FontLogo-Gradient.png"
-OUT_PNG = REPO / "docs" / "social-preview" / "lobster-trapp.png"
+BANNER_SRC = REPO / "logos" / "OpenTrApp-FontLogo-Gradient.png"
+OUT_PNG = REPO / "docs" / "social-preview" / "opentrapp.png"
 
 W, H = 1280, 640
 BG_TOP_LEFT = (15, 23, 42)        # slate-900 #0f172a
@@ -27,7 +27,7 @@ TAGLINE_COLOR = (203, 213, 225)   # slate-300 #cbd5e1
 FOOTER_COLOR = (100, 116, 139)    # slate-500 #64748b
 
 TAGLINE = "A safer way to run OpenClaw on your own computer."
-FOOTER = "albertdobmeyer  /  github.com/albertdobmeyer/lobster-trapp"
+FOOTER = "albertdobmeyer  /  github.com/albertdobmeyer/opentrapp"
 
 FONT_TAGLINE = "C:/Windows/Fonts/segoeui.ttf"
 FONT_FOOTER = "C:/Windows/Fonts/consola.ttf"

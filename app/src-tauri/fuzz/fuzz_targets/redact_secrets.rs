@@ -26,5 +26,5 @@ fuzz_target!(|data: &[u8]| {
     // The redactor only ever receives valid UTF-8 in production (subprocess
     // stderr is decoded as String before this point). Drop invalid input.
     let Ok(s) = std::str::from_utf8(data) else { return; };
-    let _ = lobster_trapp_lib::fuzz_api::redact_secrets(s);
+    let _ = opentrapp_lib::fuzz_api::redact_secrets(s);
 });

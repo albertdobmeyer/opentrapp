@@ -1,4 +1,4 @@
-# Lobster-TrApp Master Roadmap v4 — Finalization
+# OpenTrApp Master Roadmap v4 — Finalization
 
 **Date:** 2026-04-07
 **Previous:** `docs/superpowers/plans/2026-04-04-master-roadmap-v3.md` (superseded)
@@ -13,7 +13,7 @@
 
 A desktop app that lets anyone safely run OpenClaw on their personal computer, controlled from their phone, without risking their digital life.
 
-**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + lobster-trapp (GUI + landing page)
+**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + opentrapp (GUI + landing page)
 
 ---
 
@@ -36,7 +36,7 @@ A desktop app that lets anyone safely run OpenClaw on their personal computer, c
 | **openclaw-vault** | 8/8 complete | Certified | 24-point verify, 13 test scripts, 3 shell levels |
 | **clawhub-forge** | 4/5 complete | Phase 5 deferred (ClawHub API) | 87-pattern scanner, CDR pipeline, 25 skills certified |
 | **moltbook-pioneer** | 6/6 complete | Done | 48 tests, 25 injection patterns, 3 engagement presets |
-| **lobster-trapp GUI** | Functional | ~85% complete | 10 Tauri commands, 6 renderers, 52 frontend tests, 41 orchestrator checks |
+| **opentrapp GUI** | Functional | ~85% complete | 10 Tauri commands, 6 renderers, 52 frontend tests, 41 orchestrator checks |
 
 ### Cross-Repo Harmonization — Complete (2026-04-06)
 
@@ -80,10 +80,10 @@ F and I can run in parallel. G depends on nothing. H blocks J. I blocks J.
 
 | Task | Repo | Details |
 |------|------|---------|
-| F1. Wire integration tests into CI | lobster-trapp | Add `tests/integration-test.sh --ci` as a job in `.github/workflows/ci.yml` after `check-orchestration`. Skip container-dependent checks in CI. |
-| F2. Frontend unit tests: renderers | lobster-trapp | Tests for all 7 renderers (`LogRenderer`, `TerminalRenderer`, `ChecklistRenderer`, `TableRenderer`, `BadgeRenderer`, `ReportRenderer`, new `CardGridRenderer`) + `ansi.ts` parseAnsi function. |
-| F3. Frontend unit tests: StreamOutput + CommandPanel | lobster-trapp | Two most complex untested interactive components. Mock Tauri IPC for command execution and event streaming. |
-| F4. E2E test expansion | lobster-trapp | Playwright tests for: component detail view, command execution (mocked), settings persistence, setup wizard flow, error states (404, failed command). |
+| F1. Wire integration tests into CI | opentrapp | Add `tests/integration-test.sh --ci` as a job in `.github/workflows/ci.yml` after `check-orchestration`. Skip container-dependent checks in CI. |
+| F2. Frontend unit tests: renderers | opentrapp | Tests for all 7 renderers (`LogRenderer`, `TerminalRenderer`, `ChecklistRenderer`, `TableRenderer`, `BadgeRenderer`, `ReportRenderer`, new `CardGridRenderer`) + `ansi.ts` parseAnsi function. |
+| F3. Frontend unit tests: StreamOutput + CommandPanel | opentrapp | Two most complex untested interactive components. Mock Tauri IPC for command execution and event streaming. |
+| F4. E2E test expansion | opentrapp | Playwright tests for: component detail view, command execution (mocked), settings persistence, setup wizard flow, error states (404, failed command). |
 
 **Exit criteria:** CI runs orchestrator + integration + frontend + Rust + Playwright on every PR. Frontend test coverage above 35%.
 
@@ -97,10 +97,10 @@ F and I can run in parallel. G depends on nothing. H blocks J. I blocks J.
 
 | Task | Repo | Details |
 |------|------|---------|
-| G1. Design card-grid renderer | lobster-trapp | Define input format detection (JSON vs. section-header heuristics), card anatomy, responsive grid layout. |
-| G2. Implement `CardGridRenderer.tsx` | lobster-trapp | New file: `app/src/components/renderers/CardGridRenderer.tsx`. Parse structured output, render as responsive Tailwind CSS Grid. |
-| G3. Wire into OutputRenderer.tsx | lobster-trapp | Replace `ReportRenderer` alias at line 27-29 with `CardGridRenderer` import. |
-| G4. Tests + adopt in component.yml | lobster-trapp | Unit tests for parsing and rendering. Switch at least one component command to use `display: card-grid` (e.g., forge `stats` or pioneer `agent-census`). |
+| G1. Design card-grid renderer | opentrapp | Define input format detection (JSON vs. section-header heuristics), card anatomy, responsive grid layout. |
+| G2. Implement `CardGridRenderer.tsx` | opentrapp | New file: `app/src/components/renderers/CardGridRenderer.tsx`. Parse structured output, render as responsive Tailwind CSS Grid. |
+| G3. Wire into OutputRenderer.tsx | opentrapp | Replace `ReportRenderer` alias at line 27-29 with `CardGridRenderer` import. |
+| G4. Tests + adopt in component.yml | opentrapp | Unit tests for parsing and rendering. Switch at least one component command to use `display: card-grid` (e.g., forge `stats` or pioneer `agent-census`). |
 
 **Exit criteria:** A command with `display: card-grid` renders structured data as a responsive grid of cards, visually distinct from `ReportRenderer`. At least one component.yml command uses it.
 
@@ -114,10 +114,10 @@ F and I can run in parallel. G depends on nothing. H blocks J. I blocks J.
 
 | Task | Repo | Details |
 |------|------|---------|
-| H1. macOS bundle config | lobster-trapp | Add `bundle.macOS` to `tauri.conf.json`: dmg settings, `minimumSystemVersion`, signing identity placeholder. |
-| H2. Linux bundle config | lobster-trapp | Add `bundle.linux` to `tauri.conf.json`: targets (deb, AppImage), desktop file metadata, categories. |
-| H3. Configure updater | lobster-trapp | Generate signing keypair (`npx tauri signer generate`), set `active: true`, store private key in GitHub Secrets, pubkey in `tauri.conf.json`. |
-| H4. Test release workflow | lobster-trapp | Push a `v0.1.0-rc.1` tag. Verify CI produces a draft release with installable binaries + `latest.json` for all 4 platform targets. |
+| H1. macOS bundle config | opentrapp | Add `bundle.macOS` to `tauri.conf.json`: dmg settings, `minimumSystemVersion`, signing identity placeholder. |
+| H2. Linux bundle config | opentrapp | Add `bundle.linux` to `tauri.conf.json`: targets (deb, AppImage), desktop file metadata, categories. |
+| H3. Configure updater | opentrapp | Generate signing keypair (`npx tauri signer generate`), set `active: true`, store private key in GitHub Secrets, pubkey in `tauri.conf.json`. |
+| H4. Test release workflow | opentrapp | Push a `v0.1.0-rc.1` tag. Verify CI produces a draft release with installable binaries + `latest.json` for all 4 platform targets. |
 
 **Exit criteria:** `tauri.conf.json` has platform configs for macOS, Linux, and Windows. Updater enabled with valid pubkey. A git tag produces a draft release with installable binaries for all platforms.
 
@@ -131,7 +131,7 @@ F and I can run in parallel. G depends on nothing. H blocks J. I blocks J.
 
 | Task | Repo | Details |
 |------|------|---------|
-| I1. Wire wizard to real commands | lobster-trapp | The wizard's "Setup" step should trigger each component's `setup_command` from its manifest via the existing `run_command` Tauri handler. Backend already supports this — work is primarily frontend wiring in `app/src/pages/Setup.tsx`. |
+| I1. Wire wizard to real commands | opentrapp | The wizard's "Setup" step should trigger each component's `setup_command` from its manifest via the existing `run_command` Tauri handler. Backend already supports this — work is primarily frontend wiring in `app/src/pages/Setup.tsx`. |
 | I2. CDR Ollama fallback | clawhub-forge | `tools/lib/cdr-intent.sh:30-35` hard-fails if Ollama is unreachable. Add: (a) cached intent fallback (check for existing `intent.json`), (b) configurable remote endpoint in `config/cdr.conf`, (c) graceful error with actionable message. |
 | I3. Health metrics expansion | clawhub-forge | Add to `component.yml` health section: `lint-health` (count of lint-passing skills), `scan-health` (count of clean scans), `test-health` (count of passing tests). Commands already exist as `make lint-all`, `make scan-all`, `make test` with parseable output. |
 | I4. skill-create non-interactive fix | clawhub-forge | `tools/skill-create.sh` lines 109/123 check `INTERACTIVE` flag before processing `--commands`/`--tips` flags. Non-interactive mode should accept these args or proceed to AI generation when empty. |
@@ -146,13 +146,13 @@ F and I can run in parallel. G depends on nothing. H blocks J. I blocks J.
 
 | Task | Repo | Details |
 |------|------|---------|
-| J1. Static landing page | lobster-trapp | GitHub Pages at lobster-trapp.com. Hero section, three-module explainer (Vault/Forge/Pioneer), download buttons per platform, screenshot or demo. Uses `docs/index.html` as base. |
+| J1. Static landing page | opentrapp | GitHub Pages at opentrapp.com. Hero section, three-module explainer (Vault/Forge/Pioneer), download buttons per platform, screenshot or demo. Uses `docs/index.html` as base. |
 | J2. README polish | all repos | Final pass on all 4 READMEs for a public audience. Remove internal references, add badges, standardize structure. |
 | J3. Security audit for public repos | all repos | Grep for secrets, internal URLs, personal paths. Verify `.gitignore` covers `.env`, credentials. Verify no API keys in git history. |
 | J4. Make repos public | all repos | Flip visibility on GitHub. Verify submodule URLs still resolve. |
-| J5. First tagged release | lobster-trapp | `v0.1.0` tag triggers CI → release with binaries + update manifest. Announce. |
+| J5. First tagged release | opentrapp | `v0.1.0` tag triggers CI → release with binaries + update manifest. Announce. |
 
-**Exit criteria:** A stranger landing on lobster-trapp.com understands the product and can download it within 30 seconds. All repos public. `v0.1.0` release published with binaries for Linux, macOS, and Windows.
+**Exit criteria:** A stranger landing on opentrapp.com understands the product and can download it within 30 seconds. All repos public. `v0.1.0` release published with binaries for Linux, macOS, and Windows.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Context
 
-The Lobster-TrApp GUI currently renders component.yml manifests generically — every command, probe, and config declared in a manifest becomes a button on the dashboard. This is architecturally elegant but creates a terrible UX: a non-technical user sees 14 commands, 4 workflows, 3 configs, and developer jargon like "Nuclear Kill" and "seccomp profiles."
+The OpenTrApp GUI currently renders component.yml manifests generically — every command, probe, and config declared in a manifest becomes a button on the dashboard. This is architecturally elegant but creates a terrible UX: a non-technical user sees 14 commands, 4 workflows, 3 configs, and developer jargon like "Nuclear Kill" and "seccomp profiles."
 
 This spec inventories everything we have, categorizes it by who actually needs it, writes user stories from the non-technical user's perspective, and maps capabilities to stories — revealing what to show, what to hide, and what's missing.
 

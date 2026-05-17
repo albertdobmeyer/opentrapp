@@ -38,7 +38,7 @@ pub enum TenantState {
 
 The pair `(BootstrapState, TenantState)` is the perimeter's high-level state. Reported up to the frontend as a struct via the existing [`perimeter-state-changed`](../../../app/src-tauri/src/lifecycle.rs) event channel.
 
-> **Note:** `TenantState::Paused` covers what the existing UX called "Pause." Per [`04-stop-and-recovery-ux.md`](04-stop-and-recovery-ux.md), the user-facing copy becomes "Stopped"; the underlying primitive (`pause_perimeter` → `compose stop`) is unchanged. The variant name stays `Paused` to match the existing marker file (`~/.lobster-trapp/paused`) and Rust function naming.
+> **Note:** `TenantState::Paused` covers what the existing UX called "Pause." Per [`04-stop-and-recovery-ux.md`](04-stop-and-recovery-ux.md), the user-facing copy becomes "Stopped"; the underlying primitive (`pause_perimeter` → `compose stop`) is unchanged. The variant name stays `Paused` to match the existing marker file (`~/.opentrapp/paused`) and Rust function naming.
 
 ## Allowed combinations and `HeroStatusCard` mapping
 
@@ -77,9 +77,9 @@ Tenant state is **mostly computed**, with three persisted markers extending the 
 
 | Marker file | Meaning | Set when | Cleared when |
 |---|---|---|---|
-| `~/.lobster-trapp/paused` | User intent to stay stopped (already exists) | User clicks Stop | User clicks Resume |
-| `~/.lobster-trapp/activated` | Activation flow has succeeded at least once | Activation commits successfully | User clicks "Reset assistant" in Preferences |
-| `~/.lobster-trapp/credentials-ok` | Last credential validation succeeded; contains a unix-millis timestamp | After a successful `/v1/messages` live-ping | On 401 response from Anthropic; on `.env` rewrite |
+| `~/.opentrapp/paused` | User intent to stay stopped (already exists) | User clicks Stop | User clicks Resume |
+| `~/.opentrapp/activated` | Activation flow has succeeded at least once | Activation commits successfully | User clicks "Reset assistant" in Preferences |
+| `~/.opentrapp/credentials-ok` | Last credential validation succeeded; contains a unix-millis timestamp | After a successful `/v1/messages` live-ping | On 401 response from Anthropic; on `.env` rewrite |
 
 Tenant computation:
 - `Activating`: bootstrap subsystem reports `compose up -d vault-agent` in flight
@@ -139,7 +139,7 @@ Refactored:
 pub struct PerimeterStateStore {
     pub status: Mutex<PerimeterStatus>,
     pub paused: RwLock<bool>,                       // unchanged; mirrors marker file
-    pub activated: RwLock<bool>,                     // mirrors `~/.lobster-trapp/activated`
+    pub activated: RwLock<bool>,                     // mirrors `~/.opentrapp/activated`
     pub credentials_ok_at: RwLock<Option<u64>>,      // unix-ms; None means unverified
     pub bootstrap_progress: RwLock<Option<BootstrapProgress>>,  // in-flight pipeline step
 }

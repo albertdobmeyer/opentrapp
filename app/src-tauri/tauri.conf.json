@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicknisi/tauri-config-schema/main/schema.json",
-  "productName": "Lobster-TrApp",
+  "productName": "OpenTrApp",
   "version": "0.4.0",
-  "identifier": "dev.lobster-trapp.app",
+  "identifier": "dev.opentrapp.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Lobster-TrApp",
+        "title": "OpenTrApp",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
@@ -83,7 +83,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/albertdobmeyer/lobster-trapp/releases/latest/download/latest.json"
+        "https://github.com/albertdobmeyer/opentrapp/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJBOEVDNkM4QzFEOUYzMDcKUldRSDg5bkJ5TWFPS3NoazZPVkQwYUtDS0RMWjdIc2I2QVgxNXlJS1F6eThTcUJQeDVPTCtWS1EK"
     }

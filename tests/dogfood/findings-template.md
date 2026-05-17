@@ -110,7 +110,7 @@ Spending cap: $1.00
 ### Notes
 - Did any state cause the user to feel anxious / blamed?
 - Did any state require developer-jargon to understand?
-- Did the marker file `~/.lobster-trapp/paused` survive C7's app-restart?
+- Did the marker file `~/.opentrapp/paused` survive C7's app-restart?
 
 ---
 

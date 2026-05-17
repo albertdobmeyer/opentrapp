@@ -1,4 +1,4 @@
-# Product Identity Spec — What Lobster-TrApp Actually Is
+# Product Identity Spec — What OpenTrApp Actually Is
 
 **Date:** 2026-04-19
 **Author:** Albert + Claude Opus
@@ -20,9 +20,9 @@ Why not:
 
 The non-technical user wants the assistant. They're scared of the ecosystem. They can't set it up. They can't protect themselves.
 
-## What Lobster-TrApp Is
+## What OpenTrApp Is
 
-**Lobster-TrApp is the safe front door to the OpenClaw ecosystem for non-technical users.**
+**OpenTrApp is the safe front door to the OpenClaw ecosystem for non-technical users.**
 
 It does two things:
 1. **Makes OpenClaw accessible** — GUI wizard installs everything with clicks, no terminal needed
@@ -120,7 +120,7 @@ What it should feel like:
 │  Your AI Assistant                      ● Running   │
 │                                                     │
 │  Talk to your assistant:                            │
-│  Open Telegram → message @NewLobsterTrappBotBot                    │
+│  Open Telegram → message @NewLogoTrappBotBot                    │
 │                                                     │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
 │  │  Skills  │  │ Security │  │   Stop   │         │
@@ -185,7 +185,7 @@ What it should feel like:
 
 A non-technical user who has never heard of OpenClaw, containers, or security hardening should be able to:
 
-1. Visit lobster-trapp.com and understand: "This gives me a personal AI assistant"
+1. Visit opentrapp.com and understand: "This gives me a personal AI assistant"
 2. Download and install in under 5 minutes
 3. Complete the setup wizard without confusion
 4. Send their first message to their assistant via Telegram within 10 minutes of downloading

@@ -14,7 +14,7 @@ import pytest
 pytestmark = pytest.mark.network
 
 
-BLOCKED_DOMAIN = "example-not-on-allowlist-lobstertest.invalid"
+BLOCKED_DOMAIN = "example-not-on-allowlist-opentrapptest.invalid"
 # One of the allowlisted domains — raw.githubusercontent.com is in the stock
 # allowlist.txt. If the user has customized, this may need updating.
 ALLOWED_DOMAIN = "raw.githubusercontent.com"

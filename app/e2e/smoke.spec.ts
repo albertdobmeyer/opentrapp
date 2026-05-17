@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Smoke tests", () => {
   test("app loads with home page or Setup wizard", async ({ page }) => {
     await page.goto("/");
-    await expect(page).toHaveTitle(/Lobster/i);
+    await expect(page).toHaveTitle(/OpenTrApp/i);
     // On first run, the app may redirect to the setup wizard; otherwise shows home page with sidebar
     const homeLoaded = page.getByRole("link", { name: /preferences/i });
     const setup = page.getByText(/welcome|setup|prerequisites/i);
@@ -23,7 +23,7 @@ test.describe("Smoke tests", () => {
     await page.goto("/settings");
     await expect(page.getByRole("heading", { name: "Preferences" })).toBeVisible();
     // Footer shows version.
-    await expect(page.getByText(/Lobster-TrApp v\d+\.\d+\.\d+/)).toBeVisible();
+    await expect(page.getByText(/OpenTrApp v\d+\.\d+\.\d+/)).toBeVisible();
   });
 
   test("no unexpected console errors", async ({ page }) => {

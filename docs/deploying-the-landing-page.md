@@ -1,6 +1,6 @@
 # Deploying the landing page
 
-The marketing site at <https://lobster-trapp.com> is a static page hosted on the project's Hetzner VPS, served by nginx behind Cloudflare. The source lives in this repository at [`docs/index.html`](index.html) (and `docs/bg-hero.png`); deploys are a manual `scp` after merging changes to `main`.
+The marketing site at <https://opentrapp.com> is a static page hosted on the project's Hetzner VPS, served by nginx behind Cloudflare. The source lives in this repository at [`docs/index.html`](index.html) (and `docs/bg-hero.png`); deploys are a manual `scp` after merging changes to `main`.
 
 This runbook covers the deploy procedure end-to-end, including verification and rollback. It is independent of [`RELEASING.md`](../RELEASING.md) — landing-page changes ship out-of-band from app releases.
 
@@ -9,7 +9,7 @@ This runbook covers the deploy procedure end-to-end, including verification and 
 - SSH access to the Hetzner VPS via the `hetzner` alias in `~/.ssh/config` (key at `~/.ssh/hetzner_linuxlaptop`).
 - A clean working tree on `main` containing the change you want to publish. Deploy from `main`, never from a feature branch — the live site should always match a merged commit.
 
-The serve path on the server is `/var/www/lobster-trapp.com/html/`. Companion documentation for the wider server (other sites, databases, nginx layout) lives at `/root/docs/` on the VPS.
+The serve path on the server is `/var/www/opentrapp.com/html/`. Companion documentation for the wider server (other sites, databases, nginx layout) lives at `/root/docs/` on the VPS.
 
 ## Procedure
 
@@ -19,7 +19,7 @@ Run all commands from the repository root.
 
 ```bash
 LOCAL_HASH=$(sha256sum docs/index.html | awk '{print $1}')
-REMOTE_HASH=$(ssh hetzner sha256sum /var/www/lobster-trapp.com/html/index.html | awk '{print $1}')
+REMOTE_HASH=$(ssh hetzner sha256sum /var/www/opentrapp.com/html/index.html | awk '{print $1}')
 echo "local:  $LOCAL_HASH"
 echo "remote: $REMOTE_HASH"
 [ "$LOCAL_HASH" = "$REMOTE_HASH" ] && echo "→ already in sync" || echo "→ DIFFER (deploy needed)"
@@ -28,7 +28,7 @@ echo "remote: $REMOTE_HASH"
 If the hashes match, there is nothing to deploy. If they differ, optionally diff the two for a sanity check:
 
 ```bash
-ssh hetzner cat /var/www/lobster-trapp.com/html/index.html | diff - docs/index.html | head -40
+ssh hetzner cat /var/www/opentrapp.com/html/index.html | diff - docs/index.html | head -40
 ```
 
 ### 2. Back up the current live file
@@ -37,27 +37,27 @@ Always back up before overwriting. Use today's date plus a one-word reason so th
 
 ```bash
 DATE=$(date -u +%Y%m%d)
-ssh hetzner "cp -p /var/www/lobster-trapp.com/html/index.html \
-  /var/www/lobster-trapp.com/html/index.html.bak.${DATE}-pre-<reason>"
+ssh hetzner "cp -p /var/www/opentrapp.com/html/index.html \
+  /var/www/opentrapp.com/html/index.html.bak.${DATE}-pre-<reason>"
 ```
 
-Replace `<reason>` with a short tag like `deeplink`, `hero-copy`, `bg-image-swap`. Inspect existing backups with `ssh hetzner ls -la /var/www/lobster-trapp.com/html/index.html.bak.*`.
+Replace `<reason>` with a short tag like `deeplink`, `hero-copy`, `bg-image-swap`. Inspect existing backups with `ssh hetzner ls -la /var/www/opentrapp.com/html/index.html.bak.*`.
 
 ### 3. Deploy
 
 ```bash
-scp docs/index.html root@hetzner:/var/www/lobster-trapp.com/html/index.html
+scp docs/index.html root@hetzner:/var/www/opentrapp.com/html/index.html
 ```
 
 If the deploy includes new image assets, upload them in the same `scp` invocation. Note that `docs/index.html` references logos and the favicon under `img/` (e.g. `<img src="img/logo-banner.png">`), so the `docs/img/` subdirectory must be synced whenever its contents change — `scp` won't recurse into directories without `-r`:
 
 ```bash
 # Top-level assets only (most common — copy edits, hero swaps):
-scp docs/index.html docs/bg-hero.png root@hetzner:/var/www/lobster-trapp.com/html/
+scp docs/index.html docs/bg-hero.png root@hetzner:/var/www/opentrapp.com/html/
 
 # Including img/ subdirectory (logos, favicon — use whenever docs/img/ changed):
-scp docs/index.html root@hetzner:/var/www/lobster-trapp.com/html/
-scp -r docs/img root@hetzner:/var/www/lobster-trapp.com/html/
+scp docs/index.html root@hetzner:/var/www/opentrapp.com/html/
+scp -r docs/img root@hetzner:/var/www/opentrapp.com/html/
 ```
 
 If you change an asset path in `index.html` (moving a file between root and `img/`, or introducing a new subdirectory), the matching files MUST be uploaded in the same deploy. A path change without the corresponding asset upload will leave every reference 404'ing — see `index.html.bak.*` on the server for examples of past drift.
@@ -70,7 +70,7 @@ Run all three checks before declaring the deploy successful.
 # 4a. SHA-256 match between local and the file the server is serving from.
 #     This is the authoritative sync check — bypasses Cloudflare entirely.
 LOCAL_HASH=$(sha256sum docs/index.html | awk '{print $1}')
-REMOTE_HASH=$(ssh hetzner sha256sum /var/www/lobster-trapp.com/html/index.html | awk '{print $1}')
+REMOTE_HASH=$(ssh hetzner sha256sum /var/www/opentrapp.com/html/index.html | awk '{print $1}')
 [ "$LOCAL_HASH" = "$REMOTE_HASH" ] && echo "✓ sync confirmed" || echo "✗ MISMATCH"
 
 # 4b. nginx config still valid + service still active.
@@ -80,7 +80,7 @@ ssh hetzner 'nginx -t 2>&1 && systemctl is-active nginx'
 #     content. Substitute your own distinguishing substring — something
 #     short and unique to *this* deploy (a function name, a new copy
 #     fragment, a specific URL).
-HTTP_CODE=$(curl -sS -L -o /tmp/live.html -w '%{http_code}' https://lobster-trapp.com/)
+HTTP_CODE=$(curl -sS -L -o /tmp/live.html -w '%{http_code}' https://opentrapp.com/)
 echo "HTTP $HTTP_CODE"
 grep -c "<your-distinguishing-substring>" /tmp/live.html
 ```
@@ -98,8 +98,8 @@ If you change asset filenames or directory structure, that may not hold; in that
 If a deploy needs to be reverted, copy a dated backup over the live file:
 
 ```bash
-ssh hetzner 'cp /var/www/lobster-trapp.com/html/index.html.bak.<YYYYMMDD>-<reason> \
-  /var/www/lobster-trapp.com/html/index.html'
+ssh hetzner 'cp /var/www/opentrapp.com/html/index.html.bak.<YYYYMMDD>-<reason> \
+  /var/www/opentrapp.com/html/index.html'
 ```
 
 Re-run the verification block from §4 (substituting an old-content grep pattern in step 4d) to confirm the rollback took.
@@ -107,6 +107,6 @@ Re-run the verification block from §4 (substituting an old-content grep pattern
 ## Notes
 
 - **Don't `cd` into a working directory on the server**; deploys are write-once `scp` operations. The server has no checkout of this repository — it serves what was last uploaded.
-- **The `staging/` directory** under `/var/www/lobster-trapp.com/html/` is separate. It is not currently wired up to a subdomain or path; if you want a preview environment, that needs a one-time nginx and DNS change.
-- **The `.bak.YYYYMMDD-*` files** accumulate over time. Periodically prune them on the server (`ssh hetzner 'ls -t /var/www/lobster-trapp.com/html/index.html.bak.* | tail -n +6 | xargs -r rm'` keeps the five most recent).
+- **The `staging/` directory** under `/var/www/opentrapp.com/html/` is separate. It is not currently wired up to a subdomain or path; if you want a preview environment, that needs a one-time nginx and DNS change.
+- **The `.bak.YYYYMMDD-*` files** accumulate over time. Periodically prune them on the server (`ssh hetzner 'ls -t /var/www/opentrapp.com/html/index.html.bak.* | tail -n +6 | xargs -r rm'` keeps the five most recent).
 - **For larger landing-page revisions** (new sections, JS additions), open a regular PR against `main`, get CI green, merge, and *then* deploy. The repo is the source of truth; the server is downstream.

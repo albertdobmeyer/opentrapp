@@ -74,9 +74,9 @@ echo "=== Filesystem reach (vault-agent) ==="
 # instead of existence for it. We only check HOST paths here.
 declare -a HOST_PATHS=(
     "/home/albertd/.ssh/id_rsa"
-    "/home/albertd/Repositories/lobster-trapp/.env"
-    "/home/albertd/Repositories/lobster-trapp/.env.test"
-    "/home/albertd/.lobster-trapp/test-sessions"
+    "/home/albertd/Repositories/opentrapp/.env"
+    "/home/albertd/Repositories/opentrapp/.env.test"
+    "/home/albertd/.opentrapp/test-sessions"
 )
 for p in "${HOST_PATHS[@]}"; do
     out=$(podman exec vault-agent sh -c "test -e '$p' && echo FOUND || echo ABSENT" 2>&1)

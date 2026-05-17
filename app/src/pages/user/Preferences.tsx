@@ -47,7 +47,7 @@ export default function Preferences() {
       </div>
 
       <footer className="mt-10 text-center text-xs text-neutral-600">
-        <p>Lobster-TrApp v{APP_VERSION}</p>
+        <p>OpenTrApp v{APP_VERSION}</p>
         <p className="mt-1">
           Made with care for people who want AI without the stress.
         </p>
@@ -379,7 +379,7 @@ function StartupSection() {
     <div className="card-raised">
       <SectionHeader icon={Power} title="Startup" />
       <ToggleRow
-        label="Start Lobster-TrApp when I turn on my computer"
+        label="Start OpenTrApp when I turn on my computer"
         checked={settings.autostart}
         onChange={toggleAutostart}
       />

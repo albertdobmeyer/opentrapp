@@ -18,7 +18,7 @@ Both Stop and Resume call existing Tauri commands, unchanged:
 
 | Action | Command | What it does |
 |---|---|---|
-| Stop | `pause_perimeter` ([`commands/lifecycle.rs:87-119`](../../../app/src-tauri/src/commands/lifecycle.rs)) | `compose stop` against root compose.yml: stops all 4 containers, **preserves all volumes** (`vault-data` for session history, `forge-deliveries` for installed skills, `vault-proxy-logs`, `proxy-ca`), writes `~/.lobster-trapp/paused` marker |
+| Stop | `pause_perimeter` ([`commands/lifecycle.rs:87-119`](../../../app/src-tauri/src/commands/lifecycle.rs)) | `compose stop` against root compose.yml: stops all 4 containers, **preserves all volumes** (`vault-data` for session history, `forge-deliveries` for installed skills, `vault-proxy-logs`, `proxy-ca`), writes `~/.opentrapp/paused` marker |
 | Resume | `resume_perimeter` ([`commands/lifecycle.rs:140-144`](../../../app/src-tauri/src/commands/lifecycle.rs)) | Clears paused marker, `compose up -d` brings all four back |
 
 **Critical: never `nuclear-kill` or `hard-kill`.** Both wipe `vault-data` and the agent image:
@@ -136,7 +136,7 @@ Output is run through [`redact_secrets()` at `lifecycle.rs:141-163`](../../../ap
 
 ### Persistent log
 
-`~/.lobster-trapp/bootstrap.log` accumulates all bootstrap events (started, progress samples, failed). Rotated at 10 MB (existing log-rotate primitive in vault scripts). Karen can attach this log when reaching out for support; the "Show details" disclosure shows the most recent failure block.
+`~/.opentrapp/bootstrap.log` accumulates all bootstrap events (started, progress samples, failed). Rotated at 10 MB (existing log-rotate primitive in vault scripts). Karen can attach this log when reaching out for support; the "Show details" disclosure shows the most recent failure block.
 
 ## Tray icon mapping
 
@@ -169,7 +169,7 @@ E2E in `app/e2e/stop-and-recovery.spec.ts` (new):
 
 Manual smoke test:
 - Stop, restart the app, verify state is `(ShellReady, Paused)` (paused marker honored across restart)
-- Stop, manually `rm ~/.lobster-trapp/paused`, restart app — verify state recovers to `(ShellReady, Running)` (marker is the source of truth)
+- Stop, manually `rm ~/.opentrapp/paused`, restart app — verify state recovers to `(ShellReady, Running)` (marker is the source of truth)
 
 ## Out of scope
 

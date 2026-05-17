@@ -76,7 +76,7 @@ pub async fn restart_perimeter(state: State<'_, AppState>) -> Result<(), String>
 
 /// Pause the perimeter on user request. Stops the 4 containers but keeps
 /// them around (no `down`, no destroy) so resume is fast. Persists the
-/// paused state to `~/.lobster-trapp/paused` so it survives an app restart
+/// paused state to `~/.opentrapp/paused` so it survives an app restart
 /// — pausing yesterday shouldn't silently un-pause when the user reopens
 /// the app today.
 ///

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Lobster-TrApp Updater Signing Key Setup
+# OpenTrApp Updater Signing Key Setup
 # =============================================================================
 # Generates a signing keypair for the Tauri updater and configures the project.
 #
@@ -21,7 +21,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONF="$REPO_ROOT/app/src-tauri/tauri.conf.json"
 KEY_DIR="$HOME/.tauri"
-KEY_FILE="$KEY_DIR/lobster-trapp.key"
+KEY_FILE="$KEY_DIR/opentrapp.key"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -29,7 +29,7 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}=== Lobster-TrApp Updater Key Setup ===${NC}"
+echo -e "${BLUE}=== OpenTrApp Updater Key Setup ===${NC}"
 echo ""
 
 # Check prerequisites
@@ -89,7 +89,7 @@ echo -e "${GREEN}Updated: updater.active = true, pubkey set${NC}"
 echo ""
 echo -e "${BLUE}Step 3/3: Store private key in GitHub Secrets${NC}"
 echo ""
-echo "Go to: https://github.com/albertdobmeyer/lobster-trapp/settings/secrets/actions"
+echo "Go to: https://github.com/albertdobmeyer/opentrapp/settings/secrets/actions"
 echo ""
 echo "Create two secrets:"
 echo ""

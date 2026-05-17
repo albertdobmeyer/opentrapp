@@ -3,7 +3,7 @@
 **Date:** 2026-04-06
 **Status:** Approved design, pending implementation
 **Authors:** albertd + Claude
-**Scope:** New `tests/integration-test.sh` at lobster-trapp root
+**Scope:** New `tests/integration-test.sh` at opentrapp root
 
 ---
 
@@ -33,7 +33,7 @@ A bash script (`tests/integration-test.sh`) that validates cross-module data con
 
 ## Script Location & Style
 
-- **Path:** `tests/integration-test.sh` (lobster-trapp root)
+- **Path:** `tests/integration-test.sh` (opentrapp root)
 - **Style:** Matches `orchestrator-check.sh` — colored PASS/FAIL/WARN, sections, exit 1 on failure
 - **Dependencies:** bash, python3, jq
 - **No containers needed** — validates contracts at the file/format level
@@ -113,7 +113,7 @@ After the script is written:
 
 ```bash
 # Run integration tests
-cd ~/Repositories/lobster-trapp
+cd ~/Repositories/opentrapp
 bash tests/integration-test.sh
 
 # Expected: 22/22 PASS (after trifecta.md fixes)

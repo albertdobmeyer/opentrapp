@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Lobster-TrApp Cross-Module Integration Tests
+# OpenTrApp Cross-Module Integration Tests
 # =============================================================================
 # Validates operational seams between vault, forge, and pioneer:
 #   - Clearance report contract (forge -> vault)

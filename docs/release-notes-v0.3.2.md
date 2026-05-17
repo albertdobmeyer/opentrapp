@@ -1,4 +1,4 @@
-# Lobster-TrApp v0.3.2 — Release Notes
+# OpenTrApp v0.3.2 — Release Notes
 
 **Tagged:** _(pending — to be set at the v0.3.2 tag push)_
 **Container baseline:** four-container perimeter as in v0.3.0 / v0.3.1; default Split Shell

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Lobster-TrApp Orchestration Health Check
+# OpenTrApp Orchestration Health Check
 # =============================================================================
 # Comprehensive validation of the monorepo orchestration layer:
 #   - Schema validity

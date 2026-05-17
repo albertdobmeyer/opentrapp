@@ -1,6 +1,6 @@
-# Code Signing Policy — Lobster-TrApp
+# Code Signing Policy — OpenTrApp
 
-This document describes how the Lobster-TrApp project signs release artifacts and who is authorized to initiate a signing request. It exists to satisfy the [SignPath Foundation](https://signpath.org) open-source program requirements.
+This document describes how the OpenTrApp project signs release artifacts and who is authorized to initiate a signing request. It exists to satisfy the [SignPath Foundation](https://signpath.org) open-source program requirements.
 
 ## What we sign
 
@@ -8,8 +8,8 @@ Windows release artifacts produced by the CI pipeline:
 
 | Artifact | Format | Platform |
 |----------|--------|----------|
-| `Lobster-TrApp_<version>_x64_en-US.msi` | MSI installer | Windows x64 |
-| `Lobster-TrApp_<version>_x64-setup.exe` | NSIS setup executable | Windows x64 |
+| `OpenTrApp_<version>_x64_en-US.msi` | MSI installer | Windows x64 |
+| `OpenTrApp_<version>_x64-setup.exe` | NSIS setup executable | Windows x64 |
 
 macOS and Linux artifacts are not signed through SignPath (macOS signing requires Apple Developer Program; Linux packages are self-verified by package managers).
 
@@ -37,7 +37,7 @@ All of the above are attached to each GitHub Release as downloadable assets.
 
 ## Source code
 
-- Repository: https://github.com/albertdobmeyer/lobster-trapp
+- Repository: https://github.com/albertdobmeyer/opentrapp
 - License: MIT (see `LICENSE`)
 - Artifact configuration: `.github/workflows/ci.yml`, `app/src-tauri/tauri.conf.json`
 

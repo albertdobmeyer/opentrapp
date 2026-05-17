@@ -320,7 +320,7 @@ Unit tests:
 - Failure-cause classification: synthetic failures map to the correct cause IDs
 
 Integration tests (require Podman in the test environment):
-- Fresh-state bootstrap: empty `~/.lobster-trapp/`, no `.env`, with Podman pre-installed → reaches `ShellReady × Absent`
+- Fresh-state bootstrap: empty `~/.opentrapp/`, no `.env`, with Podman pre-installed → reaches `ShellReady × Absent`
 - Missing-Podman simulation: env-var-toggled `PATH` that hides Podman → sidecar invoked, fails as expected (CI env can't grant admin), surfaces `podman-install-denied` cause
 - Restart resilience: kill the bootstrap mid-step-4 → next launch resumes correctly
 
