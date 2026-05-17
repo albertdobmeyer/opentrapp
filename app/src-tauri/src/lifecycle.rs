@@ -503,6 +503,11 @@ fn compute_bootstrap_state(
     activated: bool,
 ) -> BootstrapState {
     match progress {
+        // Self-heal: a stale Failed marker is overridden by a healthy live
+        // probe. Containers may have recovered (compose restart-policy, manual
+        // intervention, transient runtime hiccup) after bootstrap failed. The
+        // watchdog clears the marker in the same tick.
+        Some(BootstrapProgress::Failed { .. }) if shell_up => BootstrapState::ShellReady,
         Some(BootstrapProgress::Failed { .. }) => BootstrapState::ShellFailed,
         Some(BootstrapProgress::Step { .. }) => BootstrapState::Bootstrapping,
         None => {
@@ -613,6 +618,17 @@ pub fn spawn_watchdog(handle: AppHandle, interval: Duration) {
             if let Some(store) = handle.try_state::<PerimeterStateStore>() {
                 if let Ok(mut guard) = store.status.lock() {
                     *guard = status.clone();
+                }
+                // Self-heal cleanup: if the live probe shows the shell back
+                // up while a stale Failed progress marker is still in the
+                // store, drop the marker so subsequent reads don't keep
+                // surfacing failure details to the UI.
+                if matches!(status.bootstrap, BootstrapState::ShellReady) {
+                    if let Ok(mut g) = store.bootstrap_progress.write() {
+                        if matches!(*g, Some(BootstrapProgress::Failed { .. })) {
+                            *g = None;
+                        }
+                    }
                 }
             }
 
@@ -795,14 +811,29 @@ mod tests {
     }
 
     #[test]
-    fn compute_bootstrap_failed_progress_overrides_shell_up() {
+    fn compute_bootstrap_failed_progress_self_heals_when_shell_up() {
+        let progress = Some(BootstrapProgress::Failed {
+            cause: "image-build-failed".into(),
+            message: "Build failed".into(),
+            last_error: None,
+        });
+        // A live probe showing the shell back up overrides a stale Failed
+        // marker — the watchdog will clear the marker on the same tick.
+        assert_eq!(
+            compute_bootstrap_state(true, &progress, true),
+            BootstrapState::ShellReady
+        );
+    }
+
+    #[test]
+    fn compute_bootstrap_failed_progress_holds_when_shell_down() {
         let progress = Some(BootstrapProgress::Failed {
             cause: "image-build-failed".into(),
             message: "Build failed".into(),
             last_error: None,
         });
         assert_eq!(
-            compute_bootstrap_state(true, &progress, true),
+            compute_bootstrap_state(false, &progress, true),
             BootstrapState::ShellFailed
         );
     }
