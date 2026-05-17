@@ -186,7 +186,7 @@ async fn step_pull_images(
             run_compose_with_runtime(
                 &root,
                 &runtime,
-                &["compose", "pull", "--quiet=false", "vault-proxy"],
+                &["compose", "pull", "vault-proxy"],
                 Duration::from_secs(300),
             )
         }
@@ -240,15 +240,19 @@ fn step_verify_shell(handle: &AppHandle, runtime: &str) -> Result<(), &'static s
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 fn images_already_built(root: &Path, runtime: &str) -> bool {
-    // Run `<runtime> compose images vault-agent` and check for non-empty output.
+    // Derive the compose project name from the directory name (lowercase, hyphens preserved).
+    let project = root
+        .file_name()
+        .and_then(|n| n.to_str())
+        .map(|s| s.to_lowercase())
+        .unwrap_or_else(|| "lobster-trapp".to_string());
+    let image_name = format!("localhost/{project}_vault-agent:latest");
+    // `podman image exists` exits 0 if the image is present — no stdout needed.
+    // podman-compose 1.0.6 doesn't support `compose images`, so we bypass it.
     StdCommand::new(runtime)
-        .args(["compose", "images", "--format", "json", "vault-agent"])
-        .current_dir(root)
+        .args(["image", "exists", &image_name])
         .output()
-        .map(|o| {
-            let stdout = String::from_utf8_lossy(&o.stdout);
-            o.status.success() && stdout.trim() != "[]" && !stdout.trim().is_empty()
-        })
+        .map(|o| o.status.success())
         .unwrap_or(false)
 }
 
@@ -256,16 +260,15 @@ fn run_compose_with_runtime(root: &Path, runtime: &str, args: &[&str], timeout: 
     let secs = timeout.as_secs().max(1).to_string();
     let result = StdCommand::new("timeout")
         .args(["--signal=TERM", "--kill-after=5s", &secs])
-        .args(args.iter().enumerate().map(|(i, &a)| {
-            if i == 0 { runtime } else { a }
-        }))
+        .arg(runtime)
+        .args(args)
         .current_dir(root)
         .output();
 
     // If timeout not found, run directly.
     let output = match result {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            StdCommand::new(runtime).args(&args[1..]).current_dir(root).output()
+            StdCommand::new(runtime).args(args).current_dir(root).output()
         }
         other => other,
     };
@@ -276,7 +279,7 @@ fn run_compose_with_runtime(root: &Path, runtime: &str, args: &[&str], timeout: 
             eprintln!(
                 "[bootstrap] {} {} → exit {}: {}",
                 runtime,
-                args[1..].join(" "),
+                args.join(" "),
                 o.status,
                 String::from_utf8_lossy(&o.stderr).trim()
             );

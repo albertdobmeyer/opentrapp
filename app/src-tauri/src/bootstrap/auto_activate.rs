@@ -99,6 +99,8 @@ pub async fn after_shell_ready(handle: AppHandle, root: PathBuf) {
 
     // Commit: bring vault-agent up.
     commit_agent(&handle, &root).await;
+    let env_path = vault_env_path(&handle);
+    resolve_and_emit_bot_url(&handle, &env_path).await;
 }
 
 async fn commit_agent(handle: &AppHandle, root: &Path) {
@@ -158,6 +160,43 @@ async fn commit_agent(handle: &AppHandle, root: &Path) {
     }
 }
 
+// ─── Bot URL resolution ───────────────────────────────────────────────
+
+/// Read the Telegram bot token from vault .env, call getMe, and emit
+/// `telegram-bot-resolved` with `{url, username}` so the frontend can
+/// populate its settings cache without the token ever entering the webview.
+async fn resolve_and_emit_bot_url(handle: &AppHandle, env_path: &Path) {
+    let Some(token) = read_env_value(env_path, "TELEGRAM_BOT_TOKEN") else {
+        return;
+    };
+
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    let resp = client
+        .get(format!("https://api.telegram.org/bot{}/getMe", token))
+        .send()
+        .await;
+
+    if let Ok(r) = resp {
+        if let Ok(body) = r.json::<serde_json::Value>().await {
+            if let Some(username) = body["result"]["username"].as_str() {
+                let url = format!("https://t.me/{}?text=Hi", username);
+                let _ = handle.emit(
+                    "telegram-bot-resolved",
+                    serde_json::json!({ "url": url, "username": username }),
+                );
+                eprintln!("[auto-activate] bot resolved: @{username}");
+            }
+        }
+    }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────
 
 // ─── Migration ────────────────────────────────────────────────────────
@@ -187,6 +226,8 @@ async fn migrate_existing_install(handle: AppHandle, root: PathBuf, anthropic_ke
                 }
             }
             commit_agent(&handle, &root).await;
+            let env_path = vault_env_path(&handle);
+            resolve_and_emit_bot_url(&handle, &env_path).await;
             let _ = handle.emit("migration-completed", ());
         }
         Some(false) => {

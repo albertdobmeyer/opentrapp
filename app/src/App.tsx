@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -63,6 +64,26 @@ export default function App() {
     // calls setAutostartEnabled directly).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsLoaded]);
+
+  // Populate the bot URL/username from the backend's auto-activate or
+  // migration path — emitted once after vault-agent comes up successfully.
+  useEffect(() => {
+    let unlistenFn: (() => void) | undefined;
+    void listen<{ url: string; username: string }>(
+      "telegram-bot-resolved",
+      (event) => {
+        void updateSettings({
+          telegramBotUrl: event.payload.url,
+          telegramBotUsername: event.payload.username,
+        });
+      }
+    ).then((fn) => {
+      unlistenFn = fn;
+    });
+    return () => {
+      unlistenFn?.();
+    };
+  }, [updateSettings]);
 
   if (!settingsLoaded) {
     return (
