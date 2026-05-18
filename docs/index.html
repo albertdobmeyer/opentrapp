@@ -15,7 +15,9 @@
   <meta name="twitter:description" content="Open-source desktop app that wraps autonomous CLI agents in a four-container sandbox on your own machine. No claim to absolute safety — just an honest perimeter.">
   <meta name="twitter:image" content="https://opentrapp.com/hero.png">
   <link rel="canonical" href="https://opentrapp.com">
-  <link rel="icon" type="image/png" href="img/favicon.png">
+  <link rel="icon" type="image/png" sizes="64x64" href="img/favicon.png">
+  <link rel="icon" type="image/x-icon" href="img/favicon.ico">
+  <link rel="apple-touch-icon" href="img/favicon.png">
   <style>
     /* ── Reset & Base ────────────────────────────────── */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -163,15 +165,101 @@
       margin: 0 auto;
     }
 
+    /* Hero logo wrapper — owns the soft brand-tinted halo so it can sit
+       behind the image without affecting the bitmap itself. The image
+       stays a regular drop-shadow chain; the wrapper carries the radial
+       glow and the moving shimmer pseudo-element. */
+    .hero-logo-wrap {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 24px;
+      isolation: isolate; /* keep the shine clipped to this stacking context */
+    }
+
+    .hero-logo-wrap::before {
+      content: "";
+      position: absolute;
+      inset: -28px -36px;
+      z-index: -1;
+      background:
+        radial-gradient(closest-side, rgba(0, 153, 102, 0.32), transparent 75%),
+        radial-gradient(closest-side, rgba(14, 165, 233, 0.22), transparent 70%);
+      filter: blur(22px);
+      opacity: 0.95;
+      pointer-events: none;
+    }
+
     .hero-logo {
       width: 100%;
       max-width: 460px;
       height: auto;
-      margin-bottom: 24px;
+      display: block;
+      /* Layered drop-shadows: brand-green halo, far blue ambient,
+         tight contact shadow — together they read as "elevated glass". */
       filter:
-        drop-shadow(0 0 30px rgba(0, 153, 102, 0.28))
-        drop-shadow(0 12px 36px rgba(14, 165, 233, 0.22))
-        drop-shadow(0 2px 4px rgba(2, 6, 23, 0.6));
+        drop-shadow(0 0 22px rgba(0, 153, 102, 0.45))
+        drop-shadow(0 18px 44px rgba(14, 165, 233, 0.32))
+        drop-shadow(0 6px 12px rgba(2, 6, 23, 0.55))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.18));
+      /* A whisper of saturation+contrast so the print colors look
+         lit, not flat. Stays under 1.1× to avoid the cheap "vivid" look. */
+      transform: translateZ(0); /* GPU layer — keeps the filter smooth */
+      transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1),
+                  filter 600ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .hero-logo-wrap:hover .hero-logo {
+      transform: translateY(-3px) scale(1.015);
+      filter:
+        drop-shadow(0 0 28px rgba(0, 153, 102, 0.55))
+        drop-shadow(0 24px 56px rgba(14, 165, 233, 0.40))
+        drop-shadow(0 8px 16px rgba(2, 6, 23, 0.60))
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.22));
+    }
+
+    /* Diagonal shine that sweeps across the logo on load + on hover.
+       Uses a mask so it only paints on top of the visible logo bitmap. */
+    .hero-logo-shine {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(
+        115deg,
+        transparent 35%,
+        rgba(255, 255, 255, 0.55) 50%,
+        transparent 65%
+      );
+      background-size: 220% 100%;
+      background-position: 120% 0;
+      mix-blend-mode: screen;
+      opacity: 0;
+      -webkit-mask-image: url("img/logo-banner.png");
+              mask-image: url("img/logo-banner.png");
+      -webkit-mask-size: contain;
+              mask-size: contain;
+      -webkit-mask-position: center;
+              mask-position: center;
+      -webkit-mask-repeat: no-repeat;
+              mask-repeat: no-repeat;
+      animation: heroLogoShine 5.5s cubic-bezier(0.4, 0, 0.2, 1) 1.2s infinite;
+    }
+
+    .hero-logo-wrap:hover .hero-logo-shine {
+      animation-duration: 2.2s;
+    }
+
+    @keyframes heroLogoShine {
+      0%   { background-position: 120% 0; opacity: 0; }
+      8%   { opacity: 0.9; }
+      40%  { background-position: -20% 0; opacity: 0.9; }
+      48%  { background-position: -20% 0; opacity: 0; }
+      100% { background-position: -20% 0; opacity: 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-logo-shine { animation: none; opacity: 0; }
+      .hero-logo,
+      .hero-logo-wrap:hover .hero-logo { transition: none; transform: none; }
     }
 
     /* Primary tagline directly under the logo — biggest, brightest text in the hero. */
@@ -763,7 +851,10 @@
 
   <!-- ── Hero ──────────────────────────────────────── -->
   <section class="hero">
-    <img src="img/logo-banner.png" alt="OpenTrApp" class="hero-logo">
+    <div class="hero-logo-wrap" role="img" aria-label="OpenTrApp">
+      <img src="img/logo-banner.png" alt="" class="hero-logo">
+      <span class="hero-logo-shine" aria-hidden="true"></span>
+    </div>
 
     <h1 class="hero-slogan">A safer way to run autonomous CLI agents on your own computer.</h1>
 
