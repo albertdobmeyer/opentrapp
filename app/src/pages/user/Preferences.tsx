@@ -106,7 +106,7 @@ function KeysSection() {
       try {
         content = await readConfig(VAULT_ENV.component, VAULT_ENV.path);
       } catch {
-        content = "# OpenClaw-Vault configuration\n";
+        content = "# OpenTrApp agent configuration\n";
       }
       const envKey = which === "anthropic" ? "ANTHROPIC_API_KEY" : "TELEGRAM_BOT_TOKEN";
       content = upsertEnvVar(content, envKey, trimmed);

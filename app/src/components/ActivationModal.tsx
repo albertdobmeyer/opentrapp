@@ -265,7 +265,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
     try {
       let envContent = "";
       try { envContent = await readConfig("openclaw-vault", ".env"); }
-      catch { envContent = "# OpenClaw-Vault configuration\n"; }
+      catch { envContent = "# OpenTrApp agent configuration\n"; }
       envContent = upsertEnvVar(envContent, "ANTHROPIC_API_KEY", anthropicKey);
       envContent = upsertEnvVar(envContent, "TELEGRAM_BOT_TOKEN", telegram.telegramToken);
       await writeConfig("openclaw-vault", ".env", envContent);

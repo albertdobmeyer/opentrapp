@@ -355,7 +355,7 @@ async function persistKeys({ anthropicKey, telegramToken }: { anthropicKey: stri
   try {
     content = await readConfig("openclaw-vault", ".env");
   } catch {
-    content = "# OpenClaw-Vault configuration\n";
+    content = "# OpenTrApp agent configuration\n";
   }
 
   if (anthropicKey) content = upsertEnvVar(content, "ANTHROPIC_API_KEY", anthropicKey);

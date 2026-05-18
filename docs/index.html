@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OpenTrApp — A safer way to run autonomous CLI agents on your own computer</title>
-  <meta name="description" content="OpenTrApp wraps autonomous CLI agents — Anthropic's OpenClaw today, more tomorrow — in a four-container sandbox on your own machine and lets you chat with them from Telegram. Open-source, MIT-licensed, no marketing — just an honest perimeter built by independent researchers.">
+  <meta name="description" content="OpenTrApp wraps autonomous CLI agents in a four-container sandbox on your own machine and lets you chat with them from Telegram. Open-source, MIT-licensed, no marketing — just an honest perimeter built by independent researchers.">
   <meta property="og:title" content="OpenTrApp — A safer way to run autonomous CLI agents on your own computer">
   <meta property="og:description" content="Open-source desktop app that wraps autonomous CLI agents in a four-container sandbox on your own machine. Reasoning still goes through the agent's vendor API; everything else stays local. No claim to absolute safety — just an honest perimeter.">
   <meta property="og:type" content="website">
@@ -767,7 +767,7 @@
     <h1 class="hero-slogan">A safer way to run autonomous CLI agents on your own computer.</h1>
 
     <p class="hero-sub">Runs <span class="brand-grad">locally</span> on your Mac, Windows, or Linux —<br class="claim-br">no separate sandbox machine, no cloud-hosted agent.</p>
-    <p class="hero-sub">Wraps the agent (Anthropic's OpenClaw today, more tomorrow) in a four-container <span class="brand-grad">sandbox</span> —<br class="claim-br">the bot, its tools, and its skills are isolated from your files.</p>
+    <p class="hero-sub">Wraps the agent in a four-container <span class="brand-grad">sandbox</span> —<br class="claim-br">the bot, its tools, and its skills are isolated from your files.</p>
     <p class="hero-sub">Puts every <span class="brand-grad">skill</span> through a 4-gate vetting pipeline —<br class="claim-br">70 malware + 17 prompt-injection signatures, before it's allowed into the sandbox.</p>
 
     <div class="hero-actions">
@@ -793,10 +793,10 @@
     </div>
 
     <div class="trust">
-      <div class="trust-item"><span class="dot"></span> Sandboxed filesystem — designed to keep the Clawbot off your files</div>
-      <div class="trust-item"><span class="dot"></span> API keys held by a proxy — the Clawbot never sees them</div>
+      <div class="trust-item"><span class="dot"></span> Sandboxed filesystem — designed to keep the agent off your files</div>
+      <div class="trust-item"><span class="dot"></span> API keys held by a proxy — the agent never sees them</div>
       <div class="trust-item"><span class="dot"></span> Outbound traffic filtered against an allowlist and logged</div>
-      <div class="trust-item"><span class="dot"></span> 24 startup checks verify the sandbox before the Clawbot runs</div>
+      <div class="trust-item"><span class="dot"></span> 24 startup checks verify the sandbox before the agent starts</div>
     </div>
   </section>
 
@@ -812,7 +812,7 @@
         style="width: 100%; max-width: 800px; border-radius: 12px;">
         <source src="demo/demo.mp4" type="video/mp4">
         <source src="demo/demo.webm" type="video/webm">
-        <img src="demo/demo.gif" alt="A 30-second walkthrough of the OpenTrApp setup wizard, ending with a Telegram chat with the Clawbot.">
+        <img src="demo/demo.gif" alt="A 30-second walkthrough of the OpenTrApp setup wizard, ending with a Telegram chat with the agent.">
       </video>
     </div>
   -->
@@ -831,7 +831,7 @@
 
       <!-- Agent inside container -->
       <rect x="100" y="110" width="120" height="60" rx="8" fill="rgba(15, 23, 42, 0.8)" stroke="#334155" stroke-width="1"/>
-      <text x="160" y="136" fill="#94a3b8" font-size="10" font-weight="500" text-anchor="middle" font-family="system-ui">OpenClaw Clawbot</text>
+      <text x="160" y="136" fill="#94a3b8" font-size="10" font-weight="500" text-anchor="middle" font-family="system-ui">CLI agent</text>
       <text x="160" y="152" fill="#475569" font-size="9" text-anchor="middle" font-family="system-ui">runs here, stays here</text>
 
       <!-- Security layers labels -->
@@ -875,7 +875,7 @@
 
       <!-- Key callout -->
       <rect x="260" y="255" width="280" height="36" rx="8" fill="rgba(245, 158, 11, 0.08)" stroke="rgba(245, 158, 11, 0.2)" stroke-width="1"/>
-      <text x="400" y="278" fill="#f59e0b" font-size="11" font-weight="600" text-anchor="middle" font-family="system-ui">API keys held by proxy, not the Clawbot</text>
+      <text x="400" y="278" fill="#f59e0b" font-size="11" font-weight="600" text-anchor="middle" font-family="system-ui">API keys held by proxy, not the agent</text>
 
       <!-- Arrow marker -->
       <defs>
@@ -891,8 +891,8 @@
   <!-- ── Features ──────────────────────────────────── -->
   <section id="features" class="section">
     <div class="section-label">What It Does</div>
-    <h2 class="section-title">How we try to make running the Clawbot safer</h2>
-    <p class="section-subtitle">The Clawbot is a powerful autonomous agent. These are the layers we put around it. None of them is bulletproof on its own; together they raise the cost of a successful attack.</p>
+    <h2 class="section-title">How we try to make running an autonomous agent safer</h2>
+    <p class="section-subtitle">An autonomous CLI agent is a powerful tool. These are the layers we put around it. None of them is bulletproof on its own; together they raise the cost of a successful attack.</p>
 
     <div class="features-grid">
       <div class="card">
@@ -900,7 +900,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#009966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
         <h3>Contain</h3>
-        <p>The Clawbot runs inside a sandbox on your computer that's designed to prevent it from reading your personal files, accessing your passwords, or installing anything outside the sandbox. Your API keys are held by a separate proxy container — the Clawbot itself never sees them.</p>
+        <p>The agent runs inside a sandbox on your computer that's designed to prevent it from reading your personal files, accessing your passwords, or installing anything outside the sandbox. Your API keys are held by a separate proxy container — the agent itself never sees them.</p>
         <div class="card-detail">6 independent layers, designed so a bug in one doesn't compromise the others</div>
       </div>
 
@@ -918,7 +918,7 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
         <h3>Monitor</h3>
-        <p>Every website the Clawbot tries to reach is checked against an allowlist. Unapproved requests are blocked and logged. You can review what the Clawbot did on the network from inside the app.</p>
+        <p>Every website the agent tries to reach is checked against an allowlist. Unapproved requests are blocked and logged. You can review what the agent did on the network from inside the app.</p>
         <div class="card-detail">Allowlist-only outbound; everything else is blocked and logged</div>
       </div>
     </div>
@@ -939,8 +939,8 @@
           <!-- Lock icon for Vault -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#009966" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
         </div>
-        <h3>The Clawbot</h3>
-        <p>OpenClaw's Clawbot runs inside a sandbox container that's designed to limit what it can do. Your API keys are held by a separate proxy container — the Clawbot itself never sees them.</p>
+        <h3>The agent</h3>
+        <p>An autonomous CLI agent runs inside a sandbox container that's designed to limit what it can do. Your API keys are held by a separate proxy container — the agent itself never sees them. OpenTrApp ships pre-wired for <a href="https://github.com/anthropics/openclaw">OpenClaw</a> today; the perimeter is designed to extend to other CLI agents over time.</p>
         <a href="https://www.getopenclaw.ai" class="card-link" target="_blank" rel="noopener">
           Learn about OpenClaw <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
@@ -1054,7 +1054,7 @@
         <line x1="140" y1="148" x2="480" y2="148" stroke="#ef4444" stroke-width="1" opacity="0.25"/>
 
         <!-- Fail label -->
-        <text x="310" y="168" fill="#ef4444" font-size="9" text-anchor="middle" font-family="system-ui" opacity="0.65">✗  any gate fails — skill is blocked before it reaches your Clawbot</text>
+        <text x="310" y="168" fill="#ef4444" font-size="9" text-anchor="middle" font-family="system-ui" opacity="0.65">✗  any gate fails — skill is blocked before it reaches your agent</text>
       </svg>
     </div>
 
@@ -1082,7 +1082,7 @@
         <!-- Vault node -->
         <circle cx="254" cy="70" r="28" fill="rgba(0, 153, 102, 0.08)" stroke="#009966" stroke-width="1.5"/>
         <text x="254" y="66" fill="#009966" font-size="10" font-weight="600" text-anchor="middle" font-family="system-ui">Vault</text>
-        <text x="254" y="80" fill="#475569" font-size="8" text-anchor="middle" font-family="system-ui">run Clawbot</text>
+        <text x="254" y="80" fill="#475569" font-size="8" text-anchor="middle" font-family="system-ui">run agent</text>
 
         <!-- Arrow to OpenTrApp -->
         <line x1="286" y1="70" x2="320" y2="70" stroke="#334155" stroke-width="1.5"/>
@@ -1100,6 +1100,24 @@
           </marker>
         </defs>
       </svg>
+    </div>
+
+    <!-- ── Compatible CLI agents — examples for newcomers ────────── -->
+    <div class="agent-examples" style="margin-top: 56px; padding: 24px; border: 1px solid rgba(51, 65, 85, 0.3); border-radius: 12px; background: rgba(15, 23, 42, 0.4);">
+      <p class="pipeline-label" style="margin-bottom: 14px;">Compatible CLI agents</p>
+      <p style="font-size: 0.95rem; color: #94a3b8; margin-bottom: 16px;">
+        OpenTrApp's perimeter is agent-agnostic: any autonomous CLI agent that runs as a long-lived process with a configurable HTTP proxy and an allowlist-able outbound surface can plug in. We ship pre-wired for one today; here are agents we know of that are candidates for future integration.
+      </p>
+      <ul style="font-size: 0.9rem; color: #94a3b8; line-height: 1.8; padding-left: 18px; margin-bottom: 8px;">
+        <li><strong style="color: #cbd5e1;"><a href="https://github.com/anthropics/openclaw">OpenClaw</a></strong> — Anthropic's autonomous agent runtime. <em style="color: #64748b;">Shipped today.</em></li>
+        <li><strong style="color: #cbd5e1;">Claude Code</strong> — Anthropic's coding CLI; runs locally, similar shape to OpenClaw. <em style="color: #64748b;">Candidate.</em></li>
+        <li><strong style="color: #cbd5e1;">OpenCode</strong> — open-source coding agent. <em style="color: #64748b;">Candidate.</em></li>
+        <li><strong style="color: #cbd5e1;">Aider</strong> — terminal-first pair-programming agent. <em style="color: #64748b;">Candidate.</em></li>
+        <li><strong style="color: #cbd5e1;">Open Interpreter</strong> — local code-execution agent. <em style="color: #64748b;">Candidate.</em></li>
+      </ul>
+      <p style="font-size: 0.85rem; color: #64748b; margin-top: 12px;">
+        If you'd like to see your agent listed, open an issue on the repo with a pointer to the runtime's documentation and the integration shape would be in scope for a contributor's first PR.
+      </p>
     </div>
   </section>
 
@@ -1127,7 +1145,7 @@
       <div class="step">
         <div class="step-number">3</div>
         <h3>Monitor &amp; Control</h3>
-        <p>Start, stop, and monitor the Clawbot from the app. The 24 sandbox checks run automatically on startup. Every outbound request is logged so you can review what the Clawbot did on the network.</p>
+        <p>Start, stop, and monitor the agent from the app. The 24 sandbox checks run automatically on startup. Every outbound request is logged so you can review what the agent did on the network.</p>
       </div>
     </div>
   </section>
@@ -1203,18 +1221,18 @@
 
     <p>
       <strong>What this is.</strong> OpenTrApp is the desktop wrapper one
-      open-source contributor built so that running OpenClaw on a personal computer
-      doesn't require the user to wire up four containers, a proxy, a skill scanner,
-      and a Telegram bridge by hand. There's no team behind it, no company, no
-      funding, no business model. It's a side project shared because we hope it's
-      useful to people who want to explore the OpenClaw ecosystem more safely than
-      running it raw on their main machine.
+      open-source contributor built so that running an autonomous CLI agent on a
+      personal computer doesn't require the user to wire up four containers, a
+      proxy, a skill scanner, and a Telegram bridge by hand. There's no team
+      behind it, no company, no funding, no business model. It's a side project
+      shared because we hope it's useful to people who want to explore autonomous
+      CLI agents more safely than running them raw on their main machine.
     </p>
 
     <p>
       <strong>What this isn't.</strong> It isn't a finished, audited security
       product. It isn't a guarantee. It isn't a replacement for thinking before you
-      give an autonomous agent access to your machine. The OpenClaw Clawbot is
+      give an autonomous agent access to your machine. The agent is
       genuinely powerful and genuinely hard to fully control — that's an open
       research problem the whole AI-safety community is working on. What we did is
       build the smallest cell we could think of around it, and document honestly
@@ -1228,7 +1246,7 @@
 
     <p>
       <strong>This is experimental software.</strong> OpenTrApp is a young project
-      that wraps an autonomous AI agent (the OpenClaw Clawbot) in a security perimeter on your
+      that wraps an autonomous AI agent in a security perimeter on your
       personal computer. It is provided <em>as is</em>, without warranty of any kind.
       The authors take no responsibility for any damage to your computer, your data,
       or anything else that may result from running it.
@@ -1259,7 +1277,7 @@
       designed around three modules. The third one
       (<a href="https://github.com/albertdobmeyer/moltbook-pioneer">moltbook-pioneer</a>)
       was built to scan posts on the Moltbook AI-agent social network for
-      prompt-injection patterns before they reached the Clawbot. Moltbook was
+      prompt-injection patterns before they reached the agent. Moltbook was
       acquired by Meta in March 2026 and its API has been intermittent since — the
       module is parked, the code is preserved at <code>components/moltbook-pioneer/</code>,
       and we'll bring it back if the network stabilises or a successor appears.
