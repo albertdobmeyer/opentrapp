@@ -94,7 +94,7 @@ export default function ModeSwitcher() {
           </h2>
         </div>
         <p className="text-sm text-neutral-300 mb-3">
-          You’re now seeing Lobster-TrApp’s full technical controls. This view
+          You’re now seeing OpenTrApp’s full technical controls. This view
           shows you every component, log, configuration, and security check.
         </p>
         <ul className="text-sm text-neutral-400 mb-6 space-y-1.5 list-disc list-inside">

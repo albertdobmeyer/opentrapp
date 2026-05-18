@@ -4,7 +4,7 @@
 
 **Goal:** Transform openclaw-vault from a static developer sandbox into a proven, multi-gear security harness that any non-technical user can trust.
 
-**Architecture:** Six-layer defense (container + proxy + tool policy + app restrictions + exec controls + hardening config). Three gears (Manual / Semi-Auto / Full-Auto). GUI-driven via Lobster-TrApp manifest system.
+**Architecture:** Six-layer defense (container + proxy + tool policy + app restrictions + exec controls + hardening config). Three gears (Manual / Semi-Auto / Full-Auto). GUI-driven via OpenTrApp manifest system.
 
 **Spec:** `docs/superpowers/specs/2026-03-23-openclaw-vault-security-harness-design.md`
 
@@ -59,7 +59,7 @@
 | Create Gear 1 allowlist template (LLM APIs only, no raw.githubusercontent.com) | Layer 2 configuration |
 | Write Gear 1-specific verification tests (beyond the 15-point check) | Prove Gear 1 claims |
 | Create `scripts/switch-gear.sh manual` command | Gear switching mechanism |
-| Update `component.yml` with gear-switching commands | Lobster-TrApp integration |
+| Update `component.yml` with gear-switching commands | OpenTrApp integration |
 | Test Gear 1 end-to-end on our laptop | Prove the thesis for Manual mode |
 
 **Exit criteria:** Gear 1 is running on our laptop. Agent cannot exec, cannot read files, cannot reach non-API domains, requires approval for every action. All gear-specific tests pass.
@@ -78,7 +78,7 @@
 | Implement `monitoring/session-report.sh` (summarize agent actions) | Session audit trail |
 | Implement `monitoring/activity-feed.sh` (real-time structured log) | Live monitoring |
 | Update `component.yml` monitoring commands | GUI integration |
-| Test monitoring output renders correctly in Lobster-TrApp | End-to-end verification |
+| Test monitoring output renders correctly in OpenTrApp | End-to-end verification |
 
 **Exit criteria:** User can see what the agent did in plain language via the GUI. Network traffic, tool usage, and blocked attempts are all visible.
 
@@ -142,7 +142,7 @@
 | Rewrite README (new thesis, new target audience, gear system docs) | Public documentation |
 | Remove Path B (docker-sandbox-setup.sh) | Cleanup per spec section 6.4 |
 | Remove/archive Phase 2 VM isolation stubs | Cleanup |
-| Update component.yml with all gear commands, states, and monitoring | Lobster-TrApp integration |
+| Update component.yml with all gear commands, states, and monitoring | OpenTrApp integration |
 | Capture screenshots for README | Visual documentation |
 | Update CLAUDE.md with new architecture | Developer documentation |
 | Final security audit of entire repo | Pre-release confidence |

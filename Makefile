@@ -1,4 +1,4 @@
-# Lobster-TrApp — common operator commands.
+# OpenTrApp — common operator commands.
 #
 # Conventions:
 #   - Targets group by area (test gates, dogfood, audits, perimeter ops).
@@ -16,7 +16,7 @@
         perimeter-up perimeter-down perimeter-status
 
 help:
-	@echo "Lobster-TrApp common targets:"
+	@echo "OpenTrApp common targets:"
 	@echo ""
 	@echo "  Test gates (also run by CI on every PR):"
 	@echo "    test-rust          cargo test --lib (~30s warm)"

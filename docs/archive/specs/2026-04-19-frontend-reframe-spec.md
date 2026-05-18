@@ -16,7 +16,7 @@ Every user-facing string must answer the question a non-technical user would ask
 
 ### Current
 ```
-Lobster-TrApp
+OpenTrApp
 OpenClaw Orchestrator
 
 [Dashboard icon] Dashboard
@@ -31,7 +31,7 @@ COMPONENTS
 
 ### Target
 ```
-Lobster-TrApp
+OpenTrApp
 
 [Dashboard icon] Dashboard
 
@@ -83,11 +83,11 @@ Dashboard
 
 [assistant status card — prominent, role=runtime component]
   Your AI Assistant          ● Running
-  Talk to your assistant on Telegram → @NewLobsterTrappBotBot
+  Talk to your assistant on Telegram → @NewLogoTrappBotBot
 
   [Security Check]  [Stop Assistant]  [Skills (25)]
 
-[onboarding: "Your assistant is ready! Message @NewLobsterTrappBotBot on Telegram to get started."]
+[onboarding: "Your assistant is ready! Message @NewLogoTrappBotBot on Telegram to get started."]
 
 [2 secondary cards: Skills + Network]
 ```
@@ -120,7 +120,7 @@ Dashboard
 ### Current
 ```
 [logo]
-Welcome to Lobster-TrApp
+Welcome to OpenTrApp
 Your security-first desktop GUI for the OpenClaw ecosystem.
 Let's check that everything is set up correctly.
 [Let's get started]
@@ -129,7 +129,7 @@ Let's check that everything is set up correctly.
 ### Target
 ```
 [logo]
-Welcome to Lobster-TrApp
+Welcome to OpenTrApp
 Let's set up your personal AI assistant.
 It'll run safely on your computer — you control it from Telegram.
 [Get Started]
@@ -138,7 +138,7 @@ It'll run safely on your computer — you control it from Telegram.
 ### Exact string changes
 | Current | New |
 |---------|-----|
-| "Welcome to Lobster-TrApp" | "Welcome to Lobster-TrApp" (keep) |
+| "Welcome to OpenTrApp" | "Welcome to OpenTrApp" (keep) |
 | "Your security-first desktop GUI for the OpenClaw ecosystem. Let's check that everything is set up correctly." | "Let's set up your personal AI assistant. It'll run safely on your computer — you control it from Telegram." |
 | "Let's get started" | "Get Started" |
 

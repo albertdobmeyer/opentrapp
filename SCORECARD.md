@@ -1,6 +1,6 @@
 # OpenSSF Scorecard
 
-This document records the project's posture against the [OpenSSF Scorecard](https://github.com/ossf/scorecard) checklist. Scorecard runs weekly via the workflow at [`.github/workflows/scorecard.yml`](.github/workflows/scorecard.yml) and publishes results to the public Scorecard registry. The current score is visible from the badge in [`README.md`](README.md) and at [scorecard.dev](https://scorecard.dev/viewer/?uri=github.com/albertdobmeyer/lobster-trapp).
+This document records the project's posture against the [OpenSSF Scorecard](https://github.com/ossf/scorecard) checklist. Scorecard runs weekly via the workflow at [`.github/workflows/scorecard.yml`](.github/workflows/scorecard.yml) and publishes results to the public Scorecard registry. The current score is visible from the badge in [`README.md`](README.md) and at [scorecard.dev](https://scorecard.dev/viewer/?uri=github.com/albertdobmeyer/opentrapp).
 
 ## Posture summary
 
@@ -51,7 +51,7 @@ These checks are intentionally not satisfied at present, with the rationale reco
 |-------|-----------|
 | **Vulnerabilities** | The advisory database flags transitive Rust dependencies (primarily through `reqwest` and `tokio`) for which no upstream patched release is available at the time of writing. Dependabot's weekly cargo updates will close these as patches are published. The supply-chain workflow (`cargo audit`, `cargo deny`) makes the open advisories visible in CI. |
 | **Fuzzing** | A fuzzing harness over the manifest parser and the orchestrator's command interpolation is on the roadmap. Until then, the property tests in `app/src-tauri/src/orchestrator/tests.rs` exercise the same surfaces deterministically. |
-| **Packaging** | Lobster-TrApp is a desktop application distributed via GitHub Releases, not a published package. Scorecard's check looks for a recognised packaging workflow (npm publish, container registry push, etc.); the GitHub Release flow does not match its current heuristics. |
+| **Packaging** | OpenTrApp is a desktop application distributed via GitHub Releases, not a published package. Scorecard's check looks for a recognised packaging workflow (npm publish, container registry push, etc.); the GitHub Release flow does not match its current heuristics. |
 | **Contributors** | The repository has a single maintaining organisation. The check reflects this accurately and is not a target for active improvement. |
 
 ## Verification
@@ -62,11 +62,11 @@ To re-run Scorecard locally against the current `main`:
 docker run --rm \
   -e GITHUB_AUTH_TOKEN=$(gh auth token) \
   gcr.io/openssf/scorecard:stable \
-  --repo=github.com/albertdobmeyer/lobster-trapp
+  --repo=github.com/albertdobmeyer/opentrapp
 ```
 
 The published machine-readable record for the most recent successful run is available at:
 
 ```
-https://api.securityscorecards.dev/projects/github.com/albertdobmeyer/lobster-trapp
+https://api.securityscorecards.dev/projects/github.com/albertdobmeyer/opentrapp
 ```

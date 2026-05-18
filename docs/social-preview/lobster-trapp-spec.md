@@ -1,4 +1,4 @@
-# Lobster-TrApp — Social Preview Image Spec
+# OpenTrApp — Social Preview Image Spec
 
 Design brief for the GitHub social preview image (the card shown when the repo link is shared on social media, Slack, Discord, embeds, etc.).
 
@@ -33,7 +33,7 @@ In ~2 seconds of glance time, a viewer should pick up:
 │                                              │
 │                                              │
 │         ┌──────────────────────────┐         │
-│         │  [shield] Lobster-TrApp  │         │
+│         │  [shield] OpenTrApp  │         │
 │         └──────────────────────────┘         │
 │                                              │
 │       A safer way to run OpenClaw on         │
@@ -47,7 +47,7 @@ In ~2 seconds of glance time, a viewer should pick up:
 - **Banner**: the canonical gradient FontLogo, ~880 px wide, centered horizontally, vertically positioned around y ≈ 150 (i.e. slightly above the canvas midline so the tagline sits in the optical centre)
 - **Glow**: a soft radial halo behind the banner, green at the green end of the gradient and blue at the blue end, blurred ~42 px — gives the card a premium, lit feel at thumbnail size
 - **Tagline**: one line, sans-serif, slate-300, centered ~36 px below the banner
-- **Footer**: `albertdobmeyer  /  github.com/albertdobmeyer/lobster-trapp` in Consolas, slate-500, ~56 px from the bottom edge
+- **Footer**: `albertdobmeyer  /  github.com/albertdobmeyer/opentrapp` in Consolas, slate-500, ~56 px from the bottom edge
 
 ### Why this layout (and not the previous asymmetric one)
 
@@ -62,9 +62,9 @@ The earlier spec called for a left-weighted logo with right-aligned text and a s
 | Background — top-left | Slate 900 | `#0f172a` |
 | Background — bottom-right | Slate 800 | `#1e293b` |
 | Dot-grid texture | Slate 400 @ ~10 % | `#94a3b8` |
-| Banner gradient — start | **LobsterTrApp-Green** | `#009966` |
-| Banner gradient — end | **LobsterTrApp-Blue** | `#0EA5E9` |
-| Shield (in banner only) | **LobsterTrApp-Red** | `#CC3333` |
+| Banner gradient — start | **OpenTrApp-Green** | `#009966` |
+| Banner gradient — end | **OpenTrApp-Blue** | `#0EA5E9` |
+| Shield (in banner only) | **OpenTrApp-Red** | `#CC3333` |
 | Banner outline + wordmark | White | `#FFFFFF` |
 | Tagline text | Slate 300 | `#cbd5e1` |
 | Footer text | Slate 500 | `#64748b` |
@@ -100,7 +100,7 @@ Do not substitute alternates. If the project's positioning changes, update all t
 
 ## Visual Details
 
-- **Banner source**: [`logos/Lobster-TrApp-FontLogo-Gradient.png`](../../logos/Lobster-TrApp-FontLogo-Gradient.png), the brand-gradient (green → blue) variant of the canonical FontLogo. Re-render via [`scripts/render-gradient-banner.py`](../../scripts/render-gradient-banner.py) if the source ever changes.
+- **Banner source**: [`logos/OpenTrApp-FontLogo-Gradient.png`](../../logos/OpenTrApp-FontLogo-Gradient.png), the brand-gradient (green → blue) variant of the canonical FontLogo. Re-render via [`scripts/render-gradient-banner.py`](../../scripts/render-gradient-banner.py) if the source ever changes.
 - **Background texture**: a faint dot grid at 32 px spacing, ~10 % alpha. Subtle — it should be barely perceptible on a phone, not a feature in its own right.
 - **Glow construction**: take the banner's alpha as a mask, paint it with the same green-→-blue gradient, blur heavily, lay it under the banner. This produces a halo that visually extends the banner's brand colours into the slate.
 - **No drop shadows under text**: the slate background gives enough contrast on its own; shadows muddy small-size renders.
@@ -126,7 +126,7 @@ Do not substitute alternates. If the project's positioning changes, update all t
 | openclaw-vault | Red | Centered text, solid bg |
 | clawhub-forge | Blue | Centered text, solid bg |
 | moltbook-pioneer | Purple | Centered text, solid bg |
-| **lobster-trapp** | **Slate gradient + brand glow** | **Centered banner + tagline** |
+| **opentrapp** | **Slate gradient + brand glow** | **Centered banner + tagline** |
 
 The parent repo intentionally breaks the pattern of the submodules. The slate gradient and the gradient banner signal hierarchy — this is the orchestrator and the brand surface, not a component preview.
 
@@ -138,9 +138,9 @@ The card is rendered, not hand-edited.
 
 ```bash
 python scripts/render-social-preview.py
-# wrote docs/social-preview/lobster-trapp.png (1280x640)
+# wrote docs/social-preview/opentrapp.png (1280x640)
 ```
 
-The script is idempotent and reads from the canonical gradient banner; re-run whenever the banner or tagline changes. The companion `lobster-trapp.svg` mirrors the design as a vector source so it can be opened in design tools, but the PNG is the asset GitHub serves.
+The script is idempotent and reads from the canonical gradient banner; re-run whenever the banner or tagline changes. The companion `opentrapp.svg` mirrors the design as a vector source so it can be opened in design tools, but the PNG is the asset GitHub serves.
 
-**Upload path**: GitHub repo → Settings → General → Social preview → Edit → upload `docs/social-preview/lobster-trapp.png`.
+**Upload path**: GitHub repo → Settings → General → Social preview → Edit → upload `docs/social-preview/opentrapp.png`.

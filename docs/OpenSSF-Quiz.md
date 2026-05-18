@@ -1,8 +1,8 @@
 # OpenSSF Best Practices — Questionnaire Record
 
-**Project:** Lobster-TrApp
-**Repository:** https://github.com/albertdobmeyer/lobster-trapp
-**Project home:** https://lobster-trapp.com
+**Project:** OpenTrApp
+**Repository:** https://github.com/albertdobmeyer/opentrapp
+**Project home:** https://opentrapp.com
 **Badge series:** Metal (Passing → Silver → Gold)
 **Current target:** Passing
 **First submitted:** 2026-05-05
@@ -20,13 +20,13 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 
 ### Project name
 
-> Lobster-TrApp
+> OpenTrApp
 
 ### Brief description (markdown)
 
-> **Lobster-TrApp** is a desktop application that lets you safely use an autonomous AI helper on your own computer.
+> **OpenTrApp** is a desktop application that lets you safely use an autonomous AI helper on your own computer.
 >
-> AI helpers like the *OpenClaw Clawbot* can read files, run programs, and install community-made plugins. Most of the time these features are useful, but they also mean a poorly written or malicious plugin could damage your computer or leak your data. Lobster-TrApp keeps the AI helper inside a sealed-off space — a *sandbox* — so it can do its job without touching your real files, passwords, or other programs. It also checks every plugin for known dangers before letting the helper use it.
+> AI helpers like the *OpenClaw Clawbot* can read files, run programs, and install community-made plugins. Most of the time these features are useful, but they also mean a poorly written or malicious plugin could damage your computer or leak your data. OpenTrApp keeps the AI helper inside a sealed-off space — a *sandbox* — so it can do its job without touching your real files, passwords, or other programs. It also checks every plugin for known dangers before letting the helper use it.
 >
 > You don't need to be a programmer to use it. Everything is controlled through a friendly desktop window, and you chat with the helper through regular [Telegram](https://telegram.org/) messages. Free and open source under the MIT license.
 
@@ -36,11 +36,11 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 
 ### Project URL
 
-> https://lobster-trapp.com
+> https://opentrapp.com
 
 ### Repository URL
 
-> https://github.com/albertdobmeyer/lobster-trapp
+> https://github.com/albertdobmeyer/opentrapp
 
 ### Licence(s)
 
@@ -67,9 +67,9 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 **Status:** Met
 **Justification:**
 
-> The project's README opening paragraph and the landing page at https://lobster-trapp.com both state in their opening sentence that Lobster-TrApp is a desktop application running the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The README §"Purpose" expands this with the threat-model rationale (the ClawHavoc 2026-Q1 study finding 11.9% of ClawHub skills were malicious) so a visitor learns the function and the differentiator inside the first scroll.
+> The project's README opening paragraph and the landing page at https://opentrapp.com both state in their opening sentence that OpenTrApp is a desktop application running the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The README §"Purpose" expands this with the threat-model rationale (the ClawHavoc 2026-Q1 study finding 11.9% of ClawHub skills were malicious) so a visitor learns the function and the differentiator inside the first scroll.
 
-**Evidence URL:** https://github.com/albertdobmeyer/lobster-trapp/blob/main/README.md
+**Evidence URL:** https://github.com/albertdobmeyer/opentrapp/blob/main/README.md
 
 ### `interact` — Project website MUST provide information on how to obtain, give feedback, and contribute
 
@@ -85,7 +85,7 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 
 > Non-trivial contribution file in the repository describing the build/test/submission workflow, branch ruleset, and review expectations.
 
-**Evidence URL:** https://github.com/albertdobmeyer/lobster-trapp/blob/main/CONTRIBUTING.md
+**Evidence URL:** https://github.com/albertdobmeyer/opentrapp/blob/main/CONTRIBUTING.md
 
 ### `contribution_requirements` — Acceptable-contribution requirements SHOULD be documented (URL required)
 
@@ -94,7 +94,7 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 
 > CONTRIBUTING.md documents the contribution process. The pull-request template at `.github/pull_request_template.md` enumerates the expected fields including a test plan. Architectural rules and the manifest contract that contributions must respect are in `CLAUDE.md`. Code-quality gates (TypeScript strict, `cargo check`, `cargo test`, vitest, Playwright, CodeQL) run automatically on every PR via `.github/workflows/ci.yml` and must pass before merge per the branch ruleset.
 
-**Evidence URL:** https://github.com/albertdobmeyer/lobster-trapp/blob/main/CONTRIBUTING.md
+**Evidence URL:** https://github.com/albertdobmeyer/opentrapp/blob/main/CONTRIBUTING.md
 
 ---
 
@@ -121,7 +121,7 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 
 > Non-trivial license location file in repository.
 
-**Evidence URL:** https://github.com/albertdobmeyer/lobster-trapp/blob/main/LICENSE
+**Evidence URL:** https://github.com/albertdobmeyer/opentrapp/blob/main/LICENSE
 
 ---
 
@@ -134,16 +134,16 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 
 > README.md covers requirements, installation, capabilities, limitations, build instructions, and verification commands. RELEASING.md documents the release procedure. CONTRIBUTING.md, CODE_OF_CONDUCT.md, and SECURITY.md cover the contributor and security paths. The technical architecture is in `docs/trifecta.md` and `docs/threat-model.md`; ADRs are in `docs/adr/`; release notes per version are in `docs/release-notes-vX.Y.Z.md`.
 
-**Evidence URL:** https://github.com/albertdobmeyer/lobster-trapp/blob/main/README.md
+**Evidence URL:** https://github.com/albertdobmeyer/opentrapp/blob/main/README.md
 
 ### `documentation_interface` — Project MUST provide reference documentation describing the external interface
 
 **Status:** Met
 **Justification:**
 
-> Lobster-TrApp is a desktop application rather than a library; its "external interface" is the manifest contract that third-party components must conform to. The contract is specified by JSON Schema at `schemas/component.schema.json` (the source of truth) and described in `CLAUDE.md` §"The manifest contract". Each section (identity, status, commands, configs, health, workflows) has a normative description. The user-facing GUI surfaces are documented in the README and demonstrated in the demo-recording scaffold at `docs/demo/`.
+> OpenTrApp is a desktop application rather than a library; its "external interface" is the manifest contract that third-party components must conform to. The contract is specified by JSON Schema at `schemas/component.schema.json` (the source of truth) and described in `CLAUDE.md` §"The manifest contract". Each section (identity, status, commands, configs, health, workflows) has a normative description. The user-facing GUI surfaces are documented in the README and demonstrated in the demo-recording scaffold at `docs/demo/`.
 
-**Evidence URL:** https://github.com/albertdobmeyer/lobster-trapp/blob/main/schemas/component.schema.json
+**Evidence URL:** https://github.com/albertdobmeyer/opentrapp/blob/main/schemas/component.schema.json
 
 ---
 
@@ -177,7 +177,7 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 
 > Actively maintained. The default branch receives multiple commits per week. Two tagged releases in the past 30 days (v0.3.0 on 2026-05-02 and v0.3.1 on 2026-05-04). A v0.3.2 patch release is queued at the time of this attestation. The repository has an enforced branch ruleset that requires all CI checks to pass before merge, and the OpenSSF Scorecard workflow runs weekly. Maintainer: @albertdobmeyer.
 
-**Evidence URL:** https://github.com/albertdobmeyer/lobster-trapp/commits/main
+**Evidence URL:** https://github.com/albertdobmeyer/opentrapp/commits/main
 
 ---
 

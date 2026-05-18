@@ -1,4 +1,4 @@
-# Lobster-TrApp — Vision & Status
+# OpenTrApp — Vision & Status
 
 > **DEPRECATED (2026-03-27):** This document is outdated. It has been superseded by:
 > - **`docs/trifecta.md`** — Cross-module strategy and ownership matrix
@@ -9,13 +9,13 @@
 
 **Last updated**: 2026-03-03 (frozen)
 
-This is the centralized planning document for the entire OpenClaw stack. It lives in lobster-trapp because the orchestrator is the integration point for all components.
+This is the centralized planning document for the entire OpenClaw stack. It lives in opentrapp because the orchestrator is the integration point for all components.
 
 ---
 
 ## The Product Thesis
 
-The OpenClaw ecosystem will mature beyond terminal-only developers. When non-technical users arrive — people who want to run their own agentic workstation, explore an agent social network, or contribute skills — Lobster-TrApp will be the **only security-first GUI** for this ecosystem. The app earns its existence by making dangerous-by-default container orchestration safe-by-default for people who can barely find a download button.
+The OpenClaw ecosystem will mature beyond terminal-only developers. When non-technical users arrive — people who want to run their own agentic workstation, explore an agent social network, or contribute skills — OpenTrApp will be the **only security-first GUI** for this ecosystem. The app earns its existence by making dangerous-by-default container orchestration safe-by-default for people who can barely find a download button.
 
 ---
 
@@ -34,7 +34,7 @@ Each repo now has a `TODO.md` documenting specific gaps found in the 2026-03-03 
 
 | Repo | Role | What It Does |
 |------|------|-------------|
-| **lobster-trapp** | Orchestrator + GUI | Discovers components via manifests, renders dashboards, controls lifecycle |
+| **opentrapp** | Orchestrator + GUI | Discovers components via manifests, renders dashboards, controls lifecycle |
 | **openclaw-vault** | Runtime | Hardened 2-container sandbox. API keys never touch the agent container. |
 | **clawhub-forge** | Toolchain | Skill development workbench. 87-pattern security scanner, gated publish pipeline. |
 | **moltbook-pioneer** | Network | Safe reconnaissance of the Moltbook agent social network. Feed scanner, census, identity tools. |
@@ -135,7 +135,7 @@ Each repo now has a `TODO.md` documenting specific gaps found in the 2026-03-03 
 
 ---
 
-### lobster-trapp (Tauri App) — 78%
+### opentrapp (Tauri App) — 78%
 
 **Manifest-driven GUI framework: COMPLETE.** The Rust backend has 10 fully-implemented Tauri commands with zero stubs, injection-safe arg interpolation, path traversal protection, and proper async. The React frontend has a complete dark design system, live status polling, health badges with threshold evaluation, grouped command panels with danger confirmation, format-specific config editors, and 6 output renderers.
 

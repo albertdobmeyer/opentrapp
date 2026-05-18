@@ -65,7 +65,7 @@ This works with what already exists. The original spec's framing would have requ
 |---|---|---|
 | Working **Browse the Skill Library** action exposed to the desktop GUI | clawhub-forge#2 — repaired `id: explore` manifest entry; was broken (passed `SKILL=` to a Makefile target that reads `QUERY=`) | Landed |
 | Bot policy guidance: *"find me a skill"* is acceptable; hand off to the desktop action; confirm after install | openclaw-vault#2 — new section in CONSTRAINTS heredoc | Landed |
-| Submodule bumps + this spec status flip | this PR (lobster-trapp) | Landing |
+| Submodule bumps + this spec status flip | this PR (opentrapp) | Landing |
 
 ## Implementation scope (deferred)
 

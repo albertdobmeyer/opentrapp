@@ -480,7 +480,7 @@ Layer 6: Hardening Config (agent behavior lockdown — application-level)
 
 *"The agent can use specific tools you've granted, within boundaries you've set."*
 
-The user selects which capabilities to enable via the Lobster-TrApp GUI. Each capability maps to a set of tool policy changes, network allowlist additions, and optionally container mount configurations.
+The user selects which capabilities to enable via the OpenTrApp GUI. Each capability maps to a set of tool policy changes, network allowlist additions, and optionally container mount configurations.
 
 | Capability | What It Enables | What It Requires |
 |-----------|----------------|-----------------|
@@ -536,7 +536,7 @@ The user selects which capabilities to enable via the Lobster-TrApp GUI. Each ca
 
 ### 5.5 Gear Switching
 
-The user switches gears via the Lobster-TrApp GUI. This requires:
+The user switches gears via the OpenTrApp GUI. This requires:
 
 1. **Stopping the current session** — active agent session is saved or terminated
 2. **Reconfiguring Layers 3-6** — OpenClaw config, allowlist, hardening config updated
@@ -561,7 +561,7 @@ Every gear provides the user with visibility into what the agent is doing:
 5. **Security alerts** — flagged when the agent attempts something blocked (domain, tool, command)
 6. **Session summary** — when the session ends, a structured summary of actions taken, resources accessed, and any security events
 
-This replaces the current stub monitoring scripts (network-log-parser.py, session-report.sh, skill-scanner.sh — currently labeled "Phase 3" in the code) with real implementations that render in the Lobster-TrApp GUI.
+This replaces the current stub monitoring scripts (network-log-parser.py, session-report.sh, skill-scanner.sh — currently labeled "Phase 3" in the code) with real implementations that render in the OpenTrApp GUI.
 
 ### 5.7 The Kill Switch
 
@@ -575,9 +575,9 @@ Available in every gear, always accessible, cannot be disabled:
 
 **Future enhancement (not in initial implementation):** A "Pause" level that suspends the agent session while keeping the container running ("Wait, what are you doing?"). This would require either `SIGSTOP` to the OpenClaw process inside the container, or an API call to the OpenClaw Gateway to suspend the session. Implementation will be investigated during Gear 2/3 development when the Gateway API is better understood.
 
-### 5.8 Lobster-TrApp Integration (The Hard Constraint)
+### 5.8 OpenTrApp Integration (The Hard Constraint)
 
-The Lobster-TrApp Tauri backend must contain **zero component-specific knowledge**. The gear system, capability toggles, and monitoring must be expressed through the manifest contract (`component.yml`), not through vault-specific Tauri code.
+The OpenTrApp Tauri backend must contain **zero component-specific knowledge**. The gear system, capability toggles, and monitoring must be expressed through the manifest contract (`component.yml`), not through vault-specific Tauri code.
 
 Implementation approach:
 
@@ -590,7 +590,7 @@ This may require extending the `component.yml` schema to support:
 - Command grouping by gear (e.g., `available_when: [running-manual]` vs `available_when: [running-semi]`)
 - State definitions per gear (`running-manual`, `running-semi`, `running-full` in addition to `running`, `stopped`, etc.)
 
-This is a cross-cutting concern that affects both the vault's `component.yml` and the Lobster-TrApp schema. It must be tracked as a dependency.
+This is a cross-cutting concern that affects both the vault's `component.yml` and the OpenTrApp schema. It must be tracked as a dependency.
 
 ---
 
@@ -632,7 +632,7 @@ Everything in the current vault that works:
 | README says "not an agentic workstation" | README says "a secure agentic workstation with granular control" |
 | README says "not for you if you've never used a terminal" | README says "designed for everyone, including non-technical users" |
 | Single static configuration | Three gear profiles + per-capability toggles |
-| Terminal-only operation | GUI-driven via Lobster-TrApp |
+| Terminal-only operation | GUI-driven via OpenTrApp |
 | Hardcoded allowlist (3 domains) | Per-gear allowlist templates with user customization |
 | Stub monitoring scripts | Real monitoring with GUI rendering |
 | One test suite | Gear-specific test suites |

@@ -9,8 +9,8 @@
 ## §0 — Pre-flight snapshot
 
 - All four containers up (5-day uptime — perimeter has been live continuously)
-- Telethon session cached at `~/.lobster-trapp/test-sessions/harness.session`
-- Bot: `@NewLobsterTrappBot`
+- Telethon session cached at `~/.opentrapp/test-sessions/harness.session`
+- Bot: `@NewLogoTrappBot`
 - Anthropic key prefix (last 4 of `sk-ant-…`): redacted
 - Spending cap: $1.00 (BudgetTracker hard-stop $4.00; per-session target $0.50)
 - **`verify.sh` baseline:** *not captured* — `/vault/scripts/verify.sh` is not on the path inside `vault-agent` in this build (a known gap; tracked separately). The 24-point check did not run for this dogfood.
@@ -164,7 +164,7 @@ Comparable to Pass-1.5's 5.0s median / 9.8s p95.
 | 1 | **P1** | Bot system prompt — architecture-explanation path | `proxy` and `sandboxing model` and `sandboxed` appear in user-facing replies when the user asks "explain how you keep my files safe" | Re-author the system-prompt section that handles meta-questions. Use Karen-language: "private space", "your folder", "your account credentials", "the security layer your assistant lives in" |
 | 2 | **P1** | Bot system prompt — workspace-restriction reply | `sandboxed` appears when refusing access to host files | Replace "I'm sandboxed to" with "I can only see files inside your workspace" — same meaning, no jargon |
 | 3 | **P2** | Bot policy — skill installation flow | Bot refuses to install from ClawHub without exact skill name; forge.scan + CDR pipeline never gets exercised through normal Karen flow | Reconsider whether the conversation-layer policy should defer skill choice to forge — the user can ask "find me a CSV skill", forge scans candidates, returns clearance reports, the user picks. The keystone perimeter feature shouldn't be hidden by the bot's conversation policy |
-| 4 | **P2** | Test rig — `verify.sh` invocation path | Spec assumes `/vault/scripts/verify.sh` reachable inside `vault-agent`; the actual path differs | Locate the right path (or the right invocation, e.g. via the lobster-trapp orchestrator command), update the spec |
+| 4 | **P2** | Test rig — `verify.sh` invocation path | Spec assumes `/vault/scripts/verify.sh` reachable inside `vault-agent`; the actual path differs | Locate the right path (or the right invocation, e.g. via the opentrapp orchestrator command), update the spec |
 | 5 | **P2** | Test rig — Tier C/D coverage | Operator-only scenarios remain unrun | Schedule a half-day operator session to walk through CHECKLIST.md §C and §D |
 
 ## Verdict

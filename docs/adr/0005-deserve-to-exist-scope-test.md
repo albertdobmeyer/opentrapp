@@ -63,7 +63,7 @@ The test is operationalised by the Pass-8 pre-ship audit ([`docs/specs/2026-05-0
 
 ## References
 
-- The recheck moment: feedback-memory `feedback_lobster_trapp_scope.md` (the user's articulation of the test in conversation, 2026-05-02)
+- The recheck moment: feedback-memory `feedback_opentrapp_scope.md` (the user's articulation of the test in conversation, 2026-05-02)
 - The audit that operationalises it: [`docs/specs/2026-05-02-pass-8-preship-walk.md`](../specs/2026-05-02-pass-8-preship-walk.md)
 - The unwound Spending work: commit `c052601` (the Pass-7 Day-1b removal pass, -1,090 / +42 lines)
 - The companion rubric: [`docs/specs/2026-04-20-ux-principles-rubric.md`](../specs/2026-04-20-ux-principles-rubric.md)

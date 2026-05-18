@@ -432,7 +432,7 @@ prerequisites:
     fn test_discover_components_in_monorepo() {
         // Try to find monorepo root
         let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        let monorepo_root = manifest_dir.parent().unwrap(); // app/ -> lobster-trapp/
+        let monorepo_root = manifest_dir.parent().unwrap(); // app/ -> opentrapp/
 
         if !monorepo_root.join("components").exists() {
             return;

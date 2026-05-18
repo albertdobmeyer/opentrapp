@@ -1,4 +1,4 @@
-# Lobster-TrApp v0.3.1 — Release Notes
+# OpenTrApp v0.3.1 — Release Notes
 
 **Tagged:** 2026-05-04
 **Container baseline:** four-container perimeter as in v0.3.0; default Split Shell
@@ -6,19 +6,19 @@
 
 ## Summary
 
-A documentation, supply-chain, and brand release. No user-facing application functionality changes. Every shipped surface from v0.3.0 is preserved verbatim. The release is the first to exercise the new release-side attestation pipeline (cosign keyless + CycloneDX SBOM + SLSA Build Level 2 build-provenance) and the first to ship under the official LobsterTrApp brand assets.
+A documentation, supply-chain, and brand release. No user-facing application functionality changes. Every shipped surface from v0.3.0 is preserved verbatim. The release is the first to exercise the new release-side attestation pipeline (cosign keyless + CycloneDX SBOM + SLSA Build Level 2 build-provenance) and the first to ship under the official OpenTrApp brand assets.
 
 ## Changes since v0.3.0
 
 ### Brand
 
-The application now ships under the official LobsterTrApp brand assets. Primary palette: brand-green `#009966` and brand-red `#CC3333`. Logo set:
+The application now ships under the official OpenTrApp brand assets. Primary palette: brand-green `#009966` and brand-red `#CC3333`. Logo set:
 
 - `app/public/logo-banner.png` — rectangular wordmark, used on the wizard `Welcome` screen, the README, and the landing-page hero
 - `app/public/logo-square.png` — square symbol, used in the user-mode sidebar and as the master for the regenerated Tauri icon set (taskbar, `.ico`, `.icns`, Windows tiles, iOS, Android)
 - `app/public/favicon.png` — claw silhouette, used as the browser tab icon
 
-Components rebranded automatically through the existing `primary-*` token wiring: the wizard, the user-mode shell, the toast system, and the landing page. Pre-brand placeholder assets (`logo.svg`, `vite.svg`, the root-level `lobster-trapp-logo.png`, and a pair of stale screenshots) were removed.
+Components rebranded automatically through the existing `primary-*` token wiring: the wizard, the user-mode shell, the toast system, and the landing page. Pre-brand placeholder assets (`logo.svg`, `vite.svg`, the root-level `opentrapp-logo.png`, and a pair of stale screenshots) were removed.
 
 ### Publication-ready documentation set
 
@@ -94,7 +94,7 @@ bash docs/reproduce.sh
 cosign verify-blob \
   --certificate <asset>.pem \
   --signature <asset>.sig \
-  --certificate-identity-regexp 'https://github.com/albertdobmeyer/lobster-trapp/.+' \
+  --certificate-identity-regexp 'https://github.com/albertdobmeyer/opentrapp/.+' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   <asset>
 

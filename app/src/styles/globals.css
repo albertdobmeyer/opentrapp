@@ -18,7 +18,7 @@
     --color-neutral-900: #0b1120;
     --color-neutral-950: #030712;
 
-    /* Brand: LobsterTrApp-Green (#009966) — primary identity */
+    /* Brand: OpenTrApp-Green (#009966) — primary identity */
     --color-primary-50: #e6f5ee;
     --color-primary-200: #80ccb3;
     --color-primary-400: #1ab07e;
@@ -26,11 +26,11 @@
     --color-primary-600: #007a52;
     --color-primary-700: #00583a;
 
-    /* Brand: LobsterTrApp-Red (#CC3333) — reserved for the logo shield only */
+    /* Brand: OpenTrApp-Red (#CC3333) — reserved for the logo shield only */
     --color-brand-red: #cc3333;
     --color-brand-red-dark: #a82828;
 
-    /* Brand: LobsterTrApp-Blue (#0EA5E9) — secondary accent; pairs with primary green in gradients */
+    /* Brand: OpenTrApp-Blue (#0EA5E9) — secondary accent; pairs with primary green in gradients */
     --color-brand-blue: #0ea5e9;
     --color-brand-blue-dark: #0284c7;
 

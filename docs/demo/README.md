@@ -4,7 +4,7 @@
 **Created:** 2026-05-04
 **Roadmap reference:** [`../roadmap-post-launch.md`](../roadmap-post-launch.md) §7.
 
-This directory holds the assets for the ≤30-second demo video that will appear on the [lobster-trapp.com](https://lobster-trapp.com) landing page hero area. The video itself is not yet committed; this README is the shooting script and the conversion recipe so the next maintainer-session can produce it without re-deriving the plan.
+This directory holds the assets for the ≤30-second demo video that will appear on the [opentrapp.com](https://opentrapp.com) landing page hero area. The video itself is not yet committed; this README is the shooting script and the conversion recipe so the next maintainer-session can produce it without re-deriving the plan.
 
 When the assets land, this directory should contain:
 
@@ -23,7 +23,7 @@ The video walks the wizard end-to-end, then cuts to the first Telegram chat. Rou
 
 | t (s) | Duration | Scene | What's on screen | On-screen caption |
 |------:|---------:|-------|------------------|-------------------|
-| 0–3 | 3 s | Wizard `Welcome` | Lobster-TrApp window opens; the `Welcome` page is visible with the *Next* button. | "Open Lobster-TrApp." |
+| 0–3 | 3 s | Wizard `Welcome` | OpenTrApp window opens; the `Welcome` page is visible with the *Next* button. | "Open OpenTrApp." |
 | 3–8 | 5 s | Wizard `System Check` | Click *Next*; the `System Check` page runs through its row of checkmarks (Podman/Docker found, network reachable, .env writable, etc.) | "It checks your system." |
 | 8–14 | 6 s | Wizard `Connect Your Accounts` | Click *Next*; the credentials form appears. Paste an Anthropic key (already on clipboard). Paste a Telegram bot token. Click *Save*. | "Paste two credentials." |
 | 14–22 | 8 s | Wizard `Setting Up Your Assistant` | The progress block animates: `Pulling images → Starting containers → Verifying perimeter → Validating key`. All four steps tick green. The `Complete` screen briefly appears. | "It builds the perimeter." |
@@ -37,7 +37,7 @@ The video walks the wizard end-to-end, then cuts to the first Telegram chat. Rou
 - Captions use the same monospace font as the website's nav-logo (`Courier New`-ish system stack).
 - The `Welcome` window starts at `1280×800` — the natural size of the desktop window. The recording is captured at that size, then exported at 1280×720 by cropping the OS window-chrome.
 
-**Branding.** As of 2026-05-04 the application uses the official LobsterTrApp brand assets (green `#009966` + brand red `#CC3333`). The wizard's Welcome screen displays [`app/public/logo-banner.png`](../../app/public/logo-banner.png); the user-mode shell carries [`app/public/logo-square.png`](../../app/public/logo-square.png) in the sidebar; the browser tab uses [`app/public/favicon.png`](../../app/public/favicon.png). The recording must be made against a build that includes these assets (anything ≥ commit `993a536`); a recording made against an older build would show the pre-brand placeholder lobster SVG and the 🦞 emoji and be visibly stale on the landing page.
+**Branding.** As of 2026-05-04 the application uses the official OpenTrApp brand assets (green `#009966` + brand red `#CC3333`). The wizard's Welcome screen displays [`app/public/logo-banner.png`](../../app/public/logo-banner.png); the user-mode shell carries [`app/public/logo-square.png`](../../app/public/logo-square.png) in the sidebar; the browser tab uses [`app/public/favicon.png`](../../app/public/favicon.png). The recording must be made against a build that includes these assets (anything ≥ commit `993a536`); a recording made against an older build would show the pre-brand placeholder logo SVG and the emoji and be visibly stale on the landing page.
 
 ---
 
@@ -49,7 +49,7 @@ Recommended environment: a clean macOS or Linux machine, *not* the maintainer's 
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| OBS Studio | Desktop capture (window-mode capture of the Lobster-TrApp window, plus Telegram on phone via screen-mirror) | `brew install --cask obs` (macOS) / `apt install obs-studio` (Ubuntu) |
+| OBS Studio | Desktop capture (window-mode capture of the OpenTrApp window, plus Telegram on phone via screen-mirror) | `brew install --cask obs` (macOS) / `apt install obs-studio` (Ubuntu) |
 | ffmpeg | MP4 → GIF conversion; cropping; trimming | `brew install ffmpeg` / `apt install ffmpeg` |
 | Telegram Desktop *or* a real phone with screen-mirror | Final-scene capture | platform-native |
 | imagemagick (`magick`) | Poster-frame extraction (alternative: `ffmpeg -ss`) | `brew install imagemagick` / `apt install imagemagick` |
@@ -58,10 +58,10 @@ Recommended environment: a clean macOS or Linux machine, *not* the maintainer's 
 
 Two scenes (one per camera angle):
 
-1. **Scene "wizard"** — single capture of the Lobster-TrApp window in window-capture mode (not display-capture, to avoid menu-bar leakage). Sized 1280×800. Frame the entire window with a 16-pixel margin.
+1. **Scene "wizard"** — single capture of the OpenTrApp window in window-capture mode (not display-capture, to avoid menu-bar leakage). Sized 1280×800. Frame the entire window with a 16-pixel margin.
 2. **Scene "telegram"** — single capture of either the Telegram Desktop window or a phone-mirror feed. Same 1280×720 frame.
 
-OBS profile settings: 30 fps, H.264 with the *Indistinguishable Quality* preset, output to `~/Movies/lobster-demo.mkv` (record as MKV; convert to MP4 in post — MKV is more recoverable if OBS is killed mid-record).
+OBS profile settings: 30 fps, H.264 with the *Indistinguishable Quality* preset, output to `~/Movies/logo-demo.mkv` (record as MKV; convert to MP4 in post — MKV is more recoverable if OBS is killed mid-record).
 
 ### Recording
 
@@ -79,7 +79,7 @@ If a scene goes badly, stop and re-record from the start. Editing splices in OBS
 
 ```bash
 # Re-encode MKV → MP4, trim to the final cut-length, downsize to 720p:
-ffmpeg -i ~/Movies/lobster-demo.mkv \
+ffmpeg -i ~/Movies/logo-demo.mkv \
   -ss 00:00:00 -t 00:00:30 \
   -vf "scale=1280:720:flags=lanczos" \
   -c:v libx264 -preset slow -crf 22 \
@@ -93,7 +93,7 @@ ffmpeg -i docs/demo/demo.mp4 \
   -loop 0 \
   docs/demo/demo.gif
 
-# Extract the poster frame (~3 seconds in, the "Open Lobster-TrApp" caption):
+# Extract the poster frame (~3 seconds in, the "Open OpenTrApp" caption):
 ffmpeg -ss 00:00:03 -i docs/demo/demo.mp4 -frames:v 1 -q:v 2 docs/demo/demo-poster.png
 
 # Optional WebM (VP9) for browsers without H.264:
@@ -139,13 +139,13 @@ python3 -m http.server -d docs 8080
 # Open http://localhost:8080 and verify the hero video plays
 ```
 
-Deploy to Hetzner per the standard pattern documented in [`../../README.md`](../../README.md) (the pattern that pushes `docs/index.html` and the asset directories to `/var/www/lobster-trapp.com/`).
+Deploy to Hetzner per the standard pattern documented in [`../../README.md`](../../README.md) (the pattern that pushes `docs/index.html` and the asset directories to `/var/www/opentrapp.com/`).
 
 Verify the deployed assets:
 
 ```bash
-curl -I https://lobster-trapp.com/demo/demo.mp4
-curl -I https://lobster-trapp.com/demo/demo.gif
+curl -I https://opentrapp.com/demo/demo.mp4
+curl -I https://opentrapp.com/demo/demo.gif
 ```
 
 The two `curl -I` calls should return 200 OK with `Content-Type: video/mp4` and `Content-Type: image/gif` respectively.

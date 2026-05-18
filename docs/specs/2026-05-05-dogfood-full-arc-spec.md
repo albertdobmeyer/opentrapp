@@ -62,13 +62,13 @@ Every state defined in [`app/src-tauri/src/status_aggregator.rs`](../../app/src-
 
 | # | State | How to force | Visible-copy check |
 |---|---|---|---|
-| **C1** | `not_setup` | Remove `~/.lobster-trapp/.env` and restart app | "Set up your assistant" CTA visible; no developer terms |
+| **C1** | `not_setup` | Remove `~/.opentrapp/.env` and restart app | "Set up your assistant" CTA visible; no developer terms |
 | **C2** | `starting` | Fresh `compose up` from cold | Calm "Starting up..." copy or equivalent; not "containers" |
 | **C3** | `recovering` | `podman stop vault-forge` mid-session (3-of-4 running) | Calm "Recovering..." copy; user not pushed to take action |
 | **C4** | `ok` | Steady state | Hero shows green/calm; no anxious copy |
 | **C5** | `error_perimeter` | `podman stop` all four containers | Clear error with "Try again" affordance, no jargon |
 | **C6** | `error_key` | Set `ANTHROPIC_API_KEY=invalid_test_key` and rotate via Preferences | "Your AI account key isn't working" + Update CTA |
-| **C7** | `paused_by_user` | Toggle pause in Preferences | Pause survives app restart (verify `~/.lobster-trapp/paused` marker) |
+| **C7** | `paused_by_user` | Toggle pause in Preferences | Pause survives app restart (verify `~/.opentrapp/paused` marker) |
 
 ### Tier D — Termination-path coverage
 
@@ -80,7 +80,7 @@ Every lifecycle exit path documented in `release-notes-v0.3.0.md` (and implement
 | **D2** | Tray Quit | Right-click tray → Quit | Same |
 | **D3** | SIGTERM | `kill -TERM <pid>` | Same; sync teardown completes |
 | **D4** | SIGINT | `kill -INT <pid>` (or Ctrl-C from launching shell) | Same |
-| **D5** | SIGKILL | `kill -KILL <pid>`; relaunch app | RunGuard detects orphans (`~/.lobster-trapp/runguard.pid` stale), reaps them, app comes up clean |
+| **D5** | SIGKILL | `kill -KILL <pid>`; relaunch app | RunGuard detects orphans (`~/.opentrapp/runguard.pid` stale), reaps them, app comes up clean |
 | **D6** | OS reboot simulation | `systemctl reboot` (or simulate via container teardown + cold app start) | App auto-starts containers if autostart configured; no orphans |
 | **D7** | User pause + app close + relaunch | Pause via Preferences → close app → relaunch | App re-opens in `paused_by_user` state; marker file present |
 
@@ -102,7 +102,7 @@ Spend is enforced by [`tests/e2e-telegram/helpers/budget.py`](../../tests/e2e-te
 2. A fresh Telegram bot dedicated to this test (do NOT reuse a personal account).
 3. A fresh Anthropic API key with a $1 hard spending cap configured at `console.anthropic.com`.
 4. A fresh `.env.test` file at the repository root with the harness credentials (see [`tests/e2e-telegram/SECONDARY_ACCOUNT_SETUP.md`](../../tests/e2e-telegram/SECONDARY_ACCOUNT_SETUP.md) for the format and one-time login).
-5. All four containers verified down before session start: `podman ps` empty, `~/.lobster-trapp/runguard.pid` absent.
+5. All four containers verified down before session start: `podman ps` empty, `~/.opentrapp/runguard.pid` absent.
 6. The dogfood corpus in `tests/dogfood/corpus/` populated with the test fixtures (three meeting-note `.txt` files for A1, the messy CSV for A5, the prompt-injection `.txt` for B4).
 
 ## Findings format

@@ -41,7 +41,7 @@ File: `app/src-tauri/tauri.conf.json`
   "updater": {
     "active": false,
     "endpoints": [
-      "https://github.com/albertdobmeyer/lobster-trapp/releases/latest/download/latest.json"
+      "https://github.com/albertdobmeyer/opentrapp/releases/latest/download/latest.json"
     ],
     "pubkey": ""
   }
@@ -104,7 +104,7 @@ Add `bundle.linux` section to `tauri.conf.json`:
 - AppImage is self-contained (no system deps) — primary distribution format for non-Debian
 
 **Desktop file:** Tauri auto-generates from `tauri.conf.json` fields:
-- Name: `productName` ("Lobster-TrApp")
+- Name: `productName` ("OpenTrApp")
 - Comment: `shortDescription`
 - Categories: `category` ("DeveloperTool" maps to `Development`)
 - Icon: from `bundle.icon`
@@ -114,18 +114,18 @@ Add `bundle.linux` section to `tauri.conf.json`:
 **Step 1: Generate signing keypair**
 
 ```bash
-npx tauri signer generate -w ~/.tauri/lobster-trapp.key
+npx tauri signer generate -w ~/.tauri/opentrapp.key
 ```
 
 This produces:
-- `~/.tauri/lobster-trapp.key` (private key — NEVER commit)
+- `~/.tauri/opentrapp.key` (private key — NEVER commit)
 - Public key string (stdout) — goes into `tauri.conf.json`
 
 **Step 2: Store private key in GitHub**
 
 ```
 Repository → Settings → Secrets and variables → Actions
-  TAURI_SIGNING_PRIVATE_KEY = <contents of ~/.tauri/lobster-trapp.key>
+  TAURI_SIGNING_PRIVATE_KEY = <contents of ~/.tauri/opentrapp.key>
   TAURI_SIGNING_PRIVATE_KEY_PASSWORD = <password from generate step>
 ```
 
@@ -135,7 +135,7 @@ Repository → Settings → Secrets and variables → Actions
 "updater": {
   "active": true,
   "endpoints": [
-    "https://github.com/albertdobmeyer/lobster-trapp/releases/latest/download/latest.json"
+    "https://github.com/albertdobmeyer/opentrapp/releases/latest/download/latest.json"
   ],
   "pubkey": "<public key from generate step>"
 }
@@ -150,11 +150,11 @@ The CI already has `includeUpdaterJson: true` in the `tauri-apps/tauri-action` c
 1. Push tag `v0.1.0-rc.1`
 2. CI triggers `build-and-release` job for all 4 platforms
 3. Verify draft release contains:
-   - `lobster-trapp_0.1.0_amd64.deb` (Linux deb)
-   - `lobster-trapp_0.1.0_amd64.AppImage` (Linux AppImage)
-   - `Lobster-TrApp_0.1.0_aarch64.dmg` (macOS ARM)
-   - `Lobster-TrApp_0.1.0_x64.dmg` (macOS Intel)
-   - `Lobster-TrApp_0.1.0_x64-setup.exe` (Windows NSIS)
+   - `opentrapp_0.1.0_amd64.deb` (Linux deb)
+   - `opentrapp_0.1.0_amd64.AppImage` (Linux AppImage)
+   - `OpenTrApp_0.1.0_aarch64.dmg` (macOS ARM)
+   - `OpenTrApp_0.1.0_x64.dmg` (macOS Intel)
+   - `OpenTrApp_0.1.0_x64-setup.exe` (Windows NSIS)
    - `latest.json` (updater manifest)
 4. Download and install on at least one platform to verify the binary works
 

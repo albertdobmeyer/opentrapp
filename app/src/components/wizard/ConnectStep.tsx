@@ -34,14 +34,14 @@ const ANTHROPIC_STEPS: HowToStep[] = [
   },
   {
     heading: "Create a new key",
-    body: "Click Create Key. Give it a name like \"Lobster-TrApp\". Choose a workspace if prompted.",
+    body: "Click Create Key. Give it a name like \"OpenTrApp\". Choose a workspace if prompted.",
   },
   {
     heading: "Copy the key immediately",
     body: "Anthropic shows the full key once — the string starts with sk-ant-. Copy it now; you can't retrieve it later. If you lose it, you can always create another.",
   },
   {
-    heading: "Paste it back in Lobster-TrApp",
+    heading: "Paste it back in OpenTrApp",
     body: "Close this window and paste the key into the Anthropic card. The green checkmark appears when the format looks right.",
   },
 ];
@@ -62,10 +62,10 @@ const TELEGRAM_STEPS: HowToStep[] = [
   },
   {
     heading: "Copy the token BotFather gives you",
-    body: "Once the bot is created, BotFather sends a token that looks like 1234567890:ABCdef.... That's the token Lobster-TrApp needs.",
+    body: "Once the bot is created, BotFather sends a token that looks like 1234567890:ABCdef.... That's the token OpenTrApp needs.",
   },
   {
-    heading: "Paste it back in Lobster-TrApp",
+    heading: "Paste it back in OpenTrApp",
     body: "Close this window and paste the token into the Telegram card. The green checkmark appears when the format looks right.",
   },
 ];
@@ -355,7 +355,7 @@ async function persistKeys({ anthropicKey, telegramToken }: { anthropicKey: stri
   try {
     content = await readConfig("openclaw-vault", ".env");
   } catch {
-    content = "# OpenClaw-Vault configuration\n";
+    content = "# OpenTrApp agent configuration\n";
   }
 
   if (anthropicKey) content = upsertEnvVar(content, "ANTHROPIC_API_KEY", anthropicKey);

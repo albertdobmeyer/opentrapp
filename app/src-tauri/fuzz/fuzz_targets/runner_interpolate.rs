@@ -35,5 +35,5 @@ fuzz_target!(|data: &[u8]| {
         }
     }
 
-    let _ = lobster_trapp_lib::fuzz_api::interpolate_args(template, &args);
+    let _ = opentrapp_lib::fuzz_api::interpolate_args(template, &args);
 });

@@ -323,7 +323,7 @@ export async function restartPerimeter(): Promise<void> {
 /**
  * Pause the perimeter on user request. Stops containers but keeps them
  * around (no destroy) so resume is fast (~3-5s). Persists across app
- * restarts via `~/.lobster-trapp/paused` so the user's intent survives.
+ * restarts via `~/.opentrapp/paused` so the user's intent survives.
  * Status aggregator reports `paused_by_user` while paused, suppressing
  * all "didn't recover" / "key not working" alerts.
  */

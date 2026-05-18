@@ -20,7 +20,7 @@ Keep the number somewhere safe; losing it locks you out of the account.
 - On mobile: Settings → Add Account → New Number
 - On Telegram Desktop: sidebar hamburger → Add Account
 - Register with the new phone number
-- Name it distinctly (e.g. "LobsterTest") so you don't confuse accounts in the chat switcher
+- Name it distinctly (e.g. "LogoTest") so you don't confuse accounts in the chat switcher
 
 ### 3. Register a new API app under the secondary account
 
@@ -28,9 +28,9 @@ Keep the number somewhere safe; losing it locks you out of the account.
 2. Log in with the **secondary** phone number (NOT your primary)
 3. API Development Tools → Create new application
 4. Fields:
-   - App title: `Lobster-TrApp Test Harness`
-   - Short name: `lobstertest2` (or similar, lowercase)
-   - URL: optional, `https://lobster-trapp.com` or blank
+   - App title: `OpenTrApp Test Harness`
+   - Short name: `logotest2` (or similar, lowercase)
+   - URL: optional, `https://opentrapp.com` or blank
    - Platform: Other
 5. Copy `api_id` (integer) and `api_hash` (32-char hex string)
 
@@ -39,7 +39,7 @@ Keep the number somewhere safe; losing it locks you out of the account.
 bot doesn't recognize the new Telegram user_id yet. Trigger the pairing
 flow:
 
-1. From the secondary account in Telegram, search `@LobsterTrappBot`
+1. From the secondary account in Telegram, search `@LogoTrappBot`
 2. Send any message (e.g. `hi`)
 3. bot replies with a pairing code plus the new user_id
 4. Copy both values
@@ -54,17 +54,17 @@ After this, bot will treat the secondary account as authorized.
 
 ### 5. Update `.env.test`
 
-Edit `/home/albertd/Repositories/lobster-trapp/.env.test`:
+Edit `/home/albertd/Repositories/opentrapp/.env.test`:
 
 ```
 TELEGRAM_API_ID=<new integer from step 3>
 TELEGRAM_API_HASH=<new hash from step 3>
 TELEGRAM_PHONE=<new phone in +country-code format>
-BOT_HANDLE=@LobsterTrappBot
-TELEGRAM_SESSION_PATH=/home/albertd/.lobster-trapp/test-sessions/harness
+BOT_HANDLE=@LogoTrappBot
+TELEGRAM_SESSION_PATH=/home/albertd/.opentrapp/test-sessions/harness
 
 # Optional: cap daily sends to share the account budget across projects.
-# Default 35; full lobster-trapp suite is ~30 sends.
+# Default 35; full opentrapp suite is ~30 sends.
 TELEGRAM_DAILY_SEND_BUDGET=35
 ```
 
@@ -90,12 +90,12 @@ that account. All subsequent runs are non-interactive.
   projects** (one app per Telegram account; my.telegram.org doesn't
   permit a second one without support intervention). Treat the api_hash
   like a password reused across projects: leak in one project = leak in
-  all. Lobster-Trapp's `.env.test` keeps it gitignored; future projects
+  all. Logo-Trapp's `.env.test` keeps it gitignored; future projects
   must do the same.
-- **Daily usage cap on the shared account: ~50/day.** Lobster-Trapp's
+- **Daily usage cap on the shared account: ~50/day.** Logo-Trapp's
   full suite is ~30 sends; the harness hard-stops at the
   `TELEGRAM_DAILY_SEND_BUDGET` env var (default 35) to leave headroom
-  for other projects. Lobster-Trapp has priority right now per user
+  for other projects. Logo-Trapp has priority right now per user
   decision 2026-04-24; if another project needs the budget, raise the
   cap explicitly or schedule runs apart.
 - **Do not use the secondary account for anything else.** No personal

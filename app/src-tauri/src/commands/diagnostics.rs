@@ -16,7 +16,7 @@ use std::sync::OnceLock;
 pub async fn generate_diagnostic_bundle() -> Result<String, String> {
     let mut out = String::new();
 
-    out.push_str("=== LOBSTER-TRAPP DIAGNOSTICS ===\n");
+    out.push_str("=== OPENTRAPP DIAGNOSTICS ===\n");
     out.push_str(&format!(
         "Generated: {}\n",
         Utc::now().format("%Y-%m-%dT%H:%M:%SZ")
@@ -224,8 +224,8 @@ mod tests {
     #[test]
     fn redacts_home_path_when_home_is_set() {
         std::env::set_var("HOME", "/home/testuser");
-        let out = redact("Read failed at /home/testuser/projects/lobster-trapp/foo");
-        assert!(out.contains("~/projects/lobster-trapp/foo"));
+        let out = redact("Read failed at /home/testuser/projects/opentrapp/foo");
+        assert!(out.contains("~/projects/opentrapp/foo"));
         assert!(!out.contains("/home/testuser"));
     }
 }

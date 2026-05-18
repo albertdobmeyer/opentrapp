@@ -1,7 +1,7 @@
-"""Render a brand-gradient version of the Lobster-TrApp FontLogo banner.
+"""Render a brand-gradient version of the OpenTrApp FontLogo banner.
 
 Replaces the flat brand-green pill with a 135° linear gradient running from
-LobsterTrApp-Green (#009966) at the top-left to LobsterTrApp-Blue (#0EA5E9)
+OpenTrApp-Green (#009966) at the top-left to OpenTrApp-Blue (#0EA5E9)
 at the bottom-right. Preserves the white outline + text and the red shield.
 """
 
@@ -10,16 +10,16 @@ from pathlib import Path
 from PIL import Image
 
 REPO = Path(__file__).resolve().parent.parent
-SOURCE = REPO / "logos" / "red-green-logos" / "Lobster-TrApp-FontLogo-Light-RedGreen.png"
+SOURCE = REPO / "logos" / "red-green-logos" / "OpenTrApp-FontLogo-Light-RedGreen.png"
 TARGETS = [
     REPO / "app" / "public" / "logo-banner.png",
     REPO / "docs" / "img" / "logo-banner.png",
-    REPO / "logos" / "Lobster-TrApp-FontLogo-Gradient.png",
+    REPO / "logos" / "OpenTrApp-FontLogo-Gradient.png",
 ]
 
 GREEN_PILL = (0, 153, 102)  # exact source colour to replace
-START = (0, 153, 102)        # LobsterTrApp-Green
-END = (14, 165, 233)         # LobsterTrApp-Blue
+START = (0, 153, 102)        # OpenTrApp-Green
+END = (14, 165, 233)         # OpenTrApp-Blue
 
 
 def lerp(a: int, b: int, t: float) -> int:

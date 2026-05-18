@@ -1,7 +1,7 @@
 # v0.4 — Shell/Tenant Reframe
 
 **Status:** Draft (8 specs, 2026-05-09)
-**Vision:** Lobster-TrApp becomes a security shell that runs after install. OpenClaw is a tenant the user activates just-in-time when they're ready. Install and activation are two separate decisions, not one.
+**Vision:** OpenTrApp becomes a security shell that runs after install. OpenClaw is a tenant the user activates just-in-time when they're ready. Install and activation are two separate decisions, not one.
 
 ## Why this exists
 
@@ -46,7 +46,7 @@ These names and shapes are stable across all 8 specs — implementing agents mus
 |---|---|
 | Two enums | `BootstrapState ∈ { Installing, Bootstrapping, ShellReady, ShellFailed }` and `TenantState ∈ { Absent, Activating, Running, Paused, Errored }` |
 | Combined state | `(BootstrapState, TenantState)` — pair, not a flat enum |
-| Marker files | `~/.lobster-trapp/{paused,activated,credentials-ok}` — paused already exists |
+| Marker files | `~/.opentrapp/{paused,activated,credentials-ok}` — paused already exists |
 | New events | `bootstrap-step-started`, `bootstrap-step-progress`, `bootstrap-step-failed` (alongside the existing `perimeter-state-changed`) |
 | Stop primitive | `pause_perimeter` (calls `compose stop`, preserves all volumes) — *never* `nuclear-kill` or `hard-kill` for user-facing Stop |
 | Failure causes | `podman-install-failed`, `podman-install-denied`, `image-build-failed`, `image-pull-failed`, `image-pull-cancelled`, `image-pull-denied`, `runtime-misdetected`, `network-unavailable`, `shell-up-failed` (canonical taxonomy in [`04-stop-and-recovery-ux.md`](04-stop-and-recovery-ux.md)) |

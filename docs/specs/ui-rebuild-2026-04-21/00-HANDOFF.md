@@ -8,7 +8,7 @@
 
 ## Mission in One Sentence
 
-**Split the Lobster-TrApp UI into two distinct, purpose-built modes inside the same Tauri app: an Apple/Google-quality non-technical GUI (default) and a dense, information-rich developer dashboard (toggleable), so that each audience gets an interface optimized for their needs without compromise.**
+**Split the OpenTrApp UI into two distinct, purpose-built modes inside the same Tauri app: an Apple/Google-quality non-technical GUI (default) and a dense, information-rich developer dashboard (toggleable), so that each audience gets an interface optimized for their needs without compromise.**
 
 ---
 
@@ -16,7 +16,7 @@
 
 The current UI mixes two user stories into one interface. Every polish pass has felt sluggish because we keep reconciling opposing needs:
 
-- **Karen** (non-technical end user) needs simplicity, automation, and reassurance. She found us via Google, downloaded the installer, and wants an AI assistant she can talk to on Telegram. She doesn't want to think about Lobster-TrApp at all. It should feel like Windows Defender or a VPN app — invisible by default, reassuring when checked, actionable when something needs her attention.
+- **Karen** (non-technical end user) needs simplicity, automation, and reassurance. She found us via Google, downloaded the installer, and wants an AI assistant she can talk to on Telegram. She doesn't want to think about OpenTrApp at all. It should feel like Windows Defender or a VPN app — invisible by default, reassuring when checked, actionable when something needs her attention.
 
 - **The developer** found us on GitHub as four public repos. They're interested in the security model, forkability, customization. They want to inspect every component, see every log, customize every config. The current UI is closer to what they need, but the non-technical reframing has been eroding it.
 
@@ -131,7 +131,7 @@ A non-technical user (someone who has never heard of OpenClaw, containers, or se
 1. **Install in under 2 minutes** from downloading the installer.
 2. **Connect their first Telegram message** within 5 minutes of install.
 3. **Never see** developer terminology: container, proxy, manifest, compose, vault, forge, pioneer, seccomp, component.yml, podman.
-4. **Forget about Lobster-TrApp after week 1** — the app runs invisibly in the tray, checks in only when something needs attention.
+4. **Forget about OpenTrApp after week 1** — the app runs invisibly in the tray, checks in only when something needs attention.
 5. **Know what to do when something breaks** — contact-support flow with self-heal and diagnostic export.
 
 A developer should be able to:

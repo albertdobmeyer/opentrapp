@@ -20,7 +20,7 @@ The home dashboard is **not** a "see all components" view. It's a **state-of-you
 
 ## User Story
 
-> As Karen, when I open Lobster-TrApp, I want to see at a glance whether everything is OK or if I need to do something. If it's OK, I close the window and get back to my day. If it's not, I want one button that fixes it — or a clear way to get help.
+> As Karen, when I open OpenTrApp, I want to see at a glance whether everything is OK or if I need to do something. If it's OK, I close the window and get back to my day. If it's not, I want one button that fixes it — or a clear way to get help.
 
 ---
 
@@ -29,7 +29,7 @@ The home dashboard is **not** a "see all components" view. It's a **state-of-you
 ```
 ┌───────────────────────────────────────────────────────────────┐
 │                                                               │
-│  [🦞]                                                          │ ← sidebar (always visible)
+│  []                                                          │ ← sidebar (always visible)
 │                                                               │
 │  🏠                                                            │
 │  🛡️                                                            │

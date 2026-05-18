@@ -15,5 +15,5 @@ fuzz_target!(|data: &[u8]| {
     // We don't care whether the parse succeeds or fails — only that it
     // never panics, never overflows the stack, and returns within libFuzzer's
     // per-input timeout. `serde_yaml::Error` is a normal Result variant.
-    let _ = lobster_trapp_lib::fuzz_api::parse_manifest(data);
+    let _ = opentrapp_lib::fuzz_api::parse_manifest(data);
 });

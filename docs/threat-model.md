@@ -4,7 +4,7 @@
 **Created:** 2026-05-04
 **Companion documents:** [`whitepaper.md`](whitepaper.md) §2 (the conversational summary); [`trifecta.md`](trifecta.md) §7 (the defense-in-depth tables); [`SECURITY.md`](../SECURITY.md) (vulnerability-reporting policy); [`adr/`](adr/) (architectural decisions cited per row).
 
-This document specifies the threats the Lobster-TrApp perimeter is designed to address, the perimeter layers that mitigate each, the residual risk that remains after the mitigations, and the empirical evidence — wherever it exists — that the mitigations work as documented. It is the single source of truth on the question *"what does this perimeter actually protect against, and what does it not?"*.
+This document specifies the threats the OpenTrApp perimeter is designed to address, the perimeter layers that mitigate each, the residual risk that remains after the mitigations, and the empirical evidence — wherever it exists — that the mitigations work as documented. It is the single source of truth on the question *"what does this perimeter actually protect against, and what does it not?"*.
 
 The model is structured around six attacker categories (T1–T6). Within each category, capabilities are decomposed by STRIDE class — Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege — to make sure the analysis is complete rather than narrative-driven. Categories T1 and T2 are the principal threats the architecture is engineered against. T3 is addressed structurally. T4 is explicitly out of scope. T5 is addressed by user-experience measures rather than mechanical isolation. T6 is partially in scope.
 
@@ -156,14 +156,14 @@ The "STRIDE" classes are interpreted as follows in this document:
 | Read the container layer caches or image metadata after `compose down` | I | Layer caches and image metadata persist on the host; do not contain the credential (proxy-side injection guarantees that) | Conversation logs and activity metadata may persist; full cleanup requires `podman system prune -a` | `untested` — what exactly persists on each platform is not enumerated | [`whitepaper.md`](whitepaper.md) §9 ("Container destruction does not guarantee complete cleanup") |
 | Use timing of upstream API requests to infer when the user is active | I | None — request timing is inherent to the architecture | The user's activity pattern is observable to anyone with log read access | n/a | n/a |
 | Read the user's workspace files from outside the agent | I | Container-volume permissions; workspace is owned by the user account that runs the perimeter | Anyone with that user's privileges (including the user themselves) can read the workspace; this is by design | n/a | [`trifecta.md`](trifecta.md) §3 |
-| Read state files in `~/.lobster-trapp/` (RunGuard PID, paused marker) | I | Files are owned by the user account; mode 0600 / 0640 as appropriate | Same as above | Inspection of the `RunGuard` block (search for `runguard_dir`) in [`app/src-tauri/src/lifecycle.rs`](../app/src-tauri/src/lifecycle.rs) | n/a |
+| Read state files in `~/.opentrapp/` (RunGuard PID, paused marker) | I | Files are owned by the user account; mode 0600 / 0640 as appropriate | Same as above | Inspection of the `RunGuard` block (search for `runguard_dir`) in [`app/src-tauri/src/lifecycle.rs`](../app/src-tauri/src/lifecycle.rs) | n/a |
 | Read the user's API credential from `.env` on the host | I | `.env` is mode 0600 and gitignored | A backup tool that disregards file mode (some cloud-backup clients) may capture `.env` | `untested` — backup behaviour is per-tool | `SECURITY.md` "Out of scope" for backup-tool misconfiguration |
 
 **Residual risks specific to T6.**
 
 - **Activity metadata is not erased.** A user with confidentiality concerns about *who they have been talking to* should treat the proxy log as sensitive and apply log rotation / shredding accordingly.
 - **Image and layer caches persist by default.** Full cleanup is documented in [`whitepaper.md`](whitepaper.md) §9 and requires `podman system prune -a` (or the Docker equivalent).
-- **The host filesystem is the user's responsibility.** Files in `~/.lobster-trapp/`, the workspace volume, and the `.env` file are protected by ordinary host file permissions. A user who shares the host account broadly weakens this layer.
+- **The host filesystem is the user's responsibility.** Files in `~/.opentrapp/`, the workspace volume, and the `.env` file are protected by ordinary host file permissions. A user who shares the host account broadly weakens this layer.
 
 ---
 

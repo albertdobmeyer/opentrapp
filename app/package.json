@@ -1,15 +1,15 @@
 {
-  "name": "lobster-trapp",
+  "name": "opentrapp",
   "private": true,
   "version": "0.3.2",
-  "description": "Security-first desktop GUI for the OpenClaw ecosystem",
+  "description": "Containerization perimeter + skill scanner for autonomous CLI agents",
   "author": "Albert Dobmeyer",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/albertdobmeyer/lobster-trapp.git"
+    "url": "https://github.com/albertdobmeyer/opentrapp.git"
   },
-  "homepage": "https://github.com/albertdobmeyer/lobster-trapp#readme",
+  "homepage": "https://github.com/albertdobmeyer/opentrapp#readme",
   "type": "module",
   "scripts": {
     "dev": "vite",

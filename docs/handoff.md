@@ -38,7 +38,7 @@ ADR-0003 claimed "agent rejects unscanned skills" — this was never actually im
 - **`install-skill.sh`** (`ecb3269`, `a5a46ad`): bypass prompt replaced with hard `exit 1`. A forge clearance report is now required to install any skill. Auto-detects `clearance-report.json` from the skill directory when the path is the forge export dir (which is the GUI call path — `component.yml` passes only `skill_path`). Writes a `.trust` file (`VERIFY_HASH=sha256:...`) into the container after successful install.
 - **`entrypoint.sh`** (`ecb3269`): step 5.5 added before OpenClaw starts — iterates every installed skill directory, checks `.trust` exists, verifies `VERIFY_HASH` matches current `sha256sum` of `SKILL.md`. Any failure aborts container startup. Skills dropped in without going through `install-skill.sh` can never reach the agent.
 
-Both commits pushed to openclaw-vault remote (`a5a46ad`). Submodule reference updated in lobster-trapp (`2c189bc`).
+Both commits pushed to openclaw-vault remote (`a5a46ad`). Submodule reference updated in opentrapp (`2c189bc`).
 
 ### Landing page
 
@@ -58,7 +58,7 @@ Both commits pushed to openclaw-vault remote (`a5a46ad`). Submodule reference up
 ### Infrastructure
 
 - **Dependabot alerts dismissed**: glib `RUSTSEC-2024-0429` (unsoundness in `VariantStrIter`, locked by Tauri GTK3 stack, no update path) and a second transitive alert — both marked `tolerable_risk`.
-- **Cloudflare Origin Certificate expired** (May 12, 17:49 UTC — the day before this session). Replaced with a Let's Encrypt certificate issued via certbot DNS challenge using the token in `/etc/letsencrypt/cloudflare.ini`. Auto-renews every 90 days (cron registered by certbot). nginx updated: `ssl_certificate/ssl_certificate_key` now point to `/etc/letsencrypt/live/lobster-trapp.com/{fullchain.pem,privkey.pem}`. Site verified live (HTTP 200, content confirmed).
+- **Cloudflare Origin Certificate expired** (May 12, 17:49 UTC — the day before this session). Replaced with a Let's Encrypt certificate issued via certbot DNS challenge using the token in `/etc/letsencrypt/cloudflare.ini`. Auto-renews every 90 days (cron registered by certbot). nginx updated: `ssl_certificate/ssl_certificate_key` now point to `/etc/letsencrypt/live/opentrapp.com/{fullchain.pem,privkey.pem}`. Site verified live (HTTP 200, content confirmed).
 - **SignPath Foundation application submitted** — awaiting approval email at `albertkdobmeyer@gmail.com`. When approved: set up project in SignPath dashboard, add `SIGNPATH_API_TOKEN` and `SIGNPATH_ORGANIZATION_ID` GitHub secrets, restructure the Windows CI job to use post-build signing (see plan in `~/.claude/plans/ethereal-wiggling-rocket.md`), then update `bundle.windows.certificateThumbprint` in `tauri.conf.json`.
 
 ### Architecture audit
@@ -73,7 +73,7 @@ Investigated whether the 4-container architecture was an accidental Claude drift
 2. **Container-name cleanup is its own PR**, lands first ([`07`](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md)). Removes hardcoded `container_name:` lines that block `--project-name` isolation.
 3. **Bot first-message tutorial as a named deliverable** ([`05`](specs/v0.4-shell-tenant-reframe/05-bot-first-message.md)). Submodule PR in openclaw-vault.
 4. **Podman strategy: bootstrapper sidecar** for v0.4. Bundled Podman is the v1.0 destination. Sidecar interface designed for forward compat.
-5. **Plaintext `.env` stays for v0.4**, with explicit user-facing disclosure ("Your key is stored in plain text at `~/lobster-trapp/.env`. We're working on encrypted storage for a future release."). OS keychain migration is a v1.0 conversation that requires redesigning the proxy's env-var injection path.
+5. **Plaintext `.env` stays for v0.4**, with explicit user-facing disclosure ("Your key is stored in plain text at `~/opentrapp/.env`. We're working on encrypted storage for a future release."). OS keychain migration is a v1.0 conversation that requires redesigning the proxy's env-var injection path.
 6. **Pluggable-shell scoping is honest**: architecture earns the language; v0.4 ships only the OpenClaw tenant. "This makes future tenants cheap" — never "multi-tenant today."
 
 ---
@@ -82,7 +82,7 @@ Investigated whether the 4-container architecture was an accidental Claude drift
 
 The verification pass in this session ran four parallel investigations + targeted file reads. Findings the implementing agent should treat as established:
 
-- **`pause_perimeter`** at [`commands/lifecycle.rs:87-119`](../app/src-tauri/src/commands/lifecycle.rs) is `compose stop` against the root compose.yml: stops all 4 containers, preserves all volumes, persists via `~/.lobster-trapp/paused`. Verified data preservation via reading `kill.sh` + `lifecycle.rs`.
+- **`pause_perimeter`** at [`commands/lifecycle.rs:87-119`](../app/src-tauri/src/commands/lifecycle.rs) is `compose stop` against the root compose.yml: stops all 4 containers, preserves all volumes, persists via `~/.opentrapp/paused`. Verified data preservation via reading `kill.sh` + `lifecycle.rs`.
 - **`hard-kill` and `nuclear-kill`** wipe `vault-data` and the agent image. Confirmed in [`components/openclaw-vault/scripts/kill.sh:30-49,71-72`](../components/openclaw-vault/scripts/kill.sh).
 - **`vault-proxy` reads `ANTHROPIC_API_KEY` per request** at [`vault-proxy.py:176-181`](../components/openclaw-vault/proxy/vault-proxy.py); never gates startup; warns if absent.
 - **`SIGHUP` reloads the allowlist only**, not env vars ([`vault-proxy.py:49`](../components/openclaw-vault/proxy/vault-proxy.py)). To pick up new keys, the proxy needs `compose up -d --force-recreate vault-proxy`.
@@ -102,7 +102,7 @@ The verification pass in this session ran four parallel investigations + targete
 
 Three things the implementing agent must validate before each merge:
 
-1. **The 3-container partial bring-up has not yet run live.** [`07`](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md) is the precondition; once `container_name:` lines are removed, the dryrun is `podman compose --project-name lobster-trapp-dryrun up -d vault-proxy vault-forge vault-pioneer` against a fresh test env. Reasoning supports it (one-directional `depends_on`, sleep-infinity daemons, independent networks) but no live confirmation yet.
+1. **The 3-container partial bring-up has not yet run live.** [`07`](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md) is the precondition; once `container_name:` lines are removed, the dryrun is `podman compose --project-name opentrapp-dryrun up -d vault-proxy vault-forge vault-pioneer` against a fresh test env. Reasoning supports it (one-directional `depends_on`, sleep-infinity daemons, independent networks) but no live confirmation yet.
 2. **Windows MSI silent-install flags** (`/quiet /qn /norestart`) are standard but **NOT documented by Podman**. Empirically validate on a Windows VM during PR-3 (bootstrap service).
 3. **macOS `.pkg` silent install command** (`installer -pkg ... -target /`) is extrapolated from `installer(8)`, not Podman-documented. Verify on a clean macOS VM during PR-3.
 
@@ -111,11 +111,11 @@ Three things the implementing agent must validate before each merge:
 ## Gotchas inherited from prior work
 
 1. **Always run `make dogfood-fresh-sessions` before re-testing prompt changes.** OpenClaw's session transcripts at `/home/vault/.openclaw/agents/main/sessions/*.jsonl` cache prior responses; the model self-mimics them. Documented in [`tests/dogfood/CHECKLIST.md`](../tests/dogfood/CHECKLIST.md) §0a. Especially relevant for PR-6 (bot first-message tutorial) — the tutorial behaviour depends on the bot reading fresh CONSTRAINTS.md and not regurgitating cached "I don't know what to say first" responses.
-2. **Cloudflare auto-injects a bot-management `<script>`** before `</body>` on every response from `lobster-trapp.com`. Any byte-level diff between the live HTML and the local `docs/index.html` will show false-positive divergence. Use `ssh hetzner sha256sum` (per the runbook §4a) for sync checks.
+2. **Cloudflare auto-injects a bot-management `<script>`** before `</body>` on every response from `opentrapp.com`. Any byte-level diff between the live HTML and the local `docs/index.html` will show false-positive divergence. Use `ssh hetzner sha256sum` (per the runbook §4a) for sync checks.
 3. **Submodule changes need separate PRs** in their respective repos. The pattern: branch in submodule → commit + push to submodule's GitHub → merge submodule PR → bump submodule reference in parent → parent PR. Used three times in the previous session; PR-6 (bot tutorial) needs this discipline again.
 4. **`HUMAN-TODO.md` §4 is sensitive** (adversarial registry-staging recipe). Don't stage, commit, or push that file. Operator-only.
 5. **The bot is in `vault-agent` and cannot IPC to `vault-forge`.** The user-bridge model is the architectural correction recorded in PR #43's spec rewrite. Don't recommend bot-direct forge calls without acknowledging the IPC plumbing that would require.
-6. **Hetzner deploys are out-of-band from app releases.** Marketing site at `lobster-trapp.com` ships when `docs/index.html` changes. Use [`docs/deploying-the-landing-page.md`](deploying-the-landing-page.md). `RELEASING.md` covers app tag-and-build separately.
+6. **Hetzner deploys are out-of-band from app releases.** Marketing site at `opentrapp.com` ships when `docs/index.html` changes. Use [`docs/deploying-the-landing-page.md`](deploying-the-landing-page.md). `RELEASING.md` covers app tag-and-build separately.
 7. **The maintainer's GitHub handle is `albertdobmeyer`** (current). The legacy `gitgoodordietrying` is deprecated.
 
 ---

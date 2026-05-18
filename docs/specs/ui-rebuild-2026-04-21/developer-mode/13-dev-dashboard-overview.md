@@ -8,7 +8,7 @@
 
 ## Purpose
 
-Give developers a dense, information-rich control surface for Lobster-TrApp's internals. Everything a developer would need to understand, debug, extend, or fork is accessible from one shell.
+Give developers a dense, information-rich control surface for OpenTrApp's internals. Everything a developer would need to understand, debug, extend, or fork is accessible from one shell.
 
 **The dev dashboard reuses as much of the current component-based UI as possible.** The existing `ComponentDetail`, `CommandPanel`, `WorkflowPanel`, and `ConfigPanel` components are already well-suited; they get rehomed into the dev shell with minor refactors.
 
@@ -35,7 +35,7 @@ On first entry ever, show the welcome dialog (spec 03).
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│ 🦞 Lobster-TrApp · Advanced Mode          [Exit Advanced] [⌘⇧D]    │  top bar (40px)
+│ OpenTrApp · Advanced Mode          [Exit Advanced] [⌘⇧D]    │  top bar (40px)
 ├─────────────────┬──────────────────────────────────────────────────┤
 │                 │                                                  │
 │ SYSTEM          │                                                  │

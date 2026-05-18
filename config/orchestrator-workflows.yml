@@ -1,4 +1,4 @@
-# Lobster-TrApp: Orchestrator Workflows
+# OpenTrApp: Orchestrator Workflows
 #
 # Cross-component sequences that span multiple components.
 # These are NOT in any single component.yml — they live here because

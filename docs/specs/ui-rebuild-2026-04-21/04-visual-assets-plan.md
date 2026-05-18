@@ -1,6 +1,6 @@
 # Visual Assets Plan
 
-> **Brand Identity section is superseded (2026-05-04).** The "logo-mark / logo-mark-mono / logo-wordmark" set this document plans was retired before it shipped. The canonical brand mark is now the **FontLogo banner** family in [`logos/`](../../../logos/), with the green→blue gradient variant at `logos/Lobster-TrApp-FontLogo-Gradient.png` deployed across the README, landing page, and social preview. The deprecated golden-shield-with-claws design referenced in earlier drafts is retired entirely. See [`memory/brand_colors.md`](../../../../) and [`scripts/render-gradient-banner.py`](../../../scripts/render-gradient-banner.py) for the current brand pipeline. Sections B–D below (illustrations, status, empty states) are still in scope.
+> **Brand Identity section is superseded (2026-05-04).** The "logo-mark / logo-mark-mono / logo-wordmark" set this document plans was retired before it shipped. The canonical brand mark is now the **FontLogo banner** family in [`logos/`](../../../logos/), with the green→blue gradient variant at `logos/OpenTrApp-FontLogo-Gradient.png` deployed across the README, landing page, and social preview. The deprecated golden-shield-with-claws design referenced in earlier drafts is retired entirely. See [`memory/brand_colors.md`](../../../../) and [`scripts/render-gradient-banner.py`](../../../scripts/render-gradient-banner.py) for the current brand pipeline. Sections B–D below (illustrations, status, empty states) are still in scope.
 
 **Prerequisite reading:** `01-vision-and-personas.md`, `02-design-system.md`
 **Purpose:** Inventory all visual assets needed for the rebuild. Sourcing strategy, licensing, file organization.
@@ -41,7 +41,7 @@ Karen is a visual thinker. A friendly illustration next to a success message con
 
 ### Tier 3: Custom SVG
 
-- **Brand assets**: Lobster-TrApp logo variations, custom shield illustrations for security moments, tray icons.
+- **Brand assets**: OpenTrApp logo variations, custom shield illustrations for security moments, tray icons.
 - **Source**: create via Figma or directly in SVG. Commissioned work (Fiverr, dribbble) as fallback.
 
 ### Tier 4: Real screenshots
@@ -58,9 +58,9 @@ Karen is a visual thinker. A friendly illustration next to a success message con
 
 | Asset | Purpose | Size | Format | Source |
 |-------|---------|------|--------|--------|
-| `logo-mark.svg` | Icon-only lobster mark | 256×256 | SVG | Custom (exists) |
+| `logo-mark.svg` | Icon-only logo mark | 256×256 | SVG | Custom (exists) |
 | `logo-mark-mono.svg` | Monochrome variant for single-color contexts | 256×256 | SVG | Custom |
-| `logo-wordmark.svg` | Lobster + "Lobster-TrApp" text | 480×128 | SVG | Custom |
+| `logo-wordmark.svg` | Logo + "OpenTrApp" text | 480×128 | SVG | Custom |
 | `tray-icon-light.png` | Tray icon (macOS light mode) | 32×32 @2x | PNG | Custom |
 | `tray-icon-dark.png` | Tray icon (macOS dark mode) | 32×32 @2x | PNG | Custom |
 | `tray-icon-linux.png` | Tray icon (Linux) | 22×22 | PNG | Custom |
@@ -72,10 +72,10 @@ Karen is a visual thinker. A friendly illustration next to a success message con
 
 | Asset | Purpose | Notes |
 |-------|---------|-------|
-| `onboarding-welcome.svg` | Full-screen hero on welcome step | Friendly lobster, subtle shield, warm gradient |
+| `onboarding-welcome.svg` | Full-screen hero on welcome step | Friendly logo, subtle shield, warm gradient |
 | `onboarding-connect.svg` | Illustrates API key + Telegram connection | Show phone + laptop bridging |
 | `onboarding-installing.svg` | Animated install illustration | Concentric rings, pulsing (SVG `<animate>`) |
-| `onboarding-ready.svg` | Celebration on complete step | Confetti, lobster with thumbs up, phone showing Telegram chat |
+| `onboarding-ready.svg` | Celebration on complete step | Confetti, logo with thumbs up, phone showing Telegram chat |
 
 **Source:** unDraw or Storyset (customize to brand palette). Estimated: 4 illustrations × 15 min customization = 1 hour.
 
@@ -138,7 +138,7 @@ FAQ categories each get a category icon + illustration:
 
 | Category | Illustration | Icon |
 |----------|--------------|------|
-| "Getting started" | Laptop with lobster mark | 🏁 rocket |
+| "Getting started" | Laptop with logo mark | 🏁 rocket |
 | "Keys & connections" | Key + Telegram logo bridging | 🔑 key |
 | "Security" | Shield with lock | 🛡️ shield |
 | "Troubleshooting" | Wrench + question mark | 🔧 wrench |
@@ -156,7 +156,7 @@ Real screenshots for step-by-step guides:
 | "How to create a Telegram bot" | 6-8 screenshots (BotFather flow) |
 | "How to get an Anthropic API key" | 5-6 screenshots (console.anthropic.com) |
 | "How to set up a spending limit" | 3-4 screenshots (console.anthropic.com billing) |
-| "How to uninstall Lobster-TrApp" | 3 screenshots per OS × 3 OS = 9 screenshots |
+| "How to uninstall OpenTrApp" | 3 screenshots per OS × 3 OS = 9 screenshots |
 
 **Source:** Capture manually, annotate with arrows using Figma or Excalidraw. Total: ~30 screenshots × 2 min = 1 hour.
 
@@ -252,7 +252,7 @@ Estimated total new assets: **~60 SVG illustrations + ~30 screenshots + 6 tray/l
 | Storyset (free tier) | Freepik free | Credit in About screen |
 | Heroicons | MIT | None required |
 | Lucide | ISC | None required |
-| Custom | Lobster-TrApp repo license (MIT) | Own work |
+| Custom | OpenTrApp repo license (MIT) | Own work |
 
 Add attribution to `app/src/pages/About.tsx` (part of Settings or Help → About):
 
@@ -275,7 +275,7 @@ Build step (optional): add `svgo` to `devDependencies` and run on `prebuild`.
 
 ## Accessibility
 
-- All illustrations: alt text describing the illustration's meaning, not its contents ("Illustration of your assistant running safely", not "Green shield with lobster").
+- All illustrations: alt text describing the illustration's meaning, not its contents ("Illustration of your assistant running safely", not "Green shield with logo").
 - Icons as buttons: always paired with `aria-label`.
 - Status illustrations: paired with text (never image-only).
 - Dark mode contrast: SVG fill colors must meet WCAG AA on the dark background (4.5:1 for text, 3:1 for graphics).

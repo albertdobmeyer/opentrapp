@@ -10,7 +10,7 @@
 
 | Layer | Repo | Audience | Voice |
 |---|---|---|---|
-| **Frontend** | lobster-trapp (parent) | Non-technical end users | "Your assistant is running safely" |
+| **Frontend** | opentrapp (parent) | Non-technical end users | "Your assistant is running safely" |
 | **Backend** | openclaw-vault, clawhub-forge, moltbook-pioneer | Developers, contributors, security researchers | "24-point verification, seccomp, proxy-gated networking" |
 
 The parent repo is ALL the non-technical user ever sees. The submodules are invisible to them — they're the plumbing. Documentation must respect this boundary.
@@ -57,12 +57,12 @@ Current README is better than before but still leads with "4-container security 
 
 **Structure:**
 ```
-# Lobster-TrApp — Your Personal AI Assistant, Safe on Any Computer
+# OpenTrApp — Your Personal AI Assistant, Safe on Any Computer
 
 [badges]
 
 Get a personal AI assistant you control from your phone — without risking 
-your files, accounts, or digital life. Lobster-TrApp installs OpenClaw 
+your files, accounts, or digital life. OpenTrApp installs OpenClaw 
 safely on any computer with a simple GUI. No terminal needed.
 
 ## What You Get
@@ -168,7 +168,7 @@ Update the handoff to reference the product identity spec and mark the UX refram
 ### Phase C: Landing Page Go-Live (~30 min)
 1. Final polish on index.html meta tags and content
 2. Deploy index.html to Hetzner (replace coming-soon.html)
-3. Verify lobster-trapp.com shows the real landing page
+3. Verify opentrapp.com shows the real landing page
 
 ### Phase D: Release (~30 min)
 1. Run full test suite (42 orchestration + 147 frontend + Rust tests)
@@ -198,7 +198,7 @@ Update the handoff to reference the product identity spec and mark the UX refram
 We add a **presentation layer** that translates developer concepts into user concepts. The engine is built. We're putting the body on the car.
 
 The four-repo split works perfectly for this:
-- **lobster-trapp** = the car body (what users see and touch)
+- **opentrapp** = the car body (what users see and touch)
 - **openclaw-vault** = the engine (runtime containment)
 - **clawhub-forge** = the fuel filter (supply chain defense)
 - **moltbook-pioneer** = the radar (social threat detection)

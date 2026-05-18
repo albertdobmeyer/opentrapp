@@ -18,7 +18,7 @@ Source of truth: [`compose.yml`](../compose.yml).
 flowchart TB
     subgraph HOST["Host (Tier 1 — trusted)"]
         USER[User]
-        GUI["Lobster-TrApp GUI<br/>(Tauri 2 + Rust)"]
+        GUI["OpenTrApp GUI<br/>(Tauri 2 + Rust)"]
         COORD["Trusted CLI coordinator<br/>(Claude Code or equivalent)"]
     end
 
@@ -75,12 +75,12 @@ flowchart TD
         direction LR
         T1A["User (issues high-level intent)"]
         T1B["Trusted CLI coordinator<br/>(Claude Code or equivalent)"]
-        T1C["Lobster-TrApp desktop GUI"]
+        T1C["OpenTrApp desktop GUI"]
     end
 
     subgraph T2["TIER 2 — INFRASTRUCTURE (perimeter)"]
         direction LR
-        T2A["Lobster-TrApp container orchestrator"]
+        T2A["OpenTrApp container orchestrator"]
         T2B["Four containers: vault-agent,<br/>vault-forge, vault-pioneer, vault-proxy"]
     end
 
@@ -233,7 +233,7 @@ stateDiagram-v2
 
     note right of PausedByUser
         Persists across app restarts
-        via ~/.lobster-trapp/paused
+        via ~/.opentrapp/paused
     end note
 ```
 

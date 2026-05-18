@@ -18,7 +18,7 @@ export default {
           900: "#0b1120",
           950: "#030712",
         },
-        // Brand: LobsterTrApp-Green (#009966) — primary identity color
+        // Brand: OpenTrApp-Green (#009966) — primary identity color
         primary: {
           50: "#e6f5ee",
           200: "#80ccb3",
@@ -27,8 +27,8 @@ export default {
           600: "#007a52",
           700: "#00583a",
         },
-        // Brand: LobsterTrApp-Red (#CC3333) — reserved for the logo shield only.
-        // Brand: LobsterTrApp-Blue (#0EA5E9) — secondary accent; pairs with primary in gradients.
+        // Brand: OpenTrApp-Red (#CC3333) — reserved for the logo shield only.
+        // Brand: OpenTrApp-Blue (#0EA5E9) — secondary accent; pairs with primary in gradients.
         brand: {
           red: "#cc3333",
           "red-dark": "#a82828",

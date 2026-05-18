@@ -24,7 +24,7 @@ export default function WelcomeStep({
       <div className="animate-slide-up w-full">
         <img
           src="/logo-banner.png"
-          alt="Lobster-TrApp"
+          alt="OpenTrApp"
           className="mx-auto mb-10 w-full max-w-md"
         />
 

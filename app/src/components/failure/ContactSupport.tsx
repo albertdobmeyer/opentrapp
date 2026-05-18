@@ -27,13 +27,13 @@ interface ContactSupportProps {
   titleOverride?: string;
 }
 
-const SUPPORT_EMAIL = "support@lobster-trapp.com";
+const SUPPORT_EMAIL = "support@opentrapp.com";
 const GITHUB_ISSUE_URL =
-  "https://github.com/albertdobmeyer/lobster-trapp/issues/new?template=bug.md";
+  "https://github.com/albertdobmeyer/opentrapp/issues/new?template=bug.md";
 
 function openEmail() {
   const subject = encodeURIComponent(
-    `Lobster-TrApp needs help [v${APP_VERSION}]`,
+    `OpenTrApp needs help [v${APP_VERSION}]`,
   );
   const body = encodeURIComponent(
     `[Paste the copied diagnostic info here]\n\nWhat were you trying to do when this happened?\n\n`,

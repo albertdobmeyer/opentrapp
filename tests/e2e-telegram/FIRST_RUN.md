@@ -5,9 +5,9 @@
 ## Prerequisites (already done, verify only)
 
 - [x] `.env.test` populated at repo root (api_id, api_hash, phone, bot handle, session path)
-- [x] `~/.lobster-trapp/test-sessions/` exists with mode 700
+- [x] `~/.opentrapp/test-sessions/` exists with mode 700
 - [x] `podman ps` shows 4 containers up (vault-proxy, vault-forge, vault-pioneer, vault-agent)
-- [x] `@LobsterTrappBot` paired to your Telegram user id (happened last night)
+- [x] `@LogoTrappBot` paired to your Telegram user id (happened last night)
 - [x] Anthropic credits loaded ($5)
 - [x] vault-proxy patched to redact bot tokens in logs (submodule 4f5b560, parent 0ac3e9e)
 
@@ -18,7 +18,7 @@ If any of the above is stale, run `bash tests/e2e-telegram/direct_probing/probe.
 ### 1. Create the venv and install deps (~1 min)
 
 ```bash
-cd ~/Repositories/lobster-trapp/tests/e2e-telegram
+cd ~/Repositories/opentrapp/tests/e2e-telegram
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -39,7 +39,7 @@ What to expect:
 3. **Check your Telegram app.** You'll get a message from "Telegram" (the official account — not from bot). The message contains a 5-digit login code.
 4. Paste that code at the pytest prompt, press Enter.
 5. If your account has 2FA password, Telethon asks for that too — paste it.
-6. The session file is written to `~/.lobster-trapp/test-sessions/harness.session` (SQLite). All future runs skip this prompt.
+6. The session file is written to `~/.opentrapp/test-sessions/harness.session` (SQLite). All future runs skip this prompt.
 7. `test_smoke.py` runs 2 tests: "does bot reply to ping" and "did the request touch the proxy." Both should pass in ~5s.
 
 If smoke passes, you're unblocked. Proceed to step 3.

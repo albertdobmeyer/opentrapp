@@ -68,7 +68,7 @@ const STATUS_INTERVAL: Duration = Duration::from_secs(60);
 /// Find the monorepo root by looking for a `components/` directory.
 fn find_monorepo_root() -> PathBuf {
     // Strategy 1: Walk up from executable path
-    // During cargo tauri dev: target/debug/lobster-trapp.exe
+    // During cargo tauri dev: target/debug/opentrapp.exe
     //   -> 4 levels up to reach monorepo root (debug -> target -> src-tauri -> app -> root)
     if let Ok(exe) = std::env::current_exe() {
         let mut candidate = exe.as_path();
@@ -118,7 +118,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let open_item = MenuItem::with_id(app, "open", "Open Dashboard", true, None::<&str>)?;
-    let quit_item = MenuItem::with_id(app, "quit", "Quit Lobster-TrApp", true, None::<&str>)?;
+    let quit_item = MenuItem::with_id(app, "quit", "Quit OpenTrApp", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
 
     let menu = Menu::with_items(
@@ -132,7 +132,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         .ok_or_else(|| tauri::Error::AssetNotFound("default window icon".into()))?;
 
     TrayIconBuilder::with_id("main-tray")
-        .tooltip("Lobster-TrApp — checking…")
+        .tooltip("OpenTrApp — checking…")
         .icon(icon)
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -171,11 +171,17 @@ fn show_main_window(app: &tauri::AppHandle) {
 #[cfg(not(feature = "fuzzing"))]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // One-shot migration from a prior Lobster-TrApp install. Runs before
+    // anything reads marker files so PerimeterStateStore sees the new
+    // ~/.opentrapp/ paths. Idempotent — writes a breadcrumb after success
+    // and short-circuits on subsequent launches.
+    bootstrap::migrate_from_lobster_trapp::migrate_if_legacy_install();
+
     let monorepo_root = find_monorepo_root();
     let app_state = AppState::new(monorepo_root.clone());
 
     // RunGuard: reap orphan containers from any prior SIGKILL'd session
-    // BEFORE we bring the perimeter up. Reads/writes ~/.lobster-trapp/runguard.pid.
+    // BEFORE we bring the perimeter up. Reads/writes ~/.opentrapp/runguard.pid.
     establish_runguard(&monorepo_root);
 
     // Pass-4 lifecycle ownership (P11): the perimeter is bound to the app's

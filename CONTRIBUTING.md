@@ -1,4 +1,4 @@
-# Contributing to Lobster-TrApp
+# Contributing to OpenTrApp
 
 Thank you for considering a contribution. This document covers how to clone, build, test, and submit changes. The architectural rules and the manifest contract are documented separately in [`CLAUDE.md`](CLAUDE.md); this document covers the contributor-facing workflow.
 
@@ -11,13 +11,13 @@ By participating in this project, you agree to follow our [Code of Conduct](CODE
 The project uses three git submodules (`openclaw-vault`, `clawhub-forge`, `moltbook-pioneer`). Clone with `--recurse-submodules` so they are populated on first clone:
 
 ```bash
-git clone --recurse-submodules https://github.com/albertdobmeyer/lobster-trapp.git
+git clone --recurse-submodules https://github.com/albertdobmeyer/opentrapp.git
 ```
 
 If you cloned without `--recurse-submodules`, populate the submodules afterwards:
 
 ```bash
-cd lobster-trapp
+cd opentrapp
 git submodule update --init --recursive
 ```
 
@@ -34,7 +34,7 @@ before the clone. The reverse mapping works equally well if you start with SSH U
 Each component exists in two places on a contributor's machine:
 
 - **Standalone clone** at `~/<component>/` — for focused work on a single component
-- **Submodule copy** at `~/lobster-trapp/components/<component>/` — for orchestrator integration
+- **Submodule copy** at `~/opentrapp/components/<component>/` — for orchestrator integration
 
 These are independent git checkouts. Changes in one do not propagate to the other automatically.
 
@@ -166,7 +166,7 @@ A release is cut by tagging `vX.Y.Z` on `main`. CI builds release artefacts for 
 
 ## Asking for help
 
-- **General questions** — open a GitHub Discussion on the [`lobster-trapp` repository](https://github.com/albertdobmeyer/lobster-trapp/discussions).
+- **General questions** — open a GitHub Discussion on the [`opentrapp` repository](https://github.com/albertdobmeyer/opentrapp/discussions).
 - **Bug reports** — open a GitHub Issue with reproduction steps.
 - **Security reports** — see [`SECURITY.md`](SECURITY.md).
 - **Direct contact with the maintainer** — `albertdobmeyer@proton.me` for security-sensitive matters; otherwise the public channels are preferred so other contributors can benefit from the answer.

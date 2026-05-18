@@ -1,5 +1,5 @@
 [package]
-name = "lobster-trapp-fuzz"
+name = "opentrapp-fuzz"
 version = "0.0.0"
 publish = false
 edition = "2021"
@@ -17,13 +17,13 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 serde_yaml = "0.9"
 
-# The parent crate's package name is "lobster-trapp" (with hyphen),
-# but its `[lib]` target name is "lobster_trapp_lib" (the Rust crate
-# name the fuzz targets `use`). Without the explicit `package` field,
-# cargo searches for a package literally named "lobster_trapp_lib"
-# and fails with "no matching package found".
-[dependencies.lobster_trapp_lib]
-package = "lobster-trapp"
+# The parent crate's package name is "opentrapp" (no hyphen variant)
+# but its `[lib]` target name is "opentrapp_lib" (the Rust crate name
+# the fuzz targets `use`). Without the explicit `package` field, cargo
+# searches for a package literally named "opentrapp_lib" and fails with
+# "no matching package found".
+[dependencies.opentrapp_lib]
+package = "opentrapp"
 path = ".."
 features = ["fuzzing"]
 

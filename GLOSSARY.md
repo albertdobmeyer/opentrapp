@@ -1,6 +1,6 @@
 # Glossary
 
-Definitions of terms used in the Lobster-TrApp source, manifests, and documentation. Use these terms consistently across all repositories, UI text, and contributor discussions.
+Definitions of terms used in the OpenTrApp source, manifests, and documentation. Use these terms consistently across all repositories, UI text, and contributor discussions.
 
 **Updated:** 2026-05-03
 
@@ -8,7 +8,7 @@ Definitions of terms used in the Lobster-TrApp source, manifests, and documentat
 
 ## 1. User-facing terms (frontend only)
 
-The desktop application (`lobster-trapp`) is the only surface non-technical users see. The mappings below define how internal developer concepts are presented in the GUI. **Developer terms must never appear in user-facing UI.**
+The desktop application (`opentrapp`) is the only surface non-technical users see. The mappings below define how internal developer concepts are presented in the GUI. **Developer terms must never appear in user-facing UI.**
 
 | Developer term | User-facing term | Where used |
 |---|---|---|
@@ -68,8 +68,8 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 
 | Term | Definition |
 |---|---|
-| **Tier 1** (trusted) | Components running on the user's host with full filesystem and network access: the user, the trusted CLI coordinator (Claude Code or equivalent), and the Lobster-TrApp desktop GUI. Tier 1 makes decisions and issues commands. |
-| **Tier 2** (infrastructure) | The container perimeter. Enforces boundaries mechanically; does not make security decisions. Implemented by Lobster-TrApp's compose orchestration plus the four `vault-*` containers. |
+| **Tier 1** (trusted) | Components running on the user's host with full filesystem and network access: the user, the trusted CLI coordinator (Claude Code or equivalent), and the OpenTrApp desktop GUI. Tier 1 makes decisions and issues commands. |
+| **Tier 2** (infrastructure) | The container perimeter. Enforces boundaries mechanically; does not make security decisions. Implemented by OpenTrApp's compose orchestration plus the four `vault-*` containers. |
 | **Tier 3** (contained) | The OpenClaw agent process, Telegram gateway, loaded skills, and any fetched network content. Performs the work the user wants done, within the boundaries Tier 2 enforces. |
 | **CLI coordinator** | The reasoning model running on the host (Claude Code, Anthropic's Opus, or an equivalent CLI agent) that translates user intent into perimeter operations, reads scanner results, adjusts shell level by context, and surfaces security events to the user in plain language. The coordinator decides; the perimeter enforces. |
 
@@ -95,7 +95,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | [`openclaw-vault`](https://github.com/albertdobmeyer/openclaw-vault) | Runtime containment | `vault-agent` + `vault-proxy` | Active |
 | [`clawhub-forge`](https://github.com/albertdobmeyer/clawhub-forge) | Supply-chain defense (scanner, CDR) | `vault-forge` | Active |
 | [`moltbook-pioneer`](https://github.com/albertdobmeyer/moltbook-pioneer) | Social-content analysis | `vault-pioneer` | **Parked** (Moltbook acquired by Meta 2026-03-10; API intermittent since 2026-04-05) |
-| [`lobster-trapp`](https://github.com/albertdobmeyer/lobster-trapp) | Desktop application + perimeter orchestrator | none (host) | Active |
+| [`opentrapp`](https://github.com/albertdobmeyer/opentrapp) | Desktop application + perimeter orchestrator | none (host) | Active |
 
 ---
 
@@ -103,7 +103,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 
 | Term | Definition |
 |---|---|
-| **OpenClaw** | The third-party autonomous AI agent runtime that Lobster-TrApp is designed to contain. Not a project of this repository; this software wraps it. |
+| **OpenClaw** | The third-party autonomous AI agent runtime that OpenTrApp is designed to contain. Not a project of this repository; this software wraps it. |
 | **ClawHub** | The third-party skill registry for OpenClaw. Skills downloaded from ClawHub are scanned by `vault-forge` before reaching the agent. |
 | **Moltbook** | A third-party AI-agent social network. Acquired by Meta on 2026-03-10. Originally the data source for `vault-pioneer`. |
 | **ClawHavoc** | The 2026-Q1 study that classified 11.9 % of published ClawHub skills (341 of 2,857) as malicious. Cited as the empirical motivation for the supply-chain scanning layer. |
@@ -139,7 +139,7 @@ These older terms appear in pre-2026-04-15 documents and commit messages. Replac
 | "Container isolation" (used as a layer name) | Container hardening | The fixed set of OS-level restrictions |
 | Driver Seat | Protected resources | Resources denied at every shell level |
 | Exoskeleton | Container hardening | Same concept, plain term |
-| Monorepo orchestrator | Perimeter orchestrator | The role of the parent `lobster-trapp` repository |
+| Monorepo orchestrator | Perimeter orchestrator | The role of the parent `opentrapp` repository |
 | Dashboard | GUI control surface | The Tauri desktop application |
 | Warden | CLI coordinator | The trusted reasoning model on the host |
 | The Trifecta | The three modules | Used informally to refer to vault + forge + pioneer collectively |

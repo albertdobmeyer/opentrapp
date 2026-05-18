@@ -1,13 +1,13 @@
-# Lobster-TrApp Master Roadmap v3
+# OpenTrApp Master Roadmap v3
 
 **Updated:** 2026-04-04
 **Previous:** `2026-03-25-master-roadmap-v2.md` (superseded — listed Phases 3-6 as future but they're done)
 
 **Product:** A desktop app that lets anyone safely run OpenClaw on their personal computer, controlled from their phone, without risking their digital life.
 
-**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + lobster-trapp (GUI + landing page)
+**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + opentrapp (GUI + landing page)
 
-**Domain:** lobster-trapp.com
+**Domain:** opentrapp.com
 
 ---
 
@@ -40,7 +40,7 @@
 
 **Current state:** 87-pattern scanner, zero-trust verifier, CDR pipeline, security certificates, AI skill creation wizard, 25 skills with trust files, 168 behavioral test assertions + 37 tool tests.
 
-### GUI (lobster-trapp app) — Functional
+### GUI (opentrapp app) — Functional
 
 | Area | Status |
 |------|--------|
@@ -85,7 +85,7 @@
 
 **Engineering work:**
 - Build `install-skill.sh` in vault (validates clearance report, copies to workspace)
-- Define host-side transfer directory (`~/.lobster-trapp/skill-transfers/`)
+- Define host-side transfer directory (`~/.opentrapp/skill-transfers/`)
 - Wire into GUI as "Install to Vault" button on forge dashboard
 - Shell level policy: Hard = blocked, Split = user confirms, Soft = allowed with notification
 
@@ -124,12 +124,12 @@
 **Why:** People need to find and understand the product before downloading.
 
 **Engineering work:**
-- Static site at lobster-trapp.com (GitHub Pages)
+- Static site at opentrapp.com (GitHub Pages)
 - Pre-built binaries via GitHub releases (CI already configured, just needs git tag)
 - Final README polish across all 4 repos
 - All repos made public
 
-**Exit criteria:** A stranger landing on lobster-trapp.com understands the product and can download it within 30 seconds.
+**Exit criteria:** A stranger landing on opentrapp.com understands the product and can download it within 30 seconds.
 
 ---
 

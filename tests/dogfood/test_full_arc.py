@@ -352,7 +352,7 @@ def test_c1_state_not_setup():
     """C1: not_setup — fresh start, no .env."""
     pytest.skip(
         "Operator-driven: see CHECKLIST.md §C1. Procedure: "
-        "(1) close the app, (2) move ~/.lobster-trapp/.env aside, "
+        "(1) close the app, (2) move ~/.opentrapp/.env aside, "
         "(3) launch the app, (4) screenshot the Home hero card, "
         "(5) restore .env."
     )
@@ -423,7 +423,7 @@ def test_c7_state_paused_by_user():
         "(1) Preferences → Pause Assistant, (2) confirm hero card "
         "shows paused, (3) close + relaunch app, (4) confirm hero "
         "card STILL shows paused, (5) verify "
-        "~/.lobster-trapp/paused marker file exists, (6) Resume."
+        "~/.opentrapp/paused marker file exists, (6) Resume."
     )
 
 
@@ -500,7 +500,7 @@ def test_d7_pause_close_relaunch():
     """D7: Pause + close + relaunch → app re-opens in paused_by_user."""
     pytest.skip(
         "Operator-driven: see CHECKLIST.md §D7. This is also Tier C's C7; "
-        "running C7 satisfies D7. The marker file ~/.lobster-trapp/paused "
+        "running C7 satisfies D7. The marker file ~/.opentrapp/paused "
         "is the load-bearing artefact."
     )
 

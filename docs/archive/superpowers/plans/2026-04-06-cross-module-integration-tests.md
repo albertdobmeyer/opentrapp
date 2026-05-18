@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Create `tests/integration-test.sh` at the lobster-trapp root that validates the operational seams between vault, forge, and pioneer (22 checks across 5 categories).
+**Goal:** Create `tests/integration-test.sh` at the opentrapp root that validates the operational seams between vault, forge, and pioneer (22 checks across 5 categories).
 
 **Architecture:** A single bash script matching `orchestrator-check.sh` style (colored PASS/FAIL/WARN output, section headers, exit 1 on failure). Tests cross-module data contracts at the file/format level — no running containers needed. Complements the existing 39-check orchestrator validation.
 
@@ -31,7 +31,7 @@
 ```bash
 #!/usr/bin/env bash
 # =============================================================================
-# Lobster-TrApp Cross-Module Integration Tests
+# OpenTrApp Cross-Module Integration Tests
 # =============================================================================
 # Validates operational seams between vault, forge, and pioneer:
 #   - Clearance report contract (forge -> vault)
@@ -612,7 +612,7 @@ Update the Integration Status table (near line 229):
 | Security certificates (forge -> vault) | Implemented (forge Phase 2) | Not blocking |
 | CDR pipeline (forge internal) | Implemented (forge Phase 3) | Not blocking |
 | Feed scanning integration (pioneer -> vault) | Designed, deferred | Not blocking (Moltbook domains not in allowlist) |
-| GUI discovery (all -> lobster-trapp) | Implemented via component.yml | Not blocking |
+| GUI discovery (all -> opentrapp) | Implemented via component.yml | Not blocking |
 | Pattern export (pioneer -> vault) | Pioneer-side complete, vault-side deferred | Not blocking |
 ```
 
@@ -659,7 +659,7 @@ git commit -m "docs: update trifecta.md — all modules complete, fix stale refe
 
 - [ ] **Step 1: Run the full integration test suite**
 
-Run: `cd ~/Repositories/lobster-trapp && bash tests/integration-test.sh`
+Run: `cd ~/Repositories/opentrapp && bash tests/integration-test.sh`
 Expected: All 22 checks pass. Output should look like:
 
 ```
@@ -696,7 +696,7 @@ git commit -m "docs: add cross-module integration tests design spec"
 After all tasks complete:
 
 ```bash
-cd ~/Repositories/lobster-trapp
+cd ~/Repositories/opentrapp
 bash tests/orchestrator-check.sh    # 39 manifest/structure checks
 bash tests/integration-test.sh      # 22 cross-module seam checks
 ```

@@ -54,7 +54,7 @@ pub enum AssistantStatus {
     Starting,
     /// Agent running, key probe says auth is valid.
     Ok,
-    /// User-initiated stop; persists via `~/.lobster-trapp/paused`.
+    /// User-initiated stop; persists via `~/.opentrapp/paused`.
     PausedByUser,
     /// Agent expected up but absent; auto-restart hasn't recovered.
     ErrorPerimeter,
