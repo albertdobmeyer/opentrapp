@@ -23,6 +23,16 @@ Autonomous CLI agents — [OpenClaw](https://www.getopenclaw.ai) is one prominen
 
 Reasoning is delegated to the agent's vendor API (Anthropic's, for OpenClaw); only the agent's execution layer (file work, tool calls, skill invocations) is local.
 
+## Values
+
+These are the principles that shape every design and product decision in this project. They are written down because the alternative — leaving them implicit — is how projects drift.
+
+- **Safety-first, safety-always.** The perimeter exists because autonomous agents are powerful and powerful tools fail in expensive ways. Every architectural choice is evaluated against its containment effect first; convenience second. Defaults err on the restrictive side and are documented when they do.
+- **Honest about residual risk.** The application can never claim to make running an autonomous agent absolutely safe. It raises the cost of compromise via defense-in-depth and is open about the gaps that remain. The [threat model](docs/threat-model.md) names them; the [whitepaper](docs/whitepaper.md) explains them.
+- **Agent-agnostic, community-driven.** The perimeter is not coupled to any single CLI agent. The reference deployment is OpenClaw because OpenClaw exists today; the architecture is designed to extend to others. Contributions that broaden compatibility are welcomed.
+- **Transparency over marketing.** No tracking, no telemetry, no proprietary blobs. Every dependency, every container layer, every external request is documentable from the source tree. Reproducibility steps are in [`docs/reproduce.md`](docs/reproduce.md).
+- **Shared for the safety of the commons.** This project is MIT-licensed and developed in the open. Security research findings, hardening recipes, and threat-model deltas land in the repo where everyone running an autonomous CLI agent can benefit, not in private channels.
+
 ## Capabilities (default Split Shell)
 
 - Telegram bot interface — message the agent from a paired phone
