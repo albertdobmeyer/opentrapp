@@ -43,8 +43,8 @@ On first entry ever, show the welcome dialog (spec 03).
 │ · Logs          │                                                  │
 │                 │                                                  │
 │ COMPONENTS      │            Main content area                     │
-│ · openclaw-vault│            (tabbed workspace or                  │
-│ · clawhub-forge │             selected screen)                     │
+│ · opencli-container│            (tabbed workspace or                  │
+│ · openskill-forge │             selected screen)                     │
 │ · moltbook-     │                                                  │
 │   pioneer       │                                                  │
 │                 │                                                  │
@@ -111,7 +111,7 @@ On first entry ever, show the welcome dialog (spec 03).
 │ System Overview                                                │
 │                                                                │
 │ ┌─────────────────────┐ ┌─────────────────────┐               │
-│ │ openclaw-vault      │ │ clawhub-forge       │               │
+│ │ opencli-container      │ │ openskill-forge       │               │
 │ │ ● running           │ │ ● ready             │               │
 │ │ v0.1.0 · runtime    │ │ v0.1.0 · toolchain  │               │
 │ │                     │ │                     │               │
@@ -124,7 +124,7 @@ On first entry ever, show the welcome dialog (spec 03).
 │ └─────────────────────┘ └─────────────────────┘               │
 │                                                                │
 │ ┌─────────────────────┐ ┌─────────────────────┐               │
-│ │ moltbook-pioneer    │ │ Security status     │               │
+│ │ openagent-social    │ │ Security status     │               │
 │ │ ◐ placeholder       │ │ ✓ 24/24 checks pass │               │
 │ │ v0.0.1 · network    │ │ Last audit 2m ago   │               │
 │ └─────────────────────┘ └─────────────────────┘               │
@@ -144,7 +144,7 @@ On first entry ever, show the welcome dialog (spec 03).
 
 ### Component cards (dev view)
 
-- Canonical name visible (e.g., "openclaw-vault", not "My Assistant")
+- Canonical name visible (e.g., "opencli-container", not "My Assistant")
 - Version + role badge
 - Live metrics: memory, CPU, uptime (polled)
 - Command/workflow counts

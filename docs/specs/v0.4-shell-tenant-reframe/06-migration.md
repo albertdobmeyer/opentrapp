@@ -7,7 +7,7 @@
 ## The problem
 
 Users who already completed v0.3's wizard have:
-- `.env` at `<repo-root>/components/openclaw-vault/.env` with non-placeholder `ANTHROPIC_API_KEY` and `TELEGRAM_BOT_TOKEN`
+- `.env` at `<repo-root>/components/opencli-container/.env` with non-placeholder `ANTHROPIC_API_KEY` and `TELEGRAM_BOT_TOKEN`
 - A previously-running 4-container perimeter (or had one until they last quit the app)
 - `settings.wizardCompleted: true` in the persisted UI settings
 

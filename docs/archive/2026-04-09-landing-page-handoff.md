@@ -1,7 +1,7 @@
 # Handoff: Landing Page + Domain Publishing
 
 **Date:** 2026-04-09
-**Context:** Phases F-J of the v4 finalization roadmap are complete. The opentrapp repo is public. The three component repos (openclaw-vault, clawhub-forge, moltbook-pioneer) are private.
+**Context:** Phases F-J of the v4 finalization roadmap are complete. The opentrapp repo is public. The three component repos (opencli-container, openskill-forge, openagent-social) are private.
 
 ---
 
@@ -94,8 +94,8 @@ git push origin v0.1.0
 | Repo | Visibility | Why |
 |------|-----------|-----|
 | `albertdobmeyer/opentrapp` | **Public** | The product — users download from here |
-| `albertdobmeyer/openclaw-vault` | Private | Component submodule — not needed by end users |
-| `albertdobmeyer/clawhub-forge` | Private | Component submodule — not needed by end users |
-| `albertdobmeyer/moltbook-pioneer` | Private | Component submodule — not needed by end users |
+| `albertdobmeyer/opencli-container` | Private | Component submodule — not needed by end users |
+| `albertdobmeyer/openskill-forge` | Private | Component submodule — not needed by end users |
+| `albertdobmeyer/openagent-social` | Private | Component submodule — not needed by end users |
 
 The README explains that submodules are private and only needed for development. End users download installers from GitHub Releases.

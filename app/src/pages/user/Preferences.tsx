@@ -27,7 +27,7 @@ import {
   upsertEnvVar,
 } from "@/lib/wizardUtils";
 
-const VAULT_ENV = { component: "openclaw-vault", path: ".env" } as const;
+const VAULT_ENV = { component: "opencli-container", path: ".env" } as const;
 
 const APP_VERSION = "0.3.0";
 

@@ -24,7 +24,7 @@
 #   podman compose logs -f        Watch all containers
 #   podman compose down           Graceful shutdown
 #
-# Requires: .env file with API keys (see components/openclaw-vault/.env.example)
+# Requires: .env file with API keys (see components/opencli-container/.env.example)
 
 services:
   # ─── THE CELL BLOCK ─────────────────────────────────────────────
@@ -32,7 +32,7 @@ services:
   # API keys never enter this container — proxy injects them.
   vault-agent:
     build:
-      context: ./components/openclaw-vault
+      context: ./components/opencli-container
       dockerfile: Containerfile
     read_only: true
     tmpfs:
@@ -41,7 +41,7 @@ services:
       - /home/vault/workspace:size=1g,noexec,nosuid,mode=1777
     security_opt:
       - no-new-privileges:true
-      - seccomp=components/openclaw-vault/config/vault-seccomp.json
+      - seccomp=components/opencli-container/config/vault-seccomp.json
     cap_drop:
       - ALL
     pids_limit: 256
@@ -82,7 +82,7 @@ services:
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
     security_opt:
-      - seccomp=components/openclaw-vault/config/vault-proxy-seccomp.json
+      - seccomp=components/opencli-container/config/vault-proxy-seccomp.json
     cap_drop:
       - ALL
     cap_add:
@@ -97,8 +97,8 @@ services:
     mem_limit: 2g
     pids_limit: 128
     volumes:
-      - ./components/openclaw-vault/proxy/vault-proxy.py:/opt/vault/vault-proxy.py:ro
-      - ./components/openclaw-vault/proxy/allowlist.txt:/opt/vault/allowlist.txt:ro
+      - ./components/opencli-container/proxy/vault-proxy.py:/opt/vault/vault-proxy.py:ro
+      - ./components/opencli-container/proxy/allowlist.txt:/opt/vault/allowlist.txt:ro
       - vault-proxy-logs:/var/log/vault-proxy
       - proxy-ca:/home/mitmproxy/.mitmproxy
     networks:
@@ -119,7 +119,7 @@ services:
   # ISOLATED from agent — agent cannot tamper with inspection.
   vault-forge:
     build:
-      context: ./components/clawhub-forge
+      context: ./components/openskill-forge
       dockerfile: Containerfile
     security_opt:
       - no-new-privileges:true
@@ -156,7 +156,7 @@ services:
   # ISOLATED from agent — agent cannot influence analysis.
   vault-pioneer:
     build:
-      context: ./components/moltbook-pioneer
+      context: ./components/openagent-social
       dockerfile: Containerfile
     security_opt:
       - no-new-privileges:true

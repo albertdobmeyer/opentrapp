@@ -44,9 +44,9 @@ section() { echo -e "\n${BLUE}=== $1 ===${NC}"; }
 
 cd "$REPO_ROOT"
 
-VAULT="components/openclaw-vault"
-FORGE="components/clawhub-forge"
-PIONEER="components/moltbook-pioneer"
+VAULT="components/opencli-container"
+FORGE="components/openskill-forge"
+PIONEER="components/openagent-social"
 
 # =============================================================================
 section "1. Clearance Report Contract (forge -> vault)"
@@ -448,7 +448,7 @@ fi
 
 # 5.2: Each component.yml declares the expected role
 ROLE_OK=true
-for pair in "openclaw-vault:runtime" "clawhub-forge:toolchain" "moltbook-pioneer:network"; do
+for pair in "opencli-container:runtime" "openskill-forge:toolchain" "openagent-social:network"; do
   comp="${pair%%:*}"
   expected="${pair##*:}"
   actual=$(python3 -c "

@@ -10,7 +10,7 @@ This spec inventories everything we have, categorizes it by who actually needs i
 
 ## Phase 1: Complete Feature Inventory
 
-### OpenClaw Vault (14 commands, 4 workflows, 3 configs)
+### OpenCli Container (14 commands, 4 workflows, 3 configs)
 
 **What a non-technical user actually needs:**
 
@@ -36,7 +36,7 @@ This spec inventories everything we have, categorizes it by who actually needs i
 | Proxy Logs | Raw mitmproxy output |
 | openclaw-hardening.json5 config | Never edited manually — controlled by shell switching |
 
-### ClawHub Forge (14 commands, 3 workflows, 4 health probes)
+### OpenSkill Forge (14 commands, 3 workflows, 4 health probes)
 
 **What a non-technical user actually needs:**
 
@@ -57,7 +57,7 @@ This spec inventories everything we have, categorizes it by who actually needs i
 | Clean, Setup | Maintenance |
 | Lint All, Scan All, Verify All | Batch operations |
 
-### Moltbook Pioneer (10 commands, 3 workflows, 1 health probe)
+### OpenAgent Social (10 commands, 3 workflows, 1 health probe)
 
 **What a non-technical user actually needs:**
 
@@ -283,9 +283,9 @@ The key insight: **we don't need to change the manifest-driven architecture.** T
 - New: `app/src/components/QuickActions.tsx` — contextual action buttons based on state
 
 **Manifests (command tier tagging):**
-- `components/openclaw-vault/component.yml` — add `tier: user|advanced` to commands
-- `components/clawhub-forge/component.yml` — add `tier: user|advanced` to commands
-- `components/moltbook-pioneer/component.yml` — add `tier: user|advanced` to commands
+- `components/opencli-container/component.yml` — add `tier: user|advanced` to commands
+- `components/openskill-forge/component.yml` — add `tier: user|advanced` to commands
+- `components/openagent-social/component.yml` — add `tier: user|advanced` to commands
 - `schemas/component.schema.json` — add optional `tier` field to command schema
 - `app/src-tauri/src/orchestrator/manifest.rs` — add `tier` field to Command struct
 - `app/src/lib/types.ts` — add `tier` field to Command type

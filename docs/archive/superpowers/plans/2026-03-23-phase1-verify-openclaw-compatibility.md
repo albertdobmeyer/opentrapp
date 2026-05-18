@@ -8,9 +8,9 @@
 
 **Tech Stack:** Podman 4.9.3, podman-compose 1.0.6, existing vault codebase, Anthropic API (Haiku-only, $5 cap)
 
-**Spec reference:** Open Questions 1, 4, 8, and Layer 4 validation from `docs/superpowers/specs/2026-03-23-openclaw-vault-security-harness-design.md`
+**Spec reference:** Open Questions 1, 4, 8, and Layer 4 validation from `docs/superpowers/specs/2026-03-23-opencli-container-security-harness-design.md`
 
-**Working directory:** `components/openclaw-vault`
+**Working directory:** `components/opencli-container`
 
 **SAFETY:** The API key is Haiku-only with a $5 spending cap. No web tools enabled. ClawHub domains blocked. SSH key backed up to `/tmp/ssh_backup_20260323`. If anything unexpected happens, run `bash scripts/kill.sh --hard` immediately.
 
@@ -54,15 +54,15 @@ This is the first real test. If the build fails on `npm install -g @anthropic-ai
 
 Run:
 ```bash
-cd components/openclaw-vault
-podman build -t openclaw-vault -f Containerfile . 2>&1 | tee /tmp/vault-build.log
+cd components/opencli-container
+podman build -t opencli-container -f Containerfile . 2>&1 | tee /tmp/vault-build.log
 ```
 
 **If SUCCEEDS:** Node 20 works with OpenClaw @2026.2.17. OQ4 partially answered. Proceed.
 
 **If FAILS with Node version error:** Node 20 is incompatible. Fix:
 1. Update Containerfile lines 7-8 and 15 to `node:22-alpine` with a fresh digest pin
-2. Rebuild: `podman build -t openclaw-vault -f Containerfile .`
+2. Rebuild: `podman build -t opencli-container -f Containerfile .`
 3. Document the Node 20 incompatibility in findings
 
 **If FAILS with npm/network error:** The build stage needs internet to pull npm packages. This is expected — the builder stage is not behind the proxy. Check network connectivity and retry.
@@ -71,13 +71,13 @@ podman build -t openclaw-vault -f Containerfile . 2>&1 | tee /tmp/vault-build.lo
 
 Run:
 ```bash
-podman images openclaw-vault
+podman images opencli-container
 ```
 Expected: Image exists with recent timestamp.
 
 Run:
 ```bash
-podman run --rm openclaw-vault openclaw --version 2>/dev/null || podman run --rm --entrypoint "" openclaw-vault node -e "console.log(process.version)"
+podman run --rm opencli-container openclaw --version 2>/dev/null || podman run --rm --entrypoint "" opencli-container node -e "console.log(process.version)"
 ```
 Expected: OpenClaw version OR Node version confirms what's installed.
 
@@ -109,7 +109,7 @@ Expected: `.env exists` and `1` (one key entry).
 
 Run:
 ```bash
-cd components/openclaw-vault
+cd components/opencli-container
 podman-compose up -d 2>&1 | tee /tmp/vault-start.log
 ```
 
@@ -119,11 +119,11 @@ Run:
 ```bash
 podman ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 ```
-Expected: Both `openclaw-vault` and `vault-proxy` show as "Up".
+Expected: Both `opencli-container` and `vault-proxy` show as "Up".
 
-**If openclaw-vault exits immediately:** Check logs:
+**If opencli-container exits immediately:** Check logs:
 ```bash
-podman logs openclaw-vault 2>&1 | tee /tmp/vault-container.log
+podman logs opencli-container 2>&1 | tee /tmp/vault-container.log
 ```
 Common failure causes:
 - Entrypoint can't find hardening config → check `/opt/openclaw-hardening.yml` in image
@@ -143,7 +143,7 @@ Common failure causes:
 
 Run:
 ```bash
-podman logs openclaw-vault 2>&1 | head -50
+podman logs opencli-container 2>&1 | head -50
 echo "---"
 podman logs vault-proxy 2>&1 | head -50
 ```
@@ -235,8 +235,8 @@ Document:
 
 Run:
 ```bash
-podman exec openclaw-vault openclaw --version 2>&1
-podman exec openclaw-vault openclaw --help 2>&1 | tee /tmp/openclaw-help.log
+podman exec opencli-container openclaw --version 2>&1
+podman exec opencli-container openclaw --help 2>&1 | tee /tmp/openclaw-help.log
 ```
 
 Look for: version number, available subcommands, config-related flags (--config, --format, --json, etc.)
@@ -245,48 +245,48 @@ Look for: version number, available subcommands, config-related flags (--config,
 
 Run:
 ```bash
-podman exec openclaw-vault openclaw --help 2>&1 | grep -iE 'config|yaml|json|format'
+podman exec opencli-container openclaw --help 2>&1 | grep -iE 'config|yaml|json|format'
 ```
 
 Also check if there's built-in config validation:
 ```bash
-podman exec openclaw-vault openclaw config --help 2>&1 || echo "No config subcommand"
-podman exec openclaw-vault openclaw validate-config --help 2>&1 || echo "No validate-config"
+podman exec opencli-container openclaw config --help 2>&1 || echo "No config subcommand"
+podman exec opencli-container openclaw validate-config --help 2>&1 || echo "No validate-config"
 ```
 
 - [ ] **Step 3: Check what OpenClaw actually loaded from our config**
 
 Run:
 ```bash
-podman exec openclaw-vault cat /home/vault/.config/openclaw/config.yml
+podman exec opencli-container cat /home/vault/.config/openclaw/config.yml
 ```
 Verify: This matches our `config/openclaw-hardening.yml` (copied by entrypoint.sh).
 
 If OpenClaw has a way to dump its running config:
 ```bash
-podman exec openclaw-vault openclaw config show 2>&1 || echo "No config show command"
-podman exec openclaw-vault openclaw status 2>&1 || echo "No status command"
+podman exec opencli-container openclaw config show 2>&1 || echo "No config show command"
+podman exec opencli-container openclaw status 2>&1 || echo "No status command"
 ```
 
 - [ ] **Step 4: Check if the Gateway is running and what port it uses**
 
 Run:
 ```bash
-podman exec openclaw-vault sh -c "ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null" || echo "No network tools"
+podman exec opencli-container sh -c "ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null" || echo "No network tools"
 ```
 
 Look for: A listener on port 18789 (ws://127.0.0.1:18789 per OpenClaw docs) or similar.
 
 Alternative: check if the OpenClaw process is running:
 ```bash
-podman exec openclaw-vault ps aux 2>/dev/null || podman exec openclaw-vault sh -c "ls /proc/*/cmdline 2>/dev/null | head -10"
+podman exec opencli-container ps aux 2>/dev/null || podman exec opencli-container sh -c "ls /proc/*/cmdline 2>/dev/null | head -10"
 ```
 
 - [ ] **Step 5: Check OpenClaw's behavior with sandbox mode and no Docker socket**
 
 The hardening config sets `sandbox.mode: "non-main"`. Inside the container, there is no Docker/Podman socket. Check:
 ```bash
-podman logs openclaw-vault 2>&1 | grep -iE 'sandbox|docker|podman|container|socket'
+podman logs opencli-container 2>&1 | grep -iE 'sandbox|docker|podman|container|socket'
 ```
 
 Look for: warnings about missing Docker socket, sandbox mode falling back, or sandbox being ignored.
@@ -295,9 +295,9 @@ Look for: warnings about missing Docker socket, sandbox mode falling back, or sa
 
 Run:
 ```bash
-podman exec -it openclaw-vault openclaw chat --help 2>&1 || echo "No chat subcommand"
-podman exec -it openclaw-vault openclaw cli --help 2>&1 || echo "No cli subcommand"
-podman exec -it openclaw-vault openclaw session --help 2>&1 || echo "No session subcommand"
+podman exec -it opencli-container openclaw chat --help 2>&1 || echo "No chat subcommand"
+podman exec -it opencli-container openclaw cli --help 2>&1 || echo "No cli subcommand"
+podman exec -it opencli-container openclaw session --help 2>&1 || echo "No session subcommand"
 ```
 
 We need to know if there's a way to interact with OpenClaw that doesn't require Telegram/WhatsApp. The CLI or WebChat might work.
@@ -325,7 +325,7 @@ Document:
 
 Check if our hardening config needs an `agent.model` setting. Check OpenClaw logs:
 ```bash
-podman logs openclaw-vault 2>&1 | grep -iE 'model|agent|provider|anthropic|haiku'
+podman logs opencli-container 2>&1 | grep -iE 'model|agent|provider|anthropic|haiku'
 ```
 
 If OpenClaw is complaining about no model being configured, we need to add it to the hardening config:
@@ -346,12 +346,12 @@ Based on Task 4 Step 6 findings, try ONE of these approaches (whichever is avail
 
 **Option A: CLI interaction**
 ```bash
-podman exec -it openclaw-vault openclaw chat "What is 2 + 2?"
+podman exec -it opencli-container openclaw chat "What is 2 + 2?"
 ```
 
 **Option B: Gateway API (if running)**
 ```bash
-podman exec openclaw-vault node -e "
+podman exec opencli-container node -e "
 const ws = require('ws');
 const c = new ws.WebSocket('ws://127.0.0.1:18789');
 c.on('open', () => { c.send(JSON.stringify({type:'message',content:'What is 2+2?'})); });
@@ -380,7 +380,7 @@ Look for:
 
 Our config sets `exec.approvals.mode: "always"`. If we sent a message and OpenClaw tries to use a tool (exec, read, etc.), it should request approval. Check:
 ```bash
-podman logs openclaw-vault 2>&1 | grep -iE 'approval|confirm|deny|tool|exec'
+podman logs opencli-container 2>&1 | grep -iE 'approval|confirm|deny|tool|exec'
 ```
 
 A simple "What is 2+2?" should NOT trigger any tool use — the LLM should answer directly.
@@ -435,7 +435,7 @@ Create `docs/phase1-findings.md` with all answers to open questions, organized a
 # Phase 1 Findings — OpenClaw Compatibility Verification
 
 **Date:** 2026-03-23
-**Vault version:** openclaw-vault @ phase0-bug-fixes
+**Vault version:** opencli-container @ phase0-bug-fixes
 **OpenClaw version:** @anthropic-ai/openclaw@2026.2.17
 **Test key:** Anthropic Haiku-only, $5 cap
 
@@ -474,7 +474,7 @@ Create `docs/phase1-findings.md` with all answers to open questions, organized a
 - [ ] **Step 5: Commit findings**
 
 ```bash
-cd components/openclaw-vault
+cd components/opencli-container
 git add docs/phase1-findings.md
 git commit -m "docs: add Phase 1 findings — OpenClaw compatibility verification"
 ```

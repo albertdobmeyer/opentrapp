@@ -2,8 +2,8 @@
 
 **Status:** Accepted
 **Decision date:** 2026-03-30 (tool-control system design); reaffirmed 2026-04-15 (architecture v2 redesign)
-**Implemented by:** [`components/openclaw-vault/scripts/tool-control.sh`](../../components/openclaw-vault/scripts/tool-control.sh); [`components/openclaw-vault/scripts/tool-control-core.py`](../../components/openclaw-vault/scripts/tool-control-core.py); [`components/openclaw-vault/config/tool-manifest.yml`](../../components/openclaw-vault/config/tool-manifest.yml); [`components/openclaw-vault/config/{hard,split,soft}-shell.json5`](../../components/openclaw-vault/config/)
-**Verified by:** Verification checks 15–18 (shell-specific) and 19–24 (per-tool security) in [`components/openclaw-vault/scripts/verify.sh`](../../components/openclaw-vault/scripts/verify.sh)
+**Implemented by:** [`components/opencli-container/scripts/tool-control.sh`](../../components/opencli-container/scripts/tool-control.sh); [`components/opencli-container/scripts/tool-control-core.py`](../../components/opencli-container/scripts/tool-control-core.py); [`components/opencli-container/config/tool-manifest.yml`](../../components/opencli-container/config/tool-manifest.yml); [`components/opencli-container/config/{hard,split,soft}-shell.json5`](../../components/opencli-container/config/)
+**Verified by:** Verification checks 15–18 (shell-specific) and 19–24 (per-tool security) in [`components/opencli-container/scripts/verify.sh`](../../components/opencli-container/scripts/verify.sh)
 
 ---
 
@@ -72,7 +72,7 @@ The implementation lives in `tool-control.sh`. The script reads the active shell
 
 **(C) Time-of-day or activity-based automatic transitions.** Have the perimeter automatically demote to Hard Shell when the user is away (e.g. screen locked, no Telegram messages in the last hour). Rejected because the trigger conditions are operationally fragile and the security gain is marginal: the agent is just as constrained at any shell level by the universal hardening.
 
-**(D) Per-skill capability requests.** Let each skill declare its required capabilities and have the perimeter dynamically grant them per skill. Rejected because it adds a manifest layer (skill capability requests) without addressing the underlying problem (whether the user trusts the skill enough to grant the capabilities). The current design treats skill installation as a Split-Shell-or-above operation that goes through `clawhub-forge`'s scanner-and-CDR pipeline (ADR-0003), which is a structurally different — and stronger — approach than per-skill capability requests.
+**(D) Per-skill capability requests.** Let each skill declare its required capabilities and have the perimeter dynamically grant them per skill. Rejected because it adds a manifest layer (skill capability requests) without addressing the underlying problem (whether the user trusts the skill enough to grant the capabilities). The current design treats skill installation as a Split-Shell-or-above operation that goes through `openskill-forge`'s scanner-and-CDR pipeline (ADR-0003), which is a structurally different — and stronger — approach than per-skill capability requests.
 
 **(E) Capability tokens passed at the runtime layer.** Each tool invocation carries a capability token that the runtime validates. Rejected because OpenClaw does not expose a capability-token API; bolting one on would require forking the runtime, which is a maintenance burden the perimeter explicitly avoids.
 
@@ -81,8 +81,8 @@ The implementation lives in `tool-control.sh`. The script reads the active shell
 - Companion architecture document: [`docs/trifecta.md`](../trifecta.md) §5 (Adaptive shell)
 - Whitepaper: [`docs/whitepaper.md`](../whitepaper.md) §5 (Adaptive shell levels)
 - Glossary: [`GLOSSARY.md`](../../GLOSSARY.md) §2 (Shell levels)
-- Verification: 24-point check groups 15–18 and 19–24 in [`components/openclaw-vault/scripts/verify.sh`](../../components/openclaw-vault/scripts/verify.sh)
-- Implementation: [`components/openclaw-vault/scripts/tool-control.sh`](../../components/openclaw-vault/scripts/tool-control.sh) and [`components/openclaw-vault/scripts/tool-control-core.py`](../../components/openclaw-vault/scripts/tool-control-core.py)
-- Source of truth for tool classifications: [`components/openclaw-vault/config/tool-manifest.yml`](../../components/openclaw-vault/config/tool-manifest.yml)
-- Per-level configurations: [`components/openclaw-vault/config/{hard,split,soft}-shell.json5`](../../components/openclaw-vault/config/)
-- Historical: [`components/openclaw-vault/docs/archive/specs/2026-03-30-tool-control-system-design.md`](../../components/openclaw-vault/docs/archive/specs/2026-03-30-tool-control-system-design.md) (the original tool-control design document, archived)
+- Verification: 24-point check groups 15–18 and 19–24 in [`components/opencli-container/scripts/verify.sh`](../../components/opencli-container/scripts/verify.sh)
+- Implementation: [`components/opencli-container/scripts/tool-control.sh`](../../components/opencli-container/scripts/tool-control.sh) and [`components/opencli-container/scripts/tool-control-core.py`](../../components/opencli-container/scripts/tool-control-core.py)
+- Source of truth for tool classifications: [`components/opencli-container/config/tool-manifest.yml`](../../components/opencli-container/config/tool-manifest.yml)
+- Per-level configurations: [`components/opencli-container/config/{hard,split,soft}-shell.json5`](../../components/opencli-container/config/)
+- Historical: [`components/opencli-container/docs/archive/specs/2026-03-30-tool-control-system-design.md`](../../components/opencli-container/docs/archive/specs/2026-03-30-tool-control-system-design.md) (the original tool-control design document, archived)

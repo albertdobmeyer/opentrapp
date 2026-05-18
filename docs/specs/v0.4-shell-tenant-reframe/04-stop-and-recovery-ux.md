@@ -22,12 +22,12 @@ Both Stop and Resume call existing Tauri commands, unchanged:
 | Resume | `resume_perimeter` ([`commands/lifecycle.rs:140-144`](../../../app/src-tauri/src/commands/lifecycle.rs)) | Clears paused marker, `compose up -d` brings all four back |
 
 **Critical: never `nuclear-kill` or `hard-kill`.** Both wipe `vault-data` and the agent image:
-- `hard-kill` runs `compose down --volumes --remove-orphans` + `rmi openclaw-vault` ([`components/openclaw-vault/scripts/kill.sh:30-49`](../../../components/openclaw-vault/scripts/kill.sh))
-- `nuclear-kill` on Linux is equivalent to hard-kill ([`kill.sh:71-72`](../../../components/openclaw-vault/scripts/kill.sh) explicit comment); on Windows additionally tears down WSL VM
+- `hard-kill` runs `compose down --volumes --remove-orphans` + `rmi opencli-container` ([`components/opencli-container/scripts/kill.sh:30-49`](../../../components/opencli-container/scripts/kill.sh))
+- `nuclear-kill` on Linux is equivalent to hard-kill ([`kill.sh:71-72`](../../../components/opencli-container/scripts/kill.sh) explicit comment); on Windows additionally tears down WSL VM
 
 Karen losing her conversation history and installed skills on a "Stop" click would be a trust-breaking event. `pause_perimeter` is the only primitive that meets the data-preservation bar.
 
-`hard-kill` and `nuclear-kill` remain in the openclaw-vault manifest for developer/operator use via the dev-mode advanced UI; they are NOT exposed to user-mode.
+`hard-kill` and `nuclear-kill` remain in the opencli-container manifest for developer/operator use via the dev-mode advanced UI; they are NOT exposed to user-mode.
 
 ## Stop button UX
 

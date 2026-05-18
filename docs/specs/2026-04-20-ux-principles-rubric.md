@@ -102,12 +102,12 @@
 
 **The rule:** Users see what things DO, not what they're CALLED internally.
 
-**Why:** "OpenClaw Vault" is a codename that means nothing. "My Assistant" describes the thing's role in the user's life.
+**Why:** "OpenCli Container" is a codename that means nothing. "My Assistant" describes the thing's role in the user's life.
 
 **Test question:** *Is every label a word the user would use to describe the thing, not a word we invented?*
 
 **Good:** "My Assistant", "Skills", "Network", "App Data Location".
-**Bad:** "OpenClaw Vault", "ClawHub Forge", "Moltbook Pioneer", "Monorepo Path".
+**Bad:** "OpenCli Container", "OpenSkill Forge", "OpenAgent Social", "Monorepo Path".
 
 ---
 
@@ -298,7 +298,7 @@ Fix: Add a user-facing summary ("25 skills installed, all clean. Last checked 2 
 Issues:
 - Heading is "Configuration" — clinical. Should be "Connect Your Accounts" or "Add Your Keys".
 - Shows missing config files as raw paths (`.env`) — violates P1
-- Uses raw `component_name` field which could surface "OpenClaw Vault" if mapping is missing
+- Uses raw `component_name` field which could surface "OpenCli Container" if mapping is missing
 - When keys are loaded from existing file, no confirmation toast
 
 Fix: Rename heading, route `component_name` through the role-based label function, hide file paths behind a "Show file details" toggle.
@@ -355,7 +355,7 @@ Fix: Add hover tooltips or inline explanations for partial install state, show a
 
 ### Tier 3 — Already strong (score 8.5+)
 
-#19 Telegram first-chat (8.4 — borderline; flagged for `components/openclaw-vault` per Pass 1.5 to push to 9+), #10 Network placeholder (9.3), #1 Welcome (10), #6 Complete (10), #12 404 (10).
+#19 Telegram first-chat (8.4 — borderline; flagged for `components/opencli-container` per Pass 1.5 to push to 9+), #10 Network placeholder (9.3), #1 Welcome (10), #6 Complete (10), #12 404 (10).
 
 These don't need rebuilds. If we touch them, it should be for feature additions (e.g. real-time status on the dashboard, fresh-account pairing-flow re-test for Telegram), not UX fixes.
 
@@ -411,10 +411,10 @@ These are the new violations the 2026-04-28 dogfood walkthrough and 2026-04-29 l
 **Wizard P0s named in Pass 1 (Pass 5 owns):**
 
 - ✅ `sudo apt install podman podman-compose` displayed as primary install guidance — **CLOSED 2026-04-29 (Pass 5):** primary copy is now "sandbox runner"; the raw apt command is hidden behind a "Show terminal command" disclosure with a "use the guide above" framing.
-- ✅ Internal codenames in InstallStep technical log (`openclaw-vault: setup`, `clawhub-forge: setup`) — **CLOSED 2026-04-29 (Pass 5):** translated to "Your assistant: install" / "Skill scanner: install" / "Sandbox runner: ready" / "Downloading your assistant…" / "Running assistant security audit (24 checks)…".
+- ✅ Internal codenames in InstallStep technical log (`opencli-container: setup`, `openskill-forge: setup`) — **CLOSED 2026-04-29 (Pass 5):** translated to "Your assistant: install" / "Skill scanner: install" / "Sandbox runner: ready" / "Downloading your assistant…" / "Running assistant security audit (24 checks)…".
 - ✅ Three thrown errors that fall through to `UNKNOWN_FALLBACK` — **CLOSED 2026-04-29 (Pass 5):** added specific patterns for `Some assistant modules failed to download`, `Workflow ended with status:`, and `exited with code` in `app/src/lib/errors.ts:54-90`. Also made `UNKNOWN_FALLBACK` context-aware via `classifyError(err, context?)` — Karen now sees "Building didn't finish" instead of "Something went wrong".
 
-**Telegram first-chat P0s named in Pass 1.5 (`components/openclaw-vault` system prompt — out of parent scope):**
+**Telegram first-chat P0s named in Pass 1.5 (`components/opencli-container` system prompt — out of parent scope):**
 
 - ❌ `/start` reply is "Pong. What can I help with?" — too terse, doesn't introduce the assistant or set expectations
 - ❌ Tool-inventory inconsistency: `what can you do?` advertises web search; `summarize today's news` admits there's no `web_search/web_fetch tool`

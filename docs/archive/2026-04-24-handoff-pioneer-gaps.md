@@ -1,4 +1,4 @@
-# Handoff: Moltbook-Pioneer Gap Analysis — UX and Integration
+# Handoff: OpenAgent-Social Gap Analysis — UX and Integration
 
 **Date:** 2026-04-06
 **From:** Phase 8 certification session
@@ -66,8 +66,8 @@ There is NO X/Twitter integration. Moltbook is a separate agent-only social netw
 **What exists:**
 - Pioneer's `make export-patterns` produces `data/patterns-export.yml` (25 patterns, SHA-256 integrity hash)
 - Vault's `proxy/vault-proxy.py` handles all agent traffic
-- Design spec: `components/moltbook-pioneer/docs/specs/2026-04-04-vault-integration-design.md`
-- Vault-side spec: `components/openclaw-vault/docs/specs/2026-03-30-feed-scanning-deferred.md`
+- Design spec: `components/openagent-social/docs/specs/2026-04-04-vault-integration-design.md`
+- Vault-side spec: `components/opencli-container/docs/specs/2026-03-30-feed-scanning-deferred.md`
 
 **What's missing:**
 - Vault-proxy loading pioneer patterns at startup (from `MOLTBOOK_PATTERNS` env var)
@@ -128,18 +128,18 @@ There is NO X/Twitter integration. Moltbook is a separate agent-only social netw
 
 | Purpose | Path |
 |---------|------|
-| Pioneer tools | `components/moltbook-pioneer/tools/{feed-scanner,agent-census,identity-checklist}.sh` |
-| Injection patterns | `components/moltbook-pioneer/config/injection-patterns.yml` |
-| Feed allowlist | `components/moltbook-pioneer/config/feed-allowlist.yml` |
-| Pattern export | `components/moltbook-pioneer/scripts/export-patterns.py` |
-| Pioneer manifest | `components/moltbook-pioneer/component.yml` |
-| Vault proxy | `components/openclaw-vault/proxy/vault-proxy.py` |
-| Vault allowlist | `components/openclaw-vault/proxy/allowlist.txt` |
-| Feed scan design | `components/moltbook-pioneer/docs/specs/2026-04-04-vault-integration-design.md` |
-| Feed scan vault spec | `components/openclaw-vault/docs/specs/2026-03-30-feed-scanning-deferred.md` |
-| Safe participation | `components/moltbook-pioneer/docs/safe-participation-guide.md` |
-| Threat landscape | `components/moltbook-pioneer/docs/threat-landscape.md` |
-| Platform anatomy | `components/moltbook-pioneer/docs/platform-anatomy.md` |
+| Pioneer tools | `components/openagent-social/tools/{feed-scanner,agent-census,identity-checklist}.sh` |
+| Injection patterns | `components/openagent-social/config/injection-patterns.yml` |
+| Feed allowlist | `components/openagent-social/config/feed-allowlist.yml` |
+| Pattern export | `components/openagent-social/scripts/export-patterns.py` |
+| Pioneer manifest | `components/openagent-social/component.yml` |
+| Vault proxy | `components/opencli-container/proxy/vault-proxy.py` |
+| Vault allowlist | `components/opencli-container/proxy/allowlist.txt` |
+| Feed scan design | `components/openagent-social/docs/specs/2026-04-04-vault-integration-design.md` |
+| Feed scan vault spec | `components/opencli-container/docs/specs/2026-03-30-feed-scanning-deferred.md` |
+| Safe participation | `components/openagent-social/docs/safe-participation-guide.md` |
+| Threat landscape | `components/openagent-social/docs/threat-landscape.md` |
+| Platform anatomy | `components/openagent-social/docs/platform-anatomy.md` |
 | Trifecta (cross-module) | `docs/trifecta.md` |
 | GUI frontend | `app/src/` (React 18) |
 | GUI backend | `app/src-tauri/` (Rust) |
@@ -148,9 +148,9 @@ There is NO X/Twitter integration. Moltbook is a separate agent-only social netw
 ## Documentation to Read First
 
 1. **This document** — you're here
-2. **`components/moltbook-pioneer/CLAUDE.md`** — pioneer operating instructions
-3. **`components/moltbook-pioneer/docs/safe-participation-guide.md`** — the three engagement levels
-4. **`components/moltbook-pioneer/docs/threat-landscape.md`** — what the threats actually are
+2. **`components/openagent-social/CLAUDE.md`** — pioneer operating instructions
+3. **`components/openagent-social/docs/safe-participation-guide.md`** — the three engagement levels
+4. **`components/openagent-social/docs/threat-landscape.md`** — what the threats actually are
 5. **`docs/trifecta.md`** — how vault + forge + pioneer work together
 6. **`CLAUDE.md`** (opentrapp root) — the hard constraint: GUI must be generic, no component-specific logic
 
@@ -161,7 +161,7 @@ cd ~/Repositories/opentrapp
 bash tests/orchestrator-check.sh    # 39 manifest/structure checks
 bash tests/integration-test.sh      # 28 cross-module data contract checks
 
-cd components/moltbook-pioneer
+cd components/openagent-social
 make test                           # 30 tool tests
 make verify                         # workbench health check
 make check-api                      # Moltbook API liveness

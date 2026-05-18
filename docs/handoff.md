@@ -3,7 +3,7 @@
 **Last updated:** 2026-05-13 (maintenance session — security hardening, landing page, cert renewal; v0.4 implementation not started)
 **Current phase:** v0.4 reframe — spec set finalized, ready for implementation. This session was maintenance, not v0.4 code.
 **Branch:** `main` at `e1e1bf3` — pushed to `origin/main`.
-**Tag:** `v0.4.0` is the current shipped version (tagged and released). openclaw-vault submodule at `a5a46ad`.
+**Tag:** `v0.4.0` is the current shipped version (tagged and released). opencli-container submodule at `a5a46ad`.
 
 ---
 
@@ -31,22 +31,22 @@ The implementation sequence is in the README; each PR has a natural review check
 
 Maintenance session — no v0.4 feature code. All changes on `main`, no feature branches.
 
-### Security: skill clearance enforcement (openclaw-vault)
+### Security: skill clearance enforcement (opencli-container)
 
 ADR-0003 claimed "agent rejects unscanned skills" — this was never actually implemented. `install-skill.sh` had a soft y/N bypass prompt. Two changes close the gap:
 
 - **`install-skill.sh`** (`ecb3269`, `a5a46ad`): bypass prompt replaced with hard `exit 1`. A forge clearance report is now required to install any skill. Auto-detects `clearance-report.json` from the skill directory when the path is the forge export dir (which is the GUI call path — `component.yml` passes only `skill_path`). Writes a `.trust` file (`VERIFY_HASH=sha256:...`) into the container after successful install.
 - **`entrypoint.sh`** (`ecb3269`): step 5.5 added before OpenClaw starts — iterates every installed skill directory, checks `.trust` exists, verifies `VERIFY_HASH` matches current `sha256sum` of `SKILL.md`. Any failure aborts container startup. Skills dropped in without going through `install-skill.sh` can never reach the agent.
 
-Both commits pushed to openclaw-vault remote (`a5a46ad`). Submodule reference updated in opentrapp (`2c189bc`).
+Both commits pushed to opencli-container remote (`a5a46ad`). Submodule reference updated in opentrapp (`2c189bc`).
 
 ### Landing page
 
 - Version pill updated: `v0.3.0` → `v0.4.0 — Shellfish Reframe release`
 - SmartScreen/Gatekeeper bypass guide added as a `<details>` block in the download section
 - SignPath Foundation credit line added (required by their OSS terms)
-- Full audit of skill scanner claims against actual clawhub-forge source code — four locations corrected: "before it runs" → "pre-install only", `16` → `17` injection signatures, "SKILL.md only" → "every file in the bundle", added honest limitation ("pipeline is not automatic; patterns unknown to scanner can still slip through")
-- **4-gate vetting pipeline SVG diagram** added to the Ecosystem section — shows the full clawhub-forge sequence (untrusted skill → Lint → Scan → Verify → Test → Clearance → Vault) with red fail rail. Rendered and verified in browser.
+- Full audit of skill scanner claims against actual openskill-forge source code — four locations corrected: "before it runs" → "pre-install only", `16` → `17` injection signatures, "SKILL.md only" → "every file in the bundle", added honest limitation ("pipeline is not automatic; patterns unknown to scanner can still slip through")
+- **4-gate vetting pipeline SVG diagram** added to the Ecosystem section — shows the full openskill-forge sequence (untrusted skill → Lint → Scan → Verify → Test → Clearance → Vault) with red fail rail. Rendered and verified in browser.
 - Deployed to Hetzner
 
 ### Supporting docs
@@ -63,7 +63,7 @@ Both commits pushed to openclaw-vault remote (`a5a46ad`). Submodule reference up
 
 ### Architecture audit
 
-Investigated whether the 4-container architecture was an accidental Claude drift or deliberate design. Finding: it was deliberate, documented in ADR-0006 (April 2026) driven by a real security gap. vault-pioneer is intentionally parked (Moltbook acquired by Meta, API unstable since April 2026) — kept in compose.yml for completeness, same as moltbook-pioneer submodule.
+Investigated whether the 4-container architecture was an accidental Claude drift or deliberate design. Finding: it was deliberate, documented in ADR-0006 (April 2026) driven by a real security gap. vault-pioneer is intentionally parked (Moltbook acquired by Meta, API unstable since April 2026) — kept in compose.yml for completeness, same as openagent-social submodule.
 
 ---
 
@@ -71,7 +71,7 @@ Investigated whether the 4-container architecture was an accidental Claude drift
 
 1. **Stop button: one button, not two.** "Stop your assistant" / "Resume" — both share the existing `pause_perimeter` primitive (`compose stop`, all volumes preserved). Never `nuclear-kill` or `hard-kill` — those wipe `vault-data` (session history) and `forge-deliveries` (installed skills).
 2. **Container-name cleanup is its own PR**, lands first ([`07`](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md)). Removes hardcoded `container_name:` lines that block `--project-name` isolation.
-3. **Bot first-message tutorial as a named deliverable** ([`05`](specs/v0.4-shell-tenant-reframe/05-bot-first-message.md)). Submodule PR in openclaw-vault.
+3. **Bot first-message tutorial as a named deliverable** ([`05`](specs/v0.4-shell-tenant-reframe/05-bot-first-message.md)). Submodule PR in opencli-container.
 4. **Podman strategy: bootstrapper sidecar** for v0.4. Bundled Podman is the v1.0 destination. Sidecar interface designed for forward compat.
 5. **Plaintext `.env` stays for v0.4**, with explicit user-facing disclosure ("Your key is stored in plain text at `~/opentrapp/.env`. We're working on encrypted storage for a future release."). OS keychain migration is a v1.0 conversation that requires redesigning the proxy's env-var injection path.
 6. **Pluggable-shell scoping is honest**: architecture earns the language; v0.4 ships only the OpenClaw tenant. "This makes future tenants cheap" — never "multi-tenant today."
@@ -83,14 +83,14 @@ Investigated whether the 4-container architecture was an accidental Claude drift
 The verification pass in this session ran four parallel investigations + targeted file reads. Findings the implementing agent should treat as established:
 
 - **`pause_perimeter`** at [`commands/lifecycle.rs:87-119`](../app/src-tauri/src/commands/lifecycle.rs) is `compose stop` against the root compose.yml: stops all 4 containers, preserves all volumes, persists via `~/.opentrapp/paused`. Verified data preservation via reading `kill.sh` + `lifecycle.rs`.
-- **`hard-kill` and `nuclear-kill`** wipe `vault-data` and the agent image. Confirmed in [`components/openclaw-vault/scripts/kill.sh:30-49,71-72`](../components/openclaw-vault/scripts/kill.sh).
-- **`vault-proxy` reads `ANTHROPIC_API_KEY` per request** at [`vault-proxy.py:176-181`](../components/openclaw-vault/proxy/vault-proxy.py); never gates startup; warns if absent.
-- **`SIGHUP` reloads the allowlist only**, not env vars ([`vault-proxy.py:49`](../components/openclaw-vault/proxy/vault-proxy.py)). To pick up new keys, the proxy needs `compose up -d --force-recreate vault-proxy`.
+- **`hard-kill` and `nuclear-kill`** wipe `vault-data` and the agent image. Confirmed in [`components/opencli-container/scripts/kill.sh:30-49,71-72`](../components/opencli-container/scripts/kill.sh).
+- **`vault-proxy` reads `ANTHROPIC_API_KEY` per request** at [`vault-proxy.py:176-181`](../components/opencli-container/proxy/vault-proxy.py); never gates startup; warns if absent.
+- **`SIGHUP` reloads the allowlist only**, not env vars ([`vault-proxy.py:49`](../components/opencli-container/proxy/vault-proxy.py)). To pick up new keys, the proxy needs `compose up -d --force-recreate vault-proxy`.
 - **OpenClaw uses grammY long-polling**, not webhooks. Telegram allows one consumer per token; the wizard's test-message must use the documented handoff sequence (`deleteWebhook → getMe → poll → sendMessage → confirm-by-offset → release`) before vault-agent starts polling.
-- **OpenClaw boots cleanly with empty `TELEGRAM_BOT_TOKEN`** — Telegram is silently disabled. Verified in [`components/openclaw-vault/docs/phase1-findings.md:134`](../components/openclaw-vault/docs/phase1-findings.md).
+- **OpenClaw boots cleanly with empty `TELEGRAM_BOT_TOKEN`** — Telegram is silently disabled. Verified in [`components/opencli-container/docs/phase1-findings.md:134`](../components/opencli-container/docs/phase1-findings.md).
 - **`podman-compose 1.0.6` skips build-only services on `compose pull`** unless `--force-local`. Three of our four services are `build:` stanzas. Bootstrap pipeline needs `compose build` AND `compose pull` as separate steps.
 - **macOS and Windows additionally require `podman machine init && podman machine start`** after the OS install. No upstream-supported Linux rootless tarball exists.
-- **`api.anthropic.com` is on the proxy allowlist** ([`components/openclaw-vault/proxy/allowlist.txt:4`](../components/openclaw-vault/proxy/allowlist.txt)).
+- **`api.anthropic.com` is on the proxy allowlist** ([`components/opencli-container/proxy/allowlist.txt:4`](../components/opencli-container/proxy/allowlist.txt)).
 - **Modal-over-home is feasible without routing rewrite.** `Setup.tsx` is at `/setup` route gated by `<Navigate>` redirect at `App.tsx:114`; the wizard step components are pure presentational. The connection-step blocks at `ConnectStep.tsx:149-169` (Anthropic) and `:171-191` (Telegram) get reused inside a new `<ActivationModal>`.
 - **`tauri-plugin-shell` is already present** ([`Cargo.toml:13`](../app/src-tauri/Cargo.toml)); sidecar wiring is ~3 line additions to `tauri.conf.json` + `capabilities/default.json`.
 - **`tauri-plugin-single-instance` is NOT yet configured** — must add (`~10 LOC`, register first per docs).
@@ -138,15 +138,15 @@ These items are unchanged from the previous handoff. They're operator-driven; th
 ```
 $ git log --oneline -5
 e1e1bf3 feat(landing): add 4-gate skill vetting pipeline diagram to ecosystem section
-2c189bc chore(submodule): update openclaw-vault — auto-detect clearance report fix
-4be54fa chore(submodule): update openclaw-vault to clearance-enforcement commit
+2c189bc chore(submodule): update opencli-container — auto-detect clearance report fix
+4be54fa chore(submodule): update opencli-container to clearance-enforcement commit
 9699cf4 docs(landing): correct skill scanner claims to match implementation
 5785dd9 chore(release): bump version to 0.4.0, add release notes and v0.4 specs
 
 $ git submodule status
- a5a46ad  components/openclaw-vault    (heads/main)
- 911b677  components/clawhub-forge     (heads/main)
- 52b3db2  components/moltbook-pioneer  (heads/main, parked)
+ a5a46ad  components/opencli-container    (heads/main)
+ 911b677  components/openskill-forge     (heads/main)
+ 52b3db2  components/openagent-social  (heads/main, parked)
 ```
 
 Working tree clean. All five test gates green on `main` (last checked 2026-05-11 pre-release).

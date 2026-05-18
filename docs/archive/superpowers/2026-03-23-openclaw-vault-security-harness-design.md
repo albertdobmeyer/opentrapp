@@ -303,7 +303,7 @@ Every existing OpenClaw hardening guide:
 
 ### 4.4 What Our Current Vault Gets Right
 
-The existing openclaw-vault implementation (as of 2026-03-23) correctly solves:
+The existing opencli-container implementation (as of 2026-03-23) correctly solves:
 
 - **API key isolation** — proxy-side injection means the key never enters the container
 - **Network isolation** — internal-only network with proxy allowlist enforcement

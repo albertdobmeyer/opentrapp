@@ -9,7 +9,7 @@
 
 ## Context
 
-The application orchestrates three components (`openclaw-vault`, `clawhub-forge`, `moltbook-pioneer`) plus a fourth slot (the `vault-proxy` egress gateway, which is part of `openclaw-vault`'s deployment but logically a separate role). Each component has its own status states, its own commands, its own configuration files, its own health probes, and its own multi-step workflows.
+The application orchestrates three components (`opencli-container`, `openskill-forge`, `openagent-social`) plus a fourth slot (the `vault-proxy` egress gateway, which is part of `opencli-container`'s deployment but logically a separate role). Each component has its own status states, its own commands, its own configuration files, its own health probes, and its own multi-step workflows.
 
 A naïve implementation hard-codes one component's behaviour into the orchestrator: `if component == "vault" then run verify.sh; else if component == "forge" then run skill-scan.sh ...`. This produces an orchestrator that grows linearly with the number of components, requires Rust changes for every component update, and tightly couples the GUI to the component set. Adding pioneer would require a Rust release; un-parking pioneer would require a Rust release; switching forge's verify command would require a Rust release.
 
@@ -82,4 +82,4 @@ The orchestrator-check suite (§7 of [`tests/orchestrator-check.sh`](../../tests
 - Architecture: [`docs/trifecta.md`](../trifecta.md) §9 (manifest-driven workflows)
 - Whitepaper: [`docs/whitepaper.md`](../whitepaper.md) §7 (the implementation paragraph that frames the generic-backend constraint)
 - Live cross-component workflows: [`config/orchestrator-workflows.yml`](../../config/orchestrator-workflows.yml)
-- Component manifests: `components/openclaw-vault/component.yml`, `components/clawhub-forge/component.yml`, `components/moltbook-pioneer/component.yml`
+- Component manifests: `components/opencli-container/component.yml`, `components/openskill-forge/component.yml`, `components/openagent-social/component.yml`

@@ -208,7 +208,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
   useEffect(() => {
     if (!reCredential) return;
     let cancelled = false;
-    void readConfig("openclaw-vault", ".env")
+    void readConfig("opencli-container", ".env")
       .then((content) => {
         if (cancelled) return;
         for (const line of content.split("\n")) {
@@ -264,11 +264,11 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
     }
     try {
       let envContent = "";
-      try { envContent = await readConfig("openclaw-vault", ".env"); }
+      try { envContent = await readConfig("opencli-container", ".env"); }
       catch { envContent = "# OpenTrApp agent configuration\n"; }
       envContent = upsertEnvVar(envContent, "ANTHROPIC_API_KEY", anthropicKey);
       envContent = upsertEnvVar(envContent, "TELEGRAM_BOT_TOKEN", telegram.telegramToken);
-      await writeConfig("openclaw-vault", ".env", envContent);
+      await writeConfig("opencli-container", ".env", envContent);
     } catch (error) {
       setCommitError("Couldn't save your keys: " + classifyError(error).userMessage);
       setStep("telegram");

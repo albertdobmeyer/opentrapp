@@ -1,15 +1,15 @@
-# ADR-0004 — Parking moltbook-pioneer
+# ADR-0004 — Parking openagent-social
 
 **Status:** Accepted
 **Decision date:** 2026-05-03
-**Implemented by:** [`compose.yml`](../../compose.yml) (vault-pioneer service retained but with `profiles: [parked]`); [`components/moltbook-pioneer/README.md`](../../components/moltbook-pioneer/README.md) (parked notice); [`docs/trifecta.md`](../trifecta.md) §4.3
+**Implemented by:** [`compose.yml`](../../compose.yml) (vault-pioneer service retained but with `profiles: [parked]`); [`components/openagent-social/README.md`](../../components/openagent-social/README.md) (parked notice); [`docs/trifecta.md`](../trifecta.md) §4.3
 **Verified by:** Surface-level smoke check — pioneer no longer reachable from the GUI's add-tool flow; `tests/orchestrator-check.sh` continues to validate the pioneer manifest against the schema even though the service is parked
 
 ---
 
 ## Context
 
-`moltbook-pioneer` was designed to scan posts on the Moltbook agent social network for prompt-injection patterns before that content reached `vault-agent`. The container is still defined in `compose.yml`. The 25-pattern catalogue is still in the submodule. The integration with `vault-proxy` for filtered fetches works.
+`openagent-social` was designed to scan posts on the Moltbook agent social network for prompt-injection patterns before that content reached `vault-agent`. The container is still defined in `compose.yml`. The 25-pattern catalogue is still in the submodule. The integration with `vault-proxy` for filtered fetches works.
 
 Two external events changed the calculus:
 
@@ -22,9 +22,9 @@ A pure-removal decision would have lost the architectural slot — pioneer's rol
 
 ## Decision
 
-`moltbook-pioneer` is **parked**. The component continues to exist as:
+`openagent-social` is **parked**. The component continues to exist as:
 
-1. A submodule at `components/moltbook-pioneer/` with its code, the 25-pattern catalogue, the platform-anatomy notes, and a README that begins with the parked notice and the rationale.
+1. A submodule at `components/openagent-social/` with its code, the 25-pattern catalogue, the platform-anatomy notes, and a README that begins with the parked notice and the rationale.
 2. A `vault-pioneer` service in `compose.yml`, retained for completeness but excluded from the default startup profile.
 3. An entry in [`docs/trifecta.md`](../trifecta.md) §4.3 and [`docs/threat-model.md`](../threat-model.md) T3 marking the architectural slot and noting that layers 1 and 2 (feed-scanner, network isolation) are dormant pending a stable target API.
 
@@ -64,6 +64,6 @@ The component is **not** removed from the repository, the schema, the orchestrat
 - Architecture: [`docs/trifecta.md`](../trifecta.md) §4.3 (the parked notice in the architecture document)
 - Threat model: [`docs/threat-model.md`](../threat-model.md) T3 (residual coverage given the parked status)
 - Whitepaper: [`docs/whitepaper.md`](../whitepaper.md) §3.2 and §4.3 (parked-status framing)
-- Component README: [`components/moltbook-pioneer/README.md`](../../components/moltbook-pioneer/README.md)
+- Component README: [`components/openagent-social/README.md`](../../components/openagent-social/README.md)
 - Compose configuration: [`compose.yml`](../../compose.yml) — `vault-pioneer` service entry
 - External: Meta's acquisition of Moltbook announced 2026-03-10 (industry press, multiple sources); Moltbook public-API behaviour from 2026-04-05 onwards documented in maintainer integration logs

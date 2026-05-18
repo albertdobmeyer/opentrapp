@@ -10,9 +10,9 @@
 ## Context
 
 All three component modules are functionally complete:
-- **openclaw-vault** — Phases 1-7, all 3 shell levels operational, 24-point verify passing
-- **clawhub-forge** — Phases 1-4, 87-pattern scanner, CDR, AI creation wizard, security certificates
-- **moltbook-pioneer** — All 5 phases, 25 injection patterns, pattern export with ReDoS hardening
+- **opencli-container** — Phases 1-7, all 3 shell levels operational, 24-point verify passing
+- **openskill-forge** — Phases 1-4, 87-pattern scanner, CDR, AI creation wizard, security certificates
+- **openagent-social** — All 5 phases, 25 injection patterns, pattern export with ReDoS hardening
 
 The existing `tests/orchestrator-check.sh` (39 checks) validates **manifest structure** — schema compliance, enum alignment, cross-references within manifests. What's missing is validation of the **operational seams** — the actual data contracts flowing between modules.
 
@@ -46,12 +46,12 @@ Tests that forge's `skill-export.sh` output is consumable by vault's `install-sk
 
 | Check | What | How |
 |-------|------|-----|
-| 1.1 | Forge certify produces clearance-report.json | Run `make -C components/clawhub-forge certify SKILL=api-dev`, verify `skills/api-dev/clearance-report.json` exists |
+| 1.1 | Forge certify produces clearance-report.json | Run `make -C components/openskill-forge certify SKILL=api-dev`, verify `skills/api-dev/clearance-report.json` exists |
 | 1.2 | Report has required fields | jq: `.skill`, `.version`, `.scan.status`, `.scan.critical`, `.verify.verdict`, `.checksum` all present |
 | 1.3 | Field types are correct | `scan.status` is string, `scan.critical` is number, `checksum` starts with `sha256:` |
 | 1.4 | SHA-256 checksum matches SKILL.md | Recompute sha256sum of the skill file, compare to `.checksum` value |
-| 1.5 | Pattern count matches actual scanner | `.scan.pattern_count` equals `grep -c 'pattern\[' components/clawhub-forge/tools/lib/patterns.sh` (87) |
-| 1.6 | Forge export packages correctly | Run `make -C components/clawhub-forge export SKILL=api-dev`, verify exports/ dir has SKILL.md + clearance-report.json + .trust |
+| 1.5 | Pattern count matches actual scanner | `.scan.pattern_count` equals `grep -c 'pattern\[' components/openskill-forge/tools/lib/patterns.sh` (87) |
+| 1.6 | Forge export packages correctly | Run `make -C components/openskill-forge export SKILL=api-dev`, verify exports/ dir has SKILL.md + clearance-report.json + .trust |
 
 ### Category 2: Pattern Export Contract (Pioneer -> Vault) — 6 checks
 
@@ -59,7 +59,7 @@ Tests that pioneer's `export-patterns.py` output matches what vault's proxy spec
 
 | Check | What | How |
 |-------|------|-----|
-| 2.1 | Pattern export produces YAML | Run `make -C components/moltbook-pioneer export-patterns`, verify `data/patterns-export.yml` exists |
+| 2.1 | Pattern export produces YAML | Run `make -C components/openagent-social export-patterns`, verify `data/patterns-export.yml` exists |
 | 2.2 | All patterns have required fields | Python: each entry has `id`, `severity`, `regex` |
 | 2.3 | All regexes compile | Python: `re.compile(pattern['regex'])` for each |
 | 2.4 | Integrity hash is present and valid | File contains `# Integrity: sha256:...`, recompute and compare |
@@ -82,7 +82,7 @@ Tests that documentation cross-references point to real files.
 
 | Check | What | How |
 |-------|------|-----|
-| 4.1 | All submodule directories are non-empty | `ls components/{openclaw-vault,clawhub-forge,moltbook-pioneer}/component.yml` |
+| 4.1 | All submodule directories are non-empty | `ls components/{opencli-container,openskill-forge,openagent-social}/component.yml` |
 | 4.2 | Submodules are on a branch (not detached HEAD) | `git -C components/<mod> symbolic-ref HEAD` succeeds |
 | 4.3 | Submodule working trees are clean | `git -C components/<mod> status --porcelain` is empty |
 

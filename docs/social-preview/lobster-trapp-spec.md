@@ -123,9 +123,9 @@ Do not substitute alternates. If the project's positioning changes, update all t
 
 | Repo | Background | Style |
 |---|---|---|
-| openclaw-vault | Red | Centered text, solid bg |
-| clawhub-forge | Blue | Centered text, solid bg |
-| moltbook-pioneer | Purple | Centered text, solid bg |
+| opencli-container | Red | Centered text, solid bg |
+| openskill-forge | Blue | Centered text, solid bg |
+| openagent-social | Purple | Centered text, solid bg |
 | **opentrapp** | **Slate gradient + brand glow** | **Centered banner + tagline** |
 
 The parent repo intentionally breaks the pattern of the submodules. The slate gradient and the gradient banner signal hierarchy — this is the orchestrator and the brand surface, not a component preview.

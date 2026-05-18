@@ -2,15 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix all pre-existing bugs in openclaw-vault so the codebase is clean before the redesign begins.
+**Goal:** Fix all pre-existing bugs in opencli-container so the codebase is clean before the redesign begins.
 
 **Architecture:** No architectural changes. These are surgical fixes to existing files.
 
 **Tech Stack:** Bash, Python, YAML, Node.js (for test replacement pattern)
 
-**Spec reference:** Section 4.6 of `docs/superpowers/specs/2026-03-23-openclaw-vault-security-harness-design.md`
+**Spec reference:** Section 4.6 of `docs/superpowers/specs/2026-03-23-opencli-container-security-harness-design.md`
 
-**Working directory:** `components/openclaw-vault`
+**Working directory:** `components/opencli-container`
 
 ---
 
@@ -36,7 +36,7 @@ The test uses `wget` on lines 12, 20, 29, 38, 50, 61, 70. But `wget` was strippe
 
 Run:
 ```bash
-cd components/openclaw-vault
+cd components/opencli-container
 head -77 tests/test-network-isolation.sh
 ```
 Verify: All test functions use `wget`.
@@ -61,7 +61,7 @@ set -uo pipefail
 
 RUNTIME="${RUNTIME:-podman}"
 command -v podman &>/dev/null || RUNTIME="docker"
-CONTAINER="openclaw-vault"
+CONTAINER="opencli-container"
 
 PASS=0
 FAIL=0
@@ -205,7 +205,7 @@ Expected: No output (no syntax errors).
 - [ ] **Step 4: Commit**
 
 ```bash
-cd components/openclaw-vault
+cd components/opencli-container
 git add tests/test-network-isolation.sh
 git commit -m "fix: replace wget with Node.js http in network isolation tests
 
@@ -229,7 +229,7 @@ The `proxy-logs` command references `openclaw-proxy` but the actual container in
 
 Run:
 ```bash
-cd components/openclaw-vault
+cd components/opencli-container
 grep 'container_name.*proxy' compose.yml
 grep 'openclaw-proxy' component.yml
 ```
@@ -302,7 +302,7 @@ The `anthropic-version` header is hardcoded to `"2023-06-01"`. When Anthropic up
 
 Run:
 ```bash
-cd components/openclaw-vault
+cd components/opencli-container
 sed -n '159,165p' proxy/vault-proxy.py
 ```
 Expected: Line 163 shows `flow.request.headers["anthropic-version"] = "2023-06-01"`

@@ -71,7 +71,7 @@ For each row, the matrix records:
 - **ADR-0001:** Proxy-side API-key injection (the architectural cornerstone)
 - **ADR-0002:** Adaptive shell levels (the capability-sequencing model)
 - **ADR-0003:** Content Disarm & Reconstruction (the supply-chain defense pattern)
-- **ADR-0004:** Parking moltbook-pioneer (the corporate-acquisition decision)
+- **ADR-0004:** Parking openagent-social (the corporate-acquisition decision)
 - **ADR-0005:** The "deserve-to-exist" scope test (the 2026-05-02 vision recheck)
 - **ADR-0006:** Four-container compose vs. single-container vs. VM-level isolation
 - **ADR-0007:** The manifest-driven generic backend
@@ -100,9 +100,9 @@ No additional ADRs currently queued. New decisions that meet the *When to write 
 
 `docs/reproduce.md` lists every numerical claim in the README and gives the exact command sequence to verify it independently:
 
-- 87 malware patterns: `wc -l components/clawhub-forge/tools/lib/patterns.sh` plus a script that summarises the categories
+- 87 malware patterns: `wc -l components/openskill-forge/tools/lib/patterns.sh` plus a script that summarises the categories
 - 11.9% ClawHavoc rate: link to the underlying ClawHavoc study; document the assumptions
-- 24-point verification: `bash components/openclaw-vault/scripts/verify.sh`
+- 24-point verification: `bash components/opencli-container/scripts/verify.sh`
 - 42-check orchestrator: `bash tests/orchestrator-check.sh`
 - 28 banned terms: `grep BANNED_TERMS app/e2e/user-facing.spec.ts | wc`
 - Cargo lib 56/56, vitest 74/74, playwright 25/25: explicit commands and expected outputs

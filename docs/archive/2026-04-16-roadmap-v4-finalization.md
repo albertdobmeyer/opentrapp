@@ -13,7 +13,7 @@
 
 A desktop app that lets anyone safely run OpenClaw on their personal computer, controlled from their phone, without risking their digital life.
 
-**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + opentrapp (GUI + landing page)
+**Repos:** opencli-container (containment) + openskill-forge (skill security) + openagent-social (ecosystem tools) + opentrapp (GUI + landing page)
 
 ---
 
@@ -33,9 +33,9 @@ A desktop app that lets anyone safely run OpenClaw on their personal computer, c
 
 | Module | Phases | Status | Key Metric |
 |--------|--------|--------|------------|
-| **openclaw-vault** | 8/8 complete | Certified | 24-point verify, 13 test scripts, 3 shell levels |
-| **clawhub-forge** | 4/5 complete | Phase 5 deferred (ClawHub API) | 87-pattern scanner, CDR pipeline, 25 skills certified |
-| **moltbook-pioneer** | 6/6 complete | Done | 48 tests, 25 injection patterns, 3 engagement presets |
+| **opencli-container** | 8/8 complete | Certified | 24-point verify, 13 test scripts, 3 shell levels |
+| **openskill-forge** | 4/5 complete | Phase 5 deferred (ClawHub API) | 87-pattern scanner, CDR pipeline, 25 skills certified |
+| **openagent-social** | 6/6 complete | Done | 48 tests, 25 injection patterns, 3 engagement presets |
 | **opentrapp GUI** | Functional | ~85% complete | 10 Tauri commands, 6 renderers, 52 frontend tests, 41 orchestrator checks |
 
 ### Cross-Repo Harmonization — Complete (2026-04-06)
@@ -132,9 +132,9 @@ F and I can run in parallel. G depends on nothing. H blocks J. I blocks J.
 | Task | Repo | Details |
 |------|------|---------|
 | I1. Wire wizard to real commands | opentrapp | The wizard's "Setup" step should trigger each component's `setup_command` from its manifest via the existing `run_command` Tauri handler. Backend already supports this — work is primarily frontend wiring in `app/src/pages/Setup.tsx`. |
-| I2. CDR Ollama fallback | clawhub-forge | `tools/lib/cdr-intent.sh:30-35` hard-fails if Ollama is unreachable. Add: (a) cached intent fallback (check for existing `intent.json`), (b) configurable remote endpoint in `config/cdr.conf`, (c) graceful error with actionable message. |
-| I3. Health metrics expansion | clawhub-forge | Add to `component.yml` health section: `lint-health` (count of lint-passing skills), `scan-health` (count of clean scans), `test-health` (count of passing tests). Commands already exist as `make lint-all`, `make scan-all`, `make test` with parseable output. |
-| I4. skill-create non-interactive fix | clawhub-forge | `tools/skill-create.sh` lines 109/123 check `INTERACTIVE` flag before processing `--commands`/`--tips` flags. Non-interactive mode should accept these args or proceed to AI generation when empty. |
+| I2. CDR Ollama fallback | openskill-forge | `tools/lib/cdr-intent.sh:30-35` hard-fails if Ollama is unreachable. Add: (a) cached intent fallback (check for existing `intent.json`), (b) configurable remote endpoint in `config/cdr.conf`, (c) graceful error with actionable message. |
+| I3. Health metrics expansion | openskill-forge | Add to `component.yml` health section: `lint-health` (count of lint-passing skills), `scan-health` (count of clean scans), `test-health` (count of passing tests). Commands already exist as `make lint-all`, `make scan-all`, `make test` with parseable output. |
+| I4. skill-create non-interactive fix | openskill-forge | `tools/skill-create.sh` lines 109/123 check `INTERACTIVE` flag before processing `--commands`/`--tips` flags. Non-interactive mode should accept these args or proceed to AI generation when empty. |
 
 **Exit criteria:** Non-technical user can set up the full stack through the GUI without opening a terminal. CDR degrades gracefully when Ollama is unavailable. Forge dashboard shows 3+ health badges.
 
@@ -180,9 +180,9 @@ F and I can run in parallel. G depends on nothing. H blocks J. I blocks J.
 
 ## Per-Repo Roadmap Cross-References
 
-- **openclaw-vault:** No changes needed. Phases 1-8 complete. Phase 9+ (VM isolation) already documented as aspirational.
-- **clawhub-forge:** Phase 5a added to `docs/roadmap.md` referencing tasks I2-I4 from this document.
-- **moltbook-pioneer:** No changes needed. All 6 phases complete.
+- **opencli-container:** No changes needed. Phases 1-8 complete. Phase 9+ (VM isolation) already documented as aspirational.
+- **openskill-forge:** Phase 5a added to `docs/roadmap.md` referencing tasks I2-I4 from this document.
+- **openagent-social:** No changes needed. All 6 phases complete.
 
 ---
 

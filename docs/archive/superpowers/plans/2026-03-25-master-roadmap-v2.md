@@ -3,11 +3,11 @@
 > **This document is superseded by [`2026-04-04-master-roadmap-v3.md`](2026-04-04-master-roadmap-v3.md).** Phases 3-6 listed below as future work were completed between 2026-03-27 and 2026-04-03. The v3 roadmap reflects the actual state.
 
 **Updated:** 2026-03-25
-**Previous:** `2026-03-23-openclaw-vault-master-roadmap.md` (vault-only, superseded)
+**Previous:** `2026-03-23-opencli-container-master-roadmap.md` (vault-only, superseded)
 
 **Product:** A desktop app that lets anyone safely run OpenClaw on their personal computer, controlled from their phone, without risking their digital life.
 
-**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + opentrapp (GUI + landing page)
+**Repos:** opencli-container (containment) + openskill-forge (skill security) + openagent-social (ecosystem tools) + opentrapp (GUI + landing page)
 
 **Domain:** opentrapp.com
 
@@ -66,12 +66,12 @@
 
 ---
 
-### Phase 5: Skill Security — clawhub-forge Integration
+### Phase 5: Skill Security — openskill-forge Integration
 
-**Why:** Gear 2/3 may allow skill installation. Before that happens, downloaded skills must pass through the clawhub-forge scanner. 11.9% of ClawHub skills were malware.
+**Why:** Gear 2/3 may allow skill installation. Before that happens, downloaded skills must pass through the openskill-forge scanner. 11.9% of ClawHub skills were malware.
 
 **Engineering work:**
-- Verify clawhub-forge's 87-pattern scanner works against real skills
+- Verify openskill-forge's 87-pattern scanner works against real skills
 - Integrate scanner into vault's skill-loading pathway
 - Test with known-malicious skill samples (ClawHavoc dataset)
 - Add skill scanning commands to vault's `component.yml`
@@ -131,12 +131,12 @@
 
 ---
 
-### Phase 9: Moltbook Exploration — moltbook-pioneer
+### Phase 9: Moltbook Exploration — openagent-social
 
 **Why:** The agent social network. Lowest priority because it's not essential for the core product, but it completes the trifecta.
 
 **Engineering work:**
-- Verify moltbook-pioneer tools work (feed scanner, agent census, identity checklist)
+- Verify openagent-social tools work (feed scanner, agent census, identity checklist)
 - Fix known bugs (safe_patterns, chmod, eval in curl)
 - Write automated tests
 - Integrate with vault (Moltbook API domains in Gear 2/3 allowlist)
@@ -165,7 +165,7 @@ DONE ──→ Phase 3 (Gear 2 — make NewLogoTrappBot useful)
               |
          Phase 4 (Monitoring dashboard)
               |
-         Phase 5 (Skill scanning — clawhub-forge)
+         Phase 5 (Skill scanning — openskill-forge)
               |
          Phase 6 (Gear 3 — full autonomy)
               |

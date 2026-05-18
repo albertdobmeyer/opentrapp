@@ -25,7 +25,7 @@ Output:
   - stdout — pytest summary + latency stats + banned-term hit table
 
 Out of scope: modifying frontend code, modifying the bot's system prompt
-(in `components/openclaw-vault` submodule), wizard live-run, post-wizard pages.
+(in `components/opencli-container` submodule), wizard live-run, post-wizard pages.
 """
 from __future__ import annotations
 
@@ -47,9 +47,9 @@ pytestmark = [pytest.mark.ux_signals]
 # same rule applies.
 GUI_CANONICAL_BANNED = [
     "OpenClaw Orchestrator",
-    "OpenClaw Vault",
-    "ClawHub Forge",
-    "Moltbook Pioneer",
+    "OpenCli Container",
+    "OpenSkill Forge",
+    "OpenAgent Social",
     "MoltBook Pioneer",
     "container_runtime",
     "component.yml",
@@ -70,10 +70,10 @@ GUI_CANONICAL_BANNED = [
 # Pass 1 P0 codebase-narrative leaks the GUI banned-list hasn't picked up yet.
 # Capturing in the bot's own replies confirms whether the system prompt /
 # default OpenClaw greeting leaks them too. Surfaces the gap to the
-# `components/openclaw-vault` submodule maintainer (out of parent scope to fix).
+# `components/opencli-container` submodule maintainer (out of parent scope to fix).
 PASS1_P0_ADDITIONS = [
-    "openclaw-vault",
-    "clawhub-forge",
+    "opencli-container",
+    "openskill-forge",
     "vault-agent",
     "vault-proxy",
     "split-shell",

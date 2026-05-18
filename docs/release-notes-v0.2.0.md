@@ -92,7 +92,7 @@ These don't change anything a Karen-tier user does, but they unblock v0.3.0:
 - **GUI shell switcher** — Soft Shell is verified-safe (Tier 4 stress test: 19/19 attacks blocked) but not yet exposed as a user-flippable mode in the desktop GUI. Available via CLI for advanced users:
   ```
   yes y | OPENCLAW_CONTAINER=vault-agent \
-    bash components/openclaw-vault/scripts/tool-control.sh \
+    bash components/opencli-container/scripts/tool-control.sh \
       --preset soft --apply --no-restart && podman restart vault-agent
   ```
 - **`vault-calendar` sidecar** — first sidecar following the tool-mediation pattern (see `docs/specs/2026-04-25-tool-mediation-pattern.md`). 3–5 days of work; v0.3.0 candidate.
@@ -103,7 +103,7 @@ These don't change anything a Karen-tier user does, but they unblock v0.3.0:
 
 - The bot retains in-session context across restarts of `chat.py` but not across container restarts. Restart → fresh session.
 - Web fetch is allowlisted to `raw.githubusercontent.com` + the LLM-API + Telegram base. Other domains require user-side allowlist edit (this is intentional — the proxy is the trust boundary).
-- The submodule remote on a few dev machines points at the old `gitgoodordietrying/openclaw-vault` URL. GitHub redirects pushes; a one-time `git remote set-url origin git@github.com:albertdobmeyer/openclaw-vault.git` silences the nag.
+- The submodule remote on a few dev machines points at the old `gitgoodordietrying/opencli-container` URL. GitHub redirects pushes; a one-time `git remote set-url origin git@github.com:albertdobmeyer/opencli-container.git` silences the nag.
 
 ## Upgrade path
 

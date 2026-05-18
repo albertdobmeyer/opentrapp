@@ -32,7 +32,7 @@ The agent's reasoning is performed by [Anthropic](https://www.anthropic.com)'s A
 - 24-point startup verification of the perimeter topology
 - API keys held by `vault-proxy` and injected per request; the agent container never reads the literal key
 
-Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled by default. They are available at "Soft Shell" via CLI configuration in v0.3.0; see [`components/openclaw-vault/`](components/openclaw-vault/).
+Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled by default. They are available at "Soft Shell" via CLI configuration in v0.3.0; see [`components/opencli-container/`](components/opencli-container/).
 
 ## Limitations
 
@@ -40,7 +40,7 @@ Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled b
 - Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility. The full attacker-capability matrix and residual-risk enumeration are in [`docs/threat-model.md`](docs/threat-model.md); the differential against alternative containment strategies (Firejail, gVisor, VM-only isolation, scanner-only, etc.) is in [`docs/why-not-x.md`](docs/why-not-x.md).
 - The agent's reasoning is not local. Operating OpenTrApp without internet access to Anthropic's API is not supported.
 - Installer binaries are signed with the Tauri auto-updater key, not with OS-level code-signing certificates. macOS Gatekeeper and Windows SmartScreen will display a first-launch warning.
-- One of the three originally-planned modules (`moltbook-pioneer`) is **parked since 2026-05-03**. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook. The container is still defined in `compose.yml`; the code is preserved at [`components/moltbook-pioneer/`](components/moltbook-pioneer/).
+- One of the three originally-planned modules (`openagent-social`) is **parked since 2026-05-03**. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook. The container is still defined in `compose.yml`; the code is preserved at [`components/openagent-social/`](components/openagent-social/).
 
 ## Requirements
 
@@ -157,9 +157,9 @@ cosign verify-attestation --type slsaprovenance ...
 ```
 opentrapp/                       (this repository — desktop GUI + perimeter orchestrator)
 ├── components/
-│   ├── openclaw-vault/              runtime containment (vault-agent + vault-proxy)
-│   ├── clawhub-forge/               supply-chain defense (vault-forge)
-│   └── moltbook-pioneer/            social-content analysis (vault-pioneer) — parked
+│   ├── opencli-container/              runtime containment (vault-agent + vault-proxy)
+│   ├── openskill-forge/               supply-chain defense (vault-forge)
+│   └── openagent-social/            social-content analysis (vault-pioneer) — parked
 ├── app/                             Tauri 2 + React 18 desktop application
 ├── compose.yml                      4-service perimeter with network isolation
 ├── schemas/component.schema.json    component manifest contract

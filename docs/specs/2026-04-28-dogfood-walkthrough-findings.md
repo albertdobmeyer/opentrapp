@@ -197,7 +197,7 @@ Plus support: `WizardProgress.tsx`, `HowToModal.tsx`, `app/src/lib/errors.ts` (`
 **Frictions:**
 - ⚠️ **P2, Principle 8:** "Anthropic API key" → "Anthropic key" or "AI account key" might be friendlier. Low priority since the modal CTA explains itself.
 - ⚠️ **P2:** When Karen returns with already-saved keys and clicks **Continue** without changing anything, the wizard moves on silently with no toast acknowledging "your saved keys are still in use." (Existing rubric flagged this at line 224.) Minor.
-- ⚠️ **P1, Principle 1+3:** Internal call `readConfig("openclaw-vault", ".env")` (`ConnectStep.tsx:87`) — if it errors, the toast at `ConnectStep.tsx:163-169` shows raw `err.message`. Could leak strings like "openclaw-vault not found" or path errors. The error path SHOULD route through `classifyError()` like InstallStep does. Currently it doesn't.
+- ⚠️ **P1, Principle 1+3:** Internal call `readConfig("opencli-container", ".env")` (`ConnectStep.tsx:87`) — if it errors, the toast at `ConnectStep.tsx:163-169` shows raw `err.message`. Could leak strings like "opencli-container not found" or path errors. The error path SHOULD route through `classifyError()` like InstallStep does. Currently it doesn't.
 
 **HowToModal walkthroughs (`ConnectStep.tsx:20-66`):**
 - Anthropic 5-step: "Open the Anthropic console" → "API Keys page" → "Create a new key" → "Copy the key immediately (sk-ant- starts)" → "Paste back" — ✅ all steps clear and actionable. Mention of `sk-ant-` is jargon-adjacent but Karen will see it on her clipboard so it's helpful confirmation.
@@ -208,7 +208,7 @@ Plus support: `WizardProgress.tsx`, `HowToModal.tsx`, `app/src/lib/errors.ts` (`
 
 | Principle | Score | Notes |
 |---|---|---|
-| P1 | **9/10** | Internal "openclaw-vault" string could leak via uncaught error toast. |
+| P1 | **9/10** | Internal "opencli-container" string could leak via uncaught error toast. |
 | P2 | **10/10** | Cost copy is a model for the rest of the app. |
 | P3 | **7/10** | Read-config error path doesn't route through `classifyError`. |
 | P5 | **10/10** | Show/hide, skip, masked re-entry, modal disclosure all good. |
@@ -240,14 +240,14 @@ This is the longest, most-state-heavy step. The screen Karen sees is generally c
 
 **Frictions on the happy path:**
 - ⚠️ **P1, Principle 1:** When Karen clicks "Show technical details," she sees lines like:
-  - `→ openclaw-vault: setup` (`InstallStep.tsx:221`)
-  - `→ openclaw-vault: start` (`InstallStep.tsx:223`)
-  - `→ clawhub-forge: setup` (`InstallStep.tsx:234`)
+  - `→ opencli-container: setup` (`InstallStep.tsx:221`)
+  - `→ opencli-container: start` (`InstallStep.tsx:223`)
+  - `→ openskill-forge: setup` (`InstallStep.tsx:234`)
   - `Container runtime: podman` (`InstallStep.tsx:175`)
   - `Fetching assistant modules…` (`InstallStep.tsx:192`) — "modules" is borderline.
   - All actual stream output from `make setup` and `make start` (which prints podman commands, container names, image hashes, etc.).
 
-  The whole point of progressive disclosure (Principle 5) is that POWER USERS who choose to peek don't get confused. But these specific lines mix internal codenames (openclaw-vault, clawhub-forge) into copy that the wizard authored — they could just as easily say "→ Your Assistant: install" / "→ Your Assistant: start" / "→ Skill Scanner: install." That's a pure copy fix.
+  The whole point of progressive disclosure (Principle 5) is that POWER USERS who choose to peek don't get confused. But these specific lines mix internal codenames (opencli-container, openskill-forge) into copy that the wizard authored — they could just as easily say "→ Your Assistant: install" / "→ Your Assistant: start" / "→ Skill Scanner: install." That's a pure copy fix.
   
 - ⚠️ **P2:** "Fetching assistant modules…" (`InstallStep.tsx:192`) — could be "Downloading the assistant…" Plain.
 - ⚠️ **P2:** Build sub-step's underlying `make setup` and `make start` stream output is a torrent of podman commands. Even with API-key sanitization (`sanitizeLine`, lines 59-66), it's a wall of dev-speak. **Cannot be cleaned at the React layer** — would need cooperation from the underlying make targets. For now, "behind progressive disclosure" is acceptable; just flag for Pass 7.
@@ -339,7 +339,7 @@ This is rubric Principle 3 done right.
 
 A subtle but important friction emerges at the END of Moment 2:
 
-When `InstallStep` finishes, `make start` has already brought up the four containers via `streamOneCommand("openclaw-vault", "start", "build")` (`InstallStep.tsx:223-224`). Containers are now running.
+When `InstallStep` finishes, `make start` has already brought up the four containers via `streamOneCommand("opencli-container", "start", "build")` (`InstallStep.tsx:223-224`). Containers are now running.
 
 Karen then clicks "Open Telegram" or "Go to dashboard," eventually closes the app. **Containers stay up indefinitely.** The Phase 1 audit confirmed this: app close ≠ perimeter down, app crash ≠ perimeter down.
 
@@ -354,7 +354,7 @@ This isn't a friction in Moment 2's UI — it's a friction in Moment 4 caused by
 ### P0 (Pass 5, must fix)
 
 1. **MissingRuntimeCard Linux block** (`InstallStep.tsx:511-518`) — replace `sudo apt install podman podman-compose` direct exposure with friendly install guidance. At minimum: hide the command behind a "Show technical command" disclosure and frame it as "If you're comfortable with the terminal, run this; otherwise click 'Open guide'." The rubric called this out at line 246 a week ago and it's still live.
-2. **Internal codenames in technical log** (`InstallStep.tsx:175, 192, 221, 223, 234`) — replace `openclaw-vault`, `clawhub-forge`, "Container runtime," "modules" strings with user-facing labels. Pure copy work.
+2. **Internal codenames in technical log** (`InstallStep.tsx:175, 192, 221, 223, 234`) — replace `opencli-container`, `openskill-forge`, "Container runtime," "modules" strings with user-facing labels. Pure copy work.
 3. **`MissingRuntimeCard` rebrand** — "Podman or Docker" → "sandbox runner" (or similar). Currently surfaces dev tool names directly to Karen.
 
 ### P1 (Pass 5/7)
@@ -395,7 +395,7 @@ This isn't a friction in Moment 2's UI — it's a friction in Moment 4 caused by
 **Karen's path:**
 1. Clicks "Open Telegram" on `ReadyStep.tsx:70-78` → opens `t.me/<botname>` in default browser/Telegram app.
 2. Taps "Start" in Telegram → sends `/start` to her bot.
-3. Bot replies. (First-reply content lives in the `openclaw-vault` submodule — out of parent-repo scope. Bot uses `anthropic/claude-haiku-4-5` per `components/openclaw-vault/config/split-shell.json5:64-69`. No custom system prompt visible in this repo, so Karen sees OpenClaw's default greeting whatever that is.)
+3. Bot replies. (First-reply content lives in the `opencli-container` submodule — out of parent-repo scope. Bot uses `anthropic/claude-haiku-4-5` per `components/opencli-container/config/split-shell.json5:64-69`. No custom system prompt visible in this repo, so Karen sees OpenClaw's default greeting whatever that is.)
 4. `channels.telegram.dmPolicy: "pairing"` (`tool-manifest.yml`) — means Karen has to PAIR her Telegram chat with the bot before it will respond to her. **This is undocumented friction Karen will hit on first contact.** The OpenTrApp app does not warn her she'll need to pair.
 
 ## Frictions
@@ -512,7 +512,7 @@ There's no sidebar item called "Add a tool" or "Skills." Karen would either:
 - Click "Help" → placeholder.
 - Give up and go back to Telegram, asking the bot to install something.
 
-The infrastructure exists in `clawhub-forge` (a sub-repo) — there's a working scanner pipeline. The UI surface to invoke it from user-mode does not exist.
+The infrastructure exists in `openskill-forge` (a sub-repo) — there's a working scanner pipeline. The UI surface to invoke it from user-mode does not exist.
 
 - 🚨 **P0:** The capability is real, the surface is missing. Pass 6 must build this from `12-use-case-gallery.md` or a sister spec.
 
@@ -634,8 +634,8 @@ I recommend **Option B**: Home is the landing-after-wizard, Discover is what unb
 ## What Pass 1 is NOT
 
 - Pass 1 didn't actually live-run the app. All findings are from code reading. **Live running would surface dynamic friction** (UI lag, Tauri load timing, real Telegram round-trip behavior, real failure modes during install, animation jank). Recommend a brief live-run sub-pass — maybe 2 hours during Pass 5 or Pass 8 — for dynamic-friction validation.
-- Pass 1 didn't walk the openclaw bot's persona/responses. The bot lives in a sub-repo and uses Claude Haiku 4.5 with no custom system prompt visible in the parent repo. Karen's bot experience is whatever OpenClaw defaults provide. If the bot says things like "I am a coding agent specialized in..." that's a Karen-friction the parent repo can't fix — would require a custom system prompt in the openclaw-vault submodule.
-- Pass 1 didn't audit the openclaw-vault, clawhub-forge, or moltbook-pioneer submodules in depth. Their `component.yml` files surface to dev mode pages (which are themselves placeholders), so any leakage there only matters once dev mode is real.
+- Pass 1 didn't walk the openclaw bot's persona/responses. The bot lives in a sub-repo and uses Claude Haiku 4.5 with no custom system prompt visible in the parent repo. Karen's bot experience is whatever OpenClaw defaults provide. If the bot says things like "I am a coding agent specialized in..." that's a Karen-friction the parent repo can't fix — would require a custom system prompt in the opencli-container submodule.
+- Pass 1 didn't audit the opencli-container, openskill-forge, or openagent-social submodules in depth. Their `component.yml` files surface to dev mode pages (which are themselves placeholders), so any leakage there only matters once dev mode is real.
 
 ## Hand-off to next session
 

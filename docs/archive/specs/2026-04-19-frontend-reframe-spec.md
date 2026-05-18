@@ -22,9 +22,9 @@ OpenClaw Orchestrator
 [Dashboard icon] Dashboard
 
 COMPONENTS
-[icon] ClawHub Forge
-[icon] Moltbook Pioneer
-[icon] OpenClaw Vault
+[icon] OpenSkill Forge
+[icon] OpenAgent Social
+[icon] OpenCli Container
 
 [Settings icon] Settings
 ```
@@ -70,7 +70,7 @@ OpenClaw ecosystem components
 [Refresh]
 
 [onboarding banner: "Setup complete — your security perimeter is ready.
- Click a component... Start with OpenClaw Vault...
+ Click a component... Start with OpenCli Container...
  Open Vault Dashboard"]
 
 [3 ComponentCards in grid]
@@ -98,7 +98,7 @@ Dashboard
 2. **Rewrite onboarding banner:**
    - Title: "Your assistant is ready!"
    - Body: "Message your bot on Telegram to start a conversation. You can also check your skills or run a security audit from this dashboard."
-   - Link: "Learn what your assistant can do" → `/component/openclaw-vault`
+   - Link: "Learn what your assistant can do" → `/component/opencli-container`
 3. **Split dashboard into primary + secondary:**
    - Find the `runtime` component → render as a prominent status card (not a grid card)
    - Remaining components → render as smaller secondary cards below
@@ -225,7 +225,7 @@ Message @YourBotName on Telegram to start chatting.
 ### Current
 ```
 ← Dashboard
-[icon] OpenClaw Vault
+[icon] OpenCli Container
 v0.1.0 · runtime                [Running]
 Hardened container for the OpenClaw agent runtime
 
@@ -284,7 +284,7 @@ SKILLS: 25 installed, all clean
 
 ### Current
 ```
-[icon] ClawHub Forge
+[icon] OpenSkill Forge
 v0.1.0                          [Ready]
 Skill development workbench and security scanner
                                  Toolchain

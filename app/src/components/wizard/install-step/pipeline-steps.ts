@@ -68,23 +68,23 @@ export async function runBuildStep(
 ): Promise<void> {
   updateStep("build", { status: "running", startedAt: Date.now() });
 
-  if (componentIds.has("openclaw-vault")) {
+  if (componentIds.has("opencli-container")) {
     await withRetry(
       async () => {
         appendLog("build", "→ Your assistant: install");
-        await streamOneCommand("openclaw-vault", "setup", "build");
+        await streamOneCommand("opencli-container", "setup", "build");
         appendLog("build", "→ Your assistant: start");
-        await streamOneCommand("openclaw-vault", "start", "build");
+        await streamOneCommand("opencli-container", "start", "build");
       },
       2,
       (attempt) => { updateStep("build", { retryAttempt: attempt }); },
     );
   }
-  if (componentIds.has("clawhub-forge")) {
+  if (componentIds.has("openskill-forge")) {
     await withRetry(
       async () => {
         appendLog("build", "→ Skill scanner: install");
-        await streamOneCommand("clawhub-forge", "setup", "build");
+        await streamOneCommand("openskill-forge", "setup", "build");
       },
       2,
       (attempt) => { updateStep("build", { retryAttempt: attempt }); },
@@ -102,13 +102,13 @@ export async function runSafetyStep(
   await withRetry(
     async () => {
       const tasks: Promise<unknown>[] = [];
-      if (componentIds.has("openclaw-vault")) {
+      if (componentIds.has("opencli-container")) {
         appendLog("safety", "Running assistant security audit (24 checks)…");
-        tasks.push(executeWorkflow("openclaw-vault", "full-verify"));
+        tasks.push(executeWorkflow("opencli-container", "full-verify"));
       }
-      if (componentIds.has("clawhub-forge")) {
+      if (componentIds.has("openskill-forge")) {
         appendLog("safety", "Running skill scanner pipeline check…");
-        tasks.push(executeWorkflow("clawhub-forge", "full-check"));
+        tasks.push(executeWorkflow("openskill-forge", "full-check"));
       }
       const results = await Promise.all(tasks);
       for (const r of results as { status: string }[]) {

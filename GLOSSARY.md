@@ -12,9 +12,9 @@ The desktop application (`opentrapp`) is the only surface non-technical users se
 
 | Developer term | User-facing term | Where used |
 |---|---|---|
-| `openclaw-vault` | **My Assistant** | Sidebar, dashboard, component detail |
-| `clawhub-forge` | **Skills** / **Skill Store** | Sidebar, dashboard |
-| `moltbook-pioneer` | **Agent Network** | Sidebar, dashboard (parked in v0.3.0) |
+| `opencli-container` | **My Assistant** | Sidebar, dashboard, component detail |
+| `openskill-forge` | **Skills** / **Skill Store** | Sidebar, dashboard |
+| `openagent-social` | **Agent Network** | Sidebar, dashboard (parked in v0.3.0) |
 | Hard Shell | **Chat Only** | Mode descriptions |
 | Split Shell | **Supervised** | Mode descriptions |
 | Soft Shell | *(default — no mode label shown)* | Default user experience |
@@ -56,7 +56,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 |---|---|
 | **Perimeter** | The four-container security boundary defined in `compose.yml`. All untrusted content (the agent process, skill files, fetched network content) stays inside the perimeter; nothing untrusted reaches the host filesystem. |
 | **Container hardening** | The fixed set of OS-level restrictions applied to every perimeter container regardless of shell level: read-only root filesystem, all Linux capabilities dropped, custom seccomp profile, `noexec` mounts. Independent of shell level. |
-| **Vault** | The complete runtime-containment package: container hardening + proxy egress filter + tool policy + shell configuration. Implemented by the `openclaw-vault` module. |
+| **Vault** | The complete runtime-containment package: container hardening + proxy egress filter + tool policy + shell configuration. Implemented by the `opencli-container` module. |
 | **Proxy** (`vault-proxy`) | The mitmproxy-based egress gateway. Sole path between any container and the public internet; enforces a domain allowlist, injects API keys per request, logs every transaction. |
 | **Protected resources** | Host-level resources that are denied at every shell level without exception: root, SSH keys, GPG keys, password stores and keyrings, administrative accounts, the Docker / Podman socket, and the perimeter's own configuration files. |
 | **Allowlist** | The list of domains the proxy permits. Requests to any other host are rejected and logged. Each shell level has its own allowlist template. |
@@ -92,9 +92,9 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 
 | Repository | Role | Container | Status at v0.3.0 |
 |---|---|---|---|
-| [`openclaw-vault`](https://github.com/albertdobmeyer/openclaw-vault) | Runtime containment | `vault-agent` + `vault-proxy` | Active |
-| [`clawhub-forge`](https://github.com/albertdobmeyer/clawhub-forge) | Supply-chain defense (scanner, CDR) | `vault-forge` | Active |
-| [`moltbook-pioneer`](https://github.com/albertdobmeyer/moltbook-pioneer) | Social-content analysis | `vault-pioneer` | **Parked** (Moltbook acquired by Meta 2026-03-10; API intermittent since 2026-04-05) |
+| [`opencli-container`](https://github.com/albertdobmeyer/opencli-container) | Runtime containment | `vault-agent` + `vault-proxy` | Active |
+| [`openskill-forge`](https://github.com/albertdobmeyer/openskill-forge) | Supply-chain defense (scanner, CDR) | `vault-forge` | Active |
+| [`openagent-social`](https://github.com/albertdobmeyer/openagent-social) | Social-content analysis | `vault-pioneer` | **Parked** (Moltbook acquired by Meta 2026-03-10; API intermittent since 2026-04-05) |
 | [`opentrapp`](https://github.com/albertdobmeyer/opentrapp) | Desktop application + perimeter orchestrator | none (host) | Active |
 
 ---
@@ -119,7 +119,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | **Proxy key injection** | The mechanism by which `vault-proxy` substitutes a placeholder string in outbound requests with the real API-key value. Implemented at the network layer. |
 | **Kill switch** | The three-level emergency stop: graceful stop (preserves data), hard kill (destroys containers and volumes), and full perimeter teardown (purges all state and prompts the user to rotate the API key). |
 | **Pairing** | The Telegram identity-verification step in which a chat counterpart proves their identity to the bot. Required after restart in Hard Shell. |
-| **Content Disarm & Reconstruction (CDR)** | The supply-chain defense pattern used by `clawhub-forge`: the original downloaded artifact is held in a quarantine volume, parsed for its semantic intent, and rebuilt from scratch. The original file is discarded; only the rebuilt artifact reaches the agent. |
+| **Content Disarm & Reconstruction (CDR)** | The supply-chain defense pattern used by `openskill-forge`: the original downloaded artifact is held in a quarantine volume, parsed for its semantic intent, and rebuilt from scratch. The original file is discarded; only the rebuilt artifact reaches the agent. |
 | **Quarantine** | The temporary directory inside `vault-forge` where downloaded skills are held during scanning and reconstruction. Bound to the container; never reaches the host filesystem. |
 | **Clearance report** | A signed JSON certificate generated after a skill passes the full pipeline (lint, scan, line verification, rebuild). Required by `vault-agent` before a skill is loaded. |
 | **Network isolation** | The compose topology's use of separate `internal: true` Docker networks. Each `vault-*` container has its own internal network; only `vault-proxy` bridges them. `vault-agent` cannot reach `vault-forge` or `vault-pioneer` directly. |

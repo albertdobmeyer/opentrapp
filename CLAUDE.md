@@ -17,9 +17,9 @@ The agent's reasoning is delegated to Anthropic's API. The agent's execution lay
 ```
 opentrapp/                          (this repository — public)
 ├── components/
-│   ├── openclaw-vault/                 git submodule — runtime containment (vault-agent + vault-proxy)
-│   ├── clawhub-forge/                  git submodule — supply-chain defense (vault-forge)
-│   └── moltbook-pioneer/               git submodule — social-content analysis (vault-pioneer); parked
+│   ├── opencli-container/                 git submodule — runtime containment (vault-agent + vault-proxy)
+│   ├── openskill-forge/                  git submodule — supply-chain defense (vault-forge)
+│   └── openagent-social/               git submodule — social-content analysis (vault-pioneer); parked
 ├── app/                                Tauri 2 + React 18 desktop application
 │   ├── src/                            React frontend
 │   └── src-tauri/                      Rust backend
@@ -40,9 +40,9 @@ opentrapp/                          (this repository — public)
 
 | Component | Role | Container | Status |
 |-----------|------|-----------|--------|
-| `openclaw-vault` | runtime containment | `vault-agent` + `vault-proxy` | Active |
-| `clawhub-forge` | supply-chain defense | `vault-forge` | Active |
-| `moltbook-pioneer` | social-content analysis | `vault-pioneer` | Parked since 2026-05-03 (Moltbook acquired by Meta 2026-03-10; API intermittent since 2026-04-05) |
+| `opencli-container` | runtime containment | `vault-agent` + `vault-proxy` | Active |
+| `openskill-forge` | supply-chain defense | `vault-forge` | Active |
+| `openagent-social` | social-content analysis | `vault-pioneer` | Parked since 2026-05-03 (Moltbook acquired by Meta 2026-03-10; API intermittent since 2026-04-05) |
 
 ## 3. UI rule (non-negotiable)
 

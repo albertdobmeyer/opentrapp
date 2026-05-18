@@ -59,7 +59,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 - **Cross-platform portability.** Linux-only; the macOS / Windows path requires running gVisor inside a Linux VM, at which point the user is paying VM overhead to run a user-space kernel.
 - **Operational simplicity.** gVisor as a runtime requires either Docker's `runsc` runtime or a Kubernetes integration; for a desktop application installed by a non-developer user, the operational surface is larger than ordinary containers.
 
-**Differential against this work.** gVisor is the **next isolation tier** the project would consider for users with stronger requirements. The current architecture's container hardening (read-only root, dropped capabilities, seccomp, narrow network policy) approximates gVisor's protections at a fraction of the operational cost. Users who require VM-equivalent isolation are currently directed to a disposable virtual machine ([`whitepaper.md`](whitepaper.md) §9); a future "VM-isolation tier" is queued in the openclaw-vault module's roadmap.
+**Differential against this work.** gVisor is the **next isolation tier** the project would consider for users with stronger requirements. The current architecture's container hardening (read-only root, dropped capabilities, seccomp, narrow network policy) approximates gVisor's protections at a fraction of the operational cost. Users who require VM-equivalent isolation are currently directed to a disposable virtual machine ([`whitepaper.md`](whitepaper.md) §9); a future "VM-isolation tier" is queued in the opencli-container module's roadmap.
 
 **Reference.** [gvisor.dev](https://gvisor.dev).
 

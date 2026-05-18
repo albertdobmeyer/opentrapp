@@ -13,9 +13,9 @@
 
 | Repo | What It Does | For Whom |
 |------|-------------|----------|
-| **openclaw-vault** | Contains the agent in a hardened sandbox with proxy-gated network, tool restrictions, and kill switches | Everyone who runs OpenClaw |
-| **clawhub-forge** | Scans downloaded skills for malware before they can execute (87 patterns, MITRE ATT&CK mapped) | Anyone who wants agent capabilities beyond chat |
-| **moltbook-pioneer** | Safe exploration tools for the Moltbook agent social network (feed scanner, census, identity checklist) | Users who want their agent on the social network |
+| **opencli-container** | Contains the agent in a hardened sandbox with proxy-gated network, tool restrictions, and kill switches | Everyone who runs OpenClaw |
+| **openskill-forge** | Scans downloaded skills for malware before they can execute (87 patterns, MITRE ATT&CK mapped) | Anyone who wants agent capabilities beyond chat |
+| **openagent-social** | Safe exploration tools for the Moltbook agent social network (feed scanner, census, identity checklist) | Users who want their agent on the social network |
 | **opentrapp** (GUI) | Ties it all together in a Tauri desktop app with manifest-driven dashboards | Everyone — the user-facing product |
 
 ---
@@ -49,9 +49,9 @@ We verified with live testing:
 OpenClaw's killer feature is that non-technical users can message an AI from Telegram/WhatsApp and have it do things on their computer. No terminal, no IDE. Our vault preserves this accessibility while adding safety. The user experience doesn't degrade — it just becomes safer.
 
 ### 5. The three-repo trifecta covers the full threat surface
-- **Runtime risk** (agent does something bad) → openclaw-vault
-- **Supply chain risk** (malicious skills) → clawhub-forge
-- **Social engineering risk** (manipulated by other agents) → moltbook-pioneer
+- **Runtime risk** (agent does something bad) → opencli-container
+- **Supply chain risk** (malicious skills) → openskill-forge
+- **Social engineering risk** (manipulated by other agents) → openagent-social
 - Most security tools cover one attack vector. We cover three.
 
 ### 6. Open source with a clear niche
@@ -100,7 +100,7 @@ Open source security tools are valuable but hard to monetize. Options:
 - None of these are proven for this niche.
 
 ### 7. Three repos is ambitious scope
-Each repo needs: working code, tests, documentation, CI/CD, manifest integration, and GUI rendering. That's three full products. clawhub-forge and moltbook-pioneer haven't been verified against live OpenClaw yet. **We might be spreading too thin.**
+Each repo needs: working code, tests, documentation, CI/CD, manifest integration, and GUI rendering. That's three full products. openskill-forge and openagent-social haven't been verified against live OpenClaw yet. **We might be spreading too thin.**
 
 ### 8. Competition from OpenClaw itself
 OpenClaw already has built-in security (sandbox mode, tool policies, exec controls, DM pairing). As the project matures, they'll improve these features. Our value proposition shrinks every time OpenClaw ships a security improvement. **We're betting that OpenClaw stays dangerous enough to need us.**
@@ -163,10 +163,10 @@ The desktop GUI must handle Podman installation, container building, API key ent
 ### Priority 3: Landing page (opentrapp.com)
 Explain the product to potential users. Show the value proposition. Provide download links. This is marketing, but it's necessary for adoption.
 
-### Priority 4: Skill scanning (clawhub-forge)
+### Priority 4: Skill scanning (openskill-forge)
 Before Gear 2/3 can allow skill installation, the scanner must work. This is a dependency, not a standalone product.
 
-### Priority 5: Moltbook tools (moltbook-pioneer)
+### Priority 5: Moltbook tools (openagent-social)
 Lowest priority. The agent social network is interesting but not essential for the core product. Build this last.
 
 ---

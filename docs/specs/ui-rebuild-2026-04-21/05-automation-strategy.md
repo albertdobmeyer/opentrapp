@@ -31,7 +31,7 @@ Find what already exists on the user's system without asking.
 | **Container runtime** (Podman/Docker) | `which podman` → `which docker` → query version | Guide user to install (with platform-specific links + one-click opener) |
 | **Monorepo path** (where opentrapp lives) | Canonical parent of Tauri binary | Auto-create at `~/.opentrapp/` |
 | **Submodule status** | Check git submodule summary | Auto-init via `git submodule update --init --recursive` |
-| **Existing `.env` keys** | Read `components/openclaw-vault/.env` if present | Show empty form |
+| **Existing `.env` keys** | Read `components/opencli-container/.env` if present | Show empty form |
 | **Telegram bot already paired** | Read `pairing-status.json` in vault workspace | Show connect button |
 | **OS & architecture** | Tauri API `os.platform()` / `os.arch()` | N/A (always succeeds) |
 | **Network connectivity** | Fetch test to a known endpoint | Show offline state |

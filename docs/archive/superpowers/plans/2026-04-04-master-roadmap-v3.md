@@ -5,7 +5,7 @@
 
 **Product:** A desktop app that lets anyone safely run OpenClaw on their personal computer, controlled from their phone, without risking their digital life.
 
-**Repos:** openclaw-vault (containment) + clawhub-forge (skill security) + moltbook-pioneer (ecosystem tools) + opentrapp (GUI + landing page)
+**Repos:** opencli-container (containment) + openskill-forge (skill security) + openagent-social (ecosystem tools) + opentrapp (GUI + landing page)
 
 **Domain:** opentrapp.com
 
@@ -13,7 +13,7 @@
 
 ## What's Done
 
-### Vault (openclaw-vault) — 8/8 Phases Complete
+### Vault (opencli-container) — 8/8 Phases Complete
 
 | Phase | What It Proved |
 |-------|---------------|
@@ -28,7 +28,7 @@
 
 **Current state:** All three shell levels operational. 24-point verification. Per-tool whitelisting with risk scoring. Monitoring tools (network, session, audit, log rotation) all implemented.
 
-### Forge (clawhub-forge) — 4/5 Phases Complete
+### Forge (openskill-forge) — 4/5 Phases Complete
 
 | Phase | What It Proved |
 |-------|---------------|
@@ -66,7 +66,7 @@
 
 ## What's Next (Priority Order)
 
-### Phase A: Complete Moltbook-Pioneer — Bugs + Tests DONE (2026-04-04)
+### Phase A: Complete OpenAgent-Social — Bugs + Tests DONE (2026-04-04)
 
 **Status:** Phase 1 (bug fixes) and Phase 2 (test framework) completed in a single 11-commit session. All 7 known bugs fixed, 16 behavioral tests passing, Makefile with standard targets, safe_patterns wired and tested. Two latent bugs discovered and fixed during testing: `(?i)` PCRE flag broke grep ERE matching, and `|` delimiter collided with regex alternation.
 

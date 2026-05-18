@@ -113,7 +113,7 @@ fn step_detect_runtime(handle: &AppHandle, _root: &Path) -> Result<String, &'sta
 fn step_write_env(handle: &AppHandle, root: &Path) -> Result<(), &'static str> {
     set_step(handle, BootstrapStep::WriteEnv, 3, None, None);
 
-    let vault_dir = root.join("components").join("openclaw-vault");
+    let vault_dir = root.join("components").join("opencli-container");
     let env_path = vault_dir.join(".env");
 
     if env_path.exists() {

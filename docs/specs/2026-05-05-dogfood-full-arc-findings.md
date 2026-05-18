@@ -126,7 +126,7 @@ The bot's conversation-layer refusal kicked in before forge.scan ran. So the tes
 
 When asked directly about its architecture, the bot pivots into developer-jargon mode: `sandboxing model`, `sandboxed`, `proxy`, etc. all surface. This is the **same finding category** Pass 1.5 surfaced and Pass 7 closed for other terms.
 
-**This is the single highest-leverage fix from this run.** The system prompt at the bot layer (lives in `components/openclaw-vault/`'s OpenClaw config) needs a Karen-language pass on the architecture-explanation path. The defence layers don't change; the user-facing exposition does.
+**This is the single highest-leverage fix from this run.** The system prompt at the bot layer (lives in `components/opencli-container/`'s OpenClaw config) needs a Karen-language pass on the architecture-explanation path. The defence layers don't change; the user-facing exposition does.
 
 ## §C, D — not run
 
@@ -188,7 +188,7 @@ The keystone A4 (forge pipeline through real ClawHub install) was not exercised 
 
 ## Top three friction items to address before next release
 
-1. **Bot system prompt: architecture-explanation rewrite.** Removes `proxy`, `sandboxing model`, `sandboxed` from user-facing replies. Estimated effort: 1 hour in `components/openclaw-vault`'s OpenClaw config.
+1. **Bot system prompt: architecture-explanation rewrite.** Removes `proxy`, `sandboxing model`, `sandboxed` from user-facing replies. Estimated effort: 1 hour in `components/opencli-container`'s OpenClaw config.
 2. **Bot policy on skill installation.** Decide whether "find me a skill that does X" is an acceptable intent that defers to forge, vs. requiring user-supplied skill name. Either policy is defensible; the choice should be deliberate.
 3. **`verify.sh` invocation path** discovery + spec update.
 

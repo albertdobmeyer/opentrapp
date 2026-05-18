@@ -28,7 +28,7 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0001](0001-proxy-side-api-key-injection.md) | Accepted | Proxy-side API-key injection |
 | [0002](0002-adaptive-shell-levels.md) | Accepted | Adaptive shell levels (Hard / Split / Soft) as a system state |
 | [0003](0003-content-disarm-reconstruction.md) | Accepted | Content Disarm and Reconstruction for skills |
-| [0004](0004-parking-moltbook-pioneer.md) | Accepted | Parking moltbook-pioneer |
+| [0004](0004-parking-openagent-social.md) | Accepted | Parking openagent-social |
 | [0005](0005-deserve-to-exist-scope-test.md) | Accepted | The "deserve-to-exist" scope test |
 | [0006](0006-four-container-topology.md) | Accepted | Four-container compose topology |
 | [0007](0007-manifest-driven-generic-backend.md) | Accepted | Manifest-driven generic backend |

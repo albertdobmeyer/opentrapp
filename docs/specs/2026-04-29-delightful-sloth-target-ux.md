@@ -118,7 +118,7 @@ Forbidden: "Component vault-agent transitioned to state RUNNING," "Health check 
 
 - Container restarts that resolve in <60s and weren't repeats
 - Health-probe pass/fail transitions
-- Anything with a component name (`vault-agent`, `clawhub-forge`)
+- Anything with a component name (`vault-agent`, `openskill-forge`)
 - Anything with a numerical diagnostic (`exit code 137`, `HTTP 503`)
 - Anything Karen can't act on within OpenTrApp's UI
 
@@ -177,7 +177,7 @@ Karen reopens lid. Containers may be in weird states (TCP connections dropped, i
 3. Restarts any container that fails its probe (per the watchdog).
 4. Hero transitions through `recovering` → `running_safely` if all OK.
 
-No notification unless recovery takes >60s. Karen's Telegram chat resumes seamlessly from the bot's perspective (assuming the bot is built to handle this — out of parent-repo scope but worth flagging to `components/openclaw-vault`).
+No notification unless recovery takes >60s. Karen's Telegram chat resumes seamlessly from the bot's perspective (assuming the bot is built to handle this — out of parent-repo scope but worth flagging to `components/opencli-container`).
 
 ---
 
@@ -233,13 +233,13 @@ Each moment defines: target score (≥, where the rubric goes), cardinal experie
 - Capability copy translates internal terminology ("sandbox", "container", "web_search/web_fetch tool") to plain English.
 - Graceful failures stay graceful — the live evidence here is excellent and is the bar to maintain.
 
-**Surfaces:** Mostly `components/openclaw-vault` (system prompt) — flagged for the submodule maintainer. The parent repo owns:
+**Surfaces:** Mostly `components/opencli-container` (system prompt) — flagged for the submodule maintainer. The parent repo owns:
 - `ReadyStep.tsx:94-97` example-prompts hint card (now load-bearing because the bot doesn't greet warmly itself)
 - The Telegram URL prefetch failure path (Moment 2 surface)
 - The banned-term list extension (`app/e2e/user-facing.spec.ts`)
 
 **Acceptance signals (Pass 8):**
-- Re-run `tests/e2e-telegram/test_ux_first_chat.py` after `components/openclaw-vault` system-prompt updates ship; banned-term hit count drops to 0.
+- Re-run `tests/e2e-telegram/test_ux_first_chat.py` after `components/opencli-container` system-prompt updates ship; banned-term hit count drops to 0.
 - Median first-byte latency stays ≤6s; p95 ≤12s.
 - A fresh-Telegram-account pairing test (separate from the existing pre-paired harness account) confirms the pairing-gate friction Pass 1 line 399 flagged is either resolved or surfaced to Karen with a one-line hint in the wizard.
 
@@ -283,7 +283,7 @@ Each moment defines: target score (≥, where the rubric goes), cardinal experie
 
 ### Moment 6 — Add a tool from the openclaw network
 
-**Target score:** ≥8/10 (was ~4.8 — placeholder; capability exists in `clawhub-forge`).
+**Target score:** ≥8/10 (was ~4.8 — placeholder; capability exists in `openskill-forge`).
 
 **Cardinal experiences:**
 - Karen wants the bot to do something new (e.g., manage her email).
@@ -380,7 +380,7 @@ No phase codes. No spec paths. One concrete fallback action.
 - Backend orchestrator architecture changes (engine is solid; Pass 4 adds lifecycle hooks but does not restructure)
 - Manifest schema changes
 - Mobile app (Telegram is the mobile interface)
-- `components/moltbook-pioneer` user-mode UI (target API still acquired by Meta)
+- `components/openagent-social` user-mode UI (target API still acquired by Meta)
 
 ---
 

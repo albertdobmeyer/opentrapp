@@ -23,9 +23,9 @@ The OpenClaw ecosystem will mature beyond terminal-only developers. When non-tec
 
 Each repo now has a `TODO.md` documenting specific gaps found in the 2026-03-03 audit. This vision doc stays as the high-level overview; the TODO files are the actionable checklists:
 
-- `components/openclaw-vault/TODO.md` — monitoring stubs, VM isolation stubs, test bug
-- `components/clawhub-forge/TODO.md` — devcontainer setup, CI auto-publish, registry API
-- `components/moltbook-pioneer/TODO.md` — no tests, safe_patterns bug, chmod, eval in curl
+- `components/opencli-container/TODO.md` — monitoring stubs, VM isolation stubs, test bug
+- `components/openskill-forge/TODO.md` — devcontainer setup, CI auto-publish, registry API
+- `components/openagent-social/TODO.md` — no tests, safe_patterns bug, chmod, eval in curl
 - `docs/TODO.md` — app-level gaps (test framework, ANSI, streaming, setup wizard)
 
 ---
@@ -35,15 +35,15 @@ Each repo now has a `TODO.md` documenting specific gaps found in the 2026-03-03 
 | Repo | Role | What It Does |
 |------|------|-------------|
 | **opentrapp** | Orchestrator + GUI | Discovers components via manifests, renders dashboards, controls lifecycle |
-| **openclaw-vault** | Runtime | Hardened 2-container sandbox. API keys never touch the agent container. |
-| **clawhub-forge** | Toolchain | Skill development workbench. 87-pattern security scanner, gated publish pipeline. |
-| **moltbook-pioneer** | Network | Safe reconnaissance of the Moltbook agent social network. Feed scanner, census, identity tools. |
+| **opencli-container** | Runtime | Hardened 2-container sandbox. API keys never touch the agent container. |
+| **openskill-forge** | Toolchain | Skill development workbench. 87-pattern security scanner, gated publish pipeline. |
+| **openagent-social** | Network | Safe reconnaissance of the Moltbook agent social network. Feed scanner, census, identity tools. |
 
 ---
 
 ## Component Maturity
 
-### openclaw-vault — 75%
+### opencli-container — 75%
 
 **Core security model: COMPLETE.** The two-container stack (agent + mitmproxy sidecar) is fully implemented with production-grade security: read-only root filesystem, all Linux capabilities dropped, custom seccomp profiles (~150 allowed syscalls, deny-by-default), noexec tmpfs mounts, 256 PID limit, 4GB RAM cap, proxy-injected API keys.
 
@@ -70,7 +70,7 @@ Each repo now has a `TODO.md` documenting specific gaps found in the 2026-03-03 
 
 ---
 
-### clawhub-forge — 83%
+### openskill-forge — 83%
 
 **Security scanning pipeline: COMPLETE.** The most feature-rich component. 87 malicious patterns across 13 MITRE ATT&CK categories, zero-trust line-by-line classification, SARIF 2.1.0 output for GitHub code scanning, .scanignore with line-range syntax, gated publish pipeline, and a self-validation test suite.
 
@@ -107,7 +107,7 @@ Each repo now has a `TODO.md` documenting specific gaps found in the 2026-03-03 
 
 ---
 
-### moltbook-pioneer — 73%
+### openagent-social — 73%
 
 **Feed scanner and documentation: COMPLETE.** All three tools are fully implemented with real bash logic, not stubs. The 30-pattern injection database and the three-tier documentation (platform anatomy, threat landscape, safe participation guide) are publication-quality.
 
@@ -187,9 +187,9 @@ Each repo now has a `TODO.md` documenting specific gaps found in the 2026-03-03 
 ### Phase 1: Cleanup & Consolidation — DONE
 
 - [x] Rename docker-compose.yml -> docker-compose.example.yml
-- [x] Convert moltbook-pioneer from placeholder to real submodule
-- [x] Create component.yml for moltbook-pioneer
-- [x] Purge all clawhub-lab -> clawhub-forge references (23+ across 3 repos)
+- [x] Convert openagent-social from placeholder to real submodule
+- [x] Create component.yml for openagent-social
+- [x] Purge all clawhub-lab -> openskill-forge references (23+ across 3 repos)
 - [x] Update CLAUDE.md, README.md, memory files
 - [x] Cross-repo harmonization (CLAUDE.md, .gitignore, LICENSE, sort_order, state labels)
 - [x] All 39 orchestrator checks pass, 14 Rust tests pass
@@ -225,12 +225,12 @@ The highest-impact UX feature for non-technical users.
 
 ### Phase 5: Component Build-Out — NOT STARTED
 
-- [x] **openclaw-vault Makefile** — DONE (7 targets, runtime auto-detection)
-- [ ] openclaw-vault monitoring scripts (log parser, session report, skill scanner)
-- [ ] moltbook-pioneer automated tests
-- [ ] moltbook-pioneer: wire safe_patterns from feed-allowlist.yml into scanner
-- [ ] Fix moltbook-pioneer chmod +x issue (document or add to setup)
-- [ ] clawhub-forge: create .devcontainer/setup.sh (referenced but missing)
+- [x] **opencli-container Makefile** — DONE (7 targets, runtime auto-detection)
+- [ ] opencli-container monitoring scripts (log parser, session report, skill scanner)
+- [ ] openagent-social automated tests
+- [ ] openagent-social: wire safe_patterns from feed-allowlist.yml into scanner
+- [ ] Fix openagent-social chmod +x issue (document or add to setup)
+- [ ] openskill-forge: create .devcontainer/setup.sh (referenced but missing)
 
 ### Phase 6: Polish & Hardening — NOT STARTED
 
@@ -277,7 +277,7 @@ Phase 6 (polish)       ← production quality
 
 ## Hard Constraints
 
-1. **Zero component-specific knowledge in the Rust backend.** If you deleted openclaw-vault and dropped in a completely different component with a valid component.yml, the app must render it correctly. The moment vault-specific or forge-specific code appears in the Rust backend, the manifest-driven architecture is compromised.
+1. **Zero component-specific knowledge in the Rust backend.** If you deleted opencli-container and dropped in a completely different component with a valid component.yml, the app must render it correctly. The moment vault-specific or forge-specific code appears in the Rust backend, the manifest-driven architecture is compromised.
 
 2. **The manifest is the API.** `component.yml` (validated against `schemas/component.schema.json`) is the only interface between the Tauri app and any component. The three component repos own their domain logic. The app owns the UX.
 
