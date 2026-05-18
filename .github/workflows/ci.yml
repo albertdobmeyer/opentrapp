@@ -207,6 +207,13 @@ jobs:
       - name: Compose release-notes body
         id: notes
         if: startsWith(github.ref, 'refs/tags/v')
+        # Force bash on every platform — the heredoc + parameter
+        # substitution below isn't PowerShell syntax, so without
+        # `shell: bash` the step throws "Missing file specification
+        # after redirection operator" on Windows and the build job
+        # never gets past this step on Windows / macOS Intel where
+        # bash is the non-default shell.
+        shell: bash
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           TAG="${GITHUB_REF_NAME}"
