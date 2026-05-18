@@ -1,4 +1,4 @@
-# Architecture — Perimeter Defense for the OpenClaw Ecosystem
+# Architecture — Perimeter Defense for Autonomous CLI Agents
 
 **Updated:** 2026-05-03
 **Supersedes:** Previous version (2026-04-15)
@@ -10,7 +10,7 @@ This document describes the security architecture of OpenTrApp: the problem it a
 
 ## 1. Problem statement
 
-OpenClaw is an autonomous AI agent capable of executing shell commands, reading files, controlling a browser, sending messages, and dynamically loading skills from a third-party registry. Run with default settings on a personal computer, the agent has the same operating-system privileges as the user, so any compromise — a prompt injection attack, a malicious skill, or a flaw in the agent itself — translates directly into damage to the user's system or accounts.
+Autonomous CLI agents — [OpenClaw](https://www.getopenclaw.ai) is the reference deployment for this work, and the example used throughout this document — execute shell commands, read files, control browsers, send messages, and dynamically load skills from third-party registries. Run with default settings on a personal computer, such an agent has the same operating-system privileges as the user, so any compromise — a prompt injection attack, a malicious skill, or a flaw in the agent itself — translates directly into damage to the user's system or accounts.
 
 Three categories of untrusted input reach the agent during normal operation:
 
@@ -37,7 +37,7 @@ TIER 2 — INFRASTRUCTURE (perimeter)
   4 containers: vault-agent, vault-forge, vault-pioneer, vault-proxy
 
 TIER 3 — CONTAINED (inside perimeter)
-  OpenClaw agent process
+  agent process
   Telegram gateway
   Loaded skills
   Fetched network content
@@ -59,7 +59,7 @@ flowchart TB
     end
 
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
-        AGENT["vault-agent<br/>OpenClaw runtime + Telegram gateway"]
+        AGENT["vault-agent<br/>agent runtime + Telegram gateway"]
         FORGE["vault-forge<br/>87-pattern scanner + CDR"]
         PIONEER["vault-pioneer (parked)"]
         PROXY["vault-proxy<br/>egress gateway, holds credentials"]
@@ -86,7 +86,7 @@ HOST
 └── Perimeter (Podman/Docker compose network)
     │
     ├── vault-agent
-    │     OpenClaw runtime, Telegram gateway, CLI agents
+    │     agent runtime, Telegram gateway, CLI agents
     │     Read-only root filesystem, all Linux capabilities dropped,
     │     custom seccomp profile, workspace mount only
     │     Adaptive shell controls allowed tool surface
@@ -136,7 +136,7 @@ Each container has its own internal network. Only `vault-proxy` bridges them.
 
 ### 4.1 opencli-container — runtime containment
 
-The core runtime layer. Wraps the OpenClaw agent in a hardened container with a six-layer defense profile:
+The core runtime layer. Wraps the agent in a hardened container with a six-layer defense profile:
 
 - Read-only root filesystem; writable scratch is mounted at a single workspace path
 - All Linux capabilities dropped at container start

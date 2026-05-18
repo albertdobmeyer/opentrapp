@@ -25,7 +25,7 @@ Pioneer has three working tools (feed-scanner, agent-census, identity-checklist)
 ## The Architecture (How Things Connect)
 
 ```
-human <-> Telegram <-> OpenClaw agent <-> Moltbook
+human <-> Telegram <-> agent <-> Moltbook
   you      phone        inside vault     agent social network
 ```
 

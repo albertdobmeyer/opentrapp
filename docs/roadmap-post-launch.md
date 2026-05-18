@@ -139,7 +139,7 @@ CI changes:
 - **OpenClaw's own `sandbox.mode` (Docker)** — what we use, why we layer on top
 - **Firejail / bubblewrap** — process-level sandboxing without containers; why insufficient for the agent's tool surface
 - **gVisor** — kernel-level sandbox; the next isolation tier we'd consider for VM-equivalent strength without VM overhead
-- **Native macOS/Windows app sandboxes** — why platform sandboxes don't compose with the OpenClaw runtime's expectations
+- **Native macOS/Windows app sandboxes** — why platform sandboxes don't compose with the agent runtime's expectations
 - **VM-only isolation (the original "just run it on a disposable cloud VM" recommendation)** — what it gives you that this design doesn't, and what this gives you that it doesn't
 - **Static skill scanners only (no CDR)** — why CDR was added on top
 - **Proxy-only (no container hardening)** — why both layers are needed

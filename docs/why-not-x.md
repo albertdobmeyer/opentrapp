@@ -14,7 +14,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 ## 1. OpenClaw's own `sandbox.mode: "docker"`
 
-**What it offers.** A configuration value that asks the OpenClaw runtime to launch each agent invocation inside a fresh Docker container. The container has the agent's tools, a writable workspace, and outbound network access. Configuration is a single line in `openclaw.json`; no separate orchestration layer.
+**What it offers.** A configuration value that asks the agent runtime to launch each agent invocation inside a fresh Docker container. The container has the agent's tools, a writable workspace, and outbound network access. Configuration is a single line in `openclaw.json`; no separate orchestration layer.
 
 **What it does not offer.**
 
@@ -71,7 +71,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 **What it does not offer.**
 
-- **Doesn't compose with the OpenClaw runtime.** The OpenClaw binary expects to spawn child processes (tools), read and write files, and make network calls. macOS App Sandbox restricts these in ways that conflict with the runtime's expected behaviour without per-tool entitlement work that is not feasible for an open-source project to maintain.
+- **Doesn't compose with the agent runtime.** The OpenClaw binary expects to spawn child processes (tools), read and write files, and make network calls. macOS App Sandbox restricts these in ways that conflict with the runtime's expected behaviour without per-tool entitlement work that is not feasible for an open-source project to maintain.
 - **Container abstraction is rejected by the platform.** macOS prefers signed code with declared entitlements; an architecture that runs the agent inside a Linux container that runs inside Docker Desktop's hypervisor is necessarily *outside* the App Sandbox model.
 - **Windows AppContainer is even more constrained.** Same architectural mismatch.
 
@@ -116,7 +116,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 ## 7. Allowlist proxy only (no container hardening)
 
-**What it offers.** Run the OpenClaw agent in its default configuration (no container, no `sandbox.mode`, no separate forge), but route all outbound HTTP through a local allowlist proxy that filters destinations and injects credentials.
+**What it offers.** Run the agent in its default configuration (no container, no `sandbox.mode`, no separate forge), but route all outbound HTTP through a local allowlist proxy that filters destinations and injects credentials.
 
 **What it does not offer.**
 

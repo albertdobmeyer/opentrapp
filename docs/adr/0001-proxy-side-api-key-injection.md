@@ -9,7 +9,7 @@
 
 ## Context
 
-The OpenClaw runtime makes outbound HTTPS calls to one or more LLM provider APIs (Anthropic, OpenAI). Each call requires an authentication credential — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or equivalent — which the runtime conventionally reads from a process environment variable.
+The agent runtime makes outbound HTTPS calls to one or more LLM provider APIs (Anthropic, OpenAI). Each call requires an authentication credential — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or equivalent — which the runtime conventionally reads from a process environment variable.
 
 The default OpenClaw configuration places this credential in the same process the agent runs in. The credential is consequently visible to:
 
@@ -18,9 +18,9 @@ The default OpenClaw configuration places this credential in the same process th
 3. Any process with read access to the agent's `/proc/<pid>/environ` (the user, root, anyone with `ptrace`)
 4. Any backup or core-dump that captures the runtime's memory
 
-The empirical record makes the cost of this exposure concrete. The Moltbook database breach (2026-01) exposed 1.5 M API tokens via a single misconfigured Supabase row-level-security policy; a non-trivial fraction of those tokens were embedded in OpenClaw runtime configurations. CVE-2026-25253 demonstrated a one-click RCE through OpenClaw's management API; an attacker who triggered it gained the runtime's environment, including the credential.
+The empirical record makes the cost of this exposure concrete. The Moltbook database breach (2026-01) exposed 1.5 M API tokens via a single misconfigured Supabase row-level-security policy; a non-trivial fraction of those tokens were embedded in agent runtime configurations. CVE-2026-25253 demonstrated a one-click RCE through OpenClaw's management API; an attacker who triggered it gained the runtime's environment, including the credential.
 
-A complete containment story for the OpenClaw runtime cannot leave the credential in the agent's process environment.
+A complete containment story for the agent runtime cannot leave the credential in the agent's process environment.
 
 ## Decision
 

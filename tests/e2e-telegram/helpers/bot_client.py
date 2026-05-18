@@ -1,10 +1,10 @@
-"""Thin wrapper over a Telethon client that sends to the clawbot under test
+"""Thin wrapper over a Telethon client that sends to the agent under test
 (handle configured via BOT_HANDLE in .env.test) and waits for its reply.
 Every test message is prefixed with `[TEST]` so the real Telegram chat stays
 legible and filterable.
 
 Class name `BotClient` is historical — the product identity is the
-OpenClaw Clawbot, but any Telegram bot handle can be plugged in via
+OpenClaw agent, but any Telegram bot handle can be plugged in via
 config. Error messages use the actual handle dynamically so test
 output reflects reality.
 

@@ -227,7 +227,7 @@ Message @YourBotName on Telegram to start chatting.
 ← Dashboard
 [icon] OpenCli Container
 v0.1.0 · runtime                [Running]
-Hardened container for the OpenClaw agent runtime
+Hardened container for the agent runtime
 
 HEALTH: [Container: running] [Security: 24 checks]
 
@@ -265,7 +265,7 @@ SKILLS: 25 installed, all clean
    - network → "Agent Network"
    - fallback → `identity.name`
 2. **Remove version + role badge** from user view (move to developer tools)
-3. **Remove manifest description** ("Hardened container for the OpenClaw agent runtime" means nothing to users)
+3. **Remove manifest description** ("Hardened container for the agent runtime" means nothing to users)
 4. **Contextual guidance card:** Keep and improve
    - Running: Add Telegram bot name guidance, capability summary
    - Stopped: "Your assistant is stopped. Click Start to bring it back online."

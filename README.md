@@ -9,7 +9,7 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/albertdobmeyer/opentrapp/badge)](https://scorecard.dev/viewer/?uri=github.com/albertdobmeyer/opentrapp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-009966.svg)](LICENSE)
 
-A desktop application that runs the [OpenClaw](https://www.getopenclaw.ai) Clawbot inside a four-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT.
+A desktop application that runs an autonomous CLI agent inside a four-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT. Ships pre-wired for [OpenClaw](https://www.getopenclaw.ai); the perimeter is designed to extend to other CLI agents.
 
 The architecture, threat model, and per-component capabilities are described in [`docs/trifecta.md`](docs/trifecta.md).
 
@@ -19,13 +19,13 @@ The architecture, threat model, and per-component capabilities are described in 
 
 ## Purpose
 
-OpenClaw is an autonomous AI agent capable of executing shell commands, reading files, and loading skills from a third-party registry. Run with default settings, the agent has the same operating-system privileges as the user. The ClawHavoc study (2026-Q1) classified 11.9 % of published ClawHub skills as malicious (341 of 2,857). OpenTrApp wraps the agent in a defense-in-depth perimeter to reduce the impact of agent compromise, malicious skills, and prompt-injection attacks.
+Autonomous CLI agents — [OpenClaw](https://www.getopenclaw.ai) is one prominent example — execute shell commands, read files, and load skills from third-party registries. Run with default settings, the agent has the same operating-system privileges as the user. The ClawHavoc study (2026-Q1) of one such registry classified 11.9 % of published skills as malicious (341 of 2,857). OpenTrApp wraps any such agent in a defense-in-depth perimeter to reduce the impact of agent compromise, malicious skills, and prompt-injection attacks. The shipped integration is OpenClaw; the perimeter is designed to extend to other CLI agents.
 
-The agent's reasoning is performed by [Anthropic](https://www.anthropic.com)'s API; only the agent's execution layer (file work, tool calls, skill invocations) is local.
+Reasoning is delegated to the agent's vendor API (Anthropic's, for OpenClaw); only the agent's execution layer (file work, tool calls, skill invocations) is local.
 
 ## Capabilities (default Split Shell)
 
-- Telegram bot interface — message the Clawbot from a paired phone
+- Telegram bot interface — message the agent from a paired phone
 - File read/write within a sandboxed workspace; the host filesystem is not exposed to the container
 - Image processing on Telegram-supplied content
 - Skill loading from ClawHub gated by a 87-pattern scanner with MITRE-ATT&CK mapping and Content Disarm & Reconstruction

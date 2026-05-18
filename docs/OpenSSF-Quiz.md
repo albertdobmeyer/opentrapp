@@ -26,7 +26,7 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 
 > **OpenTrApp** is a desktop application that lets you safely use an autonomous AI helper on your own computer.
 >
-> AI helpers like the *OpenClaw Clawbot* can read files, run programs, and install community-made plugins. Most of the time these features are useful, but they also mean a poorly written or malicious plugin could damage your computer or leak your data. OpenTrApp keeps the AI helper inside a sealed-off space — a *sandbox* — so it can do its job without touching your real files, passwords, or other programs. It also checks every plugin for known dangers before letting the helper use it.
+> AI helpers like the *agent* can read files, run programs, and install community-made plugins. Most of the time these features are useful, but they also mean a poorly written or malicious plugin could damage your computer or leak your data. OpenTrApp keeps the AI helper inside a sealed-off space — a *sandbox* — so it can do its job without touching your real files, passwords, or other programs. It also checks every plugin for known dangers before letting the helper use it.
 >
 > You don't need to be a programmer to use it. Everything is controlled through a friendly desktop window, and you chat with the helper through regular [Telegram](https://telegram.org/) messages. Free and open source under the MIT license.
 
@@ -67,7 +67,7 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 **Status:** Met
 **Justification:**
 
-> The project's README opening paragraph and the landing page at https://opentrapp.com both state in their opening sentence that OpenTrApp is a desktop application running the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The README §"Purpose" expands this with the threat-model rationale (the ClawHavoc 2026-Q1 study finding 11.9% of ClawHub skills were malicious) so a visitor learns the function and the differentiator inside the first scroll.
+> The project's README opening paragraph and the landing page at https://opentrapp.com both state in their opening sentence that OpenTrApp is a desktop application running the agent inside a four-container security perimeter on the user's own computer. The README §"Purpose" expands this with the threat-model rationale (the ClawHavoc 2026-Q1 study finding 11.9% of ClawHub skills were malicious) so a visitor learns the function and the differentiator inside the first scroll.
 
 **Evidence URL:** https://github.com/albertdobmeyer/opentrapp/blob/main/README.md
 

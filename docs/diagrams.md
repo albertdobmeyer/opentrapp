@@ -23,7 +23,7 @@ flowchart TB
     end
 
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
-        AGENT["vault-agent<br/>OpenClaw runtime + Telegram gateway<br/>read-only root, dropped capabilities,<br/>narrow syscall profile, workspace-only mount"]
+        AGENT["vault-agent<br/>agent runtime + Telegram gateway<br/>read-only root, dropped capabilities,<br/>narrow syscall profile, workspace-only mount"]
         FORGE["vault-forge<br/>87-pattern scanner +<br/>line classifier + CDR pipeline"]
         PIONEER["vault-pioneer<br/>(parked)"]
         PROXY["vault-proxy<br/>egress gateway, holds API credentials,<br/>domain allowlist, request log"]
@@ -86,7 +86,7 @@ flowchart TD
 
     subgraph T3["TIER 3 — CONTAINED (inside perimeter)"]
         direction LR
-        T3A[OpenClaw agent process]
+        T3A[agent process]
         T3B[Telegram gateway]
         T3C[Loaded skills]
         T3D[Fetched network content]

@@ -23,7 +23,7 @@ The current architecture runs openskill-forge and openagent-social as bare bash 
 - **Forge** downloads SKILL files from ClawHub (11.9% malware rate in the ClawHavoc incident), processes them with bash parsers, and stores them on the host filesystem. A vulnerability in the parser gives the attacker the user's entire machine.
 - **Pioneer** fetches content from the Moltbook API (25 known injection patterns) and processes it on the host. Same risk.
 
-The vault carefully air-gaps the OpenClaw agent from the user's system with six layers of defense — but two other components that handle equally untrusted content run with zero isolation. This is one wolf inside the fence and two wolves loose in the garden.
+The vault carefully air-gaps the agent from the user's system with six layers of defense — but two other components that handle equally untrusted content run with zero isolation. This is one wolf inside the fence and two wolves loose in the garden.
 
 ### The UX Gap
 
@@ -63,7 +63,7 @@ TIER 3: CONTAINED (does the work, within boundaries)
 
 - **Tier 1** operates on the user's host with full trust. The human gives high-level instructions in natural language. Their trusted agent (Claude Code, powered by a large reasoning model like Opus) is the **intelligent warden** — it translates human intent into security decisions, monitors agent behavior, adjusts the dynamic shell in real time, and reports back in plain language. The human doesn't need to understand security; the warden does.
 - **Tier 2** is the containerized workshop infrastructure. It enforces all security boundaries mechanically. Everything that touches untrusted content runs here, inside containers. The Tauri GUI is one interface to this infrastructure; Claude Code is another. Tier 2 doesn't make decisions — it enforces what the warden (Tier 1) decides.
-- **Tier 3** is the contained workforce. OpenClaw agents do automation work (file management, web browsing, messaging, scheduling) within the boundaries set by Tier 2 and decided by Tier 1. The agents are powerful and resourceful but untrusted — they request capabilities, the warden judges, the infrastructure enforces.
+- **Tier 3** is the contained workforce. agents do automation work (file management, web browsing, messaging, scheduling) within the boundaries set by Tier 2 and decided by Tier 1. The agents are powerful and resourceful but untrusted — they request capabilities, the warden judges, the infrastructure enforces.
 
 ---
 
@@ -82,7 +82,7 @@ USER'S HOST (protected — never touched by untrusted content)
 └── PERIMETER (Docker/Podman compose network)
     │
     ├── vault-agent (the cell block)
-    │   OpenClaw runtime, Telegram bot, CLI agents
+    │   agent runtime, Telegram bot, CLI agents
     │   Dynamic Shell (Hard/Split/Soft) controls freedom
     │   Can request scanned skills from forge
     │   CANNOT reach host, proxy keys, or other containers directly
@@ -176,7 +176,7 @@ Shell transitions:
 
 ### Intelligent Meta-Orchestration — The True USP
 
-The dynamic shell is not just adjustable — it is **intelligent.** A large reasoning model (Claude Opus via Claude Code, or another trusted CLI agent) acts as the warden: the intelligent middleman between the non-technical human user and the powerful but dangerous clawbot system.
+The dynamic shell is not just adjustable — it is **intelligent.** A large reasoning model (Claude Opus via Claude Code, or another trusted CLI agent) acts as the warden: the intelligent middleman between the non-technical human user and the powerful but dangerous agent system.
 
 **Why this matters:** The non-technical user cannot make security decisions. They don't know what "allow exec with allowlist" means. They don't know whether a SKILL file scan result is acceptable. They don't know when the agent's behavior is suspicious. But Claude Opus does. The meta-orchestration layer is:
 

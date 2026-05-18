@@ -9,7 +9,7 @@
 
 ## Context
 
-The OpenClaw runtime exposes a configurable tool surface — at design time, the operator can deny or allow individual tools (`exec`, `read`, `write`, `web_fetch`, `web_search`, `cron`, etc.) and adjust per-action approval mode (`always`, `on-miss`, `never`). A typical hardening guide suggests choosing one configuration and locking it down.
+The agent runtime exposes a configurable tool surface — at design time, the operator can deny or allow individual tools (`exec`, `read`, `write`, `web_fetch`, `web_search`, `cron`, etc.) and adjust per-action approval mode (`always`, `on-miss`, `never`). A typical hardening guide suggests choosing one configuration and locking it down.
 
 The "one configuration" approach forces a compromise that is structurally unsatisfying:
 

@@ -13,7 +13,7 @@ The full criteria are at [github.com/coreinfrastructure/best-practices-badge](ht
 | Field | Value |
 |---|---|
 | Project name | OpenTrApp |
-| Description | A desktop application that runs the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer, with a Telegram interface for chat. |
+| Description | A desktop application that runs the agent inside a four-container security perimeter on the user's own computer, with a Telegram interface for chat. |
 | Project URL | https://github.com/albertdobmeyer/opentrapp |
 | Project home page | https://opentrapp.com |
 | License | MIT |

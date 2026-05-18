@@ -11,7 +11,7 @@
 
 The perimeter could in principle have been built at three different topology levels:
 
-1. **Single container** — the OpenClaw runtime, the proxy, the scanner, and the social-content analyser all in one container, separated by user accounts and Linux namespaces.
+1. **Single container** — the agent runtime, the proxy, the scanner, and the social-content analyser all in one container, separated by user accounts and Linux namespaces.
 2. **Four containers** — each major responsibility in its own container, connected by an internal compose network with a single bridge.
 3. **VM-level isolation** — each major responsibility in its own virtual machine.
 
@@ -27,7 +27,7 @@ The runtime perimeter is composed of **four containers** connected by per-servic
 
 | Container | Responsibility | Network connectivity |
 |-----------|----------------|----------------------|
-| `vault-agent` | OpenClaw runtime, Telegram gateway, loaded skills | `agent-net` (internal); only `vault-proxy` is reachable |
+| `vault-agent` | agent runtime, Telegram gateway, loaded skills | `agent-net` (internal); only `vault-proxy` is reachable |
 | `vault-forge` | Skill scanner + line classifier + CDR pipeline | `forge-net` (internal); only `vault-proxy` is reachable |
 | `vault-pioneer` | Social-content scanner (parked — see [ADR-0004](0004-parking-openagent-social.md)) | `pioneer-net` (internal); only `vault-proxy` is reachable |
 | `vault-proxy` | Egress gateway, credential holder, allowlist enforcer | All three internal networks plus the host's network — the only container with external connectivity |

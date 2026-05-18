@@ -8,7 +8,7 @@ For end-user documentation, see [`README.md`](README.md). For the full architect
 
 ## 1. What this project is
 
-OpenTrApp is a Tauri 2 desktop application that runs the OpenClaw Clawbot inside a four-container security perimeter on the user's own computer. The application is the perimeter orchestrator: it composes the four containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations.
+OpenTrApp is a Tauri 2 desktop application that runs the OpenClaw agent inside a four-container security perimeter on the user's own computer. The application is the perimeter orchestrator: it composes the four containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations.
 
 The agent's reasoning is delegated to Anthropic's API. The agent's execution layer (file work, tool calls, skill loading) runs locally inside `vault-agent`. The application can never claim to make running an autonomous agent absolutely safe; it raises the cost of compromise via defense-in-depth and is open about the residual risks.
 
