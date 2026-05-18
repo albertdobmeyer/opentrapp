@@ -62,9 +62,9 @@ Each item is an icon + label. Labels use **friendly single words**. No sub-menus
    - Overview
    - Logs
 2. **COMPONENTS**
-   - openclaw-vault
-   - clawhub-forge
-   - moltbook-pioneer
+   - opencli-container
+   - openskill-forge
+   - openagent-social
 3. **SECURITY**
    - Audit
    - Allowlist

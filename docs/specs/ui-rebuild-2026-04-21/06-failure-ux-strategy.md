@@ -171,12 +171,12 @@ OS: Linux Ubuntu 24.04.2 LTS
 Arch: x86_64
 
 === COMPONENT STATUS ===
-openclaw-vault (runtime):   running        v0.1.0
-clawhub-forge (toolchain):  ready          v0.1.0
-moltbook-pioneer (network): placeholder    v0.0.1
+opencli-container (runtime):   running        v0.1.0
+openskill-forge (toolchain):  ready          v0.1.0
+openagent-social (network): placeholder    v0.0.1
 
 === CONTAINER STATUS ===
-openclaw-vault:  Up 2 hours
+opencli-container:  Up 2 hours
 vault-proxy:     Up 2 hours
 vault-forge:     Up 2 hours
 
@@ -227,7 +227,7 @@ The bundle generator **MUST** redact:
 
 - Any string matching `sk-ant-[a-zA-Z0-9-_]+` → `[REDACTED_ANTHROPIC_KEY]`
 - Any string matching `[0-9]+:[a-zA-Z0-9_-]{30,}` → `[REDACTED_TELEGRAM_TOKEN]`
-- The contents of `components/openclaw-vault/.env` → always skipped
+- The contents of `components/opencli-container/.env` → always skipped
 - IP addresses → `[REDACTED_IP]` (or keep only first octet for geographic debugging)
 - Home directory paths → `~/...`
 - Usernames → `[user]`
@@ -339,7 +339,7 @@ Every Level 2 and Level 3 failure screen includes a collapsible "Show technical 
 ▼ Show technical details
 
   Screen: Setup wizard → Installing
-  Component: openclaw-vault
+  Component: opencli-container
   Command: setup
   Exit code: 137
   Duration: 124s

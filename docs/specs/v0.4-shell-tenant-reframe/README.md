@@ -33,7 +33,7 @@ The specs above are organized by concept; the PRs that implement them ship in th
 3. **PR-3: bootstrap service** ([`02`](02-bootstrap-service.md)) — the new subsystem, Podman sidecar wiring, single-instance plugin
 4. **PR-4: activation flow** ([`03`](03-activation-flow.md)) — JIT wizard repositioning, Telegram handoff, Anthropic live-ping
 5. **PR-5: stop & recovery UX** ([`04`](04-stop-and-recovery-ux.md)) — one-button Stop, recovery card, tray icon variants
-6. **PR-6: bot first-message** ([`05`](05-bot-first-message.md)) — submodule PR in openclaw-vault, plus parent reference bump
+6. **PR-6: bot first-message** ([`05`](05-bot-first-message.md)) — submodule PR in opencli-container, plus parent reference bump
 7. **PR-7: migration** ([`06`](06-migration.md)) — existing-install detection + live-ping verification
 
 PR-1 lands first and blocks none of the others. PR-2 through PR-7 each have natural review checkpoints before the next begins. The whole sequence is ~6-8 reviewable PRs.

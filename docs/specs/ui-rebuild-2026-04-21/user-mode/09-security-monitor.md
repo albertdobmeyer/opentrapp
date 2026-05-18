@@ -284,9 +284,9 @@ Frontend listens and updates timeline live.
    - Persists to Tauri store
    - Emits Tauri events
 
-3. **Allowlist CRUD API** — read/write `components/openclaw-vault/proxy/allowlist.txt` via commands.
+3. **Allowlist CRUD API** — read/write `components/opencli-container/proxy/allowlist.txt` via commands.
 
-4. **Skills scan state** — query clawhub-forge for scan results.
+4. **Skills scan state** — query openskill-forge for scan results.
 
 ---
 

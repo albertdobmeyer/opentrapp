@@ -254,7 +254,7 @@ fn vault_env_path(handle: &AppHandle) -> PathBuf {
         .and_then(|state| state.monorepo_root.read().ok().map(|r| r.clone()))
         .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
         .join("components")
-        .join("openclaw-vault")
+        .join("opencli-container")
         .join(".env")
 }
 

@@ -100,7 +100,7 @@ export function useInstallPipeline({ update }: UseInstallPipelineOptions) {
       const componentIds = new Set(
         postInitReport.components
           .map((c) => c.component_id)
-          .filter((id) => id !== "moltbook-pioneer"),
+          .filter((id) => id !== "openagent-social"),
       );
       currentSubStepRef.current = "build";
       await runBuildStep(componentIds, { ...stepDeps, streamOneCommand });
@@ -134,9 +134,9 @@ export function useInstallPipeline({ update }: UseInstallPipelineOptions) {
   // Stop any in-flight stream on unmount.
   useEffect(() => {
     return () => {
-      void stopStream("openclaw-vault", "setup").catch(() => undefined);
-      void stopStream("openclaw-vault", "start").catch(() => undefined);
-      void stopStream("clawhub-forge", "setup").catch(() => undefined);
+      void stopStream("opencli-container", "setup").catch(() => undefined);
+      void stopStream("opencli-container", "start").catch(() => undefined);
+      void stopStream("openskill-forge", "setup").catch(() => undefined);
     };
   }, []);
 

@@ -161,9 +161,9 @@ case "card-grid":
 
 After implementation, switch at least one component command to use `display: card-grid`:
 
-**Candidate:** `clawhub-forge` command `stats` (currently `display: table`). The stats output lists per-skill metrics (name, status, tests, risk) — a natural fit for card-grid display.
+**Candidate:** `openskill-forge` command `stats` (currently `display: table`). The stats output lists per-skill metrics (name, status, tests, risk) — a natural fit for card-grid display.
 
-**Alternative:** `moltbook-pioneer` command `agent-census` (currently `display: report`). Census data lists agents with properties — also a natural card layout.
+**Alternative:** `openagent-social` command `agent-census` (currently `display: report`). Census data lists agents with properties — also a natural card layout.
 
 Changing `display` in a component.yml is non-breaking (GUI renders whatever the manifest says). The command's stdout format may need adjustment to output JSON for best results.
 

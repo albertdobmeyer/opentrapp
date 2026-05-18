@@ -52,7 +52,7 @@ prerequisites:
   config_files:
     - template: .env.example
       target: .env
-  check_command: "podman ps | grep openclaw-vault"
+  check_command: "podman ps | grep opencli-container"
 ```
 
 The `setup_command` field (`"setup"`) references a command declared in the `commands` section of the same manifest. The backend's `run_command` handler can execute it.
@@ -130,9 +130,9 @@ For reference, these are the setup commands declared in each component's manifes
 
 | Component | `setup_command` | Actual Command | Duration | `container_runtime` |
 |-----------|----------------|----------------|----------|---------------------|
-| openclaw-vault | `setup` | `make setup` | 2-5 min (container build) | `true` |
-| clawhub-forge | `setup` | `make setup` | < 10 sec (no container) | `false` |
-| moltbook-pioneer | `setup` | `make setup` | < 5 sec (config copy) | `false` |
+| opencli-container | `setup` | `make setup` | 2-5 min (container build) | `true` |
+| openskill-forge | `setup` | `make setup` | < 10 sec (no container) | `false` |
+| openagent-social | `setup` | `make setup` | < 5 sec (config copy) | `false` |
 
 The wizard should run all three but only gate progress on components where `container_runtime: true` (vault). Forge and pioneer setup is fast and unlikely to fail.
 
@@ -145,7 +145,7 @@ The wizard should run all three but only gate progress on components where `cont
 │  Step 5 of 6: Set Up Components          │
 │                                          │
 │  ┌────────────────────────────────────┐  │
-│  │ ● OpenClaw Vault                   │  │
+│  │ ● OpenCli Container                   │  │
 │  │   Building container image...      │  │
 │  │   ┌──────────────────────────┐     │  │
 │  │   │ Streaming output here... │     │  │
@@ -156,11 +156,11 @@ The wizard should run all three but only gate progress on components where `cont
 │  └────────────────────────────────────┘  │
 │                                          │
 │  ┌────────────────────────────────────┐  │
-│  │ ✓ ClawHub Forge — Ready            │  │
+│  │ ✓ OpenSkill Forge — Ready            │  │
 │  └────────────────────────────────────┘  │
 │                                          │
 │  ┌────────────────────────────────────┐  │
-│  │ ✓ Moltbook Pioneer — Ready         │  │
+│  │ ✓ OpenAgent Social — Ready         │  │
 │  └────────────────────────────────────┘  │
 │                                          │
 │            [Back]  [Next →]              │

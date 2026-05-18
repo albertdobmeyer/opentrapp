@@ -15,9 +15,9 @@ The parent repo (opentrapp) intentionally breaks the centered-text-on-solid-colo
 | Repo | Background | Accent | Tagline |
 |------|-----------|--------|---------|
 | opentrapp | Slate gradient `#0f172a → #1e293b` + brand glow | OpenTrApp-Green `#009966` → OpenTrApp-Blue `#0EA5E9` | A safer way to run OpenClaw on your own computer. |
-| openclaw-vault | `#dc2626` (red-600) | `#fef2f2` (red-50) | API keys never enter the container |
-| clawhub-forge | `#3b82f6` (blue-500) | `#eff6ff` (blue-50) | 87-pattern offline security scanner |
-| moltbook-pioneer | `#a855f7` (purple-500) | `#faf5ff` (purple-50) | Safe reconnaissance for the Moltbook agent network |
+| opencli-container | `#dc2626` (red-600) | `#fef2f2` (red-50) | API keys never enter the container |
+| openskill-forge | `#3b82f6` (blue-500) | `#eff6ff` (blue-50) | 87-pattern offline security scanner |
+| openagent-social | `#a855f7` (purple-500) | `#faf5ff` (purple-50) | Safe reconnaissance for the Moltbook agent network |
 
 ## Layout
 
@@ -35,9 +35,9 @@ The opentrapp card uses a different layout — see [`social-preview/opentrapp-sp
 | Repo | Status | Path |
 |------|--------|------|
 | opentrapp | **Production PNG (gradient banner)** | `docs/social-preview/opentrapp.png` (rendered by `scripts/render-social-preview.py`) |
-| openclaw-vault | **Production PNG** | `docs/social-preview.png` (in vault repo) |
-| clawhub-forge | SVG placeholder | `docs/social-preview/clawhub-forge.svg` |
-| moltbook-pioneer | SVG placeholder | `docs/social-preview/moltbook-pioneer.svg` |
+| opencli-container | **Production PNG** | `docs/social-preview.png` (in vault repo) |
+| openskill-forge | SVG placeholder | `docs/social-preview/openskill-forge.svg` |
+| openagent-social | SVG placeholder | `docs/social-preview/openagent-social.svg` |
 
 ## Uploading
 

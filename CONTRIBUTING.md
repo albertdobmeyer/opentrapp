@@ -8,7 +8,7 @@ By participating in this project, you agree to follow our [Code of Conduct](CODE
 
 ## Cloning the repository
 
-The project uses three git submodules (`openclaw-vault`, `clawhub-forge`, `moltbook-pioneer`). Clone with `--recurse-submodules` so they are populated on first clone:
+The project uses three git submodules (`opencli-container`, `openskill-forge`, `openagent-social`). Clone with `--recurse-submodules` so they are populated on first clone:
 
 ```bash
 git clone --recurse-submodules https://github.com/albertdobmeyer/opentrapp.git

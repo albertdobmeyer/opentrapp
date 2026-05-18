@@ -64,7 +64,7 @@ The user's relationship with OpenClaw happens on Telegram. The user's relationsh
 Watching a first-time walkthrough of the current app, Karen would:
 
 1. See "Set Up Components" and think "what's a component?"
-2. See `components/openclaw-vault/.env` and think "I don't know what any of this means"
+2. See `components/opencli-container/.env` and think "I don't know what any of this means"
 3. See security verification output with 24 checks and think "something has gone wrong, 24 is a big number"
 4. See a stack trace and think "I broke my computer"
 5. Give up.
@@ -114,7 +114,7 @@ Every screen Karen sees must:
 - **No manifest inspector** — they have to open `component.yml` in an editor
 - **No allowlist editor** — they have to edit files manually
 - **Security audit runs are buried** — they have to click through workflows to see them
-- **Role-based labels strip information** — "My Assistant" hides whether it's actually openclaw-vault
+- **Role-based labels strip information** — "My Assistant" hides whether it's actually opencli-container
 
 ### The fix
 
@@ -122,7 +122,7 @@ When they toggle to Advanced Mode:
 - Information density increases (smaller type, tighter spacing)
 - Full component/manifest/log/audit visibility
 - All configs editable in-app (with schema validation)
-- Technical labels return (openclaw-vault, clawhub-forge, moltbook-pioneer)
+- Technical labels return (opencli-container, openskill-forge, openagent-social)
 - Keyboard-first navigation
 
 ---
@@ -141,7 +141,7 @@ Throughout implementation, you'll hit decisions where Karen's needs conflict wit
 
 | Tension | Karen's need | Developer's need | Resolution |
 |---------|--------------|------------------|------------|
-| Component naming | Role-based ("My Assistant") | Canonical ("openclaw-vault") | Active mode decides: user mode → role-based, dev mode → canonical |
+| Component naming | Role-based ("My Assistant") | Canonical ("opencli-container") | Active mode decides: user mode → role-based, dev mode → canonical |
 | Error details | Hidden by default | Visible by default | Active mode decides |
 | Status text | Sentences ("Running safely") | State tokens ("running") | Active mode decides |
 | Available commands | Only "user" tier | All tiers | Already in schema via `tier: user \| advanced` |

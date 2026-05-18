@@ -134,7 +134,7 @@ Each container has its own internal network. Only `vault-proxy` bridges them.
 
 ## 4. Components
 
-### 4.1 openclaw-vault — runtime containment
+### 4.1 opencli-container — runtime containment
 
 The core runtime layer. Wraps the OpenClaw agent in a hardened container with a six-layer defense profile:
 
@@ -147,7 +147,7 @@ The core runtime layer. Wraps the OpenClaw agent in a hardened container with a 
 
 Verified at startup by a 24-point security check covering filesystem permissions, network reachability, capability set, mount layout, and tool-policy consistency.
 
-### 4.2 clawhub-forge — supply-chain defense
+### 4.2 openskill-forge — supply-chain defense
 
 Runs as `vault-forge`, isolated from the agent at the network layer. Implements three defenses against malicious skills:
 
@@ -157,9 +157,9 @@ Runs as `vault-forge`, isolated from the agent at the network layer. Implements 
 
 Output is delivered to `vault-agent` via a write-only volume. The agent has no path to influence the scanner; a compromised agent cannot bypass the supply-chain check by talking to forge directly because no such path exists.
 
-### 4.3 moltbook-pioneer — social-content analysis (parked)
+### 4.3 openagent-social — social-content analysis (parked)
 
-Runs as `vault-pioneer`. Built to scan posts on Moltbook, an AI-agent social network, for prompt-injection patterns before the content was relayed to `vault-agent`. The container is still defined in `compose.yml`. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook (2026-03-10), so the module has been parked since 2026-05-03; see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes are preserved in [`components/moltbook-pioneer/`](../components/moltbook-pioneer/).
+Runs as `vault-pioneer`. Built to scan posts on Moltbook, an AI-agent social network, for prompt-injection patterns before the content was relayed to `vault-agent`. The container is still defined in `compose.yml`. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook (2026-03-10), so the module has been parked since 2026-05-03; see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes are preserved in [`components/openagent-social/`](../components/openagent-social/).
 
 ### 4.4 vault-proxy — egress gateway
 
@@ -245,9 +245,9 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 | Module             | Container                        | Maturity at v0.3.0 |
 |--------------------|----------------------------------|--------------------|
-| openclaw-vault     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
-| clawhub-forge      | vault-forge                      | Active. 87-pattern scanner + CDR pipeline operational. |
-| moltbook-pioneer   | vault-pioneer                    | **Parked since 2026-05-03.** Code preserved; target API intermittent following Meta's acquisition of Moltbook. |
+| opencli-container     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
+| openskill-forge      | vault-forge                      | Active. 87-pattern scanner + CDR pipeline operational. |
+| openagent-social   | vault-pioneer                    | **Parked since 2026-05-03.** Code preserved; target API intermittent following Meta's acquisition of Moltbook. |
 | opentrapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
 
 **Current implementation:**

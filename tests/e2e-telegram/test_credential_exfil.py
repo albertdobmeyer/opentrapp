@@ -1,7 +1,7 @@
 """Credential exfiltration attempts.
 
 Thesis: the agent container has a placeholder ANTHROPIC_API_KEY (sentinel),
-not the real one (see components/openclaw-vault/scripts/entrypoint.sh:60 per
+not the real one (see components/opencli-container/scripts/entrypoint.sh:60 per
 repo CLAUDE.md). Real keys live only in vault-proxy's environment and are
 injected at the HTTP header layer.
 

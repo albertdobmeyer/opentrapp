@@ -41,7 +41,7 @@ Total Anthropic spend: 8 calls × Haiku 4.5 ≈ **$0.04** (well under the $2.00 
 
 **Moment 3 score moves from 5.5/10 (Pass 1 code-reading) to ~8.0/10 (live evidence).**
 
-Pass 1 expected the bot to be a stilted "I am a coding agent specialized in…" voice. The live bot is **calm, friendly, gracefully self-aware about its limitations, and consistently redirects to alternatives** when it can't help. The biggest remaining friction is **terseness on first contact** (`/start` returns "Pong. What can I help with?" — 27 characters; no greeting-by-name, no expectation-setting, no example prompts) plus **3 banned-term/jargon leaks in capability copy** that should be cleaned up in `components/openclaw-vault`.
+Pass 1 expected the bot to be a stilted "I am a coding agent specialized in…" voice. The live bot is **calm, friendly, gracefully self-aware about its limitations, and consistently redirects to alternatives** when it can't help. The biggest remaining friction is **terseness on first contact** (`/start` returns "Pong. What can I help with?" — 27 characters; no greeting-by-name, no expectation-setting, no example prompts) plus **3 banned-term/jargon leaks in capability copy** that should be cleaned up in `components/opencli-container`.
 
 The first-impression curve from Pass 1:
 
@@ -78,7 +78,7 @@ Latency = first-byte (`reply.latency_s`). Reply length = concatenated text chara
   - Offer 1–2 example prompts (the wizard's Ready screen *promises* example prompts at `ReadyStep.tsx:94-97` — "What's the weather?" and "Plan my Tuesday" — but the bot itself doesn't reinforce them)
 - ⚠️ **P2** — Latency is fine for a 1-call simple response (5.1s), but the perceived value-per-second is low because the reply is so short. Karen waits 5 seconds for "Pong."
 
-**Recommended fix (out of parent scope, in `components/openclaw-vault`):** Add a system-prompt directive for `/start` and similar slash commands: "On first contact, greet warmly, briefly explain you're a personal assistant living on the user's machine, and offer 2–3 concrete example prompts."
+**Recommended fix (out of parent scope, in `components/opencli-container`):** Add a system-prompt directive for `/start` and similar slash commands: "On first contact, greet warmly, briefly explain you're a personal assistant living on the user's machine, and offer 2–3 concrete example prompts."
 
 **Pairing gap unaddressed:** Account was pre-paired. A fresh Karen on a fresh Telegram client may hit the pairing gate Pass 1 line 399 flagged. **Re-test required with a never-paired secondary account** before v0.2.x ships.
 
@@ -122,7 +122,7 @@ Latency = first-byte (`reply.latency_s`). Reply length = concatenated text chara
 - 🚨 **P0, Principle 1 (Never expose plumbing)** — Two distinct leaks in one sentence:
   - **"sandboxed"** — Pass 1 P0 list. Caught by my scan.
   - **"container"** — *not in the GUI banned list at `user-facing.spec.ts:13-33`*. Surfaces a list-completeness gap: bare "container" should join "container_runtime" in the banned terms. **My scan missed this leak** because I only looked for what was already banned. Pass 7 cleanup must add bare "container" to the banned list before re-scanning.
-- ⚠️ **P1, Principle 6 (Role-based labels)** — The capability list itself is well-translated to user terms (Files / Web / Images / Memory / Messaging / Documents) — that's good. But the list mentions "search the internet" while scenario 4 (next) confirms there is no web_search tool active. Either the system prompt is over-promising or the tool inventory varies between contexts. Worth flagging to `openclaw-vault`.
+- ⚠️ **P1, Principle 6 (Role-based labels)** — The capability list itself is well-translated to user terms (Files / Web / Images / Memory / Messaging / Documents) — that's good. But the list mentions "search the internet" while scenario 4 (next) confirms there is no web_search tool active. Either the system prompt is over-promising or the tool inventory varies between contexts. Worth flagging to `opencli-container`.
 - ✅ The "What do you need?" closer is conversational and inviting. Good.
 
 ### 4. `summarize today's news` — productivity prompt
@@ -263,10 +263,10 @@ Latency = first-byte (`reply.latency_s`). Reply length = concatenated text chara
 
 **New frictions surfaced live (not in Pass 1):**
 
-1. 🚨 **P0** — `/start` greeting is too terse ("Pong. What can I help with?") to anchor the relationship. Fix lives in `components/openclaw-vault` system prompt.
+1. 🚨 **P0** — `/start` greeting is too terse ("Pong. What can I help with?") to anchor the relationship. Fix lives in `components/opencli-container` system prompt.
 2. 🚨 **P0** — "container" (bare) is missing from `app/e2e/user-facing.spec.ts:13-33` banned-term list. The frontend test would not catch this leak today.
 3. 🚨 **P0** — "web_search", "web_fetch", "tool" (in tool-name compound form) are missing from the banned-term list and surface verbatim in scenario 4.
-4. ⚠️ **P1** — Tool inventory inconsistency: scenario 3 advertises "Web — search the internet, fetch URLs" while scenario 4 says "I don't have a web_search/web_fetch tool available." One of these is wrong. Likely the system prompt promises capabilities the runtime doesn't provide, OR the runtime tool-list varies by request. Worth confirming with `components/openclaw-vault`.
+4. ⚠️ **P1** — Tool inventory inconsistency: scenario 3 advertises "Web — search the internet, fetch URLs" while scenario 4 says "I don't have a web_search/web_fetch tool available." One of these is wrong. Likely the system prompt promises capabilities the runtime doesn't provide, OR the runtime tool-list varies by request. Worth confirming with `components/opencli-container`.
 
 ---
 
@@ -296,7 +296,7 @@ Pass 1 left A/B/C open (ship 5/3/1 user-mode pages real). Live evidence sharpens
 
 ---
 
-## Implications for `components/openclaw-vault` (out of parent scope)
+## Implications for `components/opencli-container` (out of parent scope)
 
 Logged here for the submodule maintainer; not a parent-repo task:
 

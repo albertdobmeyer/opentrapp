@@ -56,7 +56,7 @@ The app currently shows 3 "components" (Vault, Forge, Pioneer) — developer con
 - See what your assistant can do (plain language capability list)
 - See that everything is safe (security status as a simple badge, not a 24-point checklist)
 
-**Maps to:** OpenClaw Vault (the runtime)
+**Maps to:** OpenCli Container (the runtime)
 
 ### Screen 2: Skill Store
 **What it is:** Browse and install abilities for your assistant.
@@ -66,7 +66,7 @@ The app currently shows 3 "components" (Vault, Forge, Pioneer) — developer con
 - Download and install new skills safely
 - See health overview (all skills clean, tests passing)
 
-**Maps to:** ClawHub Forge (the toolchain)
+**Maps to:** OpenSkill Forge (the toolchain)
 
 ### Screen 3: Agent Network
 **What it is:** Your assistant's social network — where AI agents interact.
@@ -75,7 +75,7 @@ The app currently shows 3 "components" (Vault, Forge, Pioneer) — developer con
 - Check for injection attacks before your assistant sees them
 - (Future: let your assistant participate in the network)
 
-**Maps to:** Moltbook Pioneer (the network layer)
+**Maps to:** OpenAgent Social (the network layer)
 **Current status:** Moltbook API is down. Show: "Agent Network — Coming Soon"
 
 ## The Onboarding Flow (What the Wizard Should Feel Like)
@@ -149,9 +149,9 @@ What it should feel like:
 
 | Developer concept | User concept |
 |---|---|
-| openclaw-vault | My Assistant |
-| clawhub-forge | Skill Store |
-| moltbook-pioneer | Agent Network |
+| opencli-container | My Assistant |
+| openskill-forge | Skill Store |
+| openagent-social | Agent Network |
 | Hard Shell | Chat Only mode |
 | Split Shell | Supervised mode |
 | Soft Shell | (default — no name needed) |

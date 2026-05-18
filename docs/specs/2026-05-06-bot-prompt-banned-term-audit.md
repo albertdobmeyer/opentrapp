@@ -2,7 +2,7 @@
 
 **Created:** 2026-05-06
 **Status:** Audit complete. One known false positive recorded; rest clean.
-**Trigger:** Following the targeted CONSTRAINTS.md fix (openclaw-vault PR #1, opentrapp PR #35), audit the *remaining* workspace prompt files against the same 28-banned-terms list to surface any other vocabulary leaks the dogfood test didn't probe directly.
+**Trigger:** Following the targeted CONSTRAINTS.md fix (opencli-container PR #1, opentrapp PR #35), audit the *remaining* workspace prompt files against the same 28-banned-terms list to surface any other vocabulary leaks the dogfood test didn't probe directly.
 
 ## Method
 
@@ -41,7 +41,7 @@ This finding is recorded here so future sessions don't rediscover it as new.
 
 ## Long-term: tightening the banned-terms test
 
-The current test (`app/e2e/user-facing.spec.ts`'s `assertNoBannedTerms`) does substring match. That's fine for most terms (`OpenClaw Vault`, `compose.yml`, `sandboxed`) but is too aggressive for words that have both technical and natural-language senses (`proxy`, `manifest`, `containers`).
+The current test (`app/e2e/user-facing.spec.ts`'s `assertNoBannedTerms`) does substring match. That's fine for most terms (`OpenCli Container`, `compose.yml`, `sandboxed`) but is too aggressive for words that have both technical and natural-language senses (`proxy`, `manifest`, `containers`).
 
 A future improvement would be a per-term match strategy:
 
@@ -49,7 +49,7 @@ A future improvement would be a per-term match strategy:
 type BannedTerm = string | { term: string; mode: "substring" | "wordboundary" | "regex"; exclude?: RegExp[] };
 
 const BANNED_TERMS: BannedTerm[] = [
-  "OpenClaw Vault",                                              // strict substring
+  "OpenCli Container",                                              // strict substring
   { term: "proxy", mode: "wordboundary",                         // English allowed
     exclude: [/\bnot\s+(their|your|my)\s+proxy\b/i,
               /\bby\s+proxy\b/i] },
@@ -66,6 +66,6 @@ This is a polishing-session task, not blocking. ~2 hours of focused work to refa
 
 ## References
 
-- The targeted fix that motivated this audit: [openclaw-vault PR #1](https://github.com/albertdobmeyer/openclaw-vault/pull/1)
+- The targeted fix that motivated this audit: [opencli-container PR #1](https://github.com/albertdobmeyer/opencli-container/pull/1)
 - The dogfood findings that triggered the targeted fix: [`2026-05-05-dogfood-full-arc-findings.md`](2026-05-05-dogfood-full-arc-findings.md)
 - The 28-term canon: [`app/e2e/user-facing.spec.ts:27-56`](../../app/e2e/user-facing.spec.ts)

@@ -10,7 +10,7 @@ Documents preserved for historical reference but no longer current. Filenames in
 | `2026-03-27-vision-and-status.md` | Pre-v0.1.0 | Architecture vision and progress snapshot |
 | `2026-04-09-landing-page-handoff.md` | Landing-page setup | Hetzner deployment and domain-publishing handoff |
 | `2026-04-16-roadmap-v4-finalization.md` | v0.1.0 / v0.2.0 transition | Roadmap planning before the v0.2.0 architecture |
-| `2026-04-24-handoff-pioneer-gaps.md` | Pre-Pioneer-parking | Internal handoff describing remaining `moltbook-pioneer` integration work; predates the parking decision |
+| `2026-04-24-handoff-pioneer-gaps.md` | Pre-Pioneer-parking | Internal handoff describing remaining `openagent-social` integration work; predates the parking decision |
 | `2026-04-24-product-assessment.md` | Pre-v0.2.0 | "Honest pros and cons" internal assessment |
 | `2026-04-25-v0.2.0-ship-plan.md` | v0.2.0 ship | Ship plan for the v0.2.0 release |
 
@@ -36,10 +36,10 @@ The `superpowers/` subtree was the project's design-and-planning workspace befor
 
 | File | Subject |
 |---|---|
-| `superpowers/2026-03-23-openclaw-vault-security-harness-design.md` | Original vault security-harness design (pre-v2) |
+| `superpowers/2026-03-23-opencli-container-security-harness-design.md` | Original vault security-harness design (pre-v2) |
 | `superpowers/2026-03-25-split-shell-capability1-persistent-memory.md` | Persistent-memory capability spec for Split Shell |
 | `superpowers/2026-04-06-cross-module-integration-tests-design.md` | Cross-module integration-test design (shipped) |
-| `superpowers/plans/2026-03-23-openclaw-vault-master-roadmap.md` | Original vault roadmap |
+| `superpowers/plans/2026-03-23-opencli-container-master-roadmap.md` | Original vault roadmap |
 | `superpowers/plans/2026-03-23-phase0-bug-fixes.md` | Phase-0 bug-fix list (executed) |
 | `superpowers/plans/2026-03-23-phase1-verify-openclaw-compatibility.md` | Phase-1 OpenClaw-compatibility plan (executed) |
 | `superpowers/plans/2026-03-24-phase2-formalize-gear1.md` | Phase-2 plan to formalise the original "Gear 1" (now Hard Shell) |

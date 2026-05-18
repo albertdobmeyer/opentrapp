@@ -58,7 +58,7 @@ This is a prompt-level instruction, not a code change in OpenClaw itself. The ne
 
 ## CONSTRAINTS.md addition
 
-In [`components/openclaw-vault/scripts/entrypoint.sh`](../../../components/openclaw-vault/scripts/entrypoint.sh) lines 96-161, the CONSTRAINTS heredoc is written to `/home/vault/.openclaw/workspace/CONSTRAINTS.md` on first run. Today it has 7 sections; the new "WHEN A NEW USER FIRST MESSAGES YOU" section slots between "WHEN THE USER ASKS YOU TO FIND A SKILL" (lines 135-145, added in PR #43) and "How To Talk About This With The User" (line 147+).
+In [`components/opencli-container/scripts/entrypoint.sh`](../../../components/opencli-container/scripts/entrypoint.sh) lines 96-161, the CONSTRAINTS heredoc is written to `/home/vault/.openclaw/workspace/CONSTRAINTS.md` on first run. Today it has 7 sections; the new "WHEN A NEW USER FIRST MESSAGES YOU" section slots between "WHEN THE USER ASKS YOU TO FIND A SKILL" (lines 135-145, added in PR #43) and "How To Talk About This With The User" (line 147+).
 
 Insert at line 146 (after the skill-search section, before the vocabulary guidance):
 
@@ -84,16 +84,16 @@ Do NOT send this welcome on subsequent messages. Detect "first message" by check
 If the user's first message contains a request (not a /start), still send the welcome first, then process their request after.
 ```
 
-## Submodule PR (openclaw-vault)
+## Submodule PR (opencli-container)
 
 This is a submodule change, not a parent-repo change. Per [`CLAUDE.md`](../../../CLAUDE.md) §8 ("submodule discipline"):
 
-1. Branch in `components/openclaw-vault/`
+1. Branch in `components/opencli-container/`
 2. Edit `scripts/entrypoint.sh` (insert the CONSTRAINTS section above)
-3. Commit + push to openclaw-vault's GitHub remote
+3. Commit + push to opencli-container's GitHub remote
 4. Open submodule PR; review focuses on whether the new section conflicts with existing constraints (it shouldn't — it's purely additive behavior)
 5. Merge submodule PR
-6. Bump submodule reference in parent repo: `cd /home/albertd/Repositories/opentrapp && git add components/openclaw-vault && git commit -m "Update openclaw-vault submodule reference"`
+6. Bump submodule reference in parent repo: `cd /home/albertd/Repositories/opentrapp && git add components/opencli-container && git commit -m "Update opencli-container submodule reference"`
 7. Open parent PR
 
 The parent PR is small (one submodule SHA bump); the substance is in the submodule PR.
@@ -114,7 +114,7 @@ Telegram inline keyboards are JSON objects passed as `reply_markup` on `sendMess
 
 When a button is tapped, Telegram sends a `callback_query` with the matching `callback_data`. OpenClaw's grammY handler maps `callback_data` starting with `tutorial:` to the corresponding prompt and processes it as if the user had typed it.
 
-> **Implementation note:** OpenClaw's grammY-based bot already supports `callback_query` handling — confirmed via the `extensions/telegram` source documented in [`components/openclaw-vault/docs/openclaw-internals.md`](../../../components/openclaw-vault/docs/openclaw-internals.md). The CONSTRAINTS.md instructions above are sufficient; no OpenClaw code changes needed.
+> **Implementation note:** OpenClaw's grammY-based bot already supports `callback_query` handling — confirmed via the `extensions/telegram` source documented in [`components/opencli-container/docs/openclaw-internals.md`](../../../components/opencli-container/docs/openclaw-internals.md). The CONSTRAINTS.md instructions above are sufficient; no OpenClaw code changes needed.
 
 ## Disambiguation: tutorial vs. wizard test message
 
@@ -139,7 +139,7 @@ Karen's experience is two messages back-to-back: the wizard's confirmation, then
 
 ## Test coverage
 
-Submodule unit tests in `components/openclaw-vault/tests/`:
+Submodule unit tests in `components/opencli-container/tests/`:
 - The CONSTRAINTS.md file ends up at `/home/vault/.openclaw/workspace/CONSTRAINTS.md` after entrypoint runs, with the new section present
 - Read-only-config lock applied (per existing entrypoint.sh §4)
 

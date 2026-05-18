@@ -2,11 +2,11 @@
 
 > **For agentic workers:** Each phase below has its own implementation plan. Execute plans in order — each phase depends on the previous one being complete and verified.
 
-**Goal:** Transform openclaw-vault from a static developer sandbox into a proven, multi-gear security harness that any non-technical user can trust.
+**Goal:** Transform opencli-container from a static developer sandbox into a proven, multi-gear security harness that any non-technical user can trust.
 
 **Architecture:** Six-layer defense (container + proxy + tool policy + app restrictions + exec controls + hardening config). Three gears (Manual / Semi-Auto / Full-Auto). GUI-driven via OpenTrApp manifest system.
 
-**Spec:** `docs/superpowers/specs/2026-03-23-openclaw-vault-security-harness-design.md`
+**Spec:** `docs/superpowers/specs/2026-03-23-opencli-container-security-harness-design.md`
 
 ---
 

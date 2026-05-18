@@ -2,8 +2,8 @@
 
 **Status:** Accepted
 **Decision date:** 2026-04-02 (CDR pipeline design); reaffirmed 2026-04-15 (architecture v2 redesign)
-**Implemented by:** [`components/clawhub-forge/tools/skill-cdr.sh`](../../components/clawhub-forge/tools/skill-cdr.sh); [`components/clawhub-forge/tools/lib/cdr-{intent,parse,prefilter,reconstruct,validate}.{sh,py}`](../../components/clawhub-forge/tools/lib/); [`components/clawhub-forge/tools/lib/patterns.sh`](../../components/clawhub-forge/tools/lib/patterns.sh) (87-pattern catalogue); [`components/clawhub-forge/tools/lib/line-classifier.sh`](../../components/clawhub-forge/tools/lib/line-classifier.sh)
-**Verified by:** Forge self-test (`make self-test`); [`components/clawhub-forge/tests/scanner-self-test/`](../../components/clawhub-forge/tests/scanner-self-test/)
+**Implemented by:** [`components/openskill-forge/tools/skill-cdr.sh`](../../components/openskill-forge/tools/skill-cdr.sh); [`components/openskill-forge/tools/lib/cdr-{intent,parse,prefilter,reconstruct,validate}.{sh,py}`](../../components/openskill-forge/tools/lib/); [`components/openskill-forge/tools/lib/patterns.sh`](../../components/openskill-forge/tools/lib/patterns.sh) (87-pattern catalogue); [`components/openskill-forge/tools/lib/line-classifier.sh`](../../components/openskill-forge/tools/lib/line-classifier.sh)
+**Verified by:** Forge self-test (`make self-test`); [`components/openskill-forge/tests/scanner-self-test/`](../../components/openskill-forge/tests/scanner-self-test/)
 **Empirical motivation:** ClawHavoc study (2026-Q1) — 341 of 2,857 published ClawHub skills classified as malicious
 
 ---
@@ -14,7 +14,7 @@ OpenClaw skills are downloaded from ClawHub, a third-party registry, as bundles 
 
 The empirical baseline is unforgiving. The ClawHavoc study (2026-Q1) sampled 2,857 published ClawHub skills and classified 341 (11.9 %) as malicious — credential exfiltration, persistence mechanisms, command-and-control beacons, payload droppers, all distributed under names that resembled legitimate developer tooling. The `moltbook-ay` skill, for example, masqueraded as a Moltbook-integration helper but contained instructions to download and execute malware via password-protected archives. Several malicious skills reached the top of ClawHub's discovery rankings before being removed.
 
-A pattern-blocklist scanner is the obvious first defense. The clawhub-forge module ships an 87-pattern catalogue mapped to MITRE ATT&CK techniques, scanning every file in the skill bundle (not just `SKILL.md` — many of the malicious skills hid the payload in supporting files). The catalogue covers credential access, exfiltration, persistence, privilege escalation, container escape, supply-chain attacks, environment-injection, prompt-injection, and a dozen other categories.
+A pattern-blocklist scanner is the obvious first defense. The openskill-forge module ships an 87-pattern catalogue mapped to MITRE ATT&CK techniques, scanning every file in the skill bundle (not just `SKILL.md` — many of the malicious skills hid the payload in supporting files). The catalogue covers credential access, exfiltration, persistence, privilege escalation, container escape, supply-chain attacks, environment-injection, prompt-injection, and a dozen other categories.
 
 Pattern blocklisting has a structural ceiling. It detects *known* attacks. Pattern N+1 — a novel obfuscation, a new persistence technique, a category of injection nobody has yet enumerated — slips through. Adding a zero-trust line-classifier on top (every line in every file must match a known-safe pattern, otherwise the skill is quarantined) raises the bar significantly, but at the cost of producing false positives on legitimate skills that legitimately use unusual line shapes (regex-heavy skills, skills that reference security patterns for educational purposes). Both layers are necessary; neither is sufficient.
 
@@ -22,7 +22,7 @@ A more fundamental limitation: both layers ask the same question — *"is this a
 
 ## Decision
 
-The clawhub-forge pipeline applies **Content Disarm and Reconstruction** to every skill that passes the static layers. The original artefact is treated as a parse target, not as the deliverable. The pipeline asks a different question — *can this artefact's intent be re-expressed in a known-safe form?* — and if the answer is yes, the original artefact is discarded and the rebuilt version is delivered.
+The openskill-forge pipeline applies **Content Disarm and Reconstruction** to every skill that passes the static layers. The original artefact is treated as a parse target, not as the deliverable. The pipeline asks a different question — *can this artefact's intent be re-expressed in a known-safe form?* — and if the answer is yes, the original artefact is discarded and the rebuilt version is delivered.
 
 The full pipeline runs inside `vault-forge` (network-isolated from `vault-agent`) and produces, for every input skill, either a clean rebuilt artefact + signed clearance report, or a quarantine record + reason:
 
@@ -54,7 +54,7 @@ Five properties of this design are the design's substance:
 
 **(e) Failure quarantines.** A line that fails classification, a parse that fails completion, or a static-scanner hit at `CRITICAL` severity all result in the same outcome: the skill is held in quarantine and not delivered. The agent learns nothing about the failed skill except that it failed; the failure mode is uniform.
 
-The implementation lives in `components/clawhub-forge/tools/skill-cdr.sh` (the pipeline driver) and the `tools/lib/cdr-*` scripts (the per-stage primitives — pre-filter, intent extraction, parser, reconstructor, validator).
+The implementation lives in `components/openskill-forge/tools/skill-cdr.sh` (the pipeline driver) and the `tools/lib/cdr-*` scripts (the per-stage primitives — pre-filter, intent extraction, parser, reconstructor, validator).
 
 ## Consequences
 
@@ -62,7 +62,7 @@ The implementation lives in `components/clawhub-forge/tools/skill-cdr.sh` (the p
 
 - **Novel attacks are mitigated structurally.** An attack that the 87-pattern catalogue does not yet recognise still fails CDR if it relies on the original artefact's bytes reaching the agent. Whitespace-tricks, comment-hiding, unicode-confusables, layered encoding, polyglot files — none of these survive parse-and-rebuild.
 - **The pipeline composes cleanly with the existing scanner and line classifier.** Three layers, each asking a different question: blocklist (does this match known-bad?), allowlist (does every line match known-safe?), reconstruct (can we re-express intent in known-safe form?). A skill must pass all three to be delivered.
-- **The clearance report is a portable trust artefact.** Other consumers of ClawHub skills could consume the same clearance report (not implemented; available as an integration point). The format is documented in [`components/clawhub-forge/docs/archive/specs/2026-04-02-security-certificate-system.md`](../../components/clawhub-forge/docs/archive/specs/2026-04-02-security-certificate-system.md).
+- **The clearance report is a portable trust artefact.** Other consumers of ClawHub skills could consume the same clearance report (not implemented; available as an integration point). The format is documented in [`components/openskill-forge/docs/archive/specs/2026-04-02-security-certificate-system.md`](../../components/openskill-forge/docs/archive/specs/2026-04-02-security-certificate-system.md).
 - **The pipeline is auditable.** Every quarantine record, every clearance report, and every CDR rebuild is logged. A reviewer can reconstruct the pipeline's per-skill decisions post-hoc.
 - **Operationally cheap per skill.** Typical CDR runtime is 1–3 seconds per skill; the dominant cost is the static scanner's pattern matching across all files. The CDR rebuild itself is template-driven and fast.
 
@@ -100,12 +100,12 @@ CDR composes with all of these (the pipeline could feed only into a trusted-auth
 
 ## References
 
-- Companion architecture document: [`docs/trifecta.md`](../trifecta.md) §4.2 (clawhub-forge supply-chain defense)
+- Companion architecture document: [`docs/trifecta.md`](../trifecta.md) §4.2 (openskill-forge supply-chain defense)
 - Whitepaper: [`docs/whitepaper.md`](../whitepaper.md) §6 (Content Disarm and Reconstruction)
-- Forge README: [`components/clawhub-forge/README.md`](../../components/clawhub-forge/README.md) — pipeline stages, pattern catalogue, verifier verdicts
-- Self-test: `make self-test` from [`components/clawhub-forge/`](../../components/clawhub-forge/)
-- Implementation: [`components/clawhub-forge/tools/skill-cdr.sh`](../../components/clawhub-forge/tools/skill-cdr.sh) and the `tools/lib/cdr-*` scripts
-- Pattern catalogue source: [`components/clawhub-forge/tools/lib/patterns.sh`](../../components/clawhub-forge/tools/lib/patterns.sh)
-- Line classifier source: [`components/clawhub-forge/tools/lib/line-classifier.sh`](../../components/clawhub-forge/tools/lib/line-classifier.sh)
-- Empirical motivation: ClawHavoc study (2026-Q1); `moltbook-ay` trojanised skill (documented in [`components/clawhub-forge/docs/research/security-report.md`](../../components/clawhub-forge/docs/research/security-report.md))
-- Historical: [`components/clawhub-forge/docs/archive/specs/2026-04-02-content-disarm-reconstruction.md`](../../components/clawhub-forge/docs/archive/specs/2026-04-02-content-disarm-reconstruction.md) (the original CDR design document, archived)
+- Forge README: [`components/openskill-forge/README.md`](../../components/openskill-forge/README.md) — pipeline stages, pattern catalogue, verifier verdicts
+- Self-test: `make self-test` from [`components/openskill-forge/`](../../components/openskill-forge/)
+- Implementation: [`components/openskill-forge/tools/skill-cdr.sh`](../../components/openskill-forge/tools/skill-cdr.sh) and the `tools/lib/cdr-*` scripts
+- Pattern catalogue source: [`components/openskill-forge/tools/lib/patterns.sh`](../../components/openskill-forge/tools/lib/patterns.sh)
+- Line classifier source: [`components/openskill-forge/tools/lib/line-classifier.sh`](../../components/openskill-forge/tools/lib/line-classifier.sh)
+- Empirical motivation: ClawHavoc study (2026-Q1); `moltbook-ay` trojanised skill (documented in [`components/openskill-forge/docs/research/security-report.md`](../../components/openskill-forge/docs/research/security-report.md))
+- Historical: [`components/openskill-forge/docs/archive/specs/2026-04-02-content-disarm-reconstruction.md`](../../components/openskill-forge/docs/archive/specs/2026-04-02-content-disarm-reconstruction.md) (the original CDR design document, archived)

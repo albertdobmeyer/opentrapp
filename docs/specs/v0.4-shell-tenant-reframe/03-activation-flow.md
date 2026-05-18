@@ -64,7 +64,7 @@ pub async fn validate_anthropic_key(key: String) -> Result<ValidationOutcome, St
 }
 ```
 
-Why this model: `claude-haiku-4-5-20251001` is the cheapest current model with `max_tokens: 1`. `api.anthropic.com` is already on the proxy allowlist at [`components/openclaw-vault/proxy/allowlist.txt:4`](../../../components/openclaw-vault/proxy/allowlist.txt) (verified during investigation).
+Why this model: `claude-haiku-4-5-20251001` is the cheapest current model with `max_tokens: 1`. `api.anthropic.com` is already on the proxy allowlist at [`components/opencli-container/proxy/allowlist.txt:4`](../../../components/opencli-container/proxy/allowlist.txt) (verified during investigation).
 
 > **Routing concern:** during activation, the proxy may already be running with empty `ANTHROPIC_API_KEY`. The validate command bypasses the perimeter (direct `reqwest` from the host) — this is a *pre-flight* check, not a perimeter-routed request. The user's machine talks directly to api.anthropic.com once with their key. Post-activation, all real agent traffic still goes through the proxy.
 
@@ -140,7 +140,7 @@ Server-side offset semantics: Telegram persists undelivered updates 24h. `getUpd
 Sequence after both steps validate:
 
 1. Write `ANTHROPIC_API_KEY` and `TELEGRAM_BOT_TOKEN` to `.env` via existing [`upsertEnvVar`](../../../app/src/lib/wizardUtils.ts) helper
-2. `podman compose up -d --force-recreate vault-proxy` — proxy reads env at process start; SIGHUP only reloads allowlist per [`vault-proxy.py:49`](../../../components/openclaw-vault/proxy/vault-proxy.py). `--force-recreate` is the correct primitive. Brief restart (~2s) is invisible because the agent isn't running yet.
+2. `podman compose up -d --force-recreate vault-proxy` — proxy reads env at process start; SIGHUP only reloads allowlist per [`vault-proxy.py:49`](../../../components/opencli-container/proxy/vault-proxy.py). `--force-recreate` is the correct primitive. Brief restart (~2s) is invisible because the agent isn't running yet.
 3. `podman compose up -d vault-agent`
 4. Write marker files:
    - `~/.opentrapp/activated` (file presence; no content)
@@ -209,4 +209,4 @@ E2E tests in [`app/e2e/activation.spec.ts`](../../../app/e2e/) (new):
 - **Multi-key management** (work account vs personal) — single key per install
 - **Webhook-based Telegram** — long-polling is OpenClaw's default; webhooks need a public URL on the laptop, forbidden by `CLAUDE.md` §10
 - **Re-running activation while the agent is already running** — requires stopping vault-agent first; the modal disables the launch trigger when state is `(ShellReady, Running)`
-- **Telegram chat-ID allowlist** — the bot's `dmPolicy: "pairing"` ([`openclaw-hardening.json5:92`](../../../components/openclaw-vault/config/openclaw-hardening.json5)) handles this; we just send the test message to whoever sent /start
+- **Telegram chat-ID allowlist** — the bot's `dmPolicy: "pairing"` ([`openclaw-hardening.json5:92`](../../../components/opencli-container/config/openclaw-hardening.json5)) handles this; we just send the test message to whoever sent /start

@@ -293,7 +293,7 @@ No silent fallback path.
 
 ## Plaintext .env disclosure
 
-Anthropic and Telegram keys persist in plaintext at `<repo-root>/components/openclaw-vault/.env` per the existing pattern. Defense-in-depth measures already in place:
+Anthropic and Telegram keys persist in plaintext at `<repo-root>/components/opencli-container/.env` per the existing pattern. Defense-in-depth measures already in place:
 - `.env` is in `.gitignore`
 - `redact_secrets` at [`lifecycle.rs:141-163`](../../../app/src-tauri/src/lifecycle.rs) scrubs known token-bearing env vars from logs
 - Frontend redaction at [`install-step/utils.ts:60-64`](../../../app/src/components/wizard/install-step/utils.ts) handles streaming logs

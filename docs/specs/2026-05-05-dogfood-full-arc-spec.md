@@ -25,7 +25,7 @@ Three levels, evaluated independently:
 
 2. **Surface-quality level (rubric-driven).** Every reachable surface scores ≥ 8.0 on the 13-principle rubric, with the same target floors Pass 8 used (≥ 8.5 for non-Telegram surfaces). Zero banned-term leaks across the full session.
 
-3. **Architecture level (does the perimeter actually do what it claims).** All four containers stay up across the session. The 24-point startup verification ([`components/openclaw-vault/scripts/verify.sh`](../../components/openclaw-vault/scripts/verify.sh)) is green at session start *and* end. Tier-B's adversarial scenarios all hit their defensive layer and bounce. Tier-C drives every AssistantStatus state with calm, jargon-free user-facing copy. Tier-D drives every termination path to clean teardown. API spend stays under the configured cap (default $0.50).
+3. **Architecture level (does the perimeter actually do what it claims).** All four containers stay up across the session. The 24-point startup verification ([`components/opencli-container/scripts/verify.sh`](../../components/opencli-container/scripts/verify.sh)) is green at session start *and* end. Tier-B's adversarial scenarios all hit their defensive layer and bounce. Tier-C drives every AssistantStatus state with calm, jargon-free user-facing copy. Tier-D drives every termination path to clean teardown. API spend stays under the configured cap (default $0.50).
 
 ## Four-tier scenario set (27 scenarios)
 

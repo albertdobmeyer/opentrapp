@@ -122,7 +122,7 @@ Distinguishing `starting` from `recovering`: the frontend hook tracks whether `R
 
 **Wire-up:**
 - Reads from existing `useSettings` hook.
-- Writes via existing `update` for app settings; writes `.env` via `writeConfig("openclaw-vault", ".env", ...)` for key rotations.
+- Writes via existing `update` for app settings; writes `.env` via `writeConfig("opencli-container", ".env", ...)` for key rotations.
 - Save errors route through `classifyError()` (Pass 5).
 - Spending limit edits update `settings.spendingLimit.monthly` only — the `$X this month` display stays at the stub from Day 1.
 

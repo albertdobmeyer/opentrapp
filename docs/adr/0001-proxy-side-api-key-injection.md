@@ -2,8 +2,8 @@
 
 **Status:** Accepted
 **Decision date:** 2026-03-23 (vault-proxy initial implementation); reaffirmed 2026-04-15 (architecture v2 redesign)
-**Implemented by:** [`components/openclaw-vault/proxy/vault-proxy.py`](../../components/openclaw-vault/proxy/vault-proxy.py); [`components/openclaw-vault/scripts/entrypoint.sh`](../../components/openclaw-vault/scripts/entrypoint.sh); [`components/openclaw-vault/compose.yml`](../../components/openclaw-vault/compose.yml)
-**Verified by:** Verification check 7 in [`components/openclaw-vault/scripts/verify.sh`](../../components/openclaw-vault/scripts/verify.sh) (`API keys absent from vault-agent's environment`)
+**Implemented by:** [`components/opencli-container/proxy/vault-proxy.py`](../../components/opencli-container/proxy/vault-proxy.py); [`components/opencli-container/scripts/entrypoint.sh`](../../components/opencli-container/scripts/entrypoint.sh); [`components/opencli-container/compose.yml`](../../components/opencli-container/compose.yml)
+**Verified by:** Verification check 7 in [`components/opencli-container/scripts/verify.sh`](../../components/opencli-container/scripts/verify.sh) (`API keys absent from vault-agent's environment`)
 
 ---
 
@@ -48,7 +48,7 @@ The credential is consequently visible only to the `vault-proxy` process. `vault
 
 ### Negative
 
-- **`vault-proxy` becomes the single point of credential exposure.** A compromise of `vault-proxy` (rather than `vault-agent`) exposes the credential. The proxy is hardened with a custom seccomp profile and the same capability-drop discipline as the agent, but the proxy's seccomp policy is necessarily wider than the agent's because mitmproxy requires syscalls (notably `socket`-family operations and TLS interception primitives) that the agent does not need. The trade-off — wider syscall surface in `vault-proxy` in exchange for credential isolation in `vault-agent` — is documented in the [vault README's residual-risks section](../../components/openclaw-vault/README.md#residual-risks-the-operator-must-understand).
+- **`vault-proxy` becomes the single point of credential exposure.** A compromise of `vault-proxy` (rather than `vault-agent`) exposes the credential. The proxy is hardened with a custom seccomp profile and the same capability-drop discipline as the agent, but the proxy's seccomp policy is necessarily wider than the agent's because mitmproxy requires syscalls (notably `socket`-family operations and TLS interception primitives) that the agent does not need. The trade-off — wider syscall surface in `vault-proxy` in exchange for credential isolation in `vault-agent` — is documented in the [vault README's residual-risks section](../../components/opencli-container/README.md#residual-risks-the-operator-must-understand).
 - **Allowlisted destinations can still be abused during a live session.** A compromised agent cannot read the credential but can issue arbitrary calls to allowlisted hosts using it. Mitigation: configure a hard spending cap on the API key. The cap is part of the security boundary, not a billing convenience.
 - **TLS-interception MITM is required.** `vault-proxy` must terminate the agent's outbound TLS and re-establish TLS to the upstream provider (otherwise it cannot read the headers to substitute). This requires the agent to trust mitmproxy's CA inside the container, which is set up by `scripts/entrypoint.sh` and is invisible to the user. The mitmproxy CA is per-container and re-generated on container creation; it does not persist on the host.
 - **Operationally, this rules out direct-to-API agent paths.** The agent cannot bypass the proxy even if a contributor adds a new tool that wants to make a direct outbound call. This is a feature (every egress is filtered and logged) but it is also a constraint that adding new outbound paths must respect.
@@ -73,6 +73,6 @@ The credential is consequently visible only to the `vault-proxy` process. `vault
 
 - Companion architecture document: [`docs/trifecta.md`](../trifecta.md) §4.4 (vault-proxy as the egress gateway)
 - Whitepaper: [`docs/whitepaper.md`](../whitepaper.md) §1 (the "credential-adjacent" anti-pattern), §3.3, §4.1 layer 2
-- Verification: 24-point startup check 7 ("API keys absent from environment") in [`components/openclaw-vault/scripts/verify.sh`](../../components/openclaw-vault/scripts/verify.sh)
-- Implementation: [`components/openclaw-vault/proxy/vault-proxy.py`](../../components/openclaw-vault/proxy/vault-proxy.py)
+- Verification: 24-point startup check 7 ("API keys absent from environment") in [`components/opencli-container/scripts/verify.sh`](../../components/opencli-container/scripts/verify.sh)
+- Implementation: [`components/opencli-container/proxy/vault-proxy.py`](../../components/opencli-container/proxy/vault-proxy.py)
 - Empirical motivation: ClawHavoc study (2026-Q1); Moltbook database breach (2026-01); CVE-2026-25253

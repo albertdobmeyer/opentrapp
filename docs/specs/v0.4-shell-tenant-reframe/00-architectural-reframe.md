@@ -11,11 +11,11 @@ This contradicts the architecture's own vocabulary. From [`CLAUDE.md`](../../../
 
 Three pieces of evidence the security model was always designed for shell/tenant separation:
 
-1. **Placeholder key by design.** [`components/openclaw-vault/scripts/entrypoint.sh:54-60`](../../../components/openclaw-vault/scripts/entrypoint.sh) writes a literal placeholder string (`sk-ant-api03-placeholder-vault-proxy-will-inject-real-key-placeholder`) as the agent's auth profile. The agent was *required* to never see the real key — the proxy injects it at request time. The wizard collecting the key before the perimeter exists has been a UX choice, not a security necessity.
-2. **Per-request env lookup in the proxy.** [`components/openclaw-vault/proxy/vault-proxy.py:176-181`](../../../components/openclaw-vault/proxy/vault-proxy.py) reads `ANTHROPIC_API_KEY` per request and logs a warning if absent — never gates startup. The proxy is engineered to run idle, with no key, indefinitely.
+1. **Placeholder key by design.** [`components/opencli-container/scripts/entrypoint.sh:54-60`](../../../components/opencli-container/scripts/entrypoint.sh) writes a literal placeholder string (`sk-ant-api03-placeholder-vault-proxy-will-inject-real-key-placeholder`) as the agent's auth profile. The agent was *required* to never see the real key — the proxy injects it at request time. The wizard collecting the key before the perimeter exists has been a UX choice, not a security necessity.
+2. **Per-request env lookup in the proxy.** [`components/opencli-container/proxy/vault-proxy.py:176-181`](../../../components/opencli-container/proxy/vault-proxy.py) reads `ANTHROPIC_API_KEY` per request and logs a warning if absent — never gates startup. The proxy is engineered to run idle, with no key, indefinitely.
 3. **One-directional `depends_on`.** [`compose.yml`](../../../compose.yml) declares `vault-agent.depends_on: vault-proxy` only. Forge and pioneer have no startup dependency on the agent. The shell (proxy + forge + pioneer) and the tenant (agent) are already separable in the compose graph.
 
-Empirically verified: OpenClaw with empty `TELEGRAM_BOT_TOKEN` boots cleanly with Telegram silently disabled (`components/openclaw-vault/docs/phase1-findings.md:134`). The agent container itself is happy to run without credentials; we just don't need it to.
+Empirically verified: OpenClaw with empty `TELEGRAM_BOT_TOKEN` boots cleanly with Telegram silently disabled (`components/opencli-container/docs/phase1-findings.md:134`). The agent container itself is happy to run without credentials; we just don't need it to.
 
 ## The reframe in concrete terms
 
@@ -25,7 +25,7 @@ Karen runs the OS installer. The Tauri app appears in the system tray. End. No w
 ### Phase 2 — Bootstrap (background, automatic)
 The tray app, on first run, runs everything that doesn't require Karen's input. Pipeline detail in [`02-bootstrap-service.md`](02-bootstrap-service.md). Summary:
 1. Detect Podman/Docker; install if absent (Podman sidecar)
-2. Copy [`.env.example`](../../../components/openclaw-vault/.env.example) to `.env` if missing
+2. Copy [`.env.example`](../../../components/opencli-container/.env.example) to `.env` if missing
 3. Build local images (vault-agent, vault-forge, vault-pioneer — all `build:` stanzas)
 4. Pull remote images (mitmproxy)
 5. Bring up the **shell** containers only: `podman compose up -d vault-proxy vault-forge vault-pioneer`
@@ -76,7 +76,7 @@ After Phase 3 has succeeded once, marker files persist. Subsequent app launches:
 | Bootstrap progress events | **New** | 3 new event types alongside existing `perimeter-state-changed` |
 | Single-instance plugin | **New** | `tauri-plugin-single-instance`, ~10 LOC |
 | Tray icon variants (amber/green/red) | **New** | 3 PNG files + `set_icon()` calls |
-| Bot first-message tutorial | **New** | Submodule PR in openclaw-vault; new CONSTRAINTS section |
+| Bot first-message tutorial | **New** | Submodule PR in opencli-container; new CONSTRAINTS section |
 
 **Net read:** the security architecture is preserved exactly. The entry/lifecycle subsystem is rebuilt on top of it, with substantial new infrastructure (bootstrap pipeline + sidecar). The Anthropic narrative for this work: *"we keep the security architecture verbatim and rebuild the onboarding and lifecycle subsystem to match it."*
 

@@ -87,7 +87,7 @@ The `PERIMETER_CONTAINERS` array stays as a list of *service* names (which match
 ### `app/src-tauri/src/commands/diagnostics.rs`
 Likely has similar filter logic. Audit and update to label-based.
 
-### `components/openclaw-vault/scripts/kill.sh` and `kill.ps1`
+### `components/opencli-container/scripts/kill.sh` and `kill.ps1`
 These currently use `compose down`/`compose kill` which are project-aware (no name knowledge needed). Likely no changes required; verify by reading.
 
 ### Documentation references
@@ -96,13 +96,13 @@ README.md, docs/trifecta.md, docs/diagrams.md may reference container names by t
 ### `app/e2e/` tests
 If any E2E test exec's into a container by exact name, update to label-based or use `compose exec` (which is project + service aware).
 
-### Submodule scripts (follow-up PR in `openclaw-vault`)
+### Submodule scripts (follow-up PR in `opencli-container`)
 
-The audit during PR-1 implementation surfaced four scripts inside the `components/openclaw-vault/scripts/` submodule that `inspect`/`exec` containers by hardcoded name:
+The audit during PR-1 implementation surfaced four scripts inside the `components/opencli-container/scripts/` submodule that `inspect`/`exec` containers by hardcoded name:
 
-- `verify.sh:19` — `CONTAINER="openclaw-vault"`
+- `verify.sh:19` — `CONTAINER="opencli-container"`
 - `verify.sh:308-309` — `inspect "vault-proxy"` / `exec vault-proxy ...`
-- `vault-audit.sh:26-27` + downstream — `CONTAINER="openclaw-vault"`, `PROXY_CONTAINER="vault-proxy"`
+- `vault-audit.sh:26-27` + downstream — `CONTAINER="opencli-container"`, `PROXY_CONTAINER="vault-proxy"`
 - `log-rotate.sh:29-30` + downstream — same pattern
 - `setup.sh:107` — `exec vault-proxy ...`
 
@@ -111,13 +111,13 @@ The audit during PR-1 implementation surfaced four scripts inside the `component
 | Service | Standalone name | Parent name | Pre-PR-1 parent behaviour | Post-PR-1, pre-PR-1.5 | Post-PR-1.5 |
 |---------|-----------------|-------------|---------------------------|------------------------|-------------|
 | Proxy | `vault-proxy` | `vault-proxy` (literal pre-PR-1, project-prefixed post-PR-1) | Worked by coincidence (matching `container_name:` overrides) | Broken — `vault-proxy` literal no longer matches | Works in both contexts via label lookup |
-| Vault/Agent | `vault` (service) → `openclaw-vault` (container_name) | `vault-agent` (service) → `vault-agent` literal pre-PR-1 | **Already broken** — `openclaw-vault` literal never existed in parent | Still broken (same reason) | Still broken (service-name mismatch is deeper) |
+| Vault/Agent | `vault` (service) → `opencli-container` (container_name) | `vault-agent` (service) → `vault-agent` literal pre-PR-1 | **Already broken** — `opencli-container` literal never existed in parent | Still broken (same reason) | Still broken (service-name mismatch is deeper) |
 
 So PR-1.5 restores the proxy-side checks for the parent context (the actual regression introduced by PR-1) but does **not** restore the agent-side checks — those have been broken in the parent context since the parent existed and reflect a deeper service-naming mismatch between the submodule's standalone `compose.yml` (service `vault`) and the parent's (service `vault-agent`). Reconciling that is out of scope here; tracked as a future architectural cleanup (likely a coordinated rename in one of the two compose files).
 
-The PR-1.5 fix uses a `resolve_service_container` helper that looks containers up by the `com.docker.compose.service` label. See [openclaw-vault `docs/specs/2026-05-10-script-container-resolution.md`](https://github.com/albertdobmeyer/openclaw-vault/blob/main/docs/specs/2026-05-10-script-container-resolution.md).
+The PR-1.5 fix uses a `resolve_service_container` helper that looks containers up by the `com.docker.compose.service` label. See [opencli-container `docs/specs/2026-05-10-script-container-resolution.md`](https://github.com/albertdobmeyer/opencli-container/blob/main/docs/specs/2026-05-10-script-container-resolution.md).
 
-`kill.sh` and `kill.ps1` only reference the *volume* names (`openclaw-vault_vault-proxy-logs`), which are project-scoped and unaffected by `container_name:` removal — no change needed there.
+`kill.sh` and `kill.ps1` only reference the *volume* names (`opencli-container_vault-proxy-logs`), which are project-scoped and unaffected by `container_name:` removal — no change needed there.
 
 ## Migration concern: existing users
 

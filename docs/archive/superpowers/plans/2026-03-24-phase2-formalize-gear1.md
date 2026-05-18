@@ -10,7 +10,7 @@
 
 **Spec reference:** Section 5.4 (Gear 1 definition) of the design spec.
 
-**Working directory:** `components/openclaw-vault`
+**Working directory:** `components/opencli-container`
 
 **SAFETY:** Haiku-only API key, $5 cap, no web tools. Exec security = deny. Tool profile = minimal. Telegram DM policy = pairing (must manually approve each sender).
 
@@ -44,13 +44,13 @@ This task requires the user to create a Telegram bot. The steps are manual (Tele
 
 User must open Telegram and chat with `@BotFather`:
 1. Send `/newbot`
-2. Choose a name (e.g., "OpenClaw Vault Test")
+2. Choose a name (e.g., "OpenCli Container Test")
 3. Choose a username (e.g., `openclaw_vault_test_bot`)
 4. Copy the bot token (format: `123456789:ABCdefGHIjklMNOpqrsTUVwxyz`)
 
 - [ ] **Step 2: Add bot token to .env file**
 
-Append to `components/openclaw-vault/.env`:
+Append to `components/opencli-container/.env`:
 ```
 TELEGRAM_BOT_TOKEN=<paste token here>
 ```
@@ -137,16 +137,16 @@ git commit -m "chore: clean up Gear 1 allowlist and remove dead YAML config
 - [ ] **Step 1: Rebuild and start the stack**
 
 ```bash
-podman rm -f vault-proxy openclaw-vault 2>/dev/null
-podman rmi openclaw-vault_vault openclaw-vault 2>/dev/null
-podman volume rm openclaw-vault_vault-proxy-logs openclaw-vault_proxy-ca 2>/dev/null
-podman build -t openclaw-vault -f Containerfile . && podman tag openclaw-vault openclaw-vault_vault
+podman rm -f vault-proxy opencli-container 2>/dev/null
+podman rmi opencli-container_vault opencli-container 2>/dev/null
+podman volume rm opencli-container_vault-proxy-logs opencli-container_proxy-ca 2>/dev/null
+podman build -t opencli-container -f Containerfile . && podman tag opencli-container opencli-container_vault
 podman-compose up -d
 ```
 
 Wait ~60s for startup, then verify:
 ```bash
-podman logs openclaw-vault 2>&1 | grep -E 'telegram|Telegram|listening|Gateway'
+podman logs opencli-container 2>&1 | grep -E 'telegram|Telegram|listening|Gateway'
 ```
 
 Expected: Telegram plugin starts, gateway listening, bot connects to Telegram API.
@@ -171,18 +171,18 @@ Expected: ALLOWED requests to `api.telegram.org` (Telegram long-polling).
 - [ ] **Step 4: Approve the pairing**
 
 ```bash
-podman exec openclaw-vault openclaw pairing list telegram
+podman exec opencli-container openclaw pairing list telegram
 ```
 
 This should show your pending pairing request with a code.
 
 ```bash
-podman exec openclaw-vault openclaw pairing approve telegram <CODE>
+podman exec opencli-container openclaw pairing approve telegram <CODE>
 ```
 
 **If this fails with device token error:** The CLI needs device auth. Try:
 ```bash
-podman exec openclaw-vault openclaw devices list
+podman exec opencli-container openclaw devices list
 ```
 If device auth blocks all CLI commands, we'll need to explore alternative pairing methods.
 
@@ -406,8 +406,8 @@ git push origin main
 Then update parent repo:
 ```bash
 cd opentrapp
-git add components/openclaw-vault
-git commit -m "chore: update openclaw-vault — Phase 2 (Gear 1 formalized)"
+git add components/opencli-container
+git commit -m "chore: update opencli-container — Phase 2 (Gear 1 formalized)"
 git push origin main
 ```
 

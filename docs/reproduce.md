@@ -30,7 +30,7 @@ The document is structured in three groups: counted artefacts (1–8), test-suit
 |-------|-------|
 | Claim | The skill scanner contains 87 patterns mapped to MITRE ATT&CK techniques |
 | Source | [`README.md`](../README.md) "Capabilities", [`docs/whitepaper.md`](whitepaper.md) §6, [`docs/trifecta.md`](trifecta.md) §4.2 |
-| Command | `grep -cE "^\s*'(CRITICAL\|HIGH\|MEDIUM)\|" components/clawhub-forge/tools/lib/patterns.sh` |
+| Command | `grep -cE "^\s*'(CRITICAL\|HIGH\|MEDIUM)\|" components/openskill-forge/tools/lib/patterns.sh` |
 | Expected output | `87` |
 | Runtime | < 1 s |
 
@@ -39,7 +39,7 @@ The `SCAN_PATTERNS` array in `patterns.sh` is the single source of truth for the
 To inspect the category breakdown:
 
 ```bash
-grep -oE "^\s*'(CRITICAL|HIGH|MEDIUM)\|[a-z_]+" components/clawhub-forge/tools/lib/patterns.sh \
+grep -oE "^\s*'(CRITICAL|HIGH|MEDIUM)\|[a-z_]+" components/openskill-forge/tools/lib/patterns.sh \
   | awk -F'|' '{print $2}' | sort | uniq -c | sort -rn
 ```
 
@@ -49,7 +49,7 @@ grep -oE "^\s*'(CRITICAL|HIGH|MEDIUM)\|[a-z_]+" components/clawhub-forge/tools/l
 |-------|-------|
 | Claim | A 24-point verification runs at container startup and on demand |
 | Source | [`README.md`](../README.md) "Capabilities", [`docs/whitepaper.md`](whitepaper.md) §8 |
-| Command | `grep -cE '^check [0-9]+ "' components/openclaw-vault/scripts/verify.sh` plus the inline check-24 row |
+| Command | `grep -cE '^check [0-9]+ "' components/opencli-container/scripts/verify.sh` plus the inline check-24 row |
 | Expected output | `24` (combined; see `docs/reproduce.sh` for the exact recipe) |
 | Runtime | < 1 s |
 
@@ -58,7 +58,7 @@ Checks 1–23 are invoked through the `check N "<title>"` helper; check 24 (conf
 To list the 23 helper-invoked check titles:
 
 ```bash
-grep -E '^check [0-9]+ "' components/openclaw-vault/scripts/verify.sh
+grep -E '^check [0-9]+ "' components/opencli-container/scripts/verify.sh
 ```
 
 ### 3. Forty-two orchestration checks
@@ -199,8 +199,8 @@ These are claims supported by external studies or vendor-disclosed events. We do
 |-------|-------|
 | Claim | The ClawHavoc study (2026-Q1) classified 341 of 2,857 published ClawHub skills (11.9 %) as malicious |
 | Source | [`README.md`](../README.md) "Purpose", [`docs/whitepaper.md`](whitepaper.md) §1, [`docs/trifecta.md`](trifecta.md) §1 |
-| Verification | The study's methodology and per-skill classification dataset are documented in `components/openclaw-vault/docs/research/` (companion repository, openclaw-vault) |
-| Reproduction | The study's methodology can be re-run on the current ClawHub corpus by following `components/openclaw-vault/docs/research/clawhavoc-methodology.md`. We do not re-run it as part of `reproduce.sh`. |
+| Verification | The study's methodology and per-skill classification dataset are documented in `components/opencli-container/docs/research/` (companion repository, opencli-container) |
+| Reproduction | The study's methodology can be re-run on the current ClawHub corpus by following `components/opencli-container/docs/research/clawhavoc-methodology.md`. We do not re-run it as part of `reproduce.sh`. |
 
 The figure is intentionally a snapshot of the registry as of 2026-Q1. A current re-run would produce a different (likely lower, as ClawHub has since added moderation) percentage; the architectural assumption — *every* incoming skill is potentially hostile — does not depend on the precise rate.
 

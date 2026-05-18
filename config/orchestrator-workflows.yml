@@ -22,13 +22,13 @@ workflows:
     shell_requirement: split
     steps:
       - id: download-and-scan
-        component: clawhub-forge
+        component: openskill-forge
         workflow: safe-download
         args:
           skill_name: "{{input.skill_name}}"
         abort_on_failure: true
       - id: install
-        component: openclaw-vault
+        component: opencli-container
         command: install-skill
         args:
           skill_path: "exports/{{input.skill_name}}"
@@ -51,15 +51,15 @@ workflows:
     danger: caution
     steps:
       - id: vault-setup
-        component: openclaw-vault
+        component: opencli-container
         workflow: secure-start
         abort_on_failure: true
       - id: forge-setup
-        component: clawhub-forge
+        component: openskill-forge
         command: setup
         depends_on: vault-setup
       - id: pioneer-setup
-        component: moltbook-pioneer
+        component: openagent-social
         command: setup
         depends_on: vault-setup
     inputs: []
@@ -75,13 +75,13 @@ workflows:
     danger: safe
     steps:
       - id: vault-verify
-        component: openclaw-vault
+        component: opencli-container
         workflow: full-verify
       - id: forge-verify
-        component: clawhub-forge
+        component: openskill-forge
         workflow: full-check
       - id: pioneer-verify
-        component: moltbook-pioneer
+        component: openagent-social
         workflow: safety-check
 
   # ─── Enable Feed Monitoring ────────────────────────────────────
@@ -98,10 +98,10 @@ workflows:
     shell_requirement: split
     steps:
       - id: export-patterns
-        component: moltbook-pioneer
+        component: openagent-social
         workflow: export-patterns
         abort_on_failure: true
       - id: safety-preflight
-        component: moltbook-pioneer
+        component: openagent-social
         workflow: safety-check
         depends_on: export-patterns

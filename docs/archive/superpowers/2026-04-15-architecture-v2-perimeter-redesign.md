@@ -7,10 +7,10 @@
 - `docs/trifecta.md` (current module relationships — to be updated)
 - `docs/product-assessment.md` (USP analysis, user journey requirements)
 - `GLOSSARY.md` (Shell system terminology)
-- `components/openclaw-vault/docs/specs/2026-03-30-skill-installation-path.md` (current forge→vault flow — to be replaced)
-- `components/openclaw-vault/docs/specs/2026-03-30-feed-scanning-deferred.md` (pioneer integration — absorbed by this spec)
-- `components/clawhub-forge/docs/forge-identity-and-design.md` (forge identity — to be updated)
-- `components/moltbook-pioneer/docs/specs/2026-04-04-vault-integration-design.md` (pioneer integration — absorbed by this spec)
+- `components/opencli-container/docs/specs/2026-03-30-skill-installation-path.md` (current forge→vault flow — to be replaced)
+- `components/opencli-container/docs/specs/2026-03-30-feed-scanning-deferred.md` (pioneer integration — absorbed by this spec)
+- `components/openskill-forge/docs/forge-identity-and-design.md` (forge identity — to be updated)
+- `components/openagent-social/docs/specs/2026-04-04-vault-integration-design.md` (pioneer integration — absorbed by this spec)
 
 ---
 
@@ -18,7 +18,7 @@
 
 ### The Security Gap
 
-The current architecture runs clawhub-forge and moltbook-pioneer as bare bash scripts on the user's unprotected host machine. Both components handle untrusted content:
+The current architecture runs openskill-forge and openagent-social as bare bash scripts on the user's unprotected host machine. Both components handle untrusted content:
 
 - **Forge** downloads SKILL files from ClawHub (11.9% malware rate in the ClawHavoc incident), processes them with bash parsers, and stores them on the host filesystem. A vulnerability in the parser gives the attacker the user's entire machine.
 - **Pioneer** fetches content from the Moltbook API (25 known injection patterns) and processes it on the host. Same risk.
@@ -273,9 +273,9 @@ orchestrator_workflows:
       Downloads a skill, scans it for security threats,
       rebuilds it from scratch, and installs it for your assistant.
     steps:
-      - component: clawhub-forge
+      - component: openskill-forge
         workflow: vet-and-deliver
-      - component: openclaw-vault
+      - component: opencli-container
         command: install-skill
         args:
           skill_path: "{{previous.output_path}}"
@@ -328,7 +328,7 @@ Claude Code can manage the same infrastructure programmatically:
 - `docs/trifecta.md`: Update to reflect perimeter model
 - `README.md`: Reframe for the corrected architecture and target audience
 
-### openclaw-vault
+### opencli-container
 
 - `compose.yml`: Evolves from 2 services to part of the parent's 4-service compose
 - Network config: `vault-internal` network now shared with forge and pioneer containers
@@ -337,7 +337,7 @@ Claude Code can manage the same infrastructure programmatically:
 - Shell configs: unchanged (Hard/Split/Soft still control agent restrictions)
 - Security model: unchanged (six layers preserved, extended to cover forge/pioneer)
 
-### clawhub-forge
+### openskill-forge
 
 - New: `Dockerfile` / `Containerfile` — containerize the scanning pipeline
 - CDR pipeline: runs inside container, downloads untrusted files INTO the container
@@ -347,7 +347,7 @@ Claude Code can manage the same infrastructure programmatically:
 - `component.yml`: Add `workflows` section, update `prerequisites.container_runtime: true`
 - `forge-identity-and-design.md`: Update to reflect containerized deployment
 
-### moltbook-pioneer
+### openagent-social
 
 - New: `Dockerfile` / `Containerfile` — containerize the scanning tools
 - Feed scanner: runs inside container, processes untrusted content there

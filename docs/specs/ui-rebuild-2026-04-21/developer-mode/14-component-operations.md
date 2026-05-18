@@ -19,9 +19,9 @@ Detail every developer-mode screen. Most reuse existing components (CommandPanel
 Grid of all components (canonical names, dense metadata).
 
 ```
-openclaw-vault    v0.1.0  runtime   ● running   [Open →]
-clawhub-forge     v0.1.0  toolchain ● ready     [Open →]
-moltbook-pioneer  v0.0.1  network   ◐ placeholder [Open →]
+opencli-container    v0.1.0  runtime   ● running   [Open →]
+openskill-forge     v0.1.0  toolchain ● ready     [Open →]
+openagent-social  v0.0.1  network   ◐ placeholder [Open →]
 ```
 
 Click row → `/dev/components/:id`.
@@ -197,7 +197,7 @@ CRUD editor for the vault-proxy allowlist (list of domains the agent can reach).
 
 ### Features
 
-- Read current allowlist from `components/openclaw-vault/proxy/allowlist.txt`
+- Read current allowlist from `components/opencli-container/proxy/allowlist.txt`
 - Add domain (validates pattern: domain or wildcard)
 - Remove domain (with confirmation)
 - "Recently blocked" list pulled from proxy logs — one-click add to allowlist
@@ -274,12 +274,12 @@ Inspect parsed component.yml manifests. Read-only tree view with schema validati
 ┌──────────────────────────────────────────────────────────────┐
 │ Manifest Inspector                                           │
 │                                                              │
-│ Component: [ openclaw-vault ▼ ]                              │
+│ Component: [ opencli-container ▼ ]                              │
 │                                                              │
 │ ┌──────────────────────────────────────────────────────────┐│
 │ │ ▼ identity                                               ││
-│ │     id: "openclaw-vault"                                 ││
-│ │     name: "OpenClaw Vault"                               ││
+│ │     id: "opencli-container"                                 ││
+│ │     name: "OpenCli Container"                               ││
 │ │     version: "0.1.0"                                     ││
 │ │     role: "runtime"                                      ││
 │ │                                                          ││

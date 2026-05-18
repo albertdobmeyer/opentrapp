@@ -162,7 +162,7 @@ Install `Inter` via `@fontsource-variable/inter` for Linux fallback. No external
 
 | Element | Size | Weight | Example |
 |---------|------|--------|---------|
-| Page title | xl | semibold | "openclaw-vault" |
+| Page title | xl | semibold | "opencli-container" |
 | Panel title | base | semibold | "Commands" |
 | Label | xs | medium (uppercase) | "STATUS" |
 | Body | sm | regular | "Container running, exit 0" |
@@ -441,7 +441,7 @@ Expand the banned-terms list in `app/e2e/user-facing.spec.ts` to include everyth
 ```ts
 const USER_MODE_BANNED = [
   // Existing (19 terms)
-  "OpenClaw Orchestrator", "OpenClaw Vault", "ClawHub Forge", "Moltbook Pioneer",
+  "OpenClaw Orchestrator", "OpenCli Container", "OpenSkill Forge", "OpenAgent Social",
   "MoltBook Pioneer", "container_runtime", "component.yml", "compose.yml",
   "seccomp", "MITRE ATT&CK", "proxy", "manifest", "Monorepo", "monorepo",
   "health probes", "configure components", "Checking prerequisites",

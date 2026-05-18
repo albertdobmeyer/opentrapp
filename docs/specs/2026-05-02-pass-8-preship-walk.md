@@ -77,7 +77,7 @@ Day 4 commit moved Home P11 9→10, Home P12 8→9, and Preferences P12 8→9.
 
 | # | Surface | Aggregate | Verdict |
 |---|---|---|---|
-| 19 | Telegram first-chat (live) | **8.4** | Pass 1.5 measured live with Telethon. The lower-scoring rows (P1, P9) live in `components/openclaw-vault`'s system prompt — out of this parent repo's scope; tracked for the openclaw-vault repo's own roadmap. Acceptable for first public ship. |
+| 19 | Telegram first-chat (live) | **8.4** | Pass 1.5 measured live with Telethon. The lower-scoring rows (P1, P9) live in `components/opencli-container`'s system prompt — out of this parent repo's scope; tracked for the opencli-container repo's own roadmap. Acceptable for first public ship. |
 
 ### ErrorBoundary (row 13) — unchanged at 6.6
 
@@ -252,7 +252,7 @@ first public ship.
 
 **Note on the 8.4 row:** Telegram first-chat is the only sub-8.5
 surface, and its sub-rows (P1: 7, P9: 6) live in
-`components/openclaw-vault`'s system prompt — a separate repo with
+`components/opencli-container`'s system prompt — a separate repo with
 its own roadmap. The parent app's contribution to that surface
 (Telegram deep-links, bot-username caching) is rated 9+ on every
 relevant principle. Acceptable to ship.

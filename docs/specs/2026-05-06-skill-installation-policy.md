@@ -45,8 +45,8 @@ The architectural answer. Specifically:
 
 The original recommendation said *"Bot calls `forge.explore`, then `forge.scan`, then presents the user with cleared candidates."* Verification of the actual code surfaces shows the bot **cannot** invoke forge directly:
 
-- The bot runs inside `vault-agent`. Its capabilities are enumerated in [`components/openclaw-vault/scripts/entrypoint.sh`](../../components/openclaw-vault/scripts/entrypoint.sh) (the CONSTRAINTS.md heredoc): workspace file I/O, a small safe-bin set, memory search, Telegram, vision. **No outbound IPC** to other containers.
-- The agent's [tool manifest](../../components/openclaw-vault/config/tool-manifest.yml) does not register a forge bridge.
+- The bot runs inside `vault-agent`. Its capabilities are enumerated in [`components/opencli-container/scripts/entrypoint.sh`](../../components/opencli-container/scripts/entrypoint.sh) (the CONSTRAINTS.md heredoc): workspace file I/O, a small safe-bin set, memory search, Telegram, vision. **No outbound IPC** to other containers.
+- The agent's [tool manifest](../../components/opencli-container/config/tool-manifest.yml) does not register a forge bridge.
 - Network-wise, vault-agent and vault-forge are on different compose networks; the only shared surface is the `forge-deliveries` volume, which is *read-only on the agent side* and carries finished, vetted skills — not bidirectional RPC.
 
 **The architectural reality is: the user is the bridge.** The flow is:
@@ -63,8 +63,8 @@ This works with what already exists. The original spec's framing would have requ
 
 | Piece | Where | Status |
 |---|---|---|
-| Working **Browse the Skill Library** action exposed to the desktop GUI | clawhub-forge#2 — repaired `id: explore` manifest entry; was broken (passed `SKILL=` to a Makefile target that reads `QUERY=`) | Landed |
-| Bot policy guidance: *"find me a skill"* is acceptable; hand off to the desktop action; confirm after install | openclaw-vault#2 — new section in CONSTRAINTS heredoc | Landed |
+| Working **Browse the Skill Library** action exposed to the desktop GUI | openskill-forge#2 — repaired `id: explore` manifest entry; was broken (passed `SKILL=` to a Makefile target that reads `QUERY=`) | Landed |
+| Bot policy guidance: *"find me a skill"* is acceptable; hand off to the desktop action; confirm after install | opencli-container#2 — new section in CONSTRAINTS heredoc | Landed |
 | Submodule bumps + this spec status flip | this PR (opentrapp) | Landing |
 
 ## Implementation scope (deferred)
@@ -93,5 +93,5 @@ Total: ~90 min, vs. the originally-estimated half-day. The deferred dogfood re-r
 
 - 2026-05-05 dogfood findings: [`2026-05-05-dogfood-full-arc-findings.md`](2026-05-05-dogfood-full-arc-findings.md) §A4
 - ADR-0003 (CDR): [`../adr/0003-content-disarm-reconstruction.md`](../adr/0003-content-disarm-reconstruction.md) — establishes that forge is the safety net for skill content
-- Forge component: [`../../components/clawhub-forge/component.yml`](../../components/clawhub-forge/component.yml)
-- Architecture: [`../trifecta.md`](../trifecta.md) §4.2 (clawhub-forge supply-chain defense)
+- Forge component: [`../../components/openskill-forge/component.yml`](../../components/openskill-forge/component.yml)
+- Architecture: [`../trifecta.md`](../trifecta.md) §4.2 (openskill-forge supply-chain defense)

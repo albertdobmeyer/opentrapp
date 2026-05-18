@@ -29,7 +29,7 @@ The runtime perimeter is composed of **four containers** connected by per-servic
 |-----------|----------------|----------------------|
 | `vault-agent` | OpenClaw runtime, Telegram gateway, loaded skills | `agent-net` (internal); only `vault-proxy` is reachable |
 | `vault-forge` | Skill scanner + line classifier + CDR pipeline | `forge-net` (internal); only `vault-proxy` is reachable |
-| `vault-pioneer` | Social-content scanner (parked — see [ADR-0004](0004-parking-moltbook-pioneer.md)) | `pioneer-net` (internal); only `vault-proxy` is reachable |
+| `vault-pioneer` | Social-content scanner (parked — see [ADR-0004](0004-parking-openagent-social.md)) | `pioneer-net` (internal); only `vault-proxy` is reachable |
 | `vault-proxy` | Egress gateway, credential holder, allowlist enforcer | All three internal networks plus the host's network — the only container with external connectivity |
 
 Three structural properties this layout produces:
@@ -40,7 +40,7 @@ Three structural properties this layout produces:
 
 **(c) Per-component lifecycle.** Containers can be started, stopped, restarted, or rebuilt independently. The lifecycle controls in [`app/src-tauri/src/lifecycle.rs`](../../app/src-tauri/src/lifecycle.rs) operate at the compose-service level; an operator can restart `vault-proxy` (e.g. after rotating the API credential in `.env`) without disturbing the agent's session state.
 
-The layout is verified at every commit by [`tests/orchestrator-check.sh`](../../tests/orchestrator-check.sh) (which validates the compose-service set against the manifest contract) and at every container start by the 24-point hardening verification ([`components/openclaw-vault/scripts/verify.sh`](../../components/openclaw-vault/scripts/verify.sh)).
+The layout is verified at every commit by [`tests/orchestrator-check.sh`](../../tests/orchestrator-check.sh) (which validates the compose-service set against the manifest contract) and at every container start by the 24-point hardening verification ([`components/opencli-container/scripts/verify.sh`](../../components/opencli-container/scripts/verify.sh)).
 
 ## Consequences
 
@@ -69,7 +69,7 @@ The layout is verified at every commit by [`tests/orchestrator-check.sh`](../../
 
 **(B) Two containers (agent + everything-else).** Combine forge, pioneer, and proxy into one shared "infrastructure" container behind the agent. Rejected because it removes the per-component capability scoping; the infrastructure container would need the union of forge's parser-needs and proxy's TLS-needs.
 
-**(C) Three containers (agent + forge + proxy, no pioneer slot).** Drop pioneer entirely and ship a three-container topology. Rejected because it loses the architectural slot for hostile-network/social-feed content (T3 in the threat model); see [ADR-0004](0004-parking-moltbook-pioneer.md) for the parking-not-removing decision rationale.
+**(C) Three containers (agent + forge + proxy, no pioneer slot).** Drop pioneer entirely and ship a three-container topology. Rejected because it loses the architectural slot for hostile-network/social-feed content (T3 in the threat model); see [ADR-0004](0004-parking-openagent-social.md) for the parking-not-removing decision rationale.
 
 **(D) Five or more containers.** Split the proxy further into "credential holder" + "allowlist enforcer" + "request logger". Rejected because the three responsibilities compose naturally inside mitmproxy's addon architecture; splitting them adds operational surface without adding clarity.
 
@@ -84,5 +84,5 @@ The layout is verified at every commit by [`tests/orchestrator-check.sh`](../../
 - Whitepaper: [`docs/whitepaper.md`](../whitepaper.md) §3.2 (system design)
 - Threat model mapping: [`docs/threat-model.md`](../threat-model.md) — every attacker category maps to one or more containers
 - Prior-art comparison: [`docs/why-not-x.md`](../why-not-x.md) (the differential against single-container, VM, and other alternatives)
-- Companion ADRs: [ADR-0001](0001-proxy-side-api-key-injection.md) (proxy-side credentials are why proxy is its own container); [ADR-0003](0003-content-disarm-reconstruction.md) (forge's pipeline is why forge is its own container); [ADR-0004](0004-parking-moltbook-pioneer.md) (pioneer's parked status)
+- Companion ADRs: [ADR-0001](0001-proxy-side-api-key-injection.md) (proxy-side credentials are why proxy is its own container); [ADR-0003](0003-content-disarm-reconstruction.md) (forge's pipeline is why forge is its own container); [ADR-0004](0004-parking-openagent-social.md) (pioneer's parked status)
 - Origin design spec: [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](../archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md)

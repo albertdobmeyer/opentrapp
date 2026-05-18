@@ -157,7 +157,7 @@ flowchart LR
 
 ## 4. Agent-skill-loading flow (the CDR pipeline)
 
-Source of truth: [`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) and [`components/clawhub-forge/tools/skill-cdr.sh`](../components/clawhub-forge/tools/skill-cdr.sh).
+Source of truth: [`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) and [`components/openskill-forge/tools/skill-cdr.sh`](../components/openskill-forge/tools/skill-cdr.sh).
 
 ```mermaid
 sequenceDiagram

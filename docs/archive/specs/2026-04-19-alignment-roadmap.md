@@ -11,7 +11,7 @@
 | Layer | Repo | Audience | Voice |
 |---|---|---|---|
 | **Frontend** | opentrapp (parent) | Non-technical end users | "Your assistant is running safely" |
-| **Backend** | openclaw-vault, clawhub-forge, moltbook-pioneer | Developers, contributors, security researchers | "24-point verification, seccomp, proxy-gated networking" |
+| **Backend** | opencli-container, openskill-forge, openagent-social | Developers, contributors, security researchers | "24-point verification, seccomp, proxy-gated networking" |
 
 The parent repo is ALL the non-technical user ever sees. The submodules are invisible to them — they're the plumbing. Documentation must respect this boundary.
 
@@ -25,9 +25,9 @@ Implement the product identity spec in React. Same manifest engine, new presenta
 
 | Current | Becomes |
 |---|---|
-| Sidebar: "ClawHub Forge" | Sidebar: "Skills" |
-| Sidebar: "Moltbook Pioneer" | Sidebar: "Network" |
-| Sidebar: "OpenClaw Vault" | Sidebar: "My Assistant" |
+| Sidebar: "OpenSkill Forge" | Sidebar: "Skills" |
+| Sidebar: "OpenAgent Social" | Sidebar: "Network" |
+| Sidebar: "OpenCli Container" | Sidebar: "My Assistant" |
 | Dashboard: 3 component cards | Dashboard: assistant status + skill count + network status |
 | Component Detail: developer commands | Assistant page: "Talk to your assistant" + quick actions |
 | Wizard: "Set Up Components" | Wizard: "Setting up your assistant..." |
@@ -105,9 +105,9 @@ Add a "User-Facing Terms" section that maps developer concepts to what appears i
 
 | Developer Term | User Term |
 |---|---|
-| OpenClaw Vault | My Assistant |
-| ClawHub Forge | Skills / Skill Store |
-| Moltbook Pioneer | Agent Network |
+| OpenCli Container | My Assistant |
+| OpenSkill Forge | Skills / Skill Store |
+| OpenAgent Social | Agent Network |
 | Hard Shell | Chat Only |
 | Split Shell | Supervised |
 | Soft Shell | (default, no name shown) |
@@ -199,8 +199,8 @@ We add a **presentation layer** that translates developer concepts into user con
 
 The four-repo split works perfectly for this:
 - **opentrapp** = the car body (what users see and touch)
-- **openclaw-vault** = the engine (runtime containment)
-- **clawhub-forge** = the fuel filter (supply chain defense)
-- **moltbook-pioneer** = the radar (social threat detection)
+- **opencli-container** = the engine (runtime containment)
+- **openskill-forge** = the fuel filter (supply chain defense)
+- **openagent-social** = the radar (social threat detection)
 
 The user drives the car. They never open the hood. But if they do — everything is there, well-documented, and proven.

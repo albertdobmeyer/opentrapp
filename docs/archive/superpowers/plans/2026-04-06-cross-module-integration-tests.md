@@ -67,9 +67,9 @@ section() { echo -e "\n${BLUE}=== $1 ===${NC}"; }
 
 cd "$REPO_ROOT"
 
-VAULT="components/openclaw-vault"
-FORGE="components/clawhub-forge"
-PIONEER="components/moltbook-pioneer"
+VAULT="components/opencli-container"
+FORGE="components/openskill-forge"
+PIONEER="components/openagent-social"
 
 # =============================================================================
 section "4. Submodule Health"
@@ -483,7 +483,7 @@ section "3. Cross-Reference Integrity"
 # 3.1 trifecta.md referenced design docs exist
 trifecta_ok=true
 for ref_path in \
-  "components/clawhub-forge/docs/forge-identity-and-design.md" \
+  "components/openskill-forge/docs/forge-identity-and-design.md" \
 ; do
   if [ ! -f "$ref_path" ]; then
     fail "3.1 trifecta.md references missing file: $ref_path"
@@ -594,9 +594,9 @@ Update the Current Status table (near line 222):
 ```markdown
 | Module | Maturity | Key Achievement | Next Phase |
 |---|---|---|---|
-| **openclaw-vault** | 100% | All 3 shell levels operational, 24-point verify, Soft Shell live | Phase 8: Certification |
-| **clawhub-forge** | 100% | 87-pattern scanner, CDR pipeline, AI skill creation, 25 skills certified | Phase 5: Deferred (ClawHub API) |
-| **moltbook-pioneer** | 100% | 3 tools, 25 patterns, pattern export with ReDoS hardening | Complete |
+| **opencli-container** | 100% | All 3 shell levels operational, 24-point verify, Soft Shell live | Phase 8: Certification |
+| **openskill-forge** | 100% | 87-pattern scanner, CDR pipeline, AI skill creation, 25 skills certified | Phase 5: Deferred (ClawHub API) |
+| **openagent-social** | 100% | 3 tools, 25 patterns, pattern export with ReDoS hardening | Complete |
 ```
 
 - [ ] **Step 4: Fix integration status table**
@@ -665,9 +665,9 @@ Expected: All 22 checks pass. Output should look like:
 ```
 === 5. Orchestrator Passthrough ===
   [PASS] 5.1 orchestrator-check.sh passes
-  [PASS] 5.2 Role correct: openclaw-vault = runtime
-  [PASS] 5.2 Role correct: clawhub-forge = toolchain
-  [PASS] 5.2 Role correct: moltbook-pioneer = network
+  [PASS] 5.2 Role correct: opencli-container = runtime
+  [PASS] 5.2 Role correct: openskill-forge = toolchain
+  [PASS] 5.2 Role correct: openagent-social = network
 
 === 1. Clearance Report Contract (Forge -> Vault) ===
   [PASS] 1.1 Forge certify produces clearance-report.json
