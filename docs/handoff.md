@@ -1,189 +1,182 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-05-13 (maintenance session — security hardening, landing page, cert renewal; v0.4 implementation not started)
-**Current phase:** v0.4 reframe — spec set finalized, ready for implementation. This session was maintenance, not v0.4 code.
-**Branch:** `main` at `e1e1bf3` — pushed to `origin/main`.
-**Tag:** `v0.4.0` is the current shipped version (tagged and released). opencli-container submodule at `a5a46ad`.
+**Last updated:** 2026-05-18 (rebrand-complete session — Lobster-TrApp → OpenTrApp landed end-to-end; v0.4.1 shipped clean across all platforms)
+**Current phase:** Security hardening before SignPath resubmission
+**Branch:** `main` at `97df1b1` — pushed to `origin/main`. Submodules: `opencli-container` @ `190e66a`, `openskill-forge` @ `a2b0af8`, `openagent-social` @ `75fc40a`. All tracking their own `main`.
+**Latest release:** `v0.4.1` — first clean post-rebrand release, all 4 platforms (Win/macOS Intel/macOS ARM/Linux), cosign-signed, with SBOMs.
 
 ---
 
-## RUN THIS NEXT — read the spec set, then start at PR-1
+## RUN THIS NEXT — close the security gap, then resubmit SignPath
 
-The next session's job is to **implement v0.4**. The 8 specs in [`docs/specs/v0.4-shell-tenant-reframe/`](specs/v0.4-shell-tenant-reframe/) are the canonical source. Read them in order:
+The maintainer applied to **SignPath Foundation** for free Windows code-signing under the old **Lobster-TrApp** branding + the old website. SignPath is on hold. The maintainer wants to **resubmit fresh** under the **OpenTrApp** brand + `opentrapp.com` — **after** the open security issues are documented and the regressions are tested. Order matters: a clean security posture is what makes the resubmission credible.
 
-1. [`README.md`](specs/v0.4-shell-tenant-reframe/README.md) — vision, reading order, cross-spec invariants, implementation sequence
-2. [`00-architectural-reframe.md`](specs/v0.4-shell-tenant-reframe/00-architectural-reframe.md) — the umbrella; phases, refactor/rebuild table, scoping
-3. [`01-state-machine.md`](specs/v0.4-shell-tenant-reframe/01-state-machine.md) — `BootstrapState × TenantState`, marker files, watchdog refactor
-4. [`02-bootstrap-service.md`](specs/v0.4-shell-tenant-reframe/02-bootstrap-service.md) — background pipeline, Podman sidecar, post-bootstrap auto-activation, single-instance plugin
-5. [`03-activation-flow.md`](specs/v0.4-shell-tenant-reframe/03-activation-flow.md) — JIT modal, Anthropic ping, Telegram polling-handoff
-6. [`04-stop-and-recovery-ux.md`](specs/v0.4-shell-tenant-reframe/04-stop-and-recovery-ux.md) — one-button Stop on `pause_perimeter`, recovery card, failure taxonomy
-7. [`05-bot-first-message.md`](specs/v0.4-shell-tenant-reframe/05-bot-first-message.md) — tutorial in Telegram via inline keyboard (submodule PR)
-8. [`06-migration.md`](specs/v0.4-shell-tenant-reframe/06-migration.md) — existing-install detection + live-ping verification
-9. [`07-container-name-cleanup.md`](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md) — small precondition PR
+### The security work blocking SignPath
 
-Then start with **PR-1: container-name cleanup** ([`07`](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md)). It's small, low-risk, and unblocks isolated testing for everything else.
+There is **one tracked task** in `~/.claude/state.json` (`lt-sec-001`) plus **one tracked known issue** (`lt-sec-001-residual`). The full plan is at `~/.claude/plans/soft-herding-whale.md` (Item A). The four sub-tasks:
 
-The implementation sequence is in the README; each PR has a natural review checkpoint before the next begins.
+- **A1.** Add a regression test that confirms direct IP-literal requests through `vault-proxy` return 403. The current behaviour was confirmed but is not pinned by a test.
+- **A2.** Document the **DNS-rebinding residual risk** explicitly in `docs/threat-model.md` as a T-numbered residual risk, with the `block_private=false` trade-off rationale linked from there.
+- **A3.** **Investigate whether `block_private=true` can be re-enabled.** It was disabled in `compose.yml` (the mitmproxy flags) for Telegram WebSocket compat. If the upstream Telegram proxy path no longer requires it, re-enabling closes the DNS-rebinding gap structurally. Root-cause context is in `components/opencli-container/docs/openclaw-internals.md`.
+- **A4.** Add a "security claims surfaced by LLM tooling" template stanza to the dogfood-findings template at `tests/dogfood/findings-template.md` so the next dogfood pass triages inline AI-tool suggestions systematically.
 
----
+When all four are done **and** the test gates are green, **then** rerun the OpenSSF Best Practices Badge form (pre-filled at `docs/openssf-best-practices-application.md`) and the SignPath Foundation application. Both submissions reference the threat model + reproduce.sh / reproduce.md, which need to reflect the new security work to make a good impression.
 
-## What landed this session (2026-05-13)
+### Concrete files the new session should read first
 
-Maintenance session — no v0.4 feature code. All changes on `main`, no feature branches.
-
-### Security: skill clearance enforcement (opencli-container)
-
-ADR-0003 claimed "agent rejects unscanned skills" — this was never actually implemented. `install-skill.sh` had a soft y/N bypass prompt. Two changes close the gap:
-
-- **`install-skill.sh`** (`ecb3269`, `a5a46ad`): bypass prompt replaced with hard `exit 1`. A forge clearance report is now required to install any skill. Auto-detects `clearance-report.json` from the skill directory when the path is the forge export dir (which is the GUI call path — `component.yml` passes only `skill_path`). Writes a `.trust` file (`VERIFY_HASH=sha256:...`) into the container after successful install.
-- **`entrypoint.sh`** (`ecb3269`): step 5.5 added before OpenClaw starts — iterates every installed skill directory, checks `.trust` exists, verifies `VERIFY_HASH` matches current `sha256sum` of `SKILL.md`. Any failure aborts container startup. Skills dropped in without going through `install-skill.sh` can never reach the agent.
-
-Both commits pushed to opencli-container remote (`a5a46ad`). Submodule reference updated in opentrapp (`2c189bc`).
-
-### Landing page
-
-- Version pill updated: `v0.3.0` → `v0.4.0 — Shellfish Reframe release`
-- SmartScreen/Gatekeeper bypass guide added as a `<details>` block in the download section
-- SignPath Foundation credit line added (required by their OSS terms)
-- Full audit of skill scanner claims against actual openskill-forge source code — four locations corrected: "before it runs" → "pre-install only", `16` → `17` injection signatures, "SKILL.md only" → "every file in the bundle", added honest limitation ("pipeline is not automatic; patterns unknown to scanner can still slip through")
-- **4-gate vetting pipeline SVG diagram** added to the Ecosystem section — shows the full openskill-forge sequence (untrusted skill → Lint → Scan → Verify → Test → Clearance → Vault) with red fail rail. Rendered and verified in browser.
-- Deployed to Hetzner
-
-### Supporting docs
-
-- `docs/code-signing-policy.md` — new file required for SignPath Foundation application
-- `docs/release-notes-v0.4.0.md` — v0.4.0 release notes
-- `app/src-tauri/tauri.conf.json` — version bumped `0.3.2` → `0.4.0`
-
-### Infrastructure
-
-- **Dependabot alerts dismissed**: glib `RUSTSEC-2024-0429` (unsoundness in `VariantStrIter`, locked by Tauri GTK3 stack, no update path) and a second transitive alert — both marked `tolerable_risk`.
-- **Cloudflare Origin Certificate expired** (May 12, 17:49 UTC — the day before this session). Replaced with a Let's Encrypt certificate issued via certbot DNS challenge using the token in `/etc/letsencrypt/cloudflare.ini`. Auto-renews every 90 days (cron registered by certbot). nginx updated: `ssl_certificate/ssl_certificate_key` now point to `/etc/letsencrypt/live/opentrapp.com/{fullchain.pem,privkey.pem}`. Site verified live (HTTP 200, content confirmed).
-- **SignPath Foundation application submitted** — awaiting approval email at `albertkdobmeyer@gmail.com`. When approved: set up project in SignPath dashboard, add `SIGNPATH_API_TOKEN` and `SIGNPATH_ORGANIZATION_ID` GitHub secrets, restructure the Windows CI job to use post-build signing (see plan in `~/.claude/plans/ethereal-wiggling-rocket.md`), then update `bundle.windows.certificateThumbprint` in `tauri.conf.json`.
-
-### Architecture audit
-
-Investigated whether the 4-container architecture was an accidental Claude drift or deliberate design. Finding: it was deliberate, documented in ADR-0006 (April 2026) driven by a real security gap. vault-pioneer is intentionally parked (Moltbook acquired by Meta, API unstable since April 2026) — kept in compose.yml for completeness, same as openagent-social submodule.
+- `~/.claude/state.json` — task list + known issues
+- `~/.claude/plans/soft-herding-whale.md` — the security + rebrand plan (rebrand half complete; security half pending)
+- `docs/threat-model.md` — needs the new T-row added (A2)
+- `components/opencli-container/proxy/vault-proxy.py` lines 92–106 — the IP-literal denial logic to test (A1)
+- `components/opencli-container/proxy/allowlist.txt` — current allowlist
+- `compose.yml` lines 79–80 — the `block_private=false` / `block_global=false` flags (A3 target)
+- `components/opencli-container/docs/openclaw-internals.md` — Telegram proxy root cause (A3 background)
+- `tests/dogfood/findings-template.md` — where the new stanza goes (A4)
 
 ---
 
-## What was decided this session (the product calls)
+## What landed in the rebrand (2026-05-17 → 2026-05-18)
 
-1. **Stop button: one button, not two.** "Stop your assistant" / "Resume" — both share the existing `pause_perimeter` primitive (`compose stop`, all volumes preserved). Never `nuclear-kill` or `hard-kill` — those wipe `vault-data` (session history) and `forge-deliveries` (installed skills).
-2. **Container-name cleanup is its own PR**, lands first ([`07`](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md)). Removes hardcoded `container_name:` lines that block `--project-name` isolation.
-3. **Bot first-message tutorial as a named deliverable** ([`05`](specs/v0.4-shell-tenant-reframe/05-bot-first-message.md)). Submodule PR in opencli-container.
-4. **Podman strategy: bootstrapper sidecar** for v0.4. Bundled Podman is the v1.0 destination. Sidecar interface designed for forward compat.
-5. **Plaintext `.env` stays for v0.4**, with explicit user-facing disclosure ("Your key is stored in plain text at `~/opentrapp/.env`. We're working on encrypted storage for a future release."). OS keychain migration is a v1.0 conversation that requires redesigning the proxy's env-var injection path.
-6. **Pluggable-shell scoping is honest**: architecture earns the language; v0.4 ships only the OpenClaw tenant. "This makes future tenants cheap" — never "multi-tenant today."
+Multi-day rebrand from Lobster-TrApp → OpenTrApp landed end-to-end. **Done is done** — no leftover rebrand work.
+
+### GitHub side
+- Parent repo renamed: `albertdobmeyer/lobster-trapp` → `albertdobmeyer/opentrapp` (GitHub auto-redirects from the old URL)
+- 3 submodule repos renamed:
+  - `openclaw-vault` → `opencli-container`
+  - `clawhub-forge` → `openskill-forge`
+  - `moltbook-pioneer` → `openagent-social`
+- 4 release titles fixed (`Lobster-TrApp v0.x.y` → `OpenTrApp v0.x.y`)
+- 4 release bodies rewritten to use new repo URL + OpenTrApp branding; v0.4.0 has a "🪧 Note on naming" banner explaining its pre-rebrand asset filenames
+- Repo `homepage` fixed (was a stale URL pointing at the maintainer's pre-2026 GitHub username `gitgoodordietrying`; now `https://opentrapp.com`)
+- Repo description rewritten: "A safer way to run autonomous CLI agents on your own computer. Open-source, MIT, community-driven."
+- Repo topics: dropped `openclaw`, added `opentrapp`, `cli-agents`, `ai-safety`, `container-security`, `skill-scanner`, `open-source`
+- **v0.4.1** tagged + released with `OpenTrApp_0.4.1_*` asset filenames across every platform, cosign-signed, with per-platform CycloneDX SBOMs. The `releases/latest` URL — which the landing-page Download button uses — auto-resolves to v0.4.1.
+
+### Code, config, docs
+- 147+ files swept in PR #57 (parent rename + first-run migration script)
+- 3 submodules rebranded inside their own repos via PRs #4 / #3 / #1, then wired in PR #59 (`refactor(submodules): wire opencli-container / openskill-forge / openagent-social`)
+- README + whitepaper + trifecta + ADRs + active specs reframed so **OpenClaw is the reference deployment, not the protagonist**. The architecture is described agent-agnostically; OpenClaw is named at upstream-link/CVE/feature-citation level, not in section titles or generic claims.
+- Five-commitments **Values** section added to README + landing page:
+  1. Safety-first, safety-always
+  2. Honest about residual risk
+  3. Agent-agnostic, community-driven
+  4. Transparency over marketing
+  5. Shared for the safety of the commons
+- All "Clawbot" references replaced with "agent" / "the agent" outside historical archives and the literal upstream brand.
+
+### Visuals / landing page
+- New OpenTrApp banner logo at `logos/OpenTrApp-Logos/OpenTrApp-BannerLogo.png` (regenerated 2026-05-18 with the full wordmark — the previous file was missing the middle letters of "Open"), propagated to `app/public/logo-banner.png` and `docs/img/logo-banner.png`
+- Tauri bundle icons fully regenerated via `npx tauri icon logos/OpenTrApp-Logos/OpenTrApp-SquareLogo.png`
+- Custom tray icons (`tray-{green,amber,red}.png`) at 32×32 — colored disc + the OpenTrApp square logo
+- Favicon → multi-resolution ICO (16/32/48/64/128/256) at `app/public/favicon.ico` + `docs/img/favicon.ico`
+- New procedurally-generated `docs/bg-hero.png` (856×896, dark navy + brand-green/blue radial glows + faint hex lattice — drop-in replacement for the prior lobster-themed background)
+- Hero logo got a CSS upgrade: 4-layer drop-shadow, radial brand halo behind it, diagonal `mask-image`-clipped shimmer animation that sweeps every 5.5s, hover lift, `prefers-reduced-motion` honored
+- Section subtitles got semantic `<br class="claim-br">` breaks so they don't wrap at arbitrary widths on desktop (`.claim-br { display: none }` under 640px keeps mobile clean)
+
+### Infra
+- Cloudflare Origin Cert issued for `opentrapp.com` (15-year, ECDSA, installed at `/etc/ssl/cloudflare/opentrapp.com.{pem,key}` on Hetzner)
+- nginx config at `/etc/nginx/sites-available/opentrapp.com` serves the landing
+- nginx config at `/etc/nginx/sites-available/lobster-trapp.com` rewritten as a 301-only redirect to `https://opentrapp.com$request_uri` (using the existing LE cert at `/etc/letsencrypt/live/lobster-trapp.com/`)
+- Hetzner web root `/var/www/opentrapp.com` symlinks to `/var/www/lobster-trapp.com` so existing deploy scripts keep working; both nginx vhosts reference the symlinked path
+- Cloudflare in **Full (strict)** TLS mode for opentrapp.com
+- CI workflow (`.github/workflows/ci.yml`) fixed: the `Compose release-notes body` step now forces `shell: bash` so Windows + macOS Intel jobs don't fail on PowerShell parsing the heredoc. This was a long-standing latent bug; pre-v0.4.0 releases had been missing their Windows MSI silently.
+
+### Intentional residue (do not "fix")
+- `app/src-tauri/src/bootstrap/migrate_from_lobster_trapp.rs` keeps "lobster-trapp" in 16 references. The migration script must reference the **legacy install paths** (`~/.lobster-trapp/`, `~/lobster-trapp/`, `dev.lobster-trapp.app`, `lobster-trapp_*` podman objects) to detect prior installs and move them to OpenTrApp paths. Removing them breaks every upgrade.
+- `app/package-lock.json` line 2 + 8 — autogen, will rewrite on next `npm install`.
+- `docs/social-preview/lobster-trapp.svg` — separate asset rename task; not blocking anything (used for GitHub social previews; the og:image used by the landing page is now `img/favicon.png` / `img/logo-banner.png`).
+- `OpenClaw`, `ClawHub`, `ClawHavoc`, `Moltbook` — third-party proper nouns. Preserved as accurate citations. The npm package `openclaw@2026.2.26` is what's literally installed inside `vault-agent`; renaming would lie about the install.
 
 ---
 
-## Verified facts that the specs depend on
+## Operator queue (the maintainer drives these)
 
-The verification pass in this session ran four parallel investigations + targeted file reads. Findings the implementing agent should treat as established:
+These are unchanged from prior handoffs except for status updates. They sit alongside the security work but **none of them block it.**
 
-- **`pause_perimeter`** at [`commands/lifecycle.rs:87-119`](../app/src-tauri/src/commands/lifecycle.rs) is `compose stop` against the root compose.yml: stops all 4 containers, preserves all volumes, persists via `~/.opentrapp/paused`. Verified data preservation via reading `kill.sh` + `lifecycle.rs`.
-- **`hard-kill` and `nuclear-kill`** wipe `vault-data` and the agent image. Confirmed in [`components/opencli-container/scripts/kill.sh:30-49,71-72`](../components/opencli-container/scripts/kill.sh).
-- **`vault-proxy` reads `ANTHROPIC_API_KEY` per request** at [`vault-proxy.py:176-181`](../components/opencli-container/proxy/vault-proxy.py); never gates startup; warns if absent.
-- **`SIGHUP` reloads the allowlist only**, not env vars ([`vault-proxy.py:49`](../components/opencli-container/proxy/vault-proxy.py)). To pick up new keys, the proxy needs `compose up -d --force-recreate vault-proxy`.
-- **OpenClaw uses grammY long-polling**, not webhooks. Telegram allows one consumer per token; the wizard's test-message must use the documented handoff sequence (`deleteWebhook → getMe → poll → sendMessage → confirm-by-offset → release`) before vault-agent starts polling.
-- **OpenClaw boots cleanly with empty `TELEGRAM_BOT_TOKEN`** — Telegram is silently disabled. Verified in [`components/opencli-container/docs/phase1-findings.md:134`](../components/opencli-container/docs/phase1-findings.md).
-- **`podman-compose 1.0.6` skips build-only services on `compose pull`** unless `--force-local`. Three of our four services are `build:` stanzas. Bootstrap pipeline needs `compose build` AND `compose pull` as separate steps.
-- **macOS and Windows additionally require `podman machine init && podman machine start`** after the OS install. No upstream-supported Linux rootless tarball exists.
-- **`api.anthropic.com` is on the proxy allowlist** ([`components/opencli-container/proxy/allowlist.txt:4`](../components/opencli-container/proxy/allowlist.txt)).
-- **Modal-over-home is feasible without routing rewrite.** `Setup.tsx` is at `/setup` route gated by `<Navigate>` redirect at `App.tsx:114`; the wizard step components are pure presentational. The connection-step blocks at `ConnectStep.tsx:149-169` (Anthropic) and `:171-191` (Telegram) get reused inside a new `<ActivationModal>`.
-- **`tauri-plugin-shell` is already present** ([`Cargo.toml:13`](../app/src-tauri/Cargo.toml)); sidecar wiring is ~3 line additions to `tauri.conf.json` + `capabilities/default.json`.
-- **`tauri-plugin-single-instance` is NOT yet configured** — must add (`~10 LOC`, register first per docs).
-- **The `first-run-setup` workflow at [`config/orchestrator-workflows.yml:45`](../config/orchestrator-workflows.yml)** is dead vocabulary — defined but never invoked. The wizard reimplements bootstrap imperatively in [`pipeline-steps.ts`](../app/src/components/wizard/install-step/pipeline-steps.ts). The new bootstrap subsystem replaces this imperative path.
+1. **OpenSSF Best Practices Badge** — form pre-filled at `docs/openssf-best-practices-application.md`. Submit **after** the security work is done. The form references threat-model.md + reproduce.sh; both should reflect the new T-row + the (possible) `block_private=true` re-enable.
+2. **SignPath Foundation re-application** — the original was for Lobster-TrApp branding. Resubmit fresh under OpenTrApp after security work lands. Reuses the existing plan at `~/.claude/plans/ethereal-wiggling-rocket.md` for the CI integration steps once SignPath approves.
+3. **Demo recording** — 60-second discovery → install → use loop. Unblocked now that v0.4.1 is shipped. Shooting script at `docs/demo/README.md`.
+4. **Manual upgrade test** — install v0.4.1 on a host that already has a Lobster-TrApp install (or simulate one via `~/.lobster-trapp/` + `~/lobster-trapp/.env`). Verify `migrate_from_lobster_trapp.rs` moves state cleanly and the bot resumes on first launch.
+5. **Tier C1' screenshot** — launch-button screenshot in `(ShellReady, Absent)`.
+6. **Tier D1 + D2** — graceful window-close and tray-Quit termination paths.
+7. **Live re-run of Tier A4** — bot's hand-off behaviour. Run `make dogfood-fresh-sessions` first.
+8. **Adversarial skill staging for Tier B5** — needs ClawHub publishing credentials.
+9. **Dead Cloudflare API token** at `/root/.secrets/certbot/cloudflare.ini` on Hetzner — flagged in prior handoffs, still stale. The active certbot token at `/etc/letsencrypt/cloudflare.ini` is scoped narrowly (lobster-trapp.com only, not opentrapp.com — that's why we used a Cloudflare Origin Cert for opentrapp.com instead of LE). Worth regenerating to "all zones" next time you're in the dashboard.
 
 ---
 
-## Empirical gaps still open
+## Gotchas worth knowing
 
-Three things the implementing agent must validate before each merge:
-
-1. **The 3-container partial bring-up has not yet run live.** [`07`](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md) is the precondition; once `container_name:` lines are removed, the dryrun is `podman compose --project-name opentrapp-dryrun up -d vault-proxy vault-forge vault-pioneer` against a fresh test env. Reasoning supports it (one-directional `depends_on`, sleep-infinity daemons, independent networks) but no live confirmation yet.
-2. **Windows MSI silent-install flags** (`/quiet /qn /norestart`) are standard but **NOT documented by Podman**. Empirically validate on a Windows VM during PR-3 (bootstrap service).
-3. **macOS `.pkg` silent install command** (`installer -pkg ... -target /`) is extrapolated from `installer(8)`, not Podman-documented. Verify on a clean macOS VM during PR-3.
-
----
-
-## Gotchas inherited from prior work
-
-1. **Always run `make dogfood-fresh-sessions` before re-testing prompt changes.** OpenClaw's session transcripts at `/home/vault/.openclaw/agents/main/sessions/*.jsonl` cache prior responses; the model self-mimics them. Documented in [`tests/dogfood/CHECKLIST.md`](../tests/dogfood/CHECKLIST.md) §0a. Especially relevant for PR-6 (bot first-message tutorial) — the tutorial behaviour depends on the bot reading fresh CONSTRAINTS.md and not regurgitating cached "I don't know what to say first" responses.
-2. **Cloudflare auto-injects a bot-management `<script>`** before `</body>` on every response from `opentrapp.com`. Any byte-level diff between the live HTML and the local `docs/index.html` will show false-positive divergence. Use `ssh hetzner sha256sum` (per the runbook §4a) for sync checks.
-3. **Submodule changes need separate PRs** in their respective repos. The pattern: branch in submodule → commit + push to submodule's GitHub → merge submodule PR → bump submodule reference in parent → parent PR. Used three times in the previous session; PR-6 (bot tutorial) needs this discipline again.
+1. **Always run `make dogfood-fresh-sessions` before re-testing prompt changes.** OpenClaw's session transcripts at `/home/vault/.openclaw/agents/main/sessions/*.jsonl` cache prior responses; the model self-mimics them. Documented in `tests/dogfood/CHECKLIST.md` §0a.
+2. **Cloudflare auto-injects a bot-management `<script>`** before `</body>` on every response from both `lobster-trapp.com` and `opentrapp.com`. Any byte-level diff between the live HTML and the local `docs/index.html` will show false-positive divergence. Use `ssh hetzner sha256sum` (per `docs/deploying-the-landing-page.md` §1) for sync checks.
+3. **Submodule changes need separate PRs** in their respective repos. Pattern: branch in submodule → commit + push to submodule's GitHub → merge submodule PR → bump submodule reference in parent → parent PR. Used three times in PRs #4/#3/#1 + PR #59.
 4. **`HUMAN-TODO.md` §4 is sensitive** (adversarial registry-staging recipe). Don't stage, commit, or push that file. Operator-only.
-5. **The bot is in `vault-agent` and cannot IPC to `vault-forge`.** The user-bridge model is the architectural correction recorded in PR #43's spec rewrite. Don't recommend bot-direct forge calls without acknowledging the IPC plumbing that would require.
-6. **Hetzner deploys are out-of-band from app releases.** Marketing site at `opentrapp.com` ships when `docs/index.html` changes. Use [`docs/deploying-the-landing-page.md`](deploying-the-landing-page.md). `RELEASING.md` covers app tag-and-build separately.
-7. **The maintainer's GitHub handle is `albertdobmeyer`** (current). The legacy `gitgoodordietrying` is deprecated.
+5. **Hetzner deploys are out-of-band from app releases.** Marketing site ships when `docs/index.html` changes via `scp` — see `docs/deploying-the-landing-page.md`. `RELEASING.md` covers app tag-and-build separately.
+6. **The maintainer's GitHub handle is `albertdobmeyer`** (current). The legacy `gitgoodordietrying` is deprecated — if you see it in any URL or doc, it's stale.
+7. **nginx `sites-enabled/` was non-standard** before this session — concrete files instead of symlinks. Both `lobster-trapp.com` and `opentrapp.com` are now proper symlinks to `sites-available/`. Don't replace them with concrete files again.
+8. **A prior session attempted a bulk sed rebrand** that broke the migration script and replaced "OpenClaw" with "opensource" across the tree. We reverted with `git restore .` and did a more careful pass. If a similar mass-rename is ever tempting again, be surgical — don't blanket-replace vendor names.
+9. **CI workflow runs on tag push (`tags: ['v*']`)** — tagging `v0.4.x` from main triggers the full release build matrix.
 
 ---
 
-## Outstanding operator queue (`HUMAN-TODO.md`, local-only)
+## Verified facts the implementing agent should treat as established
 
-These items are unchanged from the previous handoff. They're operator-driven; the agent assists by pasting commands, verifying output, summarising findings — but cannot drive these autonomously. They sit alongside v0.4 work and don't block it.
-
-1. Tier C1 — first-launch wizard screenshot in `not_setup` state (becomes Tier C1' after v0.4: launch-button screenshot in `(ShellReady, Absent)`)
-2. Tier D1 + D2 — graceful window-close and tray-Quit termination paths
-3. Live re-run of Tier A4 — bot's hand-off behaviour. Run `make dogfood-fresh-sessions` first.
-4. Adversarial skill staging for Tier B5 — needs ClawHub publishing credentials
-5. Demo recording — 60-second discovery → install → use loop. **Now blocked on v0.4 shipping** (the demo can't be recorded against the wizard-as-entry UX since the new flow is fundamentally different)
-6. OpenSSF Best Practices Badge submission — form pre-filled at [`docs/openssf-best-practices-application.md`](openssf-best-practices-application.md)
+- **Cargo + npm + tauri.conf versions** are unified at `0.4.1`. The prior mismatch (`0.4.0` in tauri.conf, `0.3.2` everywhere else) is why pre-rebrand release assets shipped with `0.3.2` in their filenames. Never let this drift again — bump all three together when cutting a release.
+- **`vault-agent` runs `npm install -g openclaw@2026.2.26`** as its agent runtime. Verified in `components/opencli-container/Containerfile` line 19. The runtime name is the real third-party package name; OpenTrApp does not fork or modify it.
+- **`pause_perimeter`** at `app/src-tauri/src/commands/lifecycle.rs:87-119` is `compose stop` against the root `compose.yml`: stops all 4 containers, preserves all volumes, persists via `~/.opentrapp/paused`. (Migrated from `~/.lobster-trapp/paused` for upgraders by the migration script.)
+- **`hard-kill` and `nuclear-kill`** wipe `vault-data` and the agent image. Confirmed in `components/opencli-container/scripts/kill.sh:30-49,71-72`.
+- **`vault-proxy` reads `ANTHROPIC_API_KEY` per request** at `components/opencli-container/proxy/vault-proxy.py:176-181`; never gates startup; warns if absent.
+- **`vault-proxy.py:92-106`** IP-literal denial: `ipaddress.ip_address(host)` succeeds for `127.0.0.1`, `172.17.0.1`, `10.x`, `192.168.x` → returns `False` → 403. This is the defense we need to pin with a regression test (A1).
+- **`SIGHUP` reloads the allowlist only**, not env vars (`vault-proxy.py:49`). To pick up new keys: `compose up -d --force-recreate vault-proxy`.
+- **`api.anthropic.com` is on the proxy allowlist** (`components/opencli-container/proxy/allowlist.txt:4`).
 
 ---
 
-## Working state at session end
+## Working state at session end (2026-05-18)
 
 ```
-$ git log --oneline -5
-e1e1bf3 feat(landing): add 4-gate skill vetting pipeline diagram to ecosystem section
-2c189bc chore(submodule): update opencli-container — auto-detect clearance report fix
-4be54fa chore(submodule): update opencli-container to clearance-enforcement commit
-9699cf4 docs(landing): correct skill scanner claims to match implementation
-5785dd9 chore(release): bump version to 0.4.0, add release notes and v0.4 specs
+$ git log --oneline -10
+97df1b1 fix(ci): force bash on the release-notes-body step
+d5ee5cf brand(landing): add semantic line breaks to long section subtitles
+8a88f88 chore(release): bump to 0.4.1 + neutral OpenTrApp bg-hero
+e48fc23 brand(banner): regenerate banner with full "OpenTrApp" wordmark rendered
+9eee043 brand(icons): refresh all icons from OpenTrApp square logo + add hero gloss/shine
+f9d9a87 docs(values): demote OpenClaw to specific example + add five-commitments values section
+9de26bb docs(reframe): generalize OpenClaw mentions to agent-agnostic framing
+e5b56c0 Merge pull request #59 from albertdobmeyer/rebrand-submodule-integration
+b5149c8 refactor(submodules): wire opencli-container / openskill-forge / openagent-social
+1d1a1cb Merge pull request #57 from albertdobmeyer/rebrand-opentrapp
 
 $ git submodule status
- a5a46ad  components/opencli-container    (heads/main)
- 911b677  components/openskill-forge     (heads/main)
- 52b3db2  components/openagent-social  (heads/main, parked)
+ 75fc40a  components/openagent-social   (heads/main)
+ 190e66a  components/opencli-container  (heads/main)
+ a2b0af8  components/openskill-forge    (heads/main)
 ```
 
-Working tree clean. All five test gates green on `main` (last checked 2026-05-11 pre-release).
-
-### Pending (not blocking v0.4)
-
-- SignPath approval — check `albertkdobmeyer@gmail.com`. See plan at `~/.claude/plans/ethereal-wiggling-rocket.md` for the full CI integration steps once approved.
-- Dead Cloudflare API token in `/root/.secrets/certbot/cloudflare.ini` on Hetzner — worth regenerating next time you're in the Cloudflare dashboard.
-
----
-
-## Verification approach for v0.4
-
-Each spec has its own verification section. End-to-end coverage:
-
-- **Unit:** Rust tests in `app/src-tauri/src/lifecycle.rs` and the new bootstrap module. Frontend unit tests in `app/src/components/HeroStatusCard.test.tsx`.
-- **Integration:** test environments with Podman pre-installed, simulating partial states. **Precondition: PR-1 ([container-name cleanup](specs/v0.4-shell-tenant-reframe/07-container-name-cleanup.md)) must land first** so `--project-name` isolation works.
-- **E2E:** Playwright in `app/e2e/` covers phase-transition sequences, activation, recovery paths, stop button.
-- **Manual smoke:** clean VMs per OS at least once per release cut — macOS Sequoia, Windows 11, Ubuntu 24.04. Includes admin-prompt flow + `podman machine init`.
-- **Dogfood:** new Tier-A6 (bot first-message tutorial) and Tier-A4-extended (full launch → activation → bot reply) added to [`tests/dogfood/CHECKLIST.md`](../tests/dogfood/CHECKLIST.md) when the relevant PRs land.
+Working tree clean. All test gates green at v0.4.1:
+- cargo lib 72/72
+- vitest 74/74
+- tsc clean
+- orchestrator-check 42/42 (0 warnings)
+- Playwright + CodeQL + fuzz × 3 + supply-chain audit all green
 
 ---
 
 ## Memory pressure caveat (still applies)
 
-Maintainer's dev machine is a 2017 Lenovo IdeaPad with 7.2 GB RAM. Heavy parallel operations swap. Per maintainer's CLAUDE.md, max two Claude Code sessions simultaneously (one terminal, one Cursor). Stop dev servers and Ollama models between demos; check `free -h` periodically; if swap > 500 MB, stop everything non-essential before continuing.
+Maintainer's dev machine is a 2017 Lenovo IdeaPad with 7.2 GB RAM. Heavy parallel operations swap. Per maintainer's `~/.claude/CLAUDE.md`, max two Claude Code sessions simultaneously (one terminal, one Cursor). Stop dev servers and Ollama models between demos; check `free -h` periodically; if swap > 500 MB, stop everything non-essential before continuing.
 
-The CI runs all heavy work; nothing in the v0.4 spec set requires the maintainer's machine to be the bottleneck.
+CI runs all heavy work; nothing in the security tasks above requires the maintainer's machine to be the bottleneck.
 
 ---
 
 ## Cross-doc reference graph (orientation)
 
-- **v0.4 specs:** [`docs/specs/v0.4-shell-tenant-reframe/`](specs/v0.4-shell-tenant-reframe/)
-- **v0.4 design north-star:** [`docs/specs/v0.4-shell-tenant-reframe/_source-karen-from-hr.md`](specs/v0.4-shell-tenant-reframe/_source-karen-from-hr.md)
-- **Architecture (this repository):** [`docs/trifecta.md`](trifecta.md), [`docs/whitepaper.md`](whitepaper.md), [`docs/diagrams.md`](diagrams.md), [`docs/adr/`](adr/)
-- **Threat model:** [`docs/threat-model.md`](threat-model.md), [`docs/why-not-x.md`](why-not-x.md)
-- **Releasing:** [`RELEASING.md`](../RELEASING.md), [`docs/deploying-the-landing-page.md`](deploying-the-landing-page.md)
-- **Skill-installation policy:** [`docs/specs/2026-05-06-skill-installation-policy.md`](specs/2026-05-06-skill-installation-policy.md) — Option B accepted, user-bridge model
-- **Dogfood test rig:** [`tests/dogfood/README.md`](../tests/dogfood/README.md), [`tests/dogfood/CHECKLIST.md`](../tests/dogfood/CHECKLIST.md)
+- **Threat model:** `docs/threat-model.md` (needs A2 edit)
+- **Whitepaper:** `docs/whitepaper.md`
+- **Architecture:** `docs/trifecta.md`, `docs/diagrams.md`, `docs/adr/`
+- **Reproducibility:** `docs/reproduce.md` + `docs/reproduce.sh`
+- **Releasing:** `RELEASING.md`, `docs/deploying-the-landing-page.md`
+- **Dogfood test rig:** `tests/dogfood/README.md`, `tests/dogfood/CHECKLIST.md`, `tests/dogfood/findings-template.md` (needs A4 edit)
+- **Skill-installation policy:** `docs/specs/2026-05-06-skill-installation-policy.md` — Option B accepted, user-bridge model
+- **Plan files:** `~/.claude/plans/soft-herding-whale.md` (security + rebrand), `~/.claude/plans/ethereal-wiggling-rocket.md` (SignPath integration)
