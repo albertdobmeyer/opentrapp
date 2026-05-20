@@ -193,6 +193,7 @@ jobs:
             echo '{'
             echo '  "version": 1,'
             echo "  \"tag\": \"${TAG}\","
+            echo "  \"repo\": \"${{ github.repository }}\","
             echo "  \"signer_identity_regexp\": \"https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/tags/.*\","
             echo "  \"oidc_issuer\": \"https://token.actions.githubusercontent.com\","
             echo '  "images": {'
@@ -389,17 +390,23 @@ jobs:
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
 
-      # Bundle the pre-built, signed perimeter images into the Linux AppImage
-      # so first launch is offline-capable and never builds on the user's
-      # machine. Only the Linux release build carries them (macOS/Windows
-      # runtime story is separate, deferred work). Lands in the resource dir
-      # that tauri.conf.json bundle.resources packages (see step 5).
-      - name: Download perimeter images (Linux release builds)
+      # Perimeter images are NOT bundled in the AppImage (that made it 567 MB
+      # with a ~68 min build). Instead we bundle only the small SIGNED overlay
+      # (image-digests.json) — the trust anchor — and the runtime downloads the
+      # large tarballs from the release on first launch, verifying each against
+      # the overlay digest before podman load. Keeps the AppImage ~90 MB.
+      - name: Stage perimeter image artifacts (Linux release builds)
         if: matrix.platform.slug == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: perimeter-images
-          path: app/src-tauri/resources/perimeter/images
+          path: perimeter-staging
+      - name: Bundle the signed overlay only
+        if: matrix.platform.slug == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          mkdir -p app/src-tauri/resources/perimeter/images
+          cp perimeter-staging/image-digests.json app/src-tauri/resources/perimeter/images/
 
       - name: Build and release
         id: tauri
@@ -417,6 +424,19 @@ jobs:
           releaseDraft: true
           prerelease: false
           includeUpdaterJson: true
+
+      # Attach the signed perimeter image tarballs as release assets. The
+      # runtime downloads these on first launch and verifies each against the
+      # bundled overlay digest. (Linux/tag only; the release was just created by
+      # the step above.)
+      - name: Attach perimeter image tarballs to the release
+        if: matrix.platform.slug == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.ref_name }}" perimeter-staging/*.tar \
+            --repo "${{ github.repository }}" --clobber
 
       # ── Supply-chain provenance (release tags only) ────────────────────────
       # The four steps below run only on tag pushes and produce, per built

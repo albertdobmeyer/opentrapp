@@ -448,6 +448,9 @@ pub struct ImageDigestOverlay {
     pub version: u32,
     #[serde(default)]
     pub tag: String,
+    /// `owner/repo` — used to build the release-asset download URL at runtime.
+    #[serde(default)]
+    pub repo: String,
     #[serde(default)]
     pub signer_identity_regexp: String,
     #[serde(default)]
@@ -603,25 +606,63 @@ pub fn stage_resources_from_bundle(bundle_perimeter_dir: &Path, runtime_resource
     Ok(())
 }
 
-/// `podman load` every `*.tar` in the bundle's images dir. Reads directly from
-/// the read-only AppImage mount (no multi-hundred-MB copy into the data dir);
-/// once loaded, images persist in podman storage so later launches are no-ops.
-/// Digest verification happens later, in [`BundleVerifier::verify_and_resolve`].
-pub fn load_bundled_images(bundle_images_dir: &Path) -> Result<(), OrchestratorError> {
-    if !bundle_images_dir.exists() {
+/// Download the built-image tarballs listed in the (bundled, signed) overlay
+/// from the GitHub release into the runtime images dir. The overlay rides
+/// inside the signed AppImage and defines the truth (digests); the large
+/// tarballs are fetched as release assets — keeping the AppImage small while
+/// the post-load digest check (in [`BundleVerifier`]) catches any tampering.
+/// External images (mitmproxy) are pulled by the verifier, not downloaded here.
+/// No-op in dev (no overlay) or when assets are already present.
+pub async fn fetch_perimeter_images() -> Result<(), OrchestratorError> {
+    let images_dir = resource_dir().join("images");
+    let overlay_path = images_dir.join("image-digests.json");
+    let Ok(json) = std::fs::read_to_string(&overlay_path) else {
+        return Ok(()); // dev: no bundled overlay
+    };
+    let overlay = ImageDigestOverlay::parse(&json)?;
+    if overlay.repo.is_empty() || overlay.tag.is_empty() {
         return Ok(());
     }
-    for entry in std::fs::read_dir(bundle_images_dir).map_err(OrchestratorError::IoError)? {
-        let path = entry.map_err(OrchestratorError::IoError)?.path();
-        if path.extension().and_then(|e| e.to_str()) == Some("tar") {
-            let out = podman(
-                &["load".into(), "--input".into(), path.display().to_string()],
-                Duration::from_secs(180),
-            )?;
-            if !ok(&out) {
-                eprintln!("[orchestrator] failed to load bundled image {}", path.display());
+    let client = reqwest::Client::builder()
+        .build()
+        .map_err(|e| OrchestratorError::ExecutionError(format!("http client: {e}")))?;
+
+    for (key, entry) in &overlay.images {
+        if entry.source != "built" {
+            continue;
+        }
+        let Some(tar) = &entry.tar else { continue };
+        let dest = images_dir.join(tar);
+        if dest.exists() {
+            continue; // already fetched
+        }
+        let url = format!(
+            "https://github.com/{}/releases/download/{}/{}",
+            overlay.repo, overlay.tag, tar
+        );
+        eprintln!("[orchestrator] fetching image {key} ← {url}");
+        let resp = client
+            .get(&url)
+            .send()
+            .await
+            .and_then(|r| r.error_for_status())
+            .map_err(|e| OrchestratorError::ExecutionError(format!("download {tar}: {e}")))?;
+        // Stream to a temp file (memory-safe for multi-hundred-MB tarballs),
+        // then rename so a partial download is never seen as complete.
+        let tmp = dest.with_extension("tar.part");
+        {
+            let mut file = std::fs::File::create(&tmp).map_err(OrchestratorError::IoError)?;
+            let mut resp = resp;
+            while let Some(chunk) = resp
+                .chunk()
+                .await
+                .map_err(|e| OrchestratorError::ExecutionError(format!("download {tar}: {e}")))?
+            {
+                use std::io::Write as _;
+                file.write_all(&chunk).map_err(OrchestratorError::IoError)?;
             }
         }
+        std::fs::rename(&tmp, &dest).map_err(OrchestratorError::IoError)?;
     }
     Ok(())
 }

@@ -107,18 +107,15 @@ fn prepare_bundle(handle: &AppHandle) {
     if let Err(e) = podman::stage_resources_from_bundle(&bundle_perimeter, &runtime_rd) {
         eprintln!("[bootstrap] staging perimeter resources failed: {e}");
     }
-    // Copy the small signed digest overlay; load the (large) image tarballs
-    // straight from the bundle mount (no copy into the data dir).
-    let bundle_images = bundle_perimeter.join("images");
+    // Copy the small signed digest overlay into the runtime images dir. The
+    // overlay is the trust anchor (pinned digests + release coordinates); the
+    // large image tarballs are fetched from the release at step 4.
     let runtime_images = runtime_rd.join("images");
     let _ = std::fs::create_dir_all(&runtime_images);
     let _ = std::fs::copy(
-        bundle_images.join("image-digests.json"),
+        bundle_perimeter.join("images").join("image-digests.json"),
         runtime_images.join("image-digests.json"),
     );
-    if let Err(e) = podman::load_bundled_images(&bundle_images) {
-        eprintln!("[bootstrap] loading bundled images failed: {e}");
-    }
 }
 
 // ─── Step implementations ─────────────────────────────────────────────
@@ -180,7 +177,13 @@ fn step_write_env(handle: &AppHandle, root: &Path) -> Result<(), &'static str> {
 /// loaded from the verified bundle (no on-host build — that was the v0.4.1
 /// failure). This step verifies/acquires them via the orchestrator.
 async fn step_prepare_images(handle: &AppHandle, root: &Path) -> Result<(), &'static str> {
-    set_step(handle, BootstrapStep::BuildImages, 4, None, Some("Preparing images…".into()));
+    set_step(handle, BootstrapStep::BuildImages, 4, None, Some("Downloading security images…".into()));
+    // Fetch the signed image tarballs from the release (skipped in dev / when
+    // already present), then verify + load each against the signed overlay.
+    if let Err(e) = podman::fetch_perimeter_images().await {
+        eprintln!("[bootstrap] image fetch failed: {e}");
+        return Err("image-fetch-failed");
+    }
     let root = root.to_path_buf();
     tokio::task::spawn_blocking(move || podman::ensure_images(&root))
         .await
