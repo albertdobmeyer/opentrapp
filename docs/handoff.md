@@ -1,9 +1,11 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-05-18 (rebrand-complete session — Lobster-TrApp → OpenTrApp landed end-to-end; v0.4.1 shipped clean across all platforms)
-**Current phase:** Security hardening before SignPath resubmission
-**Branch:** `main` at `97df1b1` — pushed to `origin/main`. Submodules: `opencli-container` @ `190e66a`, `openskill-forge` @ `a2b0af8`, `openagent-social` @ `75fc40a`. All tracking their own `main`.
-**Latest release:** `v0.4.1` — first clean post-rebrand release, all 4 platforms (Win/macOS Intel/macOS ARM/Linux), cosign-signed, with SBOMs.
+**Last updated:** 2026-05-20 (zero-trust self-sufficient bootstrap landed — ADR-0009/0010/0011 implemented; v0.5.0-rc1 cut)
+**Current phase:** v0.5.0 release-candidate validation → promote/publish
+**Branch:** `main` at `cdac130` — pushed to `origin/main`. Submodules: `opencli-container` @ `ebb5717`, `openskill-forge` @ `7aa51fd`, `openagent-social` @ `75fc40a`. All tracking their own `main`.
+**Latest tag:** `v0.5.0-rc1` — **DRAFT** release. Five-container perimeter (ADR-0009/0010) + the self-sufficient bootstrap (ADR-0011): no on-host build, native podman orchestrator (no compose), pre-built cosign-signed images delivered as release assets and digest-verified at first launch. ~90 MB AppImage.
+
+> **v0.5.0 status:** clean-box E2E PASSED (2026-05-20) — full perimeter up from an AppImage with no source clone, zero on-host build, every image digest-verified, a tampered tarball refused, hero reaches "running safely". See [ADR-0011](adr/0011-zero-trust-self-sufficient-bootstrap.md). **Open before promoting rc → v0.5.0:** (1) validate the `fetch_perimeter_images` download path against a *published* release (rc tested via pre-staging, since drafts aren't publicly downloadable); (2) publish the release + mark the GHCR `vault-*` packages public; (3) macOS/Windows runtime-install story still deferred (Linux/AppImage only).
 
 ---
 
