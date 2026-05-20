@@ -34,7 +34,10 @@ TIER 1 — TRUSTED (host)
 
 TIER 2 — INFRASTRUCTURE (perimeter)
   OpenTrApp container orchestrator
-  4 containers: vault-agent, vault-forge, vault-pioneer, vault-proxy
+  5 containers: vault-agent, vault-forge, vault-pioneer, vault-proxy, vault-egress
+    └─ L7 application policy lives in vault-proxy (credentials, allowlist)
+    └─ L3 network policy lives in vault-egress (kernel RFC1918 drop, DoT resolver)
+    └─ See ADR-0009 for the L7/L3 split rationale
 
 TIER 3 — CONTAINED (inside perimeter)
   agent process
@@ -62,7 +65,8 @@ flowchart TB
         AGENT["vault-agent<br/>agent runtime + Telegram gateway"]
         FORGE["vault-forge<br/>87-pattern scanner + CDR"]
         PIONEER["vault-pioneer (parked)"]
-        PROXY["vault-proxy<br/>egress gateway, holds credentials"]
+        PROXY["vault-proxy<br/>L7 policy: allowlist, key injection"]
+        EGRESS["vault-egress<br/>L3 policy: nftables drop, DoT resolver"]
     end
 
     USER --> GUI
@@ -70,7 +74,8 @@ flowchart TB
     AGENT --> PROXY
     FORGE --> PROXY
     AGENT <-.->|"write-only volume"| FORGE
-    PROXY --> EXT[Public internet]
+    PROXY --> EGRESS
+    EGRESS --> EXT[Public internet]
 
     classDef parked stroke-dasharray: 5 5,color:#777
     class PIONEER parked
@@ -105,29 +110,42 @@ HOST
     │     Container is defined; target API has been intermittent
     │     since 2026-04-05 following Meta's acquisition of Moltbook
     │
-    └── vault-proxy
-          Sole egress to the public internet
-          Holds API keys; injects them per request, so no other
-          container ever sees the literal key value
-          Domain allowlist, payload-size limits, request logging
-          Internal network bridge between the other three containers
-          (which otherwise have no path to one another)
+    ├── vault-proxy
+    │     L7 (application-layer) egress policy:
+    │     - Domain allowlist with subdomain matching
+    │     - Per-request API-key injection (real keys never leave this container)
+    │     - Post-resolve destination-IP check (ADR-0009 Tier 2)
+    │     - Payload-size limits + reflected-key redaction + request logging
+    │     Holds API keys; NO direct internet attachment.
+    │     Chains upstream to vault-egress for actual internet reach.
+    │     Internal network bridge between vault-agent, vault-forge, vault-pioneer.
+    │
+    └── vault-egress
+          L3 (network-layer) egress policy (ADR-0009 + ADR-0010):
+          - nftables ruleset drops outbound RFC1918/loopback/link-local/multicast
+          - unbound pinned DoT resolver (Quad9 + Cloudflare) with cache-min-ttl=60
+            (defeats DNS-rebinding attacks that rely on TTL=0)
+          - tinyproxy CONNECT forwarder, chained from vault-proxy
+          Holds NET_ADMIN (only). Holds NO secrets, NO application code.
+          The ONLY container with public-internet attachment.
 ```
 
 ### Network isolation matrix
 
-Each container has its own internal network. Only `vault-proxy` bridges them.
+Each internal container has its own internal network. `vault-proxy` bridges them and chains upstream to `vault-egress`; `vault-egress` is the sole external-facing container.
 
 | Source              | Destination       | Allowed | Purpose |
 |---------------------|-------------------|---------|---------|
 | vault-agent         | vault-proxy       | Yes     | Filtered, key-injected, logged egress |
+| vault-proxy         | vault-egress      | Yes     | L7 → L3 chain (HTTP CONNECT upstream) |
+| vault-egress        | public internet   | Yes     | The only external attachment |
 | vault-agent         | vault-forge       | No      | Prevents the agent from influencing skill scans |
 | vault-agent         | vault-pioneer     | No      | Prevents the agent from influencing feed analysis |
 | vault-agent         | host              | No      | No host-side filesystem or process visibility |
 | vault-forge         | vault-proxy       | Yes     | Skill download via filtered egress |
 | vault-forge         | vault-agent       | Volume only | Delivers certified skills via write-only mount |
 | vault-pioneer       | vault-proxy       | Yes     | Feed fetch via filtered egress |
-| vault-proxy         | public internet   | Yes     | The only external connection |
+| vault-proxy         | public internet   | **No**  | Removed by ADR-0009 — chains through vault-egress |
 | host (GUI / coordinator) | vault-proxy  | Yes     | Management, monitoring, control |
 
 ---
@@ -252,7 +270,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 **Current implementation:**
 
-- 4-container `compose.yml` with network isolation (verified by `tests/orchestrator-check.sh`)
+- 5-container `compose.yml` with per-service network isolation and an L7/L3 policy split (verified by `tests/orchestrator-check.sh` §10)
 - Manifest contract in `schemas/component.schema.json` (6 sections: identity, status, commands, configs, health, workflows)
 - 10 component-level workflows + 4 cross-component orchestrator workflows
 - 42-check validation suite passing (0 warnings)

@@ -6,7 +6,7 @@
 
 - [x] `.env.test` populated at repo root (api_id, api_hash, phone, bot handle, session path)
 - [x] `~/.opentrapp/test-sessions/` exists with mode 700
-- [x] `podman ps` shows 4 containers up (vault-proxy, vault-forge, vault-pioneer, vault-agent)
+- [x] `podman ps` shows 5 containers up (vault-proxy, vault-forge, vault-pioneer, vault-agent, vault-egress)
 - [x] `@LogoTrappBot` paired to your Telegram user id (happened last night)
 - [x] Anthropic credits loaded ($5)
 - [x] vault-proxy patched to redact bot tokens in logs (submodule 4f5b560, parent 0ac3e9e)
@@ -64,7 +64,7 @@ After the run: `tests/e2e-telegram/VERDICT-<date>.md` gets appended with finding
 This is normal if you restarted and have an existing session. Telethon will continue without re-prompting.
 
 ### "bot isn't replying — test_smoke timed out"
-Run `podman ps` to confirm all four containers are up. If vault-agent is missing, `podman compose up -d` from repo root. See last night's commit `0ac3e9e` for what changed.
+Run `podman ps` to confirm all five containers are up. If vault-agent is missing, `podman compose up -d` from repo root. See last night's commit `0ac3e9e` for what changed.
 
 ### Anthropic billing error
 `podman exec vault-proxy python3 -c 'import os, urllib.request, json; key=os.environ["ANTHROPIC_API_KEY"]; print(urllib.request.urlopen(urllib.request.Request("https://api.anthropic.com/v1/messages", data=json.dumps({"model":"claude-haiku-4-5","max_tokens":5,"messages":[{"role":"user","content":"hi"}]}).encode(), headers={"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json"}), timeout=10).status)'`

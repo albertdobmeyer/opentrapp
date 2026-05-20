@@ -131,7 +131,7 @@ Types in current use: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`
 ## Running the perimeter for manual verification
 
 ```bash
-# Start the four-container perimeter
+# Start the five-container perimeter (vault-egress builds on first run)
 podman compose up -d
 
 # Verify all containers are up

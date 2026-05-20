@@ -92,6 +92,11 @@ jobs:
 
       - run: bash tests/orchestrator-check.sh
 
+      # vault-proxy policy unit tests — pin IP-literal denial against regression.
+      # See ~/.claude/plans/discuss-which-one-is-buzzing-crab.md (A1).
+      - name: vault-proxy policy unit tests
+        run: python3 -m unittest discover -s components/opencli-container/proxy -p 'test_*.py' -v
+
   integration-tests:
     name: Integration tests (cross-module contracts)
     needs: check-orchestration
@@ -223,7 +228,7 @@ jobs:
             cat <<EOF
           ## Just install
 
-          Pick the row for your operating system and click the link. After downloading, double-click to install. The setup wizard takes over from there — Anthropic key, Telegram bot pairing, and the four-container perimeter download. No terminal needed.
+          Pick the row for your operating system and click the link. After downloading, double-click to install. The setup wizard takes over from there — Anthropic key, Telegram bot pairing, and the five-container perimeter download. No terminal needed.
 
           | Your OS | Download |
           |---|---|
@@ -275,7 +280,7 @@ jobs:
           projectPath: app
           args: ${{ matrix.platform.args }}
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('Lobster-TrApp {0}', github.ref_name) || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('OpenTrApp {0}', github.ref_name) || '' }}
           releaseBody: ${{ steps.notes.outputs.body || 'See the assets below to download and install.' }}
           releaseDraft: true
           prerelease: false

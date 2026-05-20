@@ -1,6 +1,8 @@
 # ADR-0006 — Four-container compose topology
 
-**Status:** Accepted
+**Status:** Partially superseded by [ADR-0009](0009-five-container-perimeter.md) (2026-05-18)
+**Superseded scope:** the container *count* (four → five) and the rationale for *where* L3 egress policy lives. The boundary-existence reasoning (one container per structurally distinct responsibility) is preserved and extended in ADR-0009.
+**Original status:** Accepted
 **Decision date:** 2026-04-15 (architecture v2 redesign)
 **Implemented by:** [`compose.yml`](../../compose.yml) (the four-service definition with per-service internal networks and the proxy bridge)
 **Verified by:** [`tests/orchestrator-check.sh`](../../tests/orchestrator-check.sh) §1 and §6 (compose-file structure and service set); the network-isolation matrix in [`docs/trifecta.md`](../trifecta.md) §3 verified by inspection of `compose.yml`'s `networks:` block

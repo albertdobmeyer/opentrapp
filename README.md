@@ -9,7 +9,7 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/albertdobmeyer/opentrapp/badge)](https://scorecard.dev/viewer/?uri=github.com/albertdobmeyer/opentrapp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-009966.svg)](LICENSE)
 
-A desktop application that runs an autonomous CLI agent inside a four-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT. Ships pre-wired for [OpenClaw](https://www.getopenclaw.ai); the perimeter is designed to extend to other CLI agents.
+A desktop application that runs an autonomous CLI agent inside a five-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT. Ships pre-wired for [OpenClaw](https://www.getopenclaw.ai); the perimeter is designed to extend to other CLI agents.
 
 The architecture, threat model, and per-component capabilities are described in [`docs/trifecta.md`](docs/trifecta.md).
 
@@ -56,7 +56,7 @@ Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled b
 
 - 64-bit Linux, macOS (Apple Silicon or Intel), or Windows
 - [Podman](https://podman.io/) or [Docker](https://www.docker.com/) installed and runnable by the current user
-- Approximately 4 GB free disk space for the four container images
+- Approximately 4 GB free disk space for the five container images
 - An [Anthropic API key](https://console.anthropic.com/) and a Telegram bot token (the in-app setup wizard explains how to obtain both)
 
 ## Installation
@@ -78,16 +78,17 @@ For unsupported platforms or to audit the build pipeline, see *Building from sou
 <details>
 <summary><strong>Architecture summary</strong></summary>
 
-The runtime perimeter consists of four containers connected by an internal compose network:
+The runtime perimeter consists of five containers connected by per-service internal compose networks. The L7 (application-layer) policy and the L3 (network-layer) policy live in separate containers — see [ADR-0009](docs/adr/0009-five-container-perimeter.md) for the rationale.
 
 | Container | Role | Description |
 |-----------|------|-------------|
 | `vault-agent`   | Runtime containment | Read-only root filesystem, all Linux capabilities dropped, custom syscall profile, workspace mount only |
 | `vault-forge`   | Supply-chain defense | 87-pattern skill scanner, zero-trust line verifier, Content Disarm & Reconstruction pipeline |
-| `vault-proxy`   | Egress gateway      | Holds API keys, enforces a domain allowlist, logs every request, the only path to the public internet |
+| `vault-proxy`   | **L7 egress policy** | Domain allowlist, API-key injection, request logging, post-resolve destination-IP check. Holds API keys; **no internet attachment** (chains to `vault-egress`). |
 | `vault-pioneer` | Social-content analysis | **Parked** — see *Limitations* |
+| `vault-egress`  | **L3 egress policy** | Kernel-level RFC1918 drop; pinned DoT resolver (Quad9 + Cloudflare); the *only* container with internet attachment. Holds `NET_ADMIN` but **no secrets**. |
 
-Each container has its own internal network. `vault-proxy` is the only bridge between them; `vault-agent` cannot reach `vault-forge` or `vault-pioneer` directly.
+`vault-proxy` is the bridge between the internal containers. `vault-egress` is the bridge to the public internet. Neither container holds both API credentials *and* elevated network capabilities — that separation is the load-bearing security property the five-container topology exists for.
 
 ```mermaid
 flowchart LR
@@ -98,15 +99,17 @@ flowchart LR
         AGENT[vault-agent]
         FORGE[vault-forge]
         PIONEER["vault-pioneer<br/>(parked)"]
-        PROXY[vault-proxy]
+        PROXY["vault-proxy<br/>(L7 policy)"]
+        EGRESS["vault-egress<br/>(L3 policy + DoT)"]
     end
 
     AGENT --> PROXY
     FORGE --> PROXY
     AGENT <-.->|"write-only volume"| FORGE
-    PROXY --> ANTHROPIC[Anthropic API]
-    PROXY --> TELEGRAM[Telegram]
-    PROXY --> CLAWHUB[ClawHub]
+    PROXY --> EGRESS
+    EGRESS --> ANTHROPIC[Anthropic API]
+    EGRESS --> TELEGRAM[Telegram]
+    EGRESS --> CLAWHUB[ClawHub]
 
     classDef parked stroke-dasharray: 5 5,color:#777
     class PIONEER parked

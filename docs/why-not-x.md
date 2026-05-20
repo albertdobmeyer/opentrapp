@@ -92,7 +92,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 - **No credential isolation between agent and credential.** The credential is in the VM's environment; whatever runs inside the VM can read it.
 - **Cost.** A continuously-running cloud VM has an ongoing dollar cost, even when idle. A disposable-per-use pattern works only for users with strong configuration discipline.
 
-**Differential against this work.** This perimeter aims for a **consumer-installable** product. A cloud-VM recommendation is correct for users with the operational discipline and budget to do it; for the larger population of users who would benefit from running OpenClaw with stronger containment than `sandbox.mode` alone but will not provision per-session VMs, the four-container perimeter is the practical answer. The two approaches are complementary: a user with high security requirements would naturally combine them (run this perimeter inside a disposable VM).
+**Differential against this work.** This perimeter aims for a **consumer-installable** product. A cloud-VM recommendation is correct for users with the operational discipline and budget to do it; for the larger population of users who would benefit from running OpenClaw with stronger containment than `sandbox.mode` alone but will not provision per-session VMs, the five-container perimeter is the practical answer. The two approaches are complementary: a user with high security requirements would naturally combine them (run this perimeter inside a disposable VM).
 
 **Reference.** [Firecracker](https://firecracker-microvm.github.io/); [Cloud Hypervisor](https://www.cloudhypervisor.org/).
 
@@ -141,7 +141,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 - **Credential-adjacent.** Storing the credential in `.env` next to the runtime puts it within reach of any process compromise inside the runtime.
 - **No lifecycle ownership.** The runtime starts and stops at the user's discretion; "is the agent currently exposed?" is a question of user vigilance rather than a structural property.
 
-**Differential against this work.** This is the baseline the architecture is engineered against. The whitepaper's introductory argument ([`whitepaper.md`](whitepaper.md) §1) names *single-layer*, *self-modifying*, and *credential-adjacent* as the three structural reasons configuration-only hardening is insufficient. The four-container perimeter addresses all three.
+**Differential against this work.** This is the baseline the architecture is engineered against. The whitepaper's introductory argument ([`whitepaper.md`](whitepaper.md) §1) names *single-layer*, *self-modifying*, and *credential-adjacent* as the three structural reasons configuration-only hardening is insufficient. The five-container perimeter addresses all three.
 
 ---
 
