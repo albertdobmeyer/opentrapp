@@ -13,6 +13,25 @@ const STAGED_RESOURCES: &[&str] = &[
     "../../components/opencli-container/egress/resolv.conf",
 ];
 
+/// Components whose `component.yml` manifest is bundled so the UI can render
+/// dashboards on a clean machine without a source clone (discovered via
+/// `discover_first` → `resources/perimeter/manifests/<component>/component.yml`).
+const STAGED_MANIFESTS: &[&str] =
+    &["opencli-container", "openskill-forge", "openagent-social"];
+
+fn stage_manifests() {
+    let base = Path::new("resources/perimeter/manifests");
+    for component in STAGED_MANIFESTS {
+        let src = format!("../../components/{component}/component.yml");
+        println!("cargo:rerun-if-changed={src}");
+        let dest_dir = base.join(component);
+        if std::fs::create_dir_all(&dest_dir).is_err() {
+            continue;
+        }
+        let _ = std::fs::copy(Path::new(&src), dest_dir.join("component.yml"));
+    }
+}
+
 fn stage_perimeter_resources() {
     let dest_dir = Path::new("resources/perimeter");
     if std::fs::create_dir_all(dest_dir).is_err() {
@@ -33,5 +52,6 @@ fn stage_perimeter_resources() {
 
 fn main() {
     stage_perimeter_resources();
+    stage_manifests();
     tauri_build::build()
 }
