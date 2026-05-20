@@ -39,6 +39,9 @@ pub fn spawn_bootstrap(handle: AppHandle, root: PathBuf) {
 }
 
 async fn run_bootstrap(handle: AppHandle, root: PathBuf) {
+    // Step 0: stage verified resources + load signed images from the bundle.
+    prepare_bundle(&handle);
+
     // Step 1: detect runtime
     let runtime = match step_detect_runtime(&handle, &root) {
         Ok(r) => r,
@@ -84,6 +87,38 @@ async fn run_bootstrap(handle: AppHandle, root: PathBuf) {
     // Pipeline complete — clear progress and dispatch to auto-activate.
     clear_progress(&handle);
     auto_activate::after_shell_ready(handle, root).await;
+}
+
+/// Stage verified policy files into the runtime resource dir and `podman load`
+/// the signed image tarballs from the AppImage bundle. No-op in dev (no bundle).
+/// The bundle copy is inside the read-only, signature-covered AppImage, so it
+/// is the trusted source; restaging on every launch self-heals any tampering of
+/// the writable runtime copies.
+fn prepare_bundle(handle: &AppHandle) {
+    let Ok(res) = handle.path().resource_dir() else {
+        return;
+    };
+    let bundle_perimeter = res.join("perimeter");
+    if !bundle_perimeter.exists() {
+        // Dev run (cargo tauri dev): no bundled resources — DevVerifier path.
+        return;
+    }
+    let runtime_rd = podman::resource_dir();
+    if let Err(e) = podman::stage_resources_from_bundle(&bundle_perimeter, &runtime_rd) {
+        eprintln!("[bootstrap] staging perimeter resources failed: {e}");
+    }
+    // Copy the small signed digest overlay; load the (large) image tarballs
+    // straight from the bundle mount (no copy into the data dir).
+    let bundle_images = bundle_perimeter.join("images");
+    let runtime_images = runtime_rd.join("images");
+    let _ = std::fs::create_dir_all(&runtime_images);
+    let _ = std::fs::copy(
+        bundle_images.join("image-digests.json"),
+        runtime_images.join("image-digests.json"),
+    );
+    if let Err(e) = podman::load_bundled_images(&bundle_images) {
+        eprintln!("[bootstrap] loading bundled images failed: {e}");
+    }
 }
 
 // ─── Step implementations ─────────────────────────────────────────────

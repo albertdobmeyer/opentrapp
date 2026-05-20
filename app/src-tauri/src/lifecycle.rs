@@ -293,17 +293,7 @@ pub fn redact_secrets(s: &str) -> String {
     out
 }
 
-// ─── Compose runner ───────────────────────────────────────────────────
-
-/// Bring the 4-container perimeter up. Idempotent — `compose up -d` is a
-/// no-op when containers are already running. Spawned on a background
-/// thread so the Tauri window appears immediately even if a first-time
-/// pull is happening.
-pub fn bring_perimeter_up_async(root: PathBuf) {
-    std::thread::spawn(move || {
-        let _ = crate::orchestrator::podman::perimeter_up(&root);
-    });
-}
+// ─── Perimeter teardown ───────────────────────────────────────────────
 
 /// Tear the perimeter down on graceful exit. Synchronous — we want the
 /// containers actually stopped before the process terminates so we don't

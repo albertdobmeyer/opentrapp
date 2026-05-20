@@ -28,6 +28,9 @@
   "bundle": {
     "active": true,
     "category": "DeveloperTool",
+    "resources": {
+      "resources/perimeter": "perimeter"
+    },
     "shortDescription": "Security-first desktop GUI for the OpenClaw ecosystem",
     "copyright": "Copyright (c) 2026 Albert Dobmeyer",
     "icon": [

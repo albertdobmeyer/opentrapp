@@ -18,6 +18,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command as StdCommand, Output};
 use std::time::Duration;
 
+use serde::Deserialize;
+
 use super::error::OrchestratorError;
 use super::perimeter::{
     DependencyCondition, EnvKind, ImageRef, ImageSource, MountKind, PerimeterSpec, Service,
@@ -369,8 +371,9 @@ fn wait_healthy(service_name: &str, timeout: Duration) -> Result<(), Orchestrato
 }
 
 /// Resolve `built` images to `repo:latest` and pass `external` refs through.
-/// DEV-ONLY: performs no signature/digest verification. The production verifier
-/// (step 5) replaces this with cosign + a signed digest overlay. Loud by design.
+/// DEV-ONLY: performs no signature/digest verification. Used only when no
+/// signed image-digests overlay is bundled (i.e. a `cargo tauri dev` run).
+/// Loud by design.
 pub struct DevVerifier;
 
 impl ImageVerifier for DevVerifier {
@@ -392,6 +395,187 @@ impl ImageVerifier for DevVerifier {
             }
         }
     }
+}
+
+// ─── Production verifier: digest-pinned, bundle-backed ──────────────────
+//
+// Trust model (offline-first, zero-trust): the image tarballs + this overlay
+// are bundled INSIDE the cosign-signed AppImage, so they inherit the AppImage
+// signature. At runtime we do not re-run cosign (Karen has no cosign, and
+// keyless verify needs network) — instead we pin every image to the digest in
+// the signed overlay and refuse anything that doesn't match. The cosign keyless
+// signatures on GHCR (step 4) are the public/audit axis, verified by CI and
+// security researchers, not on Karen's machine.
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+pub struct ImageEntry {
+    pub digest: String,
+    pub source: String,
+    /// Tarball filename (relative to the images dir) to `podman load`.
+    #[serde(default)]
+    pub tar: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ImageDigestOverlay {
+    pub version: u32,
+    #[serde(default)]
+    pub tag: String,
+    #[serde(default)]
+    pub signer_identity_regexp: String,
+    #[serde(default)]
+    pub oidc_issuer: String,
+    /// repo (without tag/digest) → pinned digest + source + tarball name.
+    pub images: BTreeMap<String, ImageEntry>,
+}
+
+impl ImageDigestOverlay {
+    pub fn parse(json: &str) -> Result<Self, OrchestratorError> {
+        serde_json::from_str(json)
+            .map_err(|e| OrchestratorError::ExecutionError(format!("image-digests overlay parse: {e}")))
+    }
+}
+
+/// Strip any `:tag` or `@digest` suffix to get the bare repo key used in the
+/// overlay. Handles registry hosts with ports (`host:5000/repo`) by only
+/// treating a colon in the final path segment as a tag separator.
+fn repo_key(reference: &str) -> String {
+    let at = reference.split('@').next().unwrap_or(reference);
+    match at.rsplit_once('/') {
+        Some((prefix, last)) => match last.rsplit_once(':') {
+            Some((name, _tag)) => format!("{prefix}/{name}"),
+            None => at.to_string(),
+        },
+        None => match at.rsplit_once(':') {
+            Some((name, _tag)) => name.to_string(),
+            None => at.to_string(),
+        },
+    }
+}
+
+pub struct BundleVerifier {
+    overlay: ImageDigestOverlay,
+    images_dir: PathBuf,
+}
+
+impl BundleVerifier {
+    /// Load the signed overlay from `<images_dir>/image-digests.json`.
+    pub fn load(images_dir: &Path) -> Result<Self, OrchestratorError> {
+        let json = std::fs::read_to_string(images_dir.join("image-digests.json"))
+            .map_err(OrchestratorError::IoError)?;
+        Ok(Self { overlay: ImageDigestOverlay::parse(&json)?, images_dir: images_dir.to_path_buf() })
+    }
+
+    /// PURE: resolve an ImageRef to its overlay key + pinned `repo@digest`.
+    /// Errors if the image isn't in the signed overlay. Unit-tested.
+    pub fn pinned_ref(&self, image: &ImageRef) -> Result<(String, String, Option<String>), OrchestratorError> {
+        let reference = match image.source {
+            ImageSource::Built => image
+                .repo
+                .clone()
+                .ok_or_else(|| OrchestratorError::ExecutionError("built image missing repo".into()))?,
+            ImageSource::External => image
+                .r#ref
+                .clone()
+                .ok_or_else(|| OrchestratorError::ExecutionError("external image missing ref".into()))?,
+        };
+        let key = repo_key(&reference);
+        let entry = self.overlay.images.get(&key).ok_or_else(|| {
+            OrchestratorError::ExecutionError(format!("image '{key}' is not in the signed overlay — refusing"))
+        })?;
+        Ok((key.clone(), format!("{key}@{}", entry.digest), entry.tar.clone()))
+    }
+}
+
+impl ImageVerifier for BundleVerifier {
+    fn verify_and_resolve(&self, image: &ImageRef) -> Result<String, OrchestratorError> {
+        let (key, pinned, tar) = self.pinned_ref(image)?;
+        // Load from the bundled tarball if the exact digest isn't present.
+        if !image_present(&pinned) {
+            let tar_name = tar.unwrap_or_else(|| format!("{}.tar", key.rsplit('/').next().unwrap_or(&key)));
+            let tar_path = self.images_dir.join(&tar_name);
+            let out = podman(
+                &["load".into(), "--input".into(), tar_path.display().to_string()],
+                Duration::from_secs(120),
+            )?;
+            if !ok(&out) {
+                return Err(OrchestratorError::ExecutionError(format!(
+                    "failed to load bundled image {tar_name}"
+                )));
+            }
+        }
+        // The image must now be present AT THE PINNED DIGEST. A tampered tarball
+        // loads under a different digest → this check fails → we refuse.
+        if !image_present(&pinned) {
+            return Err(OrchestratorError::ExecutionError(format!(
+                "image digest mismatch for {key} — expected {pinned} not present after load; refusing"
+            )));
+        }
+        Ok(pinned)
+    }
+}
+
+/// True if an image is present locally at an exact `repo@sha256:…` ref.
+fn image_present(reference: &str) -> bool {
+    podman(
+        &["image".into(), "exists".into(), reference.to_string()],
+        Duration::from_secs(10),
+    )
+    .map(|o| ok(&o))
+    .unwrap_or(false)
+}
+
+/// Select the verifier for a runtime: the digest-pinned [`BundleVerifier`] when
+/// a signed overlay is bundled, else the loud dev fallback.
+pub fn make_verifier(resource_dir: &Path) -> Box<dyn ImageVerifier> {
+    let images_dir = resource_dir.join("images");
+    match BundleVerifier::load(&images_dir) {
+        Ok(v) => Box::new(v),
+        Err(_) => {
+            eprintln!("[orchestrator] no signed image overlay found — using DevVerifier (dev only)");
+            Box::new(DevVerifier)
+        }
+    }
+}
+
+/// Re-stage the verified policy files from the signed bundle resource dir into
+/// the runtime resource dir on every launch (overwriting any tampering). The
+/// bundle copy lives inside the read-only, signature-covered AppImage, so it is
+/// the source of truth; the runtime copy is what containers bind-mount.
+pub fn stage_resources_from_bundle(bundle_perimeter_dir: &Path, runtime_resource_dir: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(runtime_resource_dir)?;
+    for entry in std::fs::read_dir(bundle_perimeter_dir)? {
+        let entry = entry?;
+        let src = entry.path();
+        if src.is_file() {
+            let dest = runtime_resource_dir.join(entry.file_name());
+            std::fs::copy(&src, &dest)?;
+        }
+    }
+    Ok(())
+}
+
+/// `podman load` every `*.tar` in the bundle's images dir. Reads directly from
+/// the read-only AppImage mount (no multi-hundred-MB copy into the data dir);
+/// once loaded, images persist in podman storage so later launches are no-ops.
+/// Digest verification happens later, in [`BundleVerifier::verify_and_resolve`].
+pub fn load_bundled_images(bundle_images_dir: &Path) -> Result<(), OrchestratorError> {
+    if !bundle_images_dir.exists() {
+        return Ok(());
+    }
+    for entry in std::fs::read_dir(bundle_images_dir).map_err(OrchestratorError::IoError)? {
+        let path = entry.map_err(OrchestratorError::IoError)?.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("tar") {
+            let out = podman(
+                &["load".into(), "--input".into(), path.display().to_string()],
+                Duration::from_secs(180),
+            )?;
+            if !ok(&out) {
+                eprintln!("[orchestrator] failed to load bundled image {}", path.display());
+            }
+        }
+    }
+    Ok(())
 }
 
 // ─── Runtime paths + env ────────────────────────────────────────────────
@@ -438,9 +622,6 @@ pub fn load_runtime_env(data_dir: &Path) -> BTreeMap<String, String> {
     map
 }
 
-/// The single dev verifier instance (referenced by `'static` from contexts).
-static DEV_VERIFIER: DevVerifier = DevVerifier;
-
 fn load_spec() -> Result<PerimeterSpec, OrchestratorError> {
     super::perimeter::load()
         .map_err(|e| OrchestratorError::ExecutionError(format!("perimeter spec parse: {e}")))
@@ -472,7 +653,8 @@ pub fn perimeter_up(data_dir: &Path) -> Result<(), OrchestratorError> {
     let spec = load_spec()?;
     let env = load_runtime_env(data_dir);
     let rd = resource_dir();
-    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: &DEV_VERIFIER };
+    let verifier = make_verifier(&rd);
+    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: verifier.as_ref() };
     up(&spec, &ctx)
 }
 
@@ -481,7 +663,8 @@ pub fn shell_up(data_dir: &Path) -> Result<(), OrchestratorError> {
     let spec = load_spec()?;
     let env = load_runtime_env(data_dir);
     let rd = resource_dir();
-    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: &DEV_VERIFIER };
+    let verifier = make_verifier(&rd);
+    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: verifier.as_ref() };
     ensure_networks(&spec)?;
     for service_name in spec.start_order() {
         if service_name == "vault-agent" {
@@ -535,7 +718,8 @@ pub fn service_up(
     })?;
     let env = load_runtime_env(data_dir);
     let rd = resource_dir();
-    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: &DEV_VERIFIER };
+    let verifier = make_verifier(&rd);
+    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: verifier.as_ref() };
     ensure_networks(&spec)?;
     if !force_recreate && is_running(service_name) {
         return Ok(());
@@ -551,18 +735,20 @@ pub fn service_up(
     Ok(())
 }
 
-/// Verify (and in production, acquire) every image the perimeter needs. In dev
-/// this resolves refs and checks local presence, logging anything missing.
+/// Verify + acquire every image the perimeter needs. With a bundled signed
+/// overlay this loads each image from its tarball and pins it to the overlay
+/// digest, refusing any mismatch. Without an overlay (dev), it resolves refs
+/// and logs anything missing.
 pub fn ensure_images(_data_dir: &Path) -> Result<(), OrchestratorError> {
     let spec = load_spec()?;
+    let verifier = make_verifier(&resource_dir());
     for (name, svc) in &spec.services {
-        let resolved = DEV_VERIFIER.verify_and_resolve(&svc.image)?;
-        let exists = podman(
-            &["image".into(), "exists".into(), resolved.clone()],
-            Duration::from_secs(10),
-        )?;
-        if !ok(&exists) {
-            eprintln!("[orchestrator] image for {name} not present locally: {resolved}");
+        match verifier.verify_and_resolve(&svc.image) {
+            Ok(resolved) => eprintln!("[orchestrator] image ready for {name}: {resolved}"),
+            Err(e) => {
+                eprintln!("[orchestrator] image NOT ready for {name}: {e}");
+                return Err(e);
+            }
         }
     }
     Ok(())
@@ -657,6 +843,68 @@ mod tests {
         assert_eq!(a, "network create --internal --subnet 10.230.0.0/24 opentrapp_egress-net");
         let b = network_create_args("external-net", false, None).join(" ");
         assert_eq!(b, "network create opentrapp_external-net");
+    }
+
+    const OVERLAY_JSON: &str = r#"{
+      "version": 1,
+      "tag": "v9.9.9",
+      "signer_identity_regexp": "https://github.com/albertdobmeyer/opentrapp/.github/workflows/ci.yml@refs/tags/.*",
+      "oidc_issuer": "https://token.actions.githubusercontent.com",
+      "images": {
+        "ghcr.io/albertdobmeyer/opentrapp/vault-agent": { "digest": "sha256:aaa", "source": "built", "tar": "vault-agent.tar" },
+        "docker.io/mitmproxy/mitmproxy": { "digest": "sha256:bbb", "source": "external", "tar": "vault-proxy.tar" }
+      }
+    }"#;
+
+    fn overlay() -> BundleVerifier {
+        BundleVerifier { overlay: ImageDigestOverlay::parse(OVERLAY_JSON).unwrap(), images_dir: PathBuf::from("/x") }
+    }
+
+    #[test]
+    fn repo_key_strips_tag_and_digest_but_keeps_port() {
+        assert_eq!(repo_key("ghcr.io/o/opentrapp/vault-agent:v1"), "ghcr.io/o/opentrapp/vault-agent");
+        assert_eq!(repo_key("docker.io/mitmproxy/mitmproxy@sha256:abc"), "docker.io/mitmproxy/mitmproxy");
+        assert_eq!(repo_key("host:5000/repo:tag"), "host:5000/repo");
+    }
+
+    #[test]
+    fn overlay_parses_and_pins_built_image_by_digest() {
+        let v = overlay();
+        let img = ImageRef {
+            source: ImageSource::Built,
+            repo: Some("ghcr.io/albertdobmeyer/opentrapp/vault-agent".into()),
+            r#ref: None,
+        };
+        let (key, pinned, tar) = v.pinned_ref(&img).unwrap();
+        assert_eq!(key, "ghcr.io/albertdobmeyer/opentrapp/vault-agent");
+        assert_eq!(pinned, "ghcr.io/albertdobmeyer/opentrapp/vault-agent@sha256:aaa");
+        assert_eq!(tar.as_deref(), Some("vault-agent.tar"));
+    }
+
+    #[test]
+    fn overlay_pins_external_image_by_overlay_digest() {
+        let v = overlay();
+        let img = ImageRef {
+            source: ImageSource::External,
+            repo: None,
+            r#ref: Some("docker.io/mitmproxy/mitmproxy@sha256:bbb".into()),
+        };
+        let (_k, pinned, _t) = v.pinned_ref(&img).unwrap();
+        assert_eq!(pinned, "docker.io/mitmproxy/mitmproxy@sha256:bbb");
+    }
+
+    #[test]
+    fn unknown_image_is_refused() {
+        // An image not present in the signed overlay must be rejected — this is
+        // the tamper guard (e.g. an attacker swaps in a different image repo).
+        let v = overlay();
+        let img = ImageRef {
+            source: ImageSource::Built,
+            repo: Some("ghcr.io/attacker/evil".into()),
+            r#ref: None,
+        };
+        let err = format!("{}", v.pinned_ref(&img).unwrap_err());
+        assert!(err.contains("not in the signed overlay"), "got: {err}");
     }
 
     #[test]

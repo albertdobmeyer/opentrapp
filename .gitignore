@@ -62,3 +62,7 @@ test-screenshots/
 
 # Playwright test results
 test-results/
+
+# Generated perimeter bundle resources: policy files staged by build.rs
+# from the submodules, and image tarballs + image-digests.json dropped by CI.
+app/src-tauri/resources/perimeter/
