@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicknisi/tauri-config-schema/main/schema.json",
   "productName": "OpenTrApp",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "identifier": "dev.opentrapp.app",
   "build": {
     "frontendDist": "../dist",
