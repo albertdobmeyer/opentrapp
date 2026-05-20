@@ -259,6 +259,17 @@ fn system_command(program: &str) -> StdCommand {
 /// `timeout(1)` is absent). Spawned with a sanitized env so system podman/conmon
 /// use system libraries, not the AppImage's bundled ones. Stderr is redacted.
 fn podman(args: &[String], timeout: Duration) -> Result<Output, OrchestratorError> {
+    podman_raw(args, timeout, true)
+}
+
+/// Like [`podman`] but never logs a non-zero exit. For existence probes
+/// (`network exists`, `image exists`) where exit 1 means "not found" — an
+/// expected, non-error outcome that would otherwise spam the log.
+fn podman_probe(args: &[String], timeout: Duration) -> Result<Output, OrchestratorError> {
+    podman_raw(args, timeout, false)
+}
+
+fn podman_raw(args: &[String], timeout: Duration, log_errors: bool) -> Result<Output, OrchestratorError> {
     let secs = timeout.as_secs().max(1).to_string();
     let wrapped = system_command("timeout")
         .args(["--signal=TERM", "--kill-after=5s", &secs, "podman"])
@@ -271,7 +282,7 @@ fn podman(args: &[String], timeout: Duration) -> Result<Output, OrchestratorErro
         other => other,
     }
     .map_err(OrchestratorError::IoError)?;
-    if !out.status.success() {
+    if log_errors && !out.status.success() {
         let stderr = String::from_utf8_lossy(&out.stderr);
         eprintln!(
             "[orchestrator] podman {} → {}: {}",
@@ -292,7 +303,7 @@ fn ok(out: &Output) -> bool {
 /// Create any missing perimeter networks. Idempotent.
 pub fn ensure_networks(spec: &PerimeterSpec) -> Result<(), OrchestratorError> {
     for (name, net) in &spec.networks {
-        let exists = podman(
+        let exists = podman_probe(
             &["network".into(), "exists".into(), net_name(name)],
             Duration::from_secs(10),
         )?;
@@ -568,7 +579,7 @@ impl ImageVerifier for BundleVerifier {
 
 /// True if an image is present locally at an exact `repo@sha256:…` ref.
 fn image_present(reference: &str) -> bool {
-    podman(
+    podman_probe(
         &["image".into(), "exists".into(), reference.to_string()],
         Duration::from_secs(10),
     )
