@@ -907,6 +907,71 @@ mod tests {
         assert!(err.contains("not in the signed overlay"), "got: {err}");
     }
 
+    /// LIVE: drives the real arg builders against podman to prove the spec
+    /// actually produces a working `podman run` (string assertions can't catch
+    /// a flag podman rejects). Uses vault-forge — no creds, no dependencies.
+    /// Requires `ghcr.io/albertdobmeyer/opentrapp/vault-forge:latest` present.
+    /// Run with: `cargo test --lib -- --ignored live_forge_brings_up`.
+    #[test]
+    #[ignore]
+    fn live_forge_brings_up_and_tears_down() {
+        let spec = perimeter::load().unwrap();
+        let svc = &spec.services["vault-forge"];
+        let env = BTreeMap::new();
+        let res = std::env::temp_dir().join("opentrapp-live-test");
+        let ctx = ctx_with(&env, &res);
+        let image = "ghcr.io/albertdobmeyer/opentrapp/vault-forge:latest";
+
+        // Clean slate.
+        let _ = podman(&["rm".into(), "--force".into(), "--ignore".into(), "vault-forge".into()], Duration::from_secs(20));
+        let _ = podman(&["network".into(), "rm".into(), "--force".into(), net_name("forge-net")], Duration::from_secs(20));
+
+        // Real network create + real run args.
+        assert!(ok(&podman(&network_create_args("forge-net", true, None), Duration::from_secs(20)).unwrap()));
+        let args = container_run_args("vault-forge", svc, image, &ctx).unwrap();
+        let run = podman(&args, Duration::from_secs(60)).unwrap();
+        assert!(ok(&run), "podman run rejected the generated args");
+
+        // It must be running, and carry our label.
+        assert!(is_running("vault-forge"), "vault-forge not running after up");
+        let labeled = podman(
+            &["ps".into(), "--filter".into(), "label=io.opentrapp.service=vault-forge".into(), "--format".into(), "{{.Names}}".into()],
+            Duration::from_secs(10),
+        ).unwrap();
+        assert!(String::from_utf8_lossy(&labeled.stdout).contains("vault-forge"));
+
+        // Tear down.
+        assert!(ok(&podman(&["rm".into(), "--force".into(), "vault-forge".into()], Duration::from_secs(20)).unwrap()));
+        let _ = podman(&["network".into(), "rm".into(), "--force".into(), net_name("forge-net")], Duration::from_secs(20));
+        assert!(!is_running("vault-forge"), "vault-forge still running after down");
+    }
+
+    /// LIVE: the digest-tamper guard, end to end. A real local image, an overlay
+    /// that pins it to the WRONG digest → verify_and_resolve must refuse (the
+    /// wrong digest is never present, and the bundled tar is absent here).
+    /// Run with: `cargo test --lib -- --ignored live_tampered_digest`.
+    #[test]
+    #[ignore]
+    fn live_tampered_digest_is_refused() {
+        let overlay_json = r#"{
+          "version": 1, "tag": "vtest",
+          "signer_identity_regexp": "x", "oidc_issuer": "y",
+          "images": { "ghcr.io/albertdobmeyer/opentrapp/vault-forge": { "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source": "built", "tar": "vault-forge.tar" } }
+        }"#;
+        let verifier = BundleVerifier {
+            overlay: ImageDigestOverlay::parse(overlay_json).unwrap(),
+            images_dir: std::env::temp_dir().join("opentrapp-no-tars"),
+        };
+        let img = ImageRef {
+            source: ImageSource::Built,
+            repo: Some("ghcr.io/albertdobmeyer/opentrapp/vault-forge".into()),
+            r#ref: None,
+        };
+        let err = verifier.verify_and_resolve(&img).unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("mismatch") || msg.contains("failed to load"), "expected refusal, got: {msg}");
+    }
+
     #[test]
     fn proxy_resource_mounts_resolved_not_bind_from_source_tree() {
         let spec = perimeter::load().unwrap();
