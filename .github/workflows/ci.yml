@@ -211,8 +211,12 @@ jobs:
             # Sign the image by digest (keyless). Verified at runtime against
             # signer_identity_regexp + oidc_issuer above.
             cosign sign --yes "${img}@${digest}"
-            # Export the exact pushed image as an OCI archive for bundling.
-            podman save --format oci-archive -o "images/${svc}.tar" "${img}@${digest}"
+            # Export the image as an OCI archive for bundling. Save by TAG —
+            # podman's local store resolves the tag, not the registry push
+            # digest (which would error "image not known"). The saved manifest
+            # is the same content, so a runtime `podman load` reproduces the
+            # digest recorded in the overlay.
+            podman save --format oci-archive -o "images/${svc}.tar" "${img}:${TAG}"
             # Append to the overlay.
             [ $first -eq 1 ] || echo ',' >> images/image-digests.json
             first=0
