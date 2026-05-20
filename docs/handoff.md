@@ -1,11 +1,16 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-05-20 (zero-trust self-sufficient bootstrap landed — ADR-0009/0010/0011 implemented; v0.5.0-rc1 cut)
-**Current phase:** v0.5.0 release-candidate validation → promote/publish
-**Branch:** `main` at `cdac130` — pushed to `origin/main`. Submodules: `opencli-container` @ `ebb5717`, `openskill-forge` @ `7aa51fd`, `openagent-social` @ `75fc40a`. All tracking their own `main`.
-**Latest tag:** `v0.5.0-rc1` — **DRAFT** release. Five-container perimeter (ADR-0009/0010) + the self-sufficient bootstrap (ADR-0011): no on-host build, native podman orchestrator (no compose), pre-built cosign-signed images delivered as release assets and digest-verified at first launch. ~90 MB AppImage.
+**Last updated:** 2026-05-20 (v0.5.0 SHIPPED — zero-trust self-sufficient bootstrap; ADR-0009/0010/0011)
+**Current phase:** v0.5.0 released; planning v0.5.1 follow-ups
+**Branch:** `main` at `af692c5` — pushed to `origin/main`. Submodules: `opencli-container` @ `ebb5717`, `openskill-forge` @ `7aa51fd`, `openagent-social` @ `75fc40a`. All tracking their own `main`.
+**Latest release:** **`v0.5.0`** — published, `latest`, all platforms, cosign-signed. Five-container perimeter (ADR-0009/0010) + self-sufficient bootstrap (ADR-0011): no on-host build, native podman orchestrator (no compose), pre-built cosign-signed images delivered as release assets and digest-verified at first launch. ~90 MB AppImage.
 
-> **v0.5.0 status:** clean-box E2E PASSED (2026-05-20) — full perimeter up from an AppImage with no source clone, zero on-host build, every image digest-verified, a tampered tarball refused, hero reaches "running safely". See [ADR-0011](adr/0011-zero-trust-self-sufficient-bootstrap.md). **Open before promoting rc → v0.5.0:** (1) validate the `fetch_perimeter_images` download path against a *published* release (rc tested via pre-staging, since drafts aren't publicly downloadable); (2) publish the release + mark the GHCR `vault-*` packages public; (3) macOS/Windows runtime-install story still deferred (Linux/AppImage only).
+> **v0.5.0 fully validated (2026-05-20):** clean-box E2E from a downloaded AppImage with no source clone — `fetch_perimeter_images` pulled the signed tarballs from the **published** release, digest-verified each, loaded them, brought up all five containers (vault-egress healthy under rootless podman), agent activated, hero "running safely". Tamper test refused a swapped image. See [ADR-0011](adr/0011-zero-trust-self-sufficient-bootstrap.md).
+>
+> **Known issues / v0.5.1 candidates:**
+> 1. **Autostart pins the binary path (P1).** Autostart defaults *on* (`app/src/App.tsx:39-66` reconcile + the persisted preference) and registers the *current* binary path. For an AppImage (no stable path) the entry goes stale when the AppImage moves/updates → a failed launch on next login. Fix options: default autostart *off*; or, for AppImage, install to a stable location / repair-or-skip a stale entry on launch. This was the root cause of the "Sandbox setup failed" card seen when an old/ephemeral AppImage autostarted.
+> 2. **macOS/Windows runtime install** still deferred — `podman` absent by default (Linux/AppImage only so far).
+> 3. GHCR `vault-*` packages are private — fine for runtime (images come from release assets), but make them public for the cosign/transparency audit axis.
 
 ---
 
