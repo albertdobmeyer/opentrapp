@@ -229,17 +229,44 @@ pub fn container_run_args(
 
 // ─── Process helpers ────────────────────────────────────────────────────
 
+/// Env vars an AppImage injects to point at its OWN bundled libraries. When the
+/// app shells out to system `podman`/`conmon`, these poison the child: conmon
+/// loads the AppImage's glib and dies with `undefined symbol:
+/// g_assertion_message_cmpint`. We strip them so child processes use system
+/// libs. (Confirmed: system conmon works with a clean env, fails with the
+/// AppImage LD_LIBRARY_PATH.)
+const APPIMAGE_LIB_ENV: &[&str] = &[
+    "LD_LIBRARY_PATH",
+    "LD_PRELOAD",
+    "GTK_PATH",
+    "GDK_PIXBUF_MODULE_FILE",
+    "GDK_PIXBUF_MODULEDIR",
+    "GIO_MODULE_DIR",
+    "GSETTINGS_SCHEMA_DIR",
+    "GST_PLUGIN_SYSTEM_PATH",
+    "GST_PLUGIN_SYSTEM_PATH_1_0",
+];
+
+fn system_command(program: &str) -> StdCommand {
+    let mut cmd = StdCommand::new(program);
+    for var in APPIMAGE_LIB_ENV {
+        cmd.env_remove(var);
+    }
+    cmd
+}
+
 /// Run `podman <args>` with a timeout wrapper (falls back to a direct call if
-/// `timeout(1)` is absent). Stderr is redacted before logging.
+/// `timeout(1)` is absent). Spawned with a sanitized env so system podman/conmon
+/// use system libraries, not the AppImage's bundled ones. Stderr is redacted.
 fn podman(args: &[String], timeout: Duration) -> Result<Output, OrchestratorError> {
     let secs = timeout.as_secs().max(1).to_string();
-    let wrapped = StdCommand::new("timeout")
+    let wrapped = system_command("timeout")
         .args(["--signal=TERM", "--kill-after=5s", &secs, "podman"])
         .args(args)
         .output();
     let out = match wrapped {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            StdCommand::new("podman").args(args).output()
+            system_command("podman").args(args).output()
         }
         other => other,
     }
@@ -490,25 +517,46 @@ impl BundleVerifier {
 impl ImageVerifier for BundleVerifier {
     fn verify_and_resolve(&self, image: &ImageRef) -> Result<String, OrchestratorError> {
         let (key, pinned, tar) = self.pinned_ref(image)?;
-        // Load from the bundled tarball if the exact digest isn't present.
         if !image_present(&pinned) {
-            let tar_name = tar.unwrap_or_else(|| format!("{}.tar", key.rsplit('/').next().unwrap_or(&key)));
-            let tar_path = self.images_dir.join(&tar_name);
-            let out = podman(
-                &["load".into(), "--input".into(), tar_path.display().to_string()],
-                Duration::from_secs(120),
-            )?;
-            if !ok(&out) {
-                return Err(OrchestratorError::ExecutionError(format!(
-                    "failed to load bundled image {tar_name}"
-                )));
+            let source = self
+                .overlay
+                .images
+                .get(&key)
+                .map(|e| e.source.as_str())
+                .unwrap_or("built");
+            if source == "external" {
+                // Public, digest-pinned upstream image (mitmproxy). Pull it by
+                // digest — tamper-proof via the pin, and avoids bundling a third
+                // party's image whose oci-archive round-trips unreliably. First
+                // launch is online anyway.
+                let out = podman(&["pull".into(), pinned.clone()], Duration::from_secs(120))?;
+                if !ok(&out) {
+                    return Err(OrchestratorError::ExecutionError(format!(
+                        "failed to pull external image {pinned}"
+                    )));
+                }
+            } else {
+                // Built image: load from the bundled tarball.
+                let tar_name =
+                    tar.unwrap_or_else(|| format!("{}.tar", key.rsplit('/').next().unwrap_or(&key)));
+                let tar_path = self.images_dir.join(&tar_name);
+                let out = podman(
+                    &["load".into(), "--input".into(), tar_path.display().to_string()],
+                    Duration::from_secs(120),
+                )?;
+                if !ok(&out) {
+                    return Err(OrchestratorError::ExecutionError(format!(
+                        "failed to load bundled image {tar_name}"
+                    )));
+                }
             }
         }
         // The image must now be present AT THE PINNED DIGEST. A tampered tarball
-        // loads under a different digest → this check fails → we refuse.
+        // (or a pull that didn't match) loads under a different digest → this
+        // check fails → we refuse.
         if !image_present(&pinned) {
             return Err(OrchestratorError::ExecutionError(format!(
-                "image digest mismatch for {key} — expected {pinned} not present after load; refusing"
+                "image digest mismatch for {key} — expected {pinned} not present; refusing"
             )));
         }
         Ok(pinned)
@@ -858,6 +906,20 @@ mod tests {
 
     fn overlay() -> BundleVerifier {
         BundleVerifier { overlay: ImageDigestOverlay::parse(OVERLAY_JSON).unwrap(), images_dir: PathBuf::from("/x") }
+    }
+
+    #[test]
+    fn system_command_strips_appimage_lib_env() {
+        // Regression for the conmon `undefined symbol: g_assertion_message_cmpint`
+        // failure: child podman/conmon must NOT inherit the AppImage's
+        // LD_LIBRARY_PATH. Set a sentinel and confirm the child doesn't see it.
+        std::env::set_var("LD_LIBRARY_PATH", "/poison/appimage/lib");
+        let out = system_command("sh")
+            .args(["-c", "printf %s \"${LD_LIBRARY_PATH-UNSET}\""])
+            .output()
+            .unwrap();
+        std::env::remove_var("LD_LIBRARY_PATH");
+        assert_eq!(String::from_utf8_lossy(&out.stdout), "UNSET");
     }
 
     #[test]

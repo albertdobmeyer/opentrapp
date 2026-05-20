@@ -224,14 +224,13 @@ jobs:
             echo "::endgroup::"
           done
 
-          # External proxy: digest pin only (not our signature).
+          # External proxy: digest pin only (not our signature). NOT bundled —
+          # an upstream image's oci-archive round-trips unreliably; the runtime
+          # pulls it by this pinned digest instead (tamper-proof via the pin).
           echo ',' >> images/image-digests.json
-          printf '    "%s": { "digest": "%s", "source": "external", "tar": "vault-proxy.tar" }\n' \
+          printf '    "%s": { "digest": "%s", "source": "external" }\n' \
             "docker.io/mitmproxy/mitmproxy" "sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1" \
             >> images/image-digests.json
-          # Also export the proxy tarball so first launch is fully offline.
-          podman pull "$PROXY_REF"
-          podman save --format oci-archive -o images/vault-proxy.tar "$PROXY_REF"
 
           echo '  }' >> images/image-digests.json
           echo '}' >> images/image-digests.json
