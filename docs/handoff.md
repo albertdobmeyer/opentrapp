@@ -123,7 +123,7 @@ These are unchanged from prior handoffs except for status updates. They sit alon
 
 - **Cargo + npm + tauri.conf versions** are unified at `0.4.1`. The prior mismatch (`0.4.0` in tauri.conf, `0.3.2` everywhere else) is why pre-rebrand release assets shipped with `0.3.2` in their filenames. Never let this drift again — bump all three together when cutting a release.
 - **`vault-agent` runs `npm install -g openclaw@2026.2.26`** as its agent runtime. Verified in `components/opencli-container/Containerfile` line 19. The runtime name is the real third-party package name; OpenTrApp does not fork or modify it.
-- **`pause_perimeter`** at `app/src-tauri/src/commands/lifecycle.rs:87-119` is `compose stop` against the root `compose.yml`: stops all 4 containers, preserves all volumes, persists via `~/.opentrapp/paused`. (Migrated from `~/.lobster-trapp/paused` for upgraders by the migration script.)
+- **`pause_perimeter`** at `app/src-tauri/src/commands/lifecycle.rs:87-119` is `compose stop` against the root `compose.yml`: stops all 5 containers (post-ADR-0009; was 4 prior), preserves all volumes, persists via `~/.opentrapp/paused`. (Migrated from `~/.lobster-trapp/paused` for upgraders by the migration script.)
 - **`hard-kill` and `nuclear-kill`** wipe `vault-data` and the agent image. Confirmed in `components/opencli-container/scripts/kill.sh:30-49,71-72`.
 - **`vault-proxy` reads `ANTHROPIC_API_KEY` per request** at `components/opencli-container/proxy/vault-proxy.py:176-181`; never gates startup; warns if absent.
 - **`vault-proxy.py:92-106`** IP-literal denial: `ipaddress.ip_address(host)` succeeds for `127.0.0.1`, `172.17.0.1`, `10.x`, `192.168.x` → returns `False` → 403. This is the defense we need to pin with a regression test (A1).

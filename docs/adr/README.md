@@ -33,6 +33,8 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0006](0006-four-container-topology.md) | Accepted | Four-container compose topology |
 | [0007](0007-manifest-driven-generic-backend.md) | Accepted | Manifest-driven generic backend |
 | [0008](0008-tauri-over-electron.md) | Accepted | Tauri 2 over Electron, native, and web-only |
+| [0009](0009-five-container-perimeter.md) | Accepted — implementation pending | From four-container perimeter to five: separating L7 and L3 egress policy |
+| [0010](0010-pinned-resolver-dns.md) | Accepted — implementation pending | Pinned-resolver DNS as a perimeter primitive (companion to ADR-0009) |
 
 ## Future ADRs
 

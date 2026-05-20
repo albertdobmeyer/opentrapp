@@ -8,7 +8,7 @@ For end-user documentation, see [`README.md`](README.md). For the full architect
 
 ## 1. What this project is
 
-OpenTrApp is a Tauri 2 desktop application that runs an autonomous CLI agent inside a four-container security perimeter on the user's own computer. The reference integration is OpenClaw; the architecture is designed to extend to other CLI agents. The application is the perimeter orchestrator: it composes the four containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations.
+OpenTrApp is a Tauri 2 desktop application that runs an autonomous CLI agent inside a five-container security perimeter on the user's own computer. The reference integration is OpenClaw; the architecture is designed to extend to other CLI agents. The application is the perimeter orchestrator: it composes the five containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations. The L7 (application-layer) policy lives in `vault-proxy`; the L3 (network-layer) policy lives in `vault-egress`; see [ADR-0009](docs/adr/0009-five-container-perimeter.md).
 
 The agent's reasoning is delegated to the agent's vendor API (Anthropic's, for OpenClaw). The agent's execution layer (file work, tool calls, skill loading) runs locally inside `vault-agent`. The application can never claim to make running an autonomous agent absolutely safe; it raises the cost of compromise via defense-in-depth and is open about the residual risks.
 
@@ -105,7 +105,7 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Prior-art comparison | [`docs/why-not-x.md`](docs/why-not-x.md) |
 | Reproducibility recipe | [`docs/reproduce.md`](docs/reproduce.md) + [`docs/reproduce.sh`](docs/reproduce.sh) |
 | Mermaid architecture diagrams | [`docs/diagrams.md`](docs/diagrams.md) |
-| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — eight records covering proxy-side credentials, adaptive shells, CDR, pioneer parking, deserve-to-exist, four-container topology, manifest-driven backend, Tauri |
+| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — nine records covering proxy-side credentials, adaptive shells, CDR, pioneer parking, deserve-to-exist, four-container topology (partially superseded by 0009), manifest-driven backend, Tauri, and the five-container L7/L3 split |
 | Whitepaper | [`docs/whitepaper.md`](docs/whitepaper.md) |
 | Architecture v2 design spec (historical, supersded by `docs/trifecta.md`) | [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) |
 
@@ -127,7 +127,7 @@ cd app && npm run dev                   # Vite dev server
 bash tests/orchestrator-check.sh        # 42 checks, must report 0 warnings
 
 # Container perimeter (smoke)
-podman compose up -d                    # start all four containers
+podman compose up -d                    # start all five containers
 podman compose down                     # stop perimeter
 ```
 

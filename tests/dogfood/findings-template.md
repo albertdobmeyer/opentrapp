@@ -188,6 +188,41 @@ P0 / P1 / P2 priority order.
 
 ---
 
+## §F — Security claims surfaced by LLM tooling
+
+During the dogfood arc, IDE-side AI (Cursor inline, Copilot, JetBrains AI) and other LLM-driven assistants may surface security observations about the perimeter that *look* like findings but are actually inferences from open file context. These are hypotheses, not findings, until verified. Triage them here so future dogfood passes have a record of what was claimed, what turned out to be true, and what false-positive patterns to expect.
+
+**Source convention:** prefix with where the claim came from. Examples: `cursor-inline:`, `copilot-chat:`, `claude-code:`, `gpt-pasted:`, `gemini-cli:`.
+
+| # | Source | Claim (one sentence) | Triage verdict | Evidence | Follow-up |
+|---|---|---|---|---|---|
+| F1 | | | | | |
+| F2 | | | | | |
+| … | | | | | |
+
+**Triage-verdict legend:**
+
+- **TRUE** — claim describes an exploitable gap; file an issue, add to threat-model.md, link the fix PR.
+- **PARTIALLY TRUE** — defence holds against the literal claim but a related residual risk exists; document the residual in threat-model.md (treat as new T-row or extend an existing one).
+- **FALSE — defence holds** — claim is wrong; record the trace (file:line) of the defence that catches it so the next reviewer doesn't re-investigate.
+- **STALE** — claim describes prior behaviour that has since been mitigated; link the commit/ADR that closed it.
+- **MISREADING** — claim is based on a misunderstanding of an API, flag, or config semantic (e.g. mitmproxy's `block_private` flag, which is a source-IP filter, not a destination filter); record the misreading so it doesn't recur.
+
+**For each entry, capture under a sub-heading:**
+
+### F# — _claim summary_
+**Source tool / context:**
+**Verbatim claim:**
+**Files / lines the tool was looking at when it inferred this:**
+**Investigation trace (commands, code paths, evidence):**
+**Verdict:** _TRUE / PARTIALLY TRUE / FALSE / STALE / MISREADING_
+**Action taken:** _opened issue #N / added T-row to threat-model / closed without action / …_
+**Pattern note for next session:** _e.g. "Cursor flags any `block_*=false` config as a leak — pre-emptively annotate these"_
+
+**Inline-AI policy reminder.** Treat inline-AI security observations as the first 30 seconds of a dogfood threat-model review, not as the verdict. The verdict requires the same evidence bar as a human-filed finding: code path, current behaviour, residual risk. Capturing the misreadings here (column "MISREADING") is *especially* valuable — it prevents the same inference from being mis-triaged again.
+
+---
+
 ## Verdict
 
 **Ship recommendation:** _SHIP / SHIP-WITH-CAVEATS / NO-SHIP_

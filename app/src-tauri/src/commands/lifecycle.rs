@@ -8,21 +8,14 @@
 //! `pause_perimeter` + `resume_perimeter` for the user-initiated stop
 //! state — closes the last hero state gap from Pass 2's spec.
 
-use std::time::Duration;
-
 use tauri::{AppHandle, State};
 
 use crate::lifecycle::{
-    bring_perimeter_down_sync, clear_paused_marker, run_compose, write_paused_marker,
+    bring_perimeter_down_sync, clear_paused_marker, write_paused_marker,
     PerimeterStateStore, PerimeterStatus,
 };
+use crate::orchestrator::podman;
 use crate::orchestrator::state::AppState;
-
-/// Up budget for the restart cycle. Down has its own internal 30s
-/// budget inside `bring_perimeter_down_sync`. Up takes ~5–10s when
-/// images are already cached; 60s is generous headroom for slower
-/// laptops without hanging the UI indefinitely on a stuck restart.
-const RESTART_UP_BUDGET: Duration = Duration::from_secs(60);
 
 /// Read the latest cached perimeter state. Returns immediately — does not
 /// trigger a fresh probe (the watchdog runs every 30s in the background).
@@ -51,14 +44,14 @@ pub fn get_perimeter_state(
 #[tauri::command]
 pub async fn restart_perimeter(state: State<'_, AppState>) -> Result<(), String> {
     let root = state
-        .monorepo_root
+        .runtime_data_dir
         .read()
         .map(|g| g.clone())
-        .map_err(|e| format!("monorepo root lock poisoned: {e}"))?;
+        .map_err(|e| format!("runtime data dir lock poisoned: {e}"))?;
 
     let result = tokio::task::spawn_blocking(move || {
         bring_perimeter_down_sync(&root);
-        run_compose(&root, &["up", "-d"], RESTART_UP_BUDGET)
+        podman::perimeter_up(&root).is_ok()
     })
     .await
     .map_err(|e| format!("restart task join failed: {e}"))?;
@@ -89,10 +82,10 @@ pub async fn pause_perimeter(
     store: State<'_, PerimeterStateStore>,
 ) -> Result<(), String> {
     let root = state
-        .monorepo_root
+        .runtime_data_dir
         .read()
         .map(|g| g.clone())
-        .map_err(|e| format!("monorepo root lock poisoned: {e}"))?;
+        .map_err(|e| format!("runtime data dir lock poisoned: {e}"))?;
 
     // Set the flag first so even if compose stop is slow the aggregator
     // already classifies the state correctly on the next tick.
@@ -102,7 +95,7 @@ pub async fn pause_perimeter(
     }
 
     let result = tokio::task::spawn_blocking(move || {
-        run_compose(&root, &["stop"], Duration::from_secs(30))
+        podman::perimeter_stop(&root).is_ok()
     })
     .await
     .map_err(|e| format!("pause task join failed: {e}"))?;
@@ -130,10 +123,10 @@ pub fn retry_bootstrap(
     store: State<'_, PerimeterStateStore>,
 ) -> Result<(), String> {
     let root = state
-        .monorepo_root
+        .runtime_data_dir
         .read()
         .map(|g| g.clone())
-        .map_err(|e| format!("monorepo root lock poisoned: {e}"))?;
+        .map_err(|e| format!("runtime data dir lock poisoned: {e}"))?;
 
     // Clear failure state so the watchdog and status aggregator see "bootstrapping"
     // instead of "shell_failed" during the retry run.
@@ -154,10 +147,10 @@ pub async fn resume_perimeter(
     store: State<'_, PerimeterStateStore>,
 ) -> Result<(), String> {
     let root = state
-        .monorepo_root
+        .runtime_data_dir
         .read()
         .map(|g| g.clone())
-        .map_err(|e| format!("monorepo root lock poisoned: {e}"))?;
+        .map_err(|e| format!("runtime data dir lock poisoned: {e}"))?;
 
     // Clear the flag first so a slow start still shows "starting/recovering"
     // rather than staying stuck on "paused".
@@ -165,7 +158,7 @@ pub async fn resume_perimeter(
     clear_paused_marker();
 
     let result = tokio::task::spawn_blocking(move || {
-        run_compose(&root, &["up", "-d"], RESTART_UP_BUDGET)
+        podman::perimeter_up(&root).is_ok()
     })
     .await
     .map_err(|e| format!("resume task join failed: {e}"))?;

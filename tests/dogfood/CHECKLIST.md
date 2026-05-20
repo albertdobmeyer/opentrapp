@@ -177,7 +177,7 @@ For each: **screenshot the Home hero card** in each state, label the file `c<N>-
 - [ ] Screenshot the hero. Calm green; no anxious copy.
 
 ### C5 — `error_perimeter`
-- [ ] `podman stop $(podman ps -q)` (all four containers).
+- [ ] `podman stop $(podman ps -q)` (all five containers — adds `vault-egress` post-ADR-0009).
 - [ ] Wait ≤60s.
 - [ ] Screenshot. Look for: clear error with "Try again" affordance. **Banned-term check.**
 - [ ] `podman compose up -d` (restore).

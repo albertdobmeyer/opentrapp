@@ -89,17 +89,17 @@ The reserved-term array is defined at the top of `app/e2e/user-facing.spec.ts`. 
 awk '/const BANNED_TERMS = \[/,/^\];/' app/e2e/user-facing.spec.ts | grep -oE '"[^"]+"'
 ```
 
-### 5. Four containers in the perimeter
+### 5. Five containers in the perimeter
 
 | Field | Value |
 |-------|-------|
-| Claim | The runtime perimeter is composed of four containers |
-| Source | Multiple — [`README.md`](../README.md), [`docs/whitepaper.md`](whitepaper.md), [`docs/trifecta.md`](trifecta.md) |
+| Claim | The runtime perimeter is composed of five containers with an L7/L3 policy split |
+| Source | Multiple — [`README.md`](../README.md), [`docs/whitepaper.md`](whitepaper.md), [`docs/trifecta.md`](trifecta.md), [`adr/0009-five-container-perimeter.md`](adr/0009-five-container-perimeter.md) |
 | Command | `python3 -c "import yaml; print(len(yaml.safe_load(open('compose.yml'))['services']))"` |
-| Expected output | `4` |
+| Expected output | `5` |
 | Runtime | < 1 s |
 
-The four services are `vault-agent`, `vault-forge`, `vault-pioneer`, `vault-proxy`. The pioneer container is parked but its definition remains in the compose file (see [`docs/whitepaper.md`](whitepaper.md) §3.2).
+The five services are `vault-agent`, `vault-forge`, `vault-pioneer`, `vault-proxy` (L7 policy), `vault-egress` (L3 policy + pinned DoT resolver). The pioneer container is parked but its definition remains in the compose file (see [`docs/whitepaper.md`](whitepaper.md) §3.2). The L7/L3 split between vault-proxy and vault-egress is enforced by `tests/orchestrator-check.sh` §10 (no container holds both API keys and `NET_ADMIN`).
 
 ### 6. Three trust tiers
 

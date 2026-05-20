@@ -92,6 +92,11 @@ jobs:
 
       - run: bash tests/orchestrator-check.sh
 
+      # vault-proxy policy unit tests — pin IP-literal denial against regression.
+      # See ~/.claude/plans/discuss-which-one-is-buzzing-crab.md (A1).
+      - name: vault-proxy policy unit tests
+        run: python3 -m unittest discover -s components/opencli-container/proxy -p 'test_*.py' -v
+
   integration-tests:
     name: Integration tests (cross-module contracts)
     needs: check-orchestration
@@ -134,10 +139,123 @@ jobs:
       - run: npx playwright install chromium --with-deps
       - run: npx playwright test
 
+  # ── Perimeter images (tag builds only) ─────────────────────────────────
+  # Builds the four OpenTrApp container images in CI — never on the user's
+  # machine — then signs each (cosign keyless), pushes to GHCR by digest,
+  # exports an OCI tarball for bundling into the AppImage, and emits a signed
+  # `image-digests.json` overlay that the runtime verifies before `podman run`.
+  # This is the supply-chain backbone of the zero-trust bootstrap (ADR-0009).
+  # vault-proxy is upstream mitmproxy, pinned by digest (recorded in the
+  # overlay as source=external) — not rebuilt here.
+  build-images:
+    name: Build perimeter images
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [check-rust, check-orchestration]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      packages: write           # push to GHCR
+      id-token: write           # cosign keyless (sigstore OIDC)
+      attestations: write       # SLSA build-provenance
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: true
+
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+
+      - name: Build, push (by digest), sign, and export each image
+        id: images
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          REG="ghcr.io/${OWNER}/opentrapp"
+          TAG="${GITHUB_REF_NAME}"
+          PROXY_REF="docker.io/mitmproxy/mitmproxy@sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1"
+          echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u '${{ github.actor }}' --password-stdin
+          mkdir -p images
+
+          # service → build context (Containerfile lives in each context dir)
+          declare -A CTX=(
+            [vault-agent]=components/opencli-container
+            [vault-egress]=components/opencli-container/egress
+            [vault-forge]=components/openskill-forge
+            [vault-pioneer]=components/openagent-social
+          )
+
+          # Begin the signed digest overlay the runtime verifies against.
+          {
+            echo '{'
+            echo '  "version": 1,'
+            echo "  \"tag\": \"${TAG}\","
+            echo "  \"signer_identity_regexp\": \"https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/tags/.*\","
+            echo "  \"oidc_issuer\": \"https://token.actions.githubusercontent.com\","
+            echo '  "images": {'
+          } > images/image-digests.json
+
+          first=1
+          for svc in vault-agent vault-egress vault-forge vault-pioneer; do
+            ctx="${CTX[$svc]}"
+            img="${REG}/${svc}"
+            echo "::group::build ${svc}"
+            podman build -t "${img}:${TAG}" -f "${ctx}/Containerfile" "${ctx}"
+            # Push and capture the registry digest.
+            podman push --digestfile="images/${svc}.digest" "${img}:${TAG}"
+            digest="$(cat images/${svc}.digest)"
+            echo "${svc} → ${img}@${digest}"
+            # Sign the image by digest (keyless). Verified at runtime against
+            # signer_identity_regexp + oidc_issuer above.
+            cosign sign --yes "${img}@${digest}"
+            # Export the exact pushed image as an OCI archive for bundling.
+            podman save --format oci-archive -o "images/${svc}.tar" "${img}@${digest}"
+            # Append to the overlay.
+            [ $first -eq 1 ] || echo ',' >> images/image-digests.json
+            first=0
+            printf '    "%s": { "digest": "%s", "source": "built", "tar": "%s.tar" }' "${img}" "${digest}" "${svc}" >> images/image-digests.json
+            echo "::endgroup::"
+          done
+
+          # External proxy: digest pin only (not our signature).
+          echo ',' >> images/image-digests.json
+          printf '    "%s": { "digest": "%s", "source": "external", "tar": "vault-proxy.tar" }\n' \
+            "docker.io/mitmproxy/mitmproxy" "sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1" \
+            >> images/image-digests.json
+          # Also export the proxy tarball so first launch is fully offline.
+          podman pull "$PROXY_REF"
+          podman save --format oci-archive -o images/vault-proxy.tar "$PROXY_REF"
+
+          echo '  }' >> images/image-digests.json
+          echo '}' >> images/image-digests.json
+          cat images/image-digests.json
+          rm -f images/*.digest
+
+      - name: Attest provenance for the bundled image tarballs
+        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
+        with:
+          subject-path: 'images/*.tar'
+
+      - name: Upload perimeter images for the AppImage build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: perimeter-images
+          path: images/
+          retention-days: 1
+
   build-and-release:
     name: Build (${{ matrix.platform.name }})
-    if: github.event_name == 'push'  || github.event_name == 'workflow_dispatch'
-    needs: [check-frontend, check-rust, check-orchestration, integration-tests]
+    # build-images only runs on tag pushes; on non-tag builds it is skipped.
+    # !cancelled() stops a skipped dependency from skipping this job, so we
+    # re-assert the real gates explicitly and accept build-images=skipped.
+    if: >-
+      !cancelled() &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      needs.check-frontend.result == 'success' &&
+      needs.check-rust.result == 'success' &&
+      needs.check-orchestration.result == 'success' &&
+      needs.integration-tests.result == 'success' &&
+      (needs.build-images.result == 'success' || needs.build-images.result == 'skipped')
+    needs: [check-frontend, check-rust, check-orchestration, integration-tests, build-images]
     permissions:
       contents: write
       id-token: write           # required for cosign keyless signing (sigstore OIDC)
@@ -223,16 +341,16 @@ jobs:
             cat <<EOF
           ## Just install
 
-          Pick the row for your operating system and click the link. After downloading, double-click to install. The setup wizard takes over from there — Anthropic key, Telegram bot pairing, and the four-container perimeter download. No terminal needed.
+          Pick the row for your operating system and click the link. After downloading, double-click to install. The setup wizard takes over from there — Anthropic key, Telegram bot pairing, and the five-container perimeter download. No terminal needed.
 
           | Your OS | Download |
           |---|---|
-          | **Windows** | [Lobster-TrApp_${VERSION}_x64_en-US.msi](${BASE}/Lobster-TrApp_${VERSION}_x64_en-US.msi) |
-          | **macOS — Apple Silicon** | [Lobster-TrApp_${VERSION}_aarch64.dmg](${BASE}/Lobster-TrApp_${VERSION}_aarch64.dmg) |
-          | **macOS — Intel** | [Lobster-TrApp_${VERSION}_x64.dmg](${BASE}/Lobster-TrApp_${VERSION}_x64.dmg) |
-          | **Linux — Ubuntu / Debian** | [Lobster-TrApp_${VERSION}_amd64.deb](${BASE}/Lobster-TrApp_${VERSION}_amd64.deb) |
-          | **Linux — universal** | [Lobster-TrApp_${VERSION}_amd64.AppImage](${BASE}/Lobster-TrApp_${VERSION}_amd64.AppImage) |
-          | **Linux — Fedora / RHEL** | [Lobster-TrApp-${VERSION}-1.x86_64.rpm](${BASE}/Lobster-TrApp-${VERSION}-1.x86_64.rpm) |
+          | **Windows** | [OpenTrApp_${VERSION}_x64_en-US.msi](${BASE}/OpenTrApp_${VERSION}_x64_en-US.msi) |
+          | **macOS — Apple Silicon** | [OpenTrApp_${VERSION}_aarch64.dmg](${BASE}/OpenTrApp_${VERSION}_aarch64.dmg) |
+          | **macOS — Intel** | [OpenTrApp_${VERSION}_x64.dmg](${BASE}/OpenTrApp_${VERSION}_x64.dmg) |
+          | **Linux — Ubuntu / Debian** | [OpenTrApp_${VERSION}_amd64.deb](${BASE}/OpenTrApp_${VERSION}_amd64.deb) |
+          | **Linux — universal** | [OpenTrApp_${VERSION}_amd64.AppImage](${BASE}/OpenTrApp_${VERSION}_amd64.AppImage) |
+          | **Linux — Fedora / RHEL** | [OpenTrApp-${VERSION}-1.x86_64.rpm](${BASE}/OpenTrApp-${VERSION}-1.x86_64.rpm) |
 
           The full release notes for this version live at [\`docs/release-notes-${TAG}.md\`](https://github.com/${{ github.repository }}/blob/${TAG}/docs/release-notes-${TAG}.md).
 
@@ -249,11 +367,11 @@ jobs:
 
           \`\`\`bash
           cosign verify-blob \\
-            --certificate Lobster-TrApp_${VERSION}_x64_en-US.msi.pem \\
-            --signature   Lobster-TrApp_${VERSION}_x64_en-US.msi.sig \\
+            --certificate OpenTrApp_${VERSION}_x64_en-US.msi.pem \\
+            --signature   OpenTrApp_${VERSION}_x64_en-US.msi.sig \\
             --certificate-identity-regexp 'https://github.com/${{ github.repository }}' \\
             --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \\
-            Lobster-TrApp_${VERSION}_x64_en-US.msi
+            OpenTrApp_${VERSION}_x64_en-US.msi
           \`\`\`
 
           The SLSA Build Level 2 build-provenance attestation for this release is in the **Attestations** panel above the asset list.
@@ -263,6 +381,18 @@ jobs:
           EOF
             echo 'NOTES_EOF'
           } >> "$GITHUB_OUTPUT"
+
+      # Bundle the pre-built, signed perimeter images into the Linux AppImage
+      # so first launch is offline-capable and never builds on the user's
+      # machine. Only the Linux release build carries them (macOS/Windows
+      # runtime story is separate, deferred work). Lands in the resource dir
+      # that tauri.conf.json bundle.resources packages (see step 5).
+      - name: Download perimeter images (Linux release builds)
+        if: matrix.platform.slug == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: perimeter-images
+          path: app/src-tauri/resources/perimeter/images
 
       - name: Build and release
         id: tauri
@@ -275,7 +405,7 @@ jobs:
           projectPath: app
           args: ${{ matrix.platform.args }}
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('Lobster-TrApp {0}', github.ref_name) || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('OpenTrApp {0}', github.ref_name) || '' }}
           releaseBody: ${{ steps.notes.outputs.body || 'See the assets below to download and install.' }}
           releaseDraft: true
           prerelease: false

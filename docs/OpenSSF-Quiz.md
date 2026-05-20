@@ -67,7 +67,7 @@ This document records every answer submitted to the [OpenSSF Best Practices](htt
 **Status:** Met
 **Justification:**
 
-> The project's README opening paragraph and the landing page at https://opentrapp.com both state in their opening sentence that OpenTrApp is a desktop application running the agent inside a four-container security perimeter on the user's own computer. The README §"Purpose" expands this with the threat-model rationale (the ClawHavoc 2026-Q1 study finding 11.9% of ClawHub skills were malicious) so a visitor learns the function and the differentiator inside the first scroll.
+> The project's README opening paragraph and the landing page at https://opentrapp.com both state in their opening sentence that OpenTrApp is a desktop application running the agent inside a five-container security perimeter (L7 + L3 egress policy split per ADR-0009) on the user's own computer. The README §"Purpose" expands this with the threat-model rationale (the ClawHavoc 2026-Q1 study finding 11.9% of ClawHub skills were malicious) so a visitor learns the function and the differentiator inside the first scroll.
 
 **Evidence URL:** https://github.com/albertdobmeyer/opentrapp/blob/main/README.md
 

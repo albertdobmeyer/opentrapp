@@ -65,41 +65,17 @@ const WATCHDOG_INTERVAL: Duration = Duration::from_secs(30);
 /// (cached) auth probe.
 const STATUS_INTERVAL: Duration = Duration::from_secs(60);
 
-/// Find the monorepo root by looking for a `components/` directory.
-fn find_monorepo_root() -> PathBuf {
-    // Strategy 1: Walk up from executable path
-    // During cargo tauri dev: target/debug/opentrapp.exe
-    //   -> 4 levels up to reach monorepo root (debug -> target -> src-tauri -> app -> root)
-    if let Ok(exe) = std::env::current_exe() {
-        let mut candidate = exe.as_path();
-        for _ in 0..6 {
-            if let Some(parent) = candidate.parent() {
-                candidate = parent;
-                if candidate.join("components").exists() {
-                    return candidate.to_path_buf();
-                }
-            }
-        }
-    }
-
-    // Strategy 2: Current working directory (common during dev)
-    if let Ok(cwd) = std::env::current_dir() {
-        // Check cwd itself and up to 3 parents
-        let mut candidate = cwd.as_path().to_path_buf();
-        for _ in 0..4 {
-            if candidate.join("components").exists() {
-                return candidate;
-            }
-            if let Some(parent) = candidate.parent() {
-                candidate = parent.to_path_buf();
-            } else {
-                break;
-            }
-        }
-    }
-
-    // Strategy 3: Fallback to cwd
-    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+/// Resolve the runtime data home (`~/.opentrapp/`), creating it if absent.
+///
+/// Replaces the old `find_monorepo_root()`, which walked the filesystem
+/// looking for a `components/` source tree — an assumption that only held when
+/// the app ran from a dev clone and broke on every installed AppImage. The
+/// perimeter no longer needs a source tree: images are pre-built and verified,
+/// and policy files live under `<data_dir>/perimeter/` (the resource dir).
+fn runtime_data_dir() -> PathBuf {
+    let dir = orchestrator::podman::runtime_data_dir();
+    let _ = std::fs::create_dir_all(&dir);
+    dir
 }
 
 /// Build the system tray menu and register event handlers.
@@ -177,20 +153,20 @@ pub fn run() {
     // and short-circuits on subsequent launches.
     bootstrap::migrate_from_lobster_trapp::migrate_if_legacy_install();
 
-    let monorepo_root = find_monorepo_root();
-    let app_state = AppState::new(monorepo_root.clone());
+    let data_dir = runtime_data_dir();
+    let app_state = AppState::new(data_dir.clone());
 
     // RunGuard: reap orphan containers from any prior SIGKILL'd session
     // BEFORE we bring the perimeter up. Reads/writes ~/.opentrapp/runguard.pid.
-    establish_runguard(&monorepo_root);
+    establish_runguard(&data_dir);
 
     // Pass-4 lifecycle ownership (P11): the perimeter is bound to the app's
-    // lifetime. App start → compose up. Graceful exit (window quit, tray Quit,
-    // SIGTERM, SIGINT) → compose down. SIGKILL is reaped on next launch via
+    // lifetime. App start → perimeter up. Graceful exit (window quit, tray Quit,
+    // SIGTERM, SIGINT) → perimeter down. SIGKILL is reaped on next launch via
     // RunGuard above. Watchdog reports state every 30s; auto-restart of dead
-    // containers is delegated to `restart: unless-stopped` in compose.yml.
-    let perimeter_root_setup = monorepo_root.clone();
-    let perimeter_root_exit = monorepo_root.clone();
+    // containers is delegated to `restart: unless-stopped` in the spec.
+    let perimeter_root_setup = data_dir.clone();
+    let perimeter_root_exit = data_dir.clone();
 
     tauri::Builder::default()
         // Single-instance guard: second launch focuses the main window and exits.
@@ -262,8 +238,8 @@ pub fn run() {
         .run(move |_app_handle, event| {
             // RunEvent::Exit fires once when the app is about to terminate
             // (after all windows are gone). Tear the perimeter down here so
-            // app-close ⇒ perimeter-down (P11). Synchronous, with a 30s
-            // ceiling enforced by run_compose's timeout wrapper.
+            // app-close ⇒ perimeter-down (P11). Synchronous, with per-call
+            // timeouts enforced inside the orchestrator.
             if let tauri::RunEvent::Exit = &event {
                 bring_perimeter_down_sync(&perimeter_root_exit);
                 clear_runguard();

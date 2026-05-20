@@ -10,9 +10,9 @@ ASCII fallbacks remain in the original architecture documents ([`trifecta.md`](t
 
 ---
 
-## 1. Four-container perimeter topology
+## 1. Five-container perimeter topology
 
-Source of truth: [`compose.yml`](../compose.yml).
+Source of truth: [`compose.yml`](../compose.yml). The L7/L3 policy split is specified in [ADR-0009](adr/0009-five-container-perimeter.md); the pinned DoT resolver in [ADR-0010](adr/0010-pinned-resolver-dns.md).
 
 ```mermaid
 flowchart TB
@@ -26,7 +26,8 @@ flowchart TB
         AGENT["vault-agent<br/>agent runtime + Telegram gateway<br/>read-only root, dropped capabilities,<br/>narrow syscall profile, workspace-only mount"]
         FORGE["vault-forge<br/>87-pattern scanner +<br/>line classifier + CDR pipeline"]
         PIONEER["vault-pioneer<br/>(parked)"]
-        PROXY["vault-proxy<br/>egress gateway, holds API credentials,<br/>domain allowlist, request log"]
+        PROXY["vault-proxy<br/>L7 policy: allowlist, key injection,<br/>post-resolve IP check, request log"]
+        EGRESS["vault-egress<br/>L3 policy: nftables RFC1918 drop,<br/>unbound DoT resolver (Quad9 + Cloudflare)"]
     end
 
     subgraph EXTERNAL["External (Tier 3 surfaces)"]
@@ -46,9 +47,10 @@ flowchart TB
     PIONEER -.-> PROXY
     AGENT <-.->|"write-only volume<br/>(forge-deliveries)"| FORGE
 
-    PROXY --> ANTHROPIC
-    PROXY --> TELEGRAM
-    PROXY --> CLAWHUB
+    PROXY --> EGRESS
+    EGRESS --> ANTHROPIC
+    EGRESS --> TELEGRAM
+    EGRESS --> CLAWHUB
 
     classDef trusted fill:#e7f3ff,stroke:#1f6feb,color:#000
     classDef perim fill:#fff7d6,stroke:#9a6700,color:#000
@@ -56,12 +58,12 @@ flowchart TB
     classDef external fill:#f0f0f0,stroke:#777,color:#000
 
     class USER,GUI,COORD trusted
-    class AGENT,FORGE,PROXY perim
+    class AGENT,FORGE,PROXY,EGRESS perim
     class PIONEER parked
     class ANTHROPIC,TELEGRAM,CLAWHUB external
 ```
 
-**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-forge` is the write-only `forge-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-pioneer` indicates the parked status. The four boxes inside *Perimeter* are the four containers in `compose.yml`'s `services:` map; the four arrows from Perimeter to External enumerate the only egress destinations the proxy allowlist permits.
+**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-forge` is the write-only `forge-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-pioneer` indicates the parked status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment** — it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
 
 ---
 
@@ -81,7 +83,7 @@ flowchart TD
     subgraph T2["TIER 2 — INFRASTRUCTURE (perimeter)"]
         direction LR
         T2A["OpenTrApp container orchestrator"]
-        T2B["Four containers: vault-agent,<br/>vault-forge, vault-pioneer, vault-proxy"]
+        T2B["Five containers: vault-agent,<br/>vault-forge, vault-pioneer,<br/>vault-proxy (L7), vault-egress (L3)"]
     end
 
     subgraph T3["TIER 3 — CONTAINED (inside perimeter)"]
@@ -211,7 +213,7 @@ stateDiagram-v2
     [*] --> NotSetup
 
     NotSetup --> Starting: Wizard complete<br/>+ .env present
-    Starting --> Recovering: 1–3 of 4 containers up
+    Starting --> Recovering: 1–4 of 5 containers up
     Starting --> Ok: 4 of 4 up + key probe valid
     Recovering --> Ok: 4 of 4 up + key probe valid
     Recovering --> ErrorPerimeter: All 4 stopped<br/>(unexpectedly)

@@ -13,8 +13,9 @@ use tauri::{AppHandle, Manager as _};
 use serde::Serialize;
 
 use crate::lifecycle::{
-    run_compose, write_activated_marker, write_credentials_ok_marker, PerimeterStateStore,
+    write_activated_marker, write_credentials_ok_marker, PerimeterStateStore,
 };
+use crate::orchestrator::podman;
 use crate::orchestrator::state::AppState;
 
 /// Structured outcome of a key validation attempt. Lets the frontend show
@@ -86,19 +87,13 @@ pub async fn validate_anthropic_key(key: String) -> Result<ValidationOutcome, St
 pub async fn commit_activation(handle: AppHandle) -> Result<(), String> {
     let root = handle
         .try_state::<AppState>()
-        .and_then(|s| s.monorepo_root.read().ok().map(|r| r.clone()))
-        .unwrap_or_else(|| {
-            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."))
-        });
+        .and_then(|s| s.runtime_data_dir.read().ok().map(|r| r.clone()))
+        .unwrap_or_else(crate::orchestrator::podman::runtime_data_dir);
 
     // Force-recreate vault-proxy so it picks up the fresh .env keys.
     let root_clone = root.clone();
     let ok_proxy = tokio::task::spawn_blocking(move || {
-        run_compose(
-            &root_clone,
-            &["up", "-d", "--force-recreate", "vault-proxy"],
-            Duration::from_secs(30),
-        )
+        podman::service_up(&root_clone, "vault-proxy", true).is_ok()
     })
     .await
     .unwrap_or(false);
@@ -112,7 +107,7 @@ pub async fn commit_activation(handle: AppHandle) -> Result<(), String> {
 
     // Bring vault-agent up.
     let ok_agent = tokio::task::spawn_blocking(move || {
-        run_compose(&root, &["up", "-d", "vault-agent"], Duration::from_secs(60))
+        podman::service_up(&root, "vault-agent", false).is_ok()
     })
     .await
     .unwrap_or(false);

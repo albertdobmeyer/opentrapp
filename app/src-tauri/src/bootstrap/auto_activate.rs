@@ -18,10 +18,11 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter as _, Manager as _};
 
 use crate::lifecycle::{
-    is_activated_persisted, is_paused_persisted, run_compose, write_activated_marker,
+    is_activated_persisted, is_paused_persisted, write_activated_marker,
     write_credentials_ok_marker, clear_credentials_ok_marker,
     BootstrapProgress, BootstrapStep, PerimeterStateStore,
 };
+use crate::orchestrator::podman;
 use crate::orchestrator::state::AppState;
 
 const CREDENTIALS_OK_TTL_DAYS: u64 = 7;
@@ -123,7 +124,7 @@ async fn commit_agent(handle: &AppHandle, root: &Path) {
     // Re-create vault-proxy first so it picks up fresh .env keys.
     let root_clone = root.to_path_buf();
     let ok_proxy = tokio::task::spawn_blocking(move || {
-        run_compose(&root_clone, &["up", "-d", "--force-recreate", "vault-proxy"], Duration::from_secs(30))
+        podman::service_up(&root_clone, "vault-proxy", true).is_ok()
     })
     .await
     .unwrap_or(false);
@@ -140,7 +141,7 @@ async fn commit_agent(handle: &AppHandle, root: &Path) {
 
     let root_clone = root.to_path_buf();
     let ok_agent = tokio::task::spawn_blocking(move || {
-        run_compose(&root_clone, &["up", "-d", "vault-agent"], Duration::from_secs(60))
+        podman::service_up(&root_clone, "vault-agent", false).is_ok()
     })
     .await
     .unwrap_or(false);
@@ -251,10 +252,8 @@ async fn migrate_existing_install(handle: AppHandle, root: PathBuf, anthropic_ke
 fn vault_env_path(handle: &AppHandle) -> PathBuf {
     handle
         .try_state::<AppState>()
-        .and_then(|state| state.monorepo_root.read().ok().map(|r| r.clone()))
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")))
-        .join("components")
-        .join("opencli-container")
+        .and_then(|state| state.runtime_data_dir.read().ok().map(|r| r.clone()))
+        .unwrap_or_else(podman::runtime_data_dir)
         .join(".env")
 }
 

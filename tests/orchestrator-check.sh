@@ -576,6 +576,83 @@ print(f'{len(orch_wfs)} orchestrator workflows validated')
 " 2>/dev/null && pass "Orchestrator workflow references valid" || fail "Orchestrator workflow cross-reference errors"
 
 # =============================================================================
+section "10. Five-container Perimeter Topology (ADR-0009)"
+# =============================================================================
+#
+# Verifies the post-ADR-0009 perimeter shape:
+#   - Five services declared in compose.yml
+#   - vault-egress exists with NET_ADMIN, no API key env vars
+#   - vault-proxy is NOT attached to external-net
+#   - vault-egress IS the only service on external-net
+#   - egress-net is internal and uses the documented 10.230.0.0/24 subnet
+
+python3 - <<'PY' 2>/dev/null && pass "compose.yml declares five perimeter services" || fail "compose.yml service count is not five"
+import sys, yaml
+with open('compose.yml') as f:
+    c = yaml.safe_load(f)
+expected = {'vault-agent', 'vault-proxy', 'vault-forge', 'vault-pioneer', 'vault-egress'}
+got = set(c.get('services', {}).keys())
+sys.exit(0 if got == expected else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "vault-egress declares NET_ADMIN; vault-proxy does NOT" || fail "Capability boundary between vault-egress and vault-proxy is broken"
+import sys, yaml
+with open('compose.yml') as f:
+    c = yaml.safe_load(f)
+svcs = c.get('services', {})
+egress = svcs.get('vault-egress', {})
+proxy  = svcs.get('vault-proxy',  {})
+egress_caps = set(egress.get('cap_add', []) or [])
+proxy_caps  = set(proxy.get('cap_add',  []) or [])
+sys.exit(0 if ('NET_ADMIN' in egress_caps and 'NET_ADMIN' not in proxy_caps) else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "vault-proxy is NOT attached to external-net" || fail "vault-proxy still has external-net attachment (ADR-0009 violation)"
+import sys, yaml
+with open('compose.yml') as f:
+    c = yaml.safe_load(f)
+nets = c['services'].get('vault-proxy', {}).get('networks', []) or []
+sys.exit(0 if 'external-net' not in nets else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "vault-egress is the only service on external-net" || fail "More than one service on external-net (ADR-0009 violation)"
+import sys, yaml
+with open('compose.yml') as f:
+    c = yaml.safe_load(f)
+on_external = [
+    name for name, svc in c['services'].items()
+    if 'external-net' in (svc.get('networks', []) or [])
+]
+sys.exit(0 if on_external == ['vault-egress'] else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "egress-net is internal and uses the documented 10.230.0.0/24 subnet" || fail "egress-net is not configured as internal 10.230.0.0/24"
+import sys, yaml
+with open('compose.yml') as f:
+    c = yaml.safe_load(f)
+egress_net = c.get('networks', {}).get('egress-net', {})
+ipam = egress_net.get('ipam', {}).get('config', [{}])[0]
+subnet_ok = ipam.get('subnet') == '10.230.0.0/24'
+internal_ok = egress_net.get('internal') is True
+sys.exit(0 if (subnet_ok and internal_ok) else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "vault-egress holds no API key env vars (secret-free)" || fail "vault-egress has API key env vars (must be secret-free per ADR-0009)"
+import sys, yaml
+with open('compose.yml') as f:
+    c = yaml.safe_load(f)
+env = c['services'].get('vault-egress', {}).get('environment', [])
+# Accept env as either list or dict
+keys = []
+if isinstance(env, list):
+    keys = [e.split('=', 1)[0] for e in env if isinstance(e, str)]
+elif isinstance(env, dict):
+    keys = list(env.keys())
+banned = {'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN'}
+sys.exit(0 if not (set(keys) & banned) else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

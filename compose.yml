@@ -1,24 +1,27 @@
 # OpenTrApp: unified perimeter compose
 #
-# Four-container security perimeter for an autonomous CLI agent
+# Five-container security perimeter for an autonomous CLI agent
 # (OpenClaw in the reference deployment; architecture is agent-agnostic).
 # All untrusted content (agent runtime, skill files, social feeds) is
 # processed inside containers, never on the host.
 #
-# Architecture:
+# Architecture (see docs/adr/0009-five-container-perimeter.md for the L7/L3 split):
 #   vault-agent   — agent runtime containment
 #   vault-forge   — supply-chain defense (skill scanner + CDR)
 #   vault-pioneer — social-content analysis (parked since 2026-05-03)
-#   vault-proxy   — egress gateway: API-key injection, domain allowlist, request logging
+#   vault-proxy   — L7 egress policy: API-key injection, domain allowlist, request logging
+#   vault-egress  — L3 egress policy: kernel-level RFC1918 drop + pinned DoT resolver
 #
 # Network isolation:
-#   vault-agent   ↔ vault-proxy  (agent-net, internal)
-#   vault-forge   ↔ vault-proxy  (forge-net, internal)
-#   vault-pioneer ↔ vault-proxy  (pioneer-net, internal)
-#   vault-proxy   ↔ internet     (external-net, bridged)
+#   vault-agent   ↔ vault-proxy   (agent-net, internal)
+#   vault-forge   ↔ vault-proxy   (forge-net, internal)
+#   vault-pioneer ↔ vault-proxy   (pioneer-net, internal)
+#   vault-proxy   ↔ vault-egress  (egress-net, internal)
+#   vault-egress  ↔ internet      (external-net, bridged)
 #
-#   Agent CANNOT reach forge or pioneer. Forge CANNOT reach agent or pioneer.
-#   Pioneer CANNOT reach agent or forge. Only the proxy bridges all networks.
+#   Agent CANNOT reach forge / pioneer / external internet.
+#   Proxy CANNOT reach the internet directly — only via vault-egress.
+#   vault-egress is the ONLY container with internet, holds NET_ADMIN, holds NO secrets.
 #
 # Usage:
 #   podman compose up -d          Start the perimeter
@@ -42,7 +45,7 @@ services:
       - /home/vault/workspace:size=1g,noexec,nosuid,mode=1777
     security_opt:
       - no-new-privileges:true
-      - seccomp=components/opencli-container/config/vault-seccomp.json
+      - seccomp=/home/albertd/Repositories/opentrapp/components/opencli-container/config/vault-seccomp.json
     cap_drop:
       - ALL
     pids_limit: 256
@@ -67,23 +70,29 @@ services:
     tty: true
     restart: unless-stopped
 
-  # ─── THE GATE ───────────────────────────────────────────────────
-  # mitmproxy sidecar. The ONLY container with internet access.
-  # Holds real API keys. Enforces domain allowlist. Logs everything.
-  # Bridges all internal networks — routes traffic between containers.
+  # ─── THE GATE (L7 policy) ───────────────────────────────────────
+  # mitmproxy sidecar. Enforces application-layer policy: domain allowlist,
+  # API-key injection, post-resolve destination-IP check (ADR-0009 Tier 2),
+  # request logging, payload-size limits.
+  #
+  # Holds real API keys but NOT NET_ADMIN. Has no direct internet attachment —
+  # outbound traffic is chained to vault-egress via --mode upstream which
+  # enforces the L3 (kernel-level) policy. See ADR-0009 for the split rationale.
   vault-proxy:
     image: docker.io/mitmproxy/mitmproxy@sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1
     command: >
       mitmdump
         --listen-host 0.0.0.0
         --listen-port 8080
+        --mode upstream:http://vault-egress:8888
         --set block_global=false
         --set block_private=false
+        --set connection_strategy=lazy
         --scripts /opt/vault/vault-proxy.py
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
     security_opt:
-      - seccomp=components/opencli-container/config/vault-proxy-seccomp.json
+      - seccomp=/home/albertd/Repositories/opentrapp/components/opencli-container/config/vault-proxy-seccomp.json
     cap_drop:
       - ALL
     cap_add:
@@ -103,14 +112,83 @@ services:
       - vault-proxy-logs:/var/log/vault-proxy
       - proxy-ca:/home/mitmproxy/.mitmproxy
     networks:
+      # ADR-0009 — vault-proxy LOSES external-net attachment. Internet
+      # reachable only via vault-egress on egress-net.
       - agent-net
       - forge-net
       - pioneer-net
-      - external-net
+      - egress-net
+    depends_on:
+      vault-egress:
+        condition: service_healthy
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_VERSION=${ANTHROPIC_API_VERSION:-2023-06-01}
+    restart: unless-stopped
+
+  # ─── THE FENCE (L3 policy) ──────────────────────────────────────
+  # vault-egress is the ONLY container with public-internet attachment.
+  # Holds NET_ADMIN, holds NO secrets, runs NO application code beyond the
+  # kernel ruleset, the unbound pinned resolver, and the tinyproxy forwarder.
+  # See ADR-0009 for the rationale and ADR-0010 for the resolver design.
+  vault-egress:
+    build:
+      context: ./components/opencli-container/egress
+      dockerfile: Containerfile
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+      - /run:size=8m,noexec,nosuid
+      - /var/log/vault-egress:size=32m,nosuid
+    volumes:
+      # Pin /etc/resolv.conf to local unbound — see ADR-0010. The file is
+      # baked into the egress/ directory and mounted read-only; tinyproxy's
+      # libc resolver reads from it on every connect.
+      - ./components/opencli-container/egress/resolv.conf:/etc/resolv.conf:ro
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      # The single container in the perimeter with elevated network capabilities.
+      # Required for nftables rule installation and IP forwarding configuration.
+      # NOT granted to any other container.
+      - NET_ADMIN
+      - NET_RAW
+      # Required by tinyproxy to bind 0.0.0.0:8888 as nobody
+      - NET_BIND_SERVICE
+      # Required by entrypoint.sh /etc/resolv.conf rewrite
+      - CHOWN
+      - DAC_OVERRIDE
+      # Required by tinyproxy and unbound to drop from root to nobody
+      # (their built-in privilege-drop step). Both processes are started by
+      # the entrypoint as root and immediately demote themselves.
+      - SETUID
+      - SETGID
+    sysctls:
+      # Enable IP forwarding declaratively. Required because the container's
+      # /proc/sys is read-only under read_only:true, so the entrypoint cannot
+      # `sysctl -w` at runtime.
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+    # Route the container's own DNS queries through unbound on 127.0.0.1:53.
+    # The compose `dns:` directive is unreliable across runtimes (podman's
+    # per-network DNS plugin overrides it) — bind-mounting a static resolv.conf
+    # is the only path that works consistently. unbound itself talks to Quad9
+    # and Cloudflare by direct IP, so this redirection is safe on boot.
+    mem_limit: 256m
+    pids_limit: 64
+    cpus: 0.5
+    networks:
+      - egress-net
+      - external-net
+    healthcheck:
+      test: ["CMD-SHELL", "nft list ruleset | grep -q vault_egress_drop_private && nc -z 127.0.0.1 8888"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
   # ─── THE WORKSHOP ───────────────────────────────────────────────
@@ -194,8 +272,20 @@ networks:
     internal: true    # No default gateway — forge is trapped here
   pioneer-net:
     internal: true    # No default gateway — pioneer is trapped here
+  # ADR-0009: egress-net bridges vault-proxy and vault-egress. Internal —
+  # no host route — because vault-proxy must reach the internet ONLY by way
+  # of vault-egress's tinyproxy at 8888. The subnet is fixed to 10.230.0.0/24
+  # so the nftables MASQUERADE rule in components/opencli-container/egress/
+  # nftables.conf can match by source address.
+  egress-net:
+    internal: true
+    ipam:
+      config:
+        - subnet: 10.230.0.0/24
   external-net:
-    driver: bridge    # Internet access for the proxy only
+    # ADR-0009: now reachable ONLY from vault-egress. The only container
+    # in the perimeter with public-internet attachment.
+    driver: bridge
 
 # ─── VOLUMES ────────────────────────────────────────────────────
 volumes:
