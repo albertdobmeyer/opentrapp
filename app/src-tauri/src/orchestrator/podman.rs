@@ -394,20 +394,178 @@ impl ImageVerifier for DevVerifier {
     }
 }
 
-/// Default resource dir under the user's data home, populated from the signed
-/// bundle at first launch (step 5). Kept here so callers share one definition.
-pub fn default_resource_dir() -> PathBuf {
-    dirs_data_home().join(PROJECT).join("perimeter")
+// ─── Runtime paths + env ────────────────────────────────────────────────
+
+/// The user's runtime data home — where markers, `.env`, and the verified
+/// `perimeter/` resources live. Matches `lifecycle::runguard_dir()`.
+pub fn runtime_data_dir() -> PathBuf {
+    let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_else(|| PathBuf::from("/tmp"));
+    home.join(".opentrapp")
 }
 
-fn dirs_data_home() -> PathBuf {
-    std::env::var_os("XDG_DATA_HOME")
-        .map(PathBuf::from)
-        .filter(|p| p.is_absolute())
-        .unwrap_or_else(|| {
-            let home = std::env::var_os("HOME").map(PathBuf::from).unwrap_or_default();
-            home.join(".local").join("share")
-        })
+/// Verified, non-agent-writable resource dir (seccomp profiles, vault-proxy.py,
+/// allowlist.txt, resolv.conf). Populated from the signed bundle at first
+/// launch (step 5).
+pub fn resource_dir() -> PathBuf {
+    runtime_data_dir().join("perimeter")
+}
+
+/// Parse `~/.opentrapp/.env` into a map for secret resolution. Tolerant of
+/// blank lines, `#` comments, `export ` prefixes, and surrounding quotes.
+pub fn load_runtime_env(data_dir: &Path) -> BTreeMap<String, String> {
+    let mut map = BTreeMap::new();
+    let Ok(text) = std::fs::read_to_string(data_dir.join(".env")) else {
+        return map;
+    };
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let line = line.strip_prefix("export ").unwrap_or(line);
+        if let Some((k, v)) = line.split_once('=') {
+            let k = k.trim().to_string();
+            let mut v = v.trim();
+            if v.len() >= 2
+                && ((v.starts_with('"') && v.ends_with('"'))
+                    || (v.starts_with('\'') && v.ends_with('\'')))
+            {
+                v = &v[1..v.len() - 1];
+            }
+            map.insert(k, v.to_string());
+        }
+    }
+    map
+}
+
+/// The single dev verifier instance (referenced by `'static` from contexts).
+static DEV_VERIFIER: DevVerifier = DevVerifier;
+
+fn load_spec() -> Result<PerimeterSpec, OrchestratorError> {
+    super::perimeter::load()
+        .map_err(|e| OrchestratorError::ExecutionError(format!("perimeter spec parse: {e}")))
+}
+
+fn is_running(service_name: &str) -> bool {
+    podman(
+        &[
+            "ps".into(),
+            "--filter".into(),
+            format!("name=^{service_name}$"),
+            "--filter".into(),
+            "status=running".into(),
+            "--format".into(),
+            "{{.Names}}".into(),
+        ],
+        Duration::from_secs(10),
+    )
+    .map(|o| ok(&o) && !o.stdout.trim_ascii().is_empty())
+    .unwrap_or(false)
+}
+
+// ─── Lifecycle façade (drop-in replacements for run_compose call sites) ──
+// Each takes the runtime data dir (where `.env` lives) and internally loads
+// the signed spec + builds the run context. Keeps call sites a one-liner.
+
+/// Bring up every service in dependency order (proxy+forge+pioneer+egress+agent).
+pub fn perimeter_up(data_dir: &Path) -> Result<(), OrchestratorError> {
+    let spec = load_spec()?;
+    let env = load_runtime_env(data_dir);
+    let rd = resource_dir();
+    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: &DEV_VERIFIER };
+    up(&spec, &ctx)
+}
+
+/// Bring up the security shell only (everything except the agent tenant).
+pub fn shell_up(data_dir: &Path) -> Result<(), OrchestratorError> {
+    let spec = load_spec()?;
+    let env = load_runtime_env(data_dir);
+    let rd = resource_dir();
+    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: &DEV_VERIFIER };
+    ensure_networks(&spec)?;
+    for service_name in spec.start_order() {
+        if service_name == "vault-agent" {
+            continue;
+        }
+        let svc = &spec.services[&service_name];
+        for dep in &svc.depends_on {
+            if matches!(dep.condition, DependencyCondition::Healthy) {
+                wait_healthy(&dep.service, Duration::from_secs(60))?;
+            }
+        }
+        let image = ctx.verifier.verify_and_resolve(&svc.image)?;
+        rm_service(&service_name)?;
+        let args = container_run_args(&service_name, svc, &image, &ctx)?;
+        if !ok(&podman(&args, Duration::from_secs(120))?) {
+            return Err(OrchestratorError::ExecutionError(format!(
+                "failed to start {service_name}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Tear the whole perimeter down.
+pub fn perimeter_down(_data_dir: &Path) -> Result<(), OrchestratorError> {
+    down(&load_spec()?)
+}
+
+/// Stop (freeze, keep containers) the whole perimeter — used by pause.
+pub fn perimeter_stop(_data_dir: &Path) -> Result<(), OrchestratorError> {
+    let spec = load_spec()?;
+    for service_name in spec.services.keys() {
+        podman(
+            &["stop".into(), "--time".into(), "10".into(), service_name.clone()],
+            Duration::from_secs(20),
+        )?;
+    }
+    Ok(())
+}
+
+/// Start one service (verifying its image). `force_recreate` removes any
+/// existing instance first; otherwise a running instance is left as-is.
+pub fn service_up(
+    data_dir: &Path,
+    service_name: &str,
+    force_recreate: bool,
+) -> Result<(), OrchestratorError> {
+    let spec = load_spec()?;
+    let svc = spec.services.get(service_name).ok_or_else(|| {
+        OrchestratorError::ExecutionError(format!("unknown service {service_name}"))
+    })?;
+    let env = load_runtime_env(data_dir);
+    let rd = resource_dir();
+    let ctx = RunContext { resource_dir: &rd, env: &env, verifier: &DEV_VERIFIER };
+    ensure_networks(&spec)?;
+    if !force_recreate && is_running(service_name) {
+        return Ok(());
+    }
+    rm_service(service_name)?;
+    let image = ctx.verifier.verify_and_resolve(&svc.image)?;
+    let args = container_run_args(service_name, svc, &image, &ctx)?;
+    if !ok(&podman(&args, Duration::from_secs(120))?) {
+        return Err(OrchestratorError::ExecutionError(format!(
+            "failed to start {service_name}"
+        )));
+    }
+    Ok(())
+}
+
+/// Verify (and in production, acquire) every image the perimeter needs. In dev
+/// this resolves refs and checks local presence, logging anything missing.
+pub fn ensure_images(_data_dir: &Path) -> Result<(), OrchestratorError> {
+    let spec = load_spec()?;
+    for (name, svc) in &spec.services {
+        let resolved = DEV_VERIFIER.verify_and_resolve(&svc.image)?;
+        let exists = podman(
+            &["image".into(), "exists".into(), resolved.clone()],
+            Duration::from_secs(10),
+        )?;
+        if !ok(&exists) {
+            eprintln!("[orchestrator] image for {name} not present locally: {resolved}");
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]

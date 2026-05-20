@@ -295,66 +295,13 @@ pub fn redact_secrets(s: &str) -> String {
 
 // ─── Compose runner ───────────────────────────────────────────────────
 
-/// Try `podman compose <args...>` first, then `docker compose <args...>`.
-/// Returns true if either succeeded with a zero exit code. Intentionally
-/// non-fatal — the app boots even if no container runtime is installed
-/// yet (e.g. first launch before the wizard has run System Check).
-///
-/// Wraps the call with `timeout(1)` if that binary is on PATH; falls back
-/// to a direct invocation if not. Stderr is redacted via `redact_secrets`
-/// before logging.
-pub fn run_compose(root: &Path, args: &[&str], timeout: Duration) -> bool {
-    for runtime in &["podman", "docker"] {
-        let secs = timeout.as_secs().max(1).to_string();
-
-        let wrapped = StdCommand::new("timeout")
-            .args(["--signal=TERM", "--kill-after=5s", &secs, runtime, "compose"])
-            .args(args)
-            .current_dir(root)
-            .output();
-
-        let output = match wrapped {
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => StdCommand::new(runtime)
-                .arg("compose")
-                .args(args)
-                .current_dir(root)
-                .output(),
-            other => other,
-        };
-
-        match output {
-            Ok(out) if out.status.success() => {
-                eprintln!("[lifecycle] {} compose {} → ok", runtime, args.join(" "));
-                return true;
-            }
-            Ok(out) => {
-                let stderr = String::from_utf8_lossy(&out.stderr);
-                eprintln!(
-                    "[lifecycle] {} compose {} exited {}: {}",
-                    runtime,
-                    args.join(" "),
-                    out.status,
-                    redact_secrets(stderr.trim())
-                );
-            }
-            Err(e) => {
-                eprintln!(
-                    "[lifecycle] failed to spawn {}: {} — trying next runtime",
-                    runtime, e
-                );
-            }
-        }
-    }
-    false
-}
-
 /// Bring the 4-container perimeter up. Idempotent — `compose up -d` is a
 /// no-op when containers are already running. Spawned on a background
 /// thread so the Tauri window appears immediately even if a first-time
 /// pull is happening.
 pub fn bring_perimeter_up_async(root: PathBuf) {
     std::thread::spawn(move || {
-        run_compose(&root, &["up", "-d"], Duration::from_secs(90));
+        let _ = crate::orchestrator::podman::perimeter_up(&root);
     });
 }
 
@@ -362,7 +309,7 @@ pub fn bring_perimeter_up_async(root: PathBuf) {
 /// containers actually stopped before the process terminates so we don't
 /// leak the running perimeter. 30s budget enforced by `timeout(1)`.
 pub fn bring_perimeter_down_sync(root: &Path) {
-    run_compose(root, &["down"], Duration::from_secs(30));
+    let _ = crate::orchestrator::podman::perimeter_down(root);
 }
 
 // ─── RunGuard (orphan reap on next launch after SIGKILL) ──────────────
@@ -401,7 +348,7 @@ pub fn establish_runguard(root: &Path) {
                     "[lifecycle] previous session pid={prev_pid} is dead — \
                      reaping orphan containers before fresh start"
                 );
-                run_compose(root, &["down"], Duration::from_secs(30));
+                let _ = crate::orchestrator::podman::perimeter_down(root);
             } else {
                 eprintln!(
                     "[lifecycle] previous session pid={prev_pid} is still alive — \

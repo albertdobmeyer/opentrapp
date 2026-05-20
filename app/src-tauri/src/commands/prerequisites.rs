@@ -49,7 +49,7 @@ pub struct PrerequisiteReport {
 pub async fn check_prerequisites(
     state: State<'_, AppState>,
 ) -> Result<PrerequisiteReport, OrchestratorError> {
-    let root = state.monorepo_root.read().unwrap().clone();
+    let root = state.runtime_data_dir.read().unwrap().clone();
 
     // Check container runtime
     let container_runtime = check_container_runtime(&root).await;
@@ -148,7 +148,7 @@ async fn check_container_runtime(root: &PathBuf) -> ContainerRuntimeInfo {
 pub async fn init_submodules(
     state: State<'_, AppState>,
 ) -> Result<String, OrchestratorError> {
-    let root = state.monorepo_root.read().unwrap().clone();
+    let root = state.runtime_data_dir.read().unwrap().clone();
 
     let result = run_shell(
         "git submodule update --init --recursive",

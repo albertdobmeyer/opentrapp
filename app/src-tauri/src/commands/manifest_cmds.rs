@@ -8,7 +8,7 @@ use crate::orchestrator::state::AppState;
 pub async fn list_components(
     state: State<'_, AppState>,
 ) -> Result<Vec<DiscoveredComponent>, OrchestratorError> {
-    let root = state.monorepo_root.read().unwrap().clone();
+    let root = state.runtime_data_dir.read().unwrap().clone();
     let discovered = discover_components(&root)?;
 
     // Update cached components
@@ -35,7 +35,7 @@ pub async fn get_component(
     }
 
     // Cache miss (empty or component not found) — discover from filesystem
-    let root = state.monorepo_root.read().unwrap().clone();
+    let root = state.runtime_data_dir.read().unwrap().clone();
     let discovered = discover_components(&root)?;
     let result = discovered
         .iter()
@@ -66,7 +66,7 @@ pub async fn set_monorepo_root(
 
     // Update the root
     {
-        let mut root = state.monorepo_root.write().unwrap();
+        let mut root = state.runtime_data_dir.write().unwrap();
         *root = new_root.clone();
     }
 

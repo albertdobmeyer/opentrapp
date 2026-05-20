@@ -6,16 +6,19 @@ use super::discovery::DiscoveredComponent;
 
 /// Application state managed by Tauri
 pub struct AppState {
-    pub monorepo_root: RwLock<PathBuf>,
+    /// The user's runtime data home (`~/.opentrapp/`) — where `.env`, marker
+    /// files, and the verified `perimeter/` resources live. Replaces the old
+    /// `monorepo_root`, which assumed the app ran from a source clone.
+    pub runtime_data_dir: RwLock<PathBuf>,
     pub components: Mutex<Vec<DiscoveredComponent>>,
     pub component_states: Mutex<HashMap<String, String>>,
     pub active_streams: Mutex<HashMap<String, u32>>, // component:command -> child PID
 }
 
 impl AppState {
-    pub fn new(monorepo_root: PathBuf) -> Self {
+    pub fn new(runtime_data_dir: PathBuf) -> Self {
         Self {
-            monorepo_root: RwLock::new(monorepo_root),
+            runtime_data_dir: RwLock::new(runtime_data_dir),
             components: Mutex::new(Vec::new()),
             component_states: Mutex::new(HashMap::new()),
             active_streams: Mutex::new(HashMap::new()),

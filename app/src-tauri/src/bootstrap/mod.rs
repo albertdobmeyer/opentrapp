@@ -13,16 +13,20 @@ pub mod migrate_from_lobster_trapp;
 
 use std::path::{Path, PathBuf};
 use std::process::Command as StdCommand;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use tauri::{AppHandle, Emitter, Manager as _};
 
 use crate::lifecycle::{
-    run_compose, BootstrapProgress, BootstrapStep, PerimeterStateStore,
+    BootstrapProgress, BootstrapStep, PerimeterStateStore,
 };
+use crate::orchestrator::podman;
 
 const TOTAL_STEPS: u8 = 7;
-const SHELL_SERVICES: [&str; 3] = ["vault-proxy", "vault-forge", "vault-pioneer"];
+/// The security shell — everything except the agent tenant. Per ADR-0009,
+/// `vault-egress` joined the shell (it must be healthy before `vault-proxy`).
+const SHELL_SERVICES: [&str; 4] =
+    ["vault-egress", "vault-proxy", "vault-forge", "vault-pioneer"];
 
 // ─── Public entry point ───────────────────────────────────────────────
 
@@ -53,15 +57,15 @@ async fn run_bootstrap(handle: AppHandle, root: PathBuf) {
         return;
     }
 
-    // Step 4: build images
-    if let Err(cause) = step_build_images(&handle, &root, &runtime).await {
-        set_failed(&handle, cause, "Image build failed.");
+    // Step 4: prepare images (verify/acquire pre-built signed images)
+    if let Err(cause) = step_prepare_images(&handle, &root).await {
+        set_failed(&handle, cause, "Couldn't prepare the security images.");
         return;
     }
 
-    // Step 5: pull images
-    if let Err(cause) = step_pull_images(&handle, &root, &runtime).await {
-        set_failed(&handle, cause, "Image pull failed.");
+    // Step 5: verify images present
+    if let Err(cause) = step_pull_images(&handle, &root).await {
+        set_failed(&handle, cause, "Image verification failed.");
         return;
     }
 
@@ -113,17 +117,19 @@ fn step_detect_runtime(handle: &AppHandle, _root: &Path) -> Result<String, &'sta
 fn step_write_env(handle: &AppHandle, root: &Path) -> Result<(), &'static str> {
     set_step(handle, BootstrapStep::WriteEnv, 3, None, None);
 
-    let vault_dir = root.join("components").join("opencli-container");
-    let env_path = vault_dir.join(".env");
+    // `.env` lives in the runtime data dir (`root`), never the source tree.
+    let env_path = root.join(".env");
 
     if env_path.exists() {
         eprintln!("[bootstrap] .env already exists — skipping write-env");
         return Ok(());
     }
 
-    let example_path = vault_dir.join(".env.example");
+    // The template ships in the verified resource bundle. If it isn't there
+    // yet, the setup wizard will write `.env` directly via write_config.
+    let example_path = podman::resource_dir().join(".env.example");
     if !example_path.exists() {
-        eprintln!("[bootstrap] .env.example missing — skipping write-env (fresh clone?)");
+        eprintln!("[bootstrap] no .env yet — wizard will write it");
         return Ok(());
     }
 
@@ -135,78 +141,29 @@ fn step_write_env(handle: &AppHandle, root: &Path) -> Result<(), &'static str> {
         })
 }
 
-async fn step_build_images(
-    handle: &AppHandle,
-    root: &Path,
-    runtime: &str,
-) -> Result<(), &'static str> {
-    set_step(handle, BootstrapStep::BuildImages, 4, None, Some("Building images…".into()));
-
-    // Check if images exist first. `compose images` lists images for the
-    // compose project; if it returns non-empty output, they exist.
-    let images_exist = images_already_built(root, runtime);
-    if images_exist {
-        eprintln!("[bootstrap] build images — already exist, skipping");
-        return Ok(());
-    }
-
-    let ok = tokio::task::spawn_blocking({
-        let root = root.to_path_buf();
-        let runtime = runtime.to_string();
-        move || {
-            // Build vault-agent, vault-forge, vault-pioneer (not vault-proxy — it's an image pull).
-            run_compose_with_runtime(
-                &root,
-                &runtime,
-                &["compose", "build", "vault-agent", "vault-forge", "vault-pioneer"],
-                Duration::from_secs(600),
-            )
-        }
-    })
-    .await
-    .unwrap_or(false);
-
-    if ok {
-        Ok(())
-    } else {
-        Err("image-build-failed")
-    }
+/// Prepare the perimeter images. Images are pre-built + signed by CI and
+/// loaded from the verified bundle (no on-host build — that was the v0.4.1
+/// failure). This step verifies/acquires them via the orchestrator.
+async fn step_prepare_images(handle: &AppHandle, root: &Path) -> Result<(), &'static str> {
+    set_step(handle, BootstrapStep::BuildImages, 4, None, Some("Preparing images…".into()));
+    let root = root.to_path_buf();
+    tokio::task::spawn_blocking(move || podman::ensure_images(&root))
+        .await
+        .map_err(|_| "image-prepare-join-failed")?
+        .map_err(|_| "image-prepare-failed")
 }
 
-async fn step_pull_images(
-    handle: &AppHandle,
-    root: &Path,
-    runtime: &str,
-) -> Result<(), &'static str> {
-    set_step(handle, BootstrapStep::PullImages, 5, None, Some("Pulling mitmproxy…".into()));
-
-    let ok = tokio::task::spawn_blocking({
-        let root = root.to_path_buf();
-        let runtime = runtime.to_string();
-        move || {
-            run_compose_with_runtime(
-                &root,
-                &runtime,
-                &["compose", "pull", "vault-proxy"],
-                Duration::from_secs(300),
-            )
-        }
-    })
-    .await
-    .unwrap_or(false);
-
-    if ok {
-        Ok(())
-    } else {
-        Err("image-pull-failed")
-    }
+/// Image acquisition is fully handled by step 4 (`ensure_images` covers both
+/// our built images and the external mitmproxy image). This step remains as a
+/// distinct, fast verification point so the 7-step progress UX is unchanged.
+async fn step_pull_images(handle: &AppHandle, _root: &Path) -> Result<(), &'static str> {
+    set_step(handle, BootstrapStep::PullImages, 5, None, Some("Verifying images…".into()));
+    Ok(())
 }
 
 fn step_up_shell(handle: &AppHandle, root: &Path) -> Result<(), &'static str> {
     set_step(handle, BootstrapStep::UpShell, 6, None, None);
-
-    let ok = run_compose(root, &["up", "-d", "vault-proxy", "vault-forge", "vault-pioneer"], Duration::from_secs(90));
-    if ok { Ok(()) } else { Err("shell-up-failed") }
+    podman::shell_up(root).map_err(|_| "shell-up-failed")
 }
 
 fn step_verify_shell(handle: &AppHandle, runtime: &str) -> Result<(), &'static str> {
@@ -234,64 +191,11 @@ fn step_verify_shell(handle: &AppHandle, runtime: &str) -> Result<(), &'static s
         }
     }
 
-    eprintln!("[bootstrap] shell verified — all 3 services running");
+    eprintln!("[bootstrap] shell verified — all shell services running");
     Ok(())
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────
-
-fn images_already_built(root: &Path, runtime: &str) -> bool {
-    // Derive the compose project name from the directory name (lowercase, hyphens preserved).
-    let project = root
-        .file_name()
-        .and_then(|n| n.to_str())
-        .map(|s| s.to_lowercase())
-        .unwrap_or_else(|| "opentrapp".to_string());
-    let image_name = format!("localhost/{project}_vault-agent:latest");
-    // `podman image exists` exits 0 if the image is present — no stdout needed.
-    // podman-compose 1.0.6 doesn't support `compose images`, so we bypass it.
-    StdCommand::new(runtime)
-        .args(["image", "exists", &image_name])
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
-}
-
-fn run_compose_with_runtime(root: &Path, runtime: &str, args: &[&str], timeout: Duration) -> bool {
-    let secs = timeout.as_secs().max(1).to_string();
-    let result = StdCommand::new("timeout")
-        .args(["--signal=TERM", "--kill-after=5s", &secs])
-        .arg(runtime)
-        .args(args)
-        .current_dir(root)
-        .output();
-
-    // If timeout not found, run directly.
-    let output = match result {
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            StdCommand::new(runtime).args(args).current_dir(root).output()
-        }
-        other => other,
-    };
-
-    match output {
-        Ok(o) if o.status.success() => true,
-        Ok(o) => {
-            eprintln!(
-                "[bootstrap] {} {} → exit {}: {}",
-                runtime,
-                args.join(" "),
-                o.status,
-                String::from_utf8_lossy(&o.stderr).trim()
-            );
-            false
-        }
-        Err(e) => {
-            eprintln!("[bootstrap] spawn error: {e}");
-            false
-        }
-    }
-}
 
 fn now_unix_ms() -> u64 {
     SystemTime::now()
