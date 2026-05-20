@@ -397,8 +397,9 @@ fn vault_env_path(handle: &AppHandle) -> PathBuf {
     let root = handle
         .try_state::<AppState>()
         .and_then(|state| state.runtime_data_dir.read().ok().map(|r| r.clone()))
-        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
-    root.join("components").join("opencli-container").join(".env")
+        .unwrap_or_else(crate::orchestrator::podman::runtime_data_dir);
+    // `.env` lives in the runtime data dir (~/.opentrapp/), not a source tree.
+    root.join(".env")
 }
 
 fn read_env_keys(path: &PathBuf) -> (bool, bool, Option<String>) {
