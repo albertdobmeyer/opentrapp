@@ -72,31 +72,42 @@ class ProxyLogTail:
         self._log_file_path: str = ""
 
     async def _discover_log_path(self) -> str:
-        """Find the host path of the requests.jsonl file on the proxy-logs
-        named volume. Raises if the volume isn't present (perimeter likely
-        not started).
+        """Find the path the proxy is actually writing to, INSIDE the container.
+
+        The proxy writes to /var/log/vault-proxy/requests.jsonl when its log
+        volume is writable, else falls back to /tmp/vault-proxy-requests.jsonl.
+        On rootless podman the proxy-logs named volume is owned by
+        container-root while mitmproxy runs as a non-root user, so the proxy
+        always falls back to the in-container tmpfs (findings 2026-05-20). That
+        tmpfs path is NOT host-visible, so we probe both in-container paths and
+        tail whichever exists via `podman exec`.
         """
-        proc = await asyncio.create_subprocess_exec(
-            "podman", "volume", "inspect", PROXY_LOGS_VOLUME,
-            "--format", "{{.Mountpoint}}",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        out, err = await proc.communicate()
-        mountpoint = out.decode().strip()
-        if proc.returncode != 0 or not mountpoint:
-            raise RuntimeError(
-                f"Could not discover {PROXY_LOGS_VOLUME} mountpoint. "
-                f"Is the perimeter running? stderr={err.decode()[:200]!r}"
+        candidates = [
+            "/var/log/vault-proxy/requests.jsonl",
+            "/tmp/vault-proxy-requests.jsonl",
+        ]
+        for path in candidates:
+            proc = await asyncio.create_subprocess_exec(
+                "podman", "exec", self.container, "test", "-f", path,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
             )
-        return os.path.join(mountpoint, LOG_FILE_NAME)
+            await proc.wait()
+            if proc.returncode == 0:
+                return path
+        raise RuntimeError(
+            f"No proxy requests.jsonl found in {self.container} at {candidates}. "
+            f"Is the perimeter running?"
+        )
 
     async def __aenter__(self) -> "ProxyLogTail":
         self._log_file_path = await self._discover_log_path()
         # `tail -n 0 -F` — skip backlog, follow by name (survives log rotation).
-        # File-level tail bypasses podman-logs stream buffering that missed
-        # events in earlier testing.
+        # Run INSIDE the container via `podman exec` because the proxy's actual
+        # log file (often the /tmp fallback) lives on an in-container tmpfs that
+        # is not visible on the host volume mountpoint.
         self._proc = await asyncio.create_subprocess_exec(
+            "podman", "exec", self.container,
             "tail", "-n", "0", "-F", self._log_file_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.DEVNULL,
