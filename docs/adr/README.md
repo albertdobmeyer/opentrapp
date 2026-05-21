@@ -36,6 +36,7 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0009](0009-five-container-perimeter.md) | Accepted — implemented in v0.5.0 | From four-container perimeter to five: separating L7 and L3 egress policy |
 | [0010](0010-pinned-resolver-dns.md) | Accepted — implemented in v0.5.0 | Pinned-resolver DNS as a perimeter primitive (companion to ADR-0009) |
 | [0011](0011-zero-trust-self-sufficient-bootstrap.md) | Accepted — implemented in v0.5.0 | Zero-trust, self-sufficient first-launch bootstrap (native orchestrator + release-asset signed image delivery) |
+| [0012](0012-subscription-oauth-auth-feasibility.md) | Proposed — research only | Subscription / OAuth authentication feasibility (can a Claude Pro/Max login replace the pasted API key without weakening the perimeter?) |
 
 ## Future ADRs
 
