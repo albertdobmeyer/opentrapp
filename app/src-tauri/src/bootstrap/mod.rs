@@ -13,6 +13,7 @@ pub mod migrate_from_lobster_trapp;
 
 use std::path::{Path, PathBuf};
 use std::process::Command as StdCommand;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use tauri::{AppHandle, Emitter, Manager as _};
@@ -30,11 +31,26 @@ const SHELL_SERVICES: [&str; 4] =
 
 // ─── Public entry point ───────────────────────────────────────────────
 
+/// Guards against concurrent bootstrap runs. The app kicks off a bootstrap on
+/// launch *and* the wizard / retry path can trigger one; without this guard two
+/// runs race on `podman run`, colliding on container names
+/// (`name "vault-forge" is already in use`). Single-flight: a second spawn while
+/// one is in flight is ignored.
+static BOOTSTRAP_IN_FLIGHT: AtomicBool = AtomicBool::new(false);
+
 /// Spawn the bootstrap pipeline on a tokio background task.
 /// Replaces `bring_perimeter_up_async` from the v0.3 lifecycle.
 pub fn spawn_bootstrap(handle: AppHandle, root: PathBuf) {
+    if BOOTSTRAP_IN_FLIGHT
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        eprintln!("[bootstrap] already in flight — ignoring duplicate spawn");
+        return;
+    }
     tauri::async_runtime::spawn(async move {
         run_bootstrap(handle, root).await;
+        BOOTSTRAP_IN_FLIGHT.store(false, Ordering::SeqCst);
     });
 }
 

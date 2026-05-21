@@ -82,7 +82,10 @@ pub fn container_run_args(
     resolved_image: &str,
     ctx: &RunContext,
 ) -> Result<Vec<String>, OrchestratorError> {
-    let mut a: Vec<String> = vec!["run".into(), "--detach".into()];
+    // `--replace` atomically removes any same-named container before creating
+    // this one. Defense-in-depth against the retry/concurrency collision
+    // (`name "<svc>" is already in use`); podman >= 4.0 (we require 4.9.3+).
+    let mut a: Vec<String> = vec!["run".into(), "--detach".into(), "--replace".into()];
 
     a.push("--name".into());
     a.push(service_name.to_string());
@@ -885,6 +888,9 @@ mod tests {
         assert!(joined.contains("--name vault-agent"));
         assert!(joined.ends_with("img:latest"));
         assert!(joined.contains("io.opentrapp.service=vault-agent"));
+        // --replace so a re-run/retry atomically supersedes a stale same-named
+        // container instead of colliding with "name already in use".
+        assert!(joined.contains("--replace"));
     }
 
     #[test]
