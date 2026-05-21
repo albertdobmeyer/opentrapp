@@ -1,8 +1,25 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-05-20 (v0.5.0 SHIPPED — zero-trust self-sufficient bootstrap; ADR-0009/0010/0011)
-**Current phase:** v0.5.0 released; planning v0.5.1 follow-ups
-**Branch:** `main` at `af692c5` — pushed to `origin/main`. Submodules: `opencli-container` @ `ebb5717`, `openskill-forge` @ `7aa51fd`, `openagent-social` @ `75fc40a`. All tracking their own `main`.
+**Last updated:** 2026-05-21 (full Karen E2E against v0.5.0; verdict SHIP-WITH-CAVEATS; work rescoped into construction zones)
+**Current phase:** v0.5.0 released + E2E-validated; v0.5.1 work rescoped into focused zones
+**Branch:** `main` at `136c76a` — **local commits NOT yet pushed** (`e52541f` retry fix, `2bd6edb` harness, `136c76a` findings+ADR-0012). Submodules clean: `opencli-container` @ `ebb5717`, `openskill-forge` @ `7aa51fd`, `openagent-social` @ `75fc40a`.
+
+> ## ⟶ 2026-05-21 — E2E run + rescope (read this first)
+>
+> A full Karen E2E ran against the **cosign-verified v0.5.0 AppImage on a true clean box**.
+> **Verdict: SHIP-WITH-CAVEATS — the security thesis HOLDS; first-run/recovery UX is the gap.**
+> - Tier B 7/7 substantive PASS (credential exfil, workspace, exec, **indirect injection**,
+>   malicious skill, pairing, self-promote all refused). Forge scanner self-test 10/10 direct.
+>   The only Tier-B fail is a banned word ("sandboxed"), not a breach.
+> - Full scored record: **`docs/specs/2026-05-20-dogfood-full-arc-findings.md`**.
+> - **All next work is rescoped into construction zones in the (gitignored) `AGENT-TODO.md`** —
+>   one focused mission per agent. ZONE 1 (first-run/recovery UX) is the top priority.
+> - **The retry-idempotency P0 is fixed + committed** (`e52541f`, local). New bugs to file:
+>   proxy-log can't persist (ZONE 3), forge CDR-on-clean fails + unreachable via chat (ZONE 4),
+>   bot vocabulary (ZONE 5), autostart pins binary path (confirmed live), stale verify.sh.
+> - **Impact on the SignPath/OpenSSF mission below:** the E2E *confirms the security posture* the
+>   resubmission needs — that axis is now evidenced. The A1–A4 security tasks below remain the
+>   gating checklist; the new UX zones are additive, not blockers for SignPath.
 **Latest release:** **`v0.5.0`** — published, `latest`, all platforms, cosign-signed. Five-container perimeter (ADR-0009/0010) + self-sufficient bootstrap (ADR-0011): no on-host build, native podman orchestrator (no compose), pre-built cosign-signed images delivered as release assets and digest-verified at first launch. ~90 MB AppImage.
 
 > **v0.5.0 fully validated (2026-05-20):** clean-box E2E from a downloaded AppImage with no source clone — `fetch_perimeter_images` pulled the signed tarballs from the **published** release, digest-verified each, loaded them, brought up all five containers (vault-egress healthy under rootless podman), agent activated, hero "running safely". Tamper test refused a swapped image. See [ADR-0011](adr/0011-zero-trust-self-sufficient-bootstrap.md).
