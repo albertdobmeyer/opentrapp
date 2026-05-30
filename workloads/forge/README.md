@@ -1,10 +1,21 @@
-# openskill-forge
+# forge — the supply-chain defence
 
-[![Skill CI](https://github.com/albertdobmeyer/openskill-forge/actions/workflows/skill-ci.yml/badge.svg)](https://github.com/albertdobmeyer/openskill-forge/actions/workflows/skill-ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+The skill-authoring toolchain and security scanner that runs as the
+`vault-forge` container in OpenTrApp's [five-container
+perimeter](../../docs/perimeter-explained.md). Offline static analysis
+(87 patterns, MITRE ATT&CK-mapped), 16-pattern prompt-injection detector,
+line-level zero-trust verification, Content Disarm & Reconstruction, and a
+gated publishing pipeline.
 
-A skill-authoring toolchain and security scanner for [ClawHub](https://clawdhub.com), the third-party skill registry for the OpenClaw agent runtime. Provides offline static analysis, line-level zero-trust verification, behavioural testing, and a gated publishing pipeline.
+This directory lives at `workloads/forge/` in the OpenTrApp monorepo since
+the v0.5.0 consolidation ([ADR-0013](../../docs/adr/0013-monorepo-consolidation.md)).
+The same toolchain doubles as the author's environment for publishing skills
+to [ClawHub](https://clawdhub.com); twenty-five published skills are included
+as the corpus the scanner is regression-tested against.
 
-This repository serves two roles. As a **standalone toolchain**, it is the author's environment for creating, testing, and publishing skills to ClawHub; twenty-five published skills are included as reference implementations. As a **OpenTrApp component**, the same scanner runs inside the `vault-forge` container of the five-container perimeter (see [ADR-0009](https://github.com/albertdobmeyer/opentrapp/blob/main/docs/adr/0009-five-container-perimeter.md)) to vet skills before they reach the agent runtime in `vault-agent`.
+**For the elevator pitch and the narrative on why CDR-for-skills is original
+work**, see [`docs/forge-spotlight.md`](../../docs/forge-spotlight.md) at the
+repo root.
 
 **Author:** [@albertdobmeyer](https://github.com/albertdobmeyer)
 
@@ -169,7 +180,7 @@ make publish SKILL=my-tool VERSION=1.0.0
 In production, the toolchain runs inside the `vault-forge` container of the OpenTrApp five-container perimeter. All untrusted content (downloaded skills) is processed inside the container and never reaches the host filesystem.
 
 - The `Containerfile` in this repository's root defines the image (~233 MB, `python:3.10-slim` plus the bash toolchain).
-- `vault-forge` is one of four services in `compose.yml` at the opentrapp root.
+- `vault-forge` is one of five services in `compose.yml` at the opentrapp root (see [ADR-0009](../../docs/adr/0009-five-container-perimeter.md) for the topology).
 - It runs on `forge-net`, an internal network. It can reach `vault-proxy` for outbound HTTPS but cannot reach `vault-agent` or `vault-social` directly.
 - Certified skills are delivered to the agent through the `forge-deliveries` shared volume, which is writable in `vault-forge` and read-only in `vault-agent`.
 - Non-root user, capabilities dropped, 1 GB memory limit, custom seccomp profile.
@@ -283,10 +294,21 @@ Skills install via `molthub install <slug>` and are placed at `./skills/<slug>/`
 
 ---
 
-## Companion repositories
+## Sibling workloads in the monorepo
 
-- [`opencli-container`](https://github.com/albertdobmeyer/opencli-container) — runtime containment for the OpenClaw agent. Hardened container, proxy-side API-key injection, domain allowlist, three-level kill switch, 24-point security verification.
-- [`openagent-social`](https://github.com/albertdobmeyer/openagent-social) — analysis of the Moltbook AI-agent social network. **Parked since 2026-05-03** following Meta's acquisition of Moltbook on 2026-03-10 and the resulting API instability.
+Other directories at the same level since the v0.5.0 consolidation
+([ADR-0013](../../docs/adr/0013-monorepo-consolidation.md)):
+
+- [`workloads/agent/`](../agent/) — runtime containment for the agent
+  (the `vault-agent` container). Hardened container, proxy-side API-key
+  injection, domain allowlist, three-level kill switch, 24-point
+  verification.
+- [`workloads/social/`](../social/) — agent-social-feed analysis (the
+  `vault-social` container). **Parked since 2026-05-03** following Meta's
+  acquisition of Moltbook; re-aim to a generalised agent-to-agent shield
+  is tracked in `MISSION.md` Thread C.
+- [`infra/proxy/`](../../infra/proxy/) and [`infra/egress/`](../../infra/egress/) —
+  the L7 and L3 egress chain that the agent + forge + social all share.
 
 ## License
 

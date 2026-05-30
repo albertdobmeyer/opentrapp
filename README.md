@@ -44,6 +44,40 @@ These are the principles that shape every design and product decision in this pr
 
 Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled by default. They are available at "Soft Shell" via CLI configuration in v0.3.0; see [`workloads/agent/`](workloads/agent/).
 
+## Skill scanner & Content Disarm & Reconstruction
+
+The most novel piece of the project is the supply-chain defence in
+[`workloads/forge/`](workloads/forge/). The ClawHavoc study (2026-Q1) found
+**11.9 % of published ClawHub skills were malicious** (341 of 2,857) — the
+gap container hardening doesn't close, because a malicious skill loaded by
+the agent runs *as part of* the agent's reasoning. `vault-forge` runs five
+independent defences against that before any skill reaches the agent:
+
+1. **87-pattern static scanner**, MITRE ATT&CK-mapped, calibrated to skills
+   observed in real attacks (the ClawHavoc campaign + the `moltbook-ay`
+   trojan).
+2. **16-pattern prompt-injection detector** — instruction override, persona
+   hijack, exfil directives, LLM control-token injection.
+3. **Zero-trust line verifier** — every line of every file classified; a
+   single unrecognised line quarantines the entire skill. Defence against
+   novel attacks the pattern set hasn't been told about yet.
+4. **Content Disarm & Reconstruction** — the original artefact is parsed
+   into structured intent, then discarded; the skill that reaches the agent
+   is rebuilt from scratch using only the parsed intent and clean templates.
+   Bytes from the original never reach the agent. CDR is standard for email
+   attachments; applying it to agent skills is, as far as we know, original.
+5. **Post-install re-scan + suppression audit** — `.scanignore` ranges over
+   50 lines are rejected; the scanner re-runs against the installed artefact.
+
+The scanner, the injection patterns, the line verifier, and CDR are all
+**agent-agnostic** — they work on the text and helper-script content any
+markdown-based skill format ships, not on anything OpenClaw-specific. Adapting
+forge to a different agent's skill registry is a connector question, not a
+redesign.
+
+**Full narrative + the pitch to other CLI-agent maintainers:**
+[`docs/forge-spotlight.md`](docs/forge-spotlight.md).
+
 ## Limitations
 
 - This is experimental software. It is provided as-is, without warranty of any kind. The authors accept no responsibility for damage resulting from its use.

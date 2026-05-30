@@ -739,6 +739,65 @@ sys.exit(0 if not hits else 1)
 PY
 
 # =============================================================================
+section "14. Forge spotlight (MISSION Thread D)"
+# =============================================================================
+# openskill-forge is the most novel piece of the project (per MISSION.md
+# Thread D). It got buried under UI/UX issues during the v0.5.0 push. These
+# checks pin the editorial work that lifts it back into view, so the spotlight
+# can't quietly decay back into a one-line mention in the next refactor.
+
+python3 - <<'PY' 2>/dev/null && pass "docs/forge-spotlight.md exists and is substantive" || fail "docs/forge-spotlight.md missing or too thin — Thread D spotlight isn't shipped"
+import sys, pathlib
+p = pathlib.Path('docs/forge-spotlight.md')
+if not p.exists():
+    sys.exit(1)
+text = p.read_text()
+# Substance check: long enough to be a real narrative, mentions the key
+# distinguishing concepts (scanner + CDR + MITRE + ClawHavoc origin),
+# and links to where forge actually lives now.
+ok = (
+    len(text) > 2000
+    and 'Content Disarm' in text
+    and ('MITRE' in text or 'ATT&CK' in text)
+    and 'ClawHavoc' in text
+    and 'workloads/forge' in text
+)
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "README has a dedicated forge spotlight section linked to the narrative doc" || fail "README lacks a dedicated forge spotlight section or doesn't link to docs/forge-spotlight.md (Thread D)"
+import re, sys, pathlib
+readme = pathlib.Path('README.md').read_text()
+# Require a Markdown heading whose text contains either 'forge' or 'skill scanner'
+# (case-insensitive) AND the section links to forge-spotlight.md somewhere nearby.
+# Simplest pin: a heading on a line containing forge/scanner concepts, and the
+# doc reference appears somewhere in README.
+has_heading = bool(re.search(r'^#+ .*(forge|skill scan|skill scanner|content disarm).*$',
+                              readme, re.IGNORECASE | re.MULTILINE))
+links_doc = 'forge-spotlight.md' in readme or 'docs/forge-spotlight.md' in readme
+sys.exit(0 if (has_heading and links_doc) else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "workloads/forge/README.md is monorepo-aware (no stale 'four containers' or dead-repo links)" || fail "workloads/forge/README.md still reads as a separate submodule repo — update for the monorepo layout (Thread D)"
+import sys, pathlib, re
+text = pathlib.Path('workloads/forge/README.md').read_text()
+problems = []
+# Stale container count (we are five since ADR-0009).
+if re.search(r'four containers|four services|4-container perimeter', text, re.IGNORECASE):
+    problems.append('stale four-container language')
+# Dead standalone-repo references (post ADR-0013).
+if 'https://github.com/albertdobmeyer/opencli-container' in text:
+    problems.append('links to archived opencli-container repo')
+if 'https://github.com/albertdobmeyer/openagent-social' in text:
+    problems.append('links to archived openagent-social repo')
+# "This repository serves two roles" / "standalone toolchain" framing was the
+# submodule-era pitch — incompatible with the monorepo layout.
+if 'This repository serves two roles' in text:
+    problems.append('residual two-roles framing from submodule era')
+sys.exit(0 if not problems else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
