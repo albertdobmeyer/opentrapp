@@ -658,6 +658,41 @@ sys.exit(0 if (has_marker and mentions_banned and has_replacement) else 1)
 PY
 
 # =============================================================================
+section "12. Proxy log volume persistence (Zone 3)"
+# =============================================================================
+# vault-proxy.py writes requests.jsonl to /var/log/vault-proxy as a non-root
+# user (mitmproxy). The named volume defaults to container-root ownership on
+# rootless podman, so the addon silently falls back to in-container /tmp.
+# The fix is podman's ':U' suffix on the mount, which chowns the volume to
+# the container's user namespace mapping at mount time. Pin this in BOTH the
+# shipped perimeter.yml mount declaration (via a chown flag) AND the dev
+# compose.yml (via the ':U' syntax) so the bug can't quietly come back.
+
+python3 - <<'PY' 2>/dev/null && pass "perimeter.yml vault-proxy-logs mount declares chown-on-mount" || fail "perimeter.yml vault-proxy-logs mount is missing 'chown: true' — non-root mitmproxy can't write the log volume (Zone 3 fix)"
+import sys, yaml
+with open('app/src-tauri/resources/perimeter.yml') as f:
+    spec = yaml.safe_load(f)
+mounts = spec['services'].get('vault-proxy', {}).get('volumes', []) or []
+log_mount = next((m for m in mounts if m.get('source') == 'vault-proxy-logs'), None)
+sys.exit(0 if log_mount and log_mount.get('chown') is True else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "compose.yml vault-proxy-logs mount uses ':U' chown-on-mount" || fail "compose.yml vault-proxy-logs mount lacks ':U' suffix — dev-mode podman compose hits the same write-fallback bug"
+import sys, yaml
+with open('compose.yml') as f:
+    c = yaml.safe_load(f)
+vols = c['services'].get('vault-proxy', {}).get('volumes', []) or []
+hit = False
+for v in vols:
+    s = v if isinstance(v, str) else v.get('source', '')
+    if isinstance(v, str) and v.startswith('vault-proxy-logs:'):
+        hit = True
+        if not (v.endswith(':U') or ':U,' in v or ':U:' in v):
+            sys.exit(1)
+sys.exit(0 if hit else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

@@ -162,6 +162,12 @@ pub fn container_run_args(
         let mut spec = format!("{}:{}", source, v.target);
         if v.read_only {
             spec.push_str(":ro");
+        } else if v.chown {
+            // Podman ':U' — chown the volume to the container's user namespace
+            // mapping at mount time. Required for non-root processes writing to
+            // named volumes. Mutually exclusive with ':ro' (chowning a ro mount
+            // is meaningless). See VolumeMount docs.
+            spec.push_str(":U");
         }
         a.push("-v".into());
         a.push(spec);
@@ -1104,5 +1110,49 @@ mod tests {
         assert!(joined.contains("/run/opentrapp/perimeter/vault-proxy.py:/opt/vault/vault-proxy.py:ro"));
         assert!(joined.contains("/run/opentrapp/perimeter/allowlist.txt:/opt/vault/allowlist.txt:ro"));
         assert!(!joined.contains("workloads/agent") && !joined.contains("infra/proxy"), "no source-tree paths");
+    }
+
+    /// Zone 3 / B-bug: the `vault-proxy-logs` named volume must be chowned on
+    /// mount to the mitmproxy uid; otherwise the non-root mitmproxy process
+    /// in the container can't write `requests.jsonl` and the addon silently
+    /// falls back to in-container `/tmp` (logs never reach the host). Podman's
+    /// `:U` suffix is the documented mechanism for this. Test that the
+    /// orchestrator emits it for that mount and ONLY that mount (read-only
+    /// mounts like `proxy-ca` must not be chowned).
+    #[test]
+    fn vault_proxy_logs_mount_is_chown_on_mount() {
+        let spec = perimeter::load().unwrap();
+        let env = BTreeMap::from([("ANTHROPIC_API_KEY".into(), "sk".into())]);
+        let res = Path::new("/run/opentrapp/perimeter");
+        let args =
+            container_run_args("vault-proxy", &spec.services["vault-proxy"], "mitm@sha256:x", &ctx_with(&env, &res))
+                .unwrap();
+
+        // Find every `-v` arg and check the logs mount has :U.
+        let mut found_logs_mount_with_chown = false;
+        let mut found_proxy_ca_without_chown = false;
+        let mut prev_was_v = false;
+        for a in &args {
+            if prev_was_v {
+                if a.contains(":/var/log/vault-proxy") {
+                    assert!(
+                        a.ends_with(":U") || a.contains(":U,") || a.contains(":U:"),
+                        "vault-proxy-logs mount must use podman ':U' chown-on-mount, got: {a}"
+                    );
+                    found_logs_mount_with_chown = true;
+                }
+                // proxy-ca is read-only; it must NOT carry :U (chown a ro mount is meaningless).
+                if a.contains(":/home/mitmproxy/.mitmproxy") {
+                    assert!(
+                        !a.contains(":U"),
+                        "proxy-ca is read-only; must not carry :U, got: {a}"
+                    );
+                    found_proxy_ca_without_chown = true;
+                }
+            }
+            prev_was_v = a == "-v";
+        }
+        assert!(found_logs_mount_with_chown, "vault-proxy-logs mount not found in args");
+        assert!(found_proxy_ca_without_chown, "proxy-ca mount not found in args");
     }
 }

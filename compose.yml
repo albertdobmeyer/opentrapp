@@ -110,7 +110,12 @@ services:
     volumes:
       - ./infra/proxy/vault-proxy.py:/opt/vault/vault-proxy.py:ro
       - ./infra/proxy/allowlist.txt:/opt/vault/allowlist.txt:ro
-      - vault-proxy-logs:/var/log/vault-proxy
+      # ':U' chowns the named volume to the container's user-namespace mapping
+      # at mount time so the non-root mitmproxy process can write
+      # requests.jsonl. Without it, mitmproxy hits EACCES and silently falls
+      # back to in-container /tmp. Podman-specific; this compose path is
+      # explicitly podman-targeted (see file header).
+      - vault-proxy-logs:/var/log/vault-proxy:U
       - proxy-ca:/home/mitmproxy/.mitmproxy
     networks:
       # ADR-0009 — vault-proxy LOSES external-net attachment. Internet

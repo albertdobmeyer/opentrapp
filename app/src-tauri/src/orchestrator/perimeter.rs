@@ -121,12 +121,21 @@ pub struct TmpfsMount {
 /// - `Named`: a podman named volume (auto-created).
 /// - `Resource`: a verified file extracted from the signed bundle (policy
 ///   files: seccomp, proxy addon, allowlist, resolv.conf). Never user-writable.
+///
+/// `chown` (podman `:U` suffix) — chown the volume to the container's user
+/// namespace mapping at mount time. Required when the container's process
+/// runs as a non-root user and needs to write to a named volume (rootless
+/// podman creates named volumes owned by container-root by default, so the
+/// non-root process gets EACCES otherwise). Only applies when the mount is
+/// writable; setting it on a `read_only` mount is rejected.
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct VolumeMount {
     pub source: String,
     pub target: String,
     #[serde(default)]
     pub read_only: bool,
+    #[serde(default)]
+    pub chown: bool,
     pub kind: MountKind,
 }
 

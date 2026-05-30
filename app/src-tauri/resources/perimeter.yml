@@ -85,7 +85,10 @@ services:
     volumes:
       - { source: vault-proxy.py, target: /opt/vault/vault-proxy.py, read_only: true, kind: resource }
       - { source: allowlist.txt, target: /opt/vault/allowlist.txt, read_only: true, kind: resource }
-      - { source: vault-proxy-logs, target: /var/log/vault-proxy, kind: named }
+      # chown: true → podman ':U' so the non-root mitmproxy process can
+      # write requests.jsonl into the named volume. Without this, mitmproxy
+      # silently falls back to in-container /tmp (logs never reach host).
+      - { source: vault-proxy-logs, target: /var/log/vault-proxy, kind: named, chown: true }
       - { source: proxy-ca, target: /home/mitmproxy/.mitmproxy, kind: named }
     env:
       - { name: ANTHROPIC_API_KEY, kind: secret, var: ANTHROPIC_API_KEY }
