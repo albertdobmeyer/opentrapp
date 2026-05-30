@@ -798,6 +798,50 @@ sys.exit(0 if not problems else 1)
 PY
 
 # =============================================================================
+section "15. Skill-install flow honesty (Zone 4b)"
+# =============================================================================
+# Today the bot's CONSTRAINTS.md tells users to use the desktop app's
+# "Browse the Skill Library" feature. That feature does not exist in the
+# frontend (zero hits in app/src/). A4 in the 2026-05-20 dogfood findings
+# confirms the install path is broken end-to-end. Zone 4b's job is twofold:
+# (1) document the actual + intended install paths and the phasing between
+# them, (2) stop the bot from promising vaporware.
+
+python3 - <<'PY' 2>/dev/null && pass "docs/skill-install-flow.md exists and is substantive" || fail "docs/skill-install-flow.md missing or too thin — Zone 4b decision isn't documented"
+import sys, pathlib
+p = pathlib.Path('docs/skill-install-flow.md')
+if not p.exists():
+    sys.exit(1)
+text = p.read_text()
+ok = (
+    len(text) > 2000
+    and 'current state' in text.lower()
+    and 'workloads/forge' in text
+    and ('interim' in text.lower() or 'today' in text.lower())
+    and ('GUI' in text or 'gui' in text or 'desktop app' in text.lower())
+    # The doc must explicitly name the v0.6 / interim path so we don't
+    # ship a doc that's only about the future.
+    and ('cli' in text.lower() or 'terminal' in text.lower() or 'host' in text.lower())
+)
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "CONSTRAINTS.md doesn't promise the not-yet-shipped 'Browse the Skill Library' feature" || fail "CONSTRAINTS.md tells the bot to refer to 'Browse the Skill Library' — that feature doesn't exist in app/src/ yet (Zone 4b honesty fix)"
+import re, sys, pathlib
+src = pathlib.Path('workloads/agent/scripts/entrypoint.sh').read_text()
+m = re.search(r"<<\s*'CONSTRAINTSEOF'\s*\n(.*?)\nCONSTRAINTSEOF", src, re.DOTALL)
+if not m:
+    sys.exit(2)
+body = m.group(1)
+# Fail if the heredoc names the vaporware feature.
+promises_vaporware = bool(
+    re.search(r'browse the skill library', body, re.IGNORECASE)
+    or "library-browse action" in body
+)
+sys.exit(0 if not promises_vaporware else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
