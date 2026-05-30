@@ -614,6 +614,50 @@ sys.exit(0 if not (set(keys) & banned) else 1)
 PY
 
 # =============================================================================
+section "11. Bot vocabulary hygiene (Zone 5 / B8)"
+# =============================================================================
+# Guards the CONSTRAINTS.md content that the agent reads on startup. The bot
+# mimics what it reads, so any developer-jargon or raw container path in this
+# file leaks straight into user-facing replies — that's the B8 failure mode
+# from the 2026-05-20 E2E. The heredoc lives inside entrypoint.sh; we extract
+# it and scan for banned tokens.
+
+python3 - <<'PY' 2>/dev/null && pass "CONSTRAINTS.md heredoc has no raw container paths" || fail "CONSTRAINTS.md leaks internal container paths to the bot (e.g. /home/vault/.openclaw/...)"
+import re, sys
+src = open('workloads/agent/scripts/entrypoint.sh').read()
+m = re.search(r"<<\s*'CONSTRAINTSEOF'\s*\n(.*?)\nCONSTRAINTSEOF", src, re.DOTALL)
+if not m:
+    sys.exit(2)
+body = m.group(1)
+# Match container-internal paths the bot would mimic. Requires meaningful
+# content after the vault token (`.openclaw`, `workspace`, etc.) so bare-prefix
+# tokens used as counter-examples in the "Do NOT say" table (e.g. `/vault/`,
+# `/home/`) do NOT trigger.
+if re.search(r'(/home/vault|/opt/vault|/var/log/vault|/vault)/[A-Za-z._][\w./_-]*', body):
+    sys.exit(1)
+sys.exit(0)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "CONSTRAINTS.md heredoc instructs the bot away from 'sandbox' / 'container' / 'vault' self-descriptions" || fail "CONSTRAINTS.md lacks an explicit vocabulary guard against 'sandbox' / 'container' / 'vault' (B8 fix)"
+import re, sys
+src = open('workloads/agent/scripts/entrypoint.sh').read()
+m = re.search(r"<<\s*'CONSTRAINTSEOF'\s*\n(.*?)\nCONSTRAINTSEOF", src, re.DOTALL)
+if not m:
+    sys.exit(2)
+body = m.group(1).lower()
+# The fix must add an explicit "do not say these words" guidance. We look for
+# a marker section + at least one banned term mentioned as a counter-example.
+has_marker = ('do not use' in body or "don't use" in body or 'avoid these words' in body
+              or 'never use these words' in body)
+# At least one of the three banned self-descriptions called out.
+mentions_banned = ('sandbox' in body or 'sandboxed' in body)
+# Suggested replacement vocabulary must be present too — otherwise the bot
+# has nothing to fall back to.
+has_replacement = ('walled off' in body or 'kept separate' in body or 'protected room' in body)
+sys.exit(0 if (has_marker and mentions_banned and has_replacement) else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
