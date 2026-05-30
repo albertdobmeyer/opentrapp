@@ -14,7 +14,7 @@ When populated, save this as `docs/specs/2026-05-DD-dogfood-full-arc-findings.md
 `verify.sh` at session start:
 
 ```
-[paste output of: podman exec vault-agent /vault/scripts/verify.sh]
+[paste output of: bash workloads/agent/scripts/verify.sh]
 ```
 
 Test bot handle: `@…`

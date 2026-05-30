@@ -33,8 +33,17 @@ resolve_service_container() {
     return 1
 }
 
-CONTAINER=$(resolve_service_container vault) || CONTAINER=""
+# Prefer the current service name `vault-agent` (ADR-0009 / v0.5.0 rename),
+# fall back to the legacy `vault` for any old compose project still around.
+CONTAINER=$(resolve_service_container vault-agent vault) || CONTAINER=""
 PROXY_CONTAINER=$(resolve_service_container vault-proxy) || PROXY_CONTAINER=""
+
+if [ -z "$CONTAINER" ]; then
+    echo "ERROR: no running container with compose service 'vault-agent' (or legacy 'vault')." >&2
+    echo "       Start the perimeter first ('podman compose up -d' or the app's bootstrap)." >&2
+    exit 2
+fi
+
 PASS=0
 FAIL=0
 SKIP=0

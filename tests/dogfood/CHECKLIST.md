@@ -24,7 +24,7 @@ Estimated wall-clock: **70 minutes** (Tier A is the longest by far at ~35 min). 
 - [ ] **Telegram session cached.** Run `cd tests/e2e-telegram && pytest -xvs test_smoke.py::test_smoke_round_trip` once first; this triggers the one-time interactive Telethon login if needed.
 - [ ] **Test corpus populated.** See `tests/dogfood/corpus/` — three meeting-note `.txt` files, one messy CSV, one prompt-injection `.txt`. (Stub corpus is committed; replace with realistic content if doing a "real Karen" run.)
 - [ ] **Findings file created.** Copy `findings-template.md` to `docs/specs/2026-05-DD-dogfood-full-arc-findings.md` (substitute today's day for `DD`).
-- [ ] **`verify.sh` baseline captured.** Start the perimeter once (`podman compose up -d`), run `podman exec vault-agent /vault/scripts/verify.sh`, paste the output into the findings doc as the "session start" snapshot. Stop the perimeter again (`podman compose down`).
+- [ ] **`verify.sh` baseline captured.** Start the perimeter once (`podman compose up -d`), run `bash workloads/agent/scripts/verify.sh`, paste the output into the findings doc as the "session start" snapshot. Stop the perimeter again (`podman compose down`).
 
 If any pre-flight fails, **stop and fix before continuing.** Running with a fouled environment produces useless signals.
 
@@ -241,7 +241,7 @@ Mostly operator-driven; some optionally scriptable.
 
 ## §E — Close-out (10 min)
 
-- [ ] **`verify.sh` end-of-session snapshot.** Run `podman exec vault-agent /vault/scripts/verify.sh` and paste the output into findings as the "session end" snapshot. **Diff against the start snapshot — should be identical.**
+- [ ] **`verify.sh` end-of-session snapshot.** Run `bash workloads/agent/scripts/verify.sh` and paste the output into findings as the "session end" snapshot. **Diff against the start snapshot — should be identical.**
 - [ ] **Spend reconciliation.** Read the `BudgetTracker` summary from harness stdout. Compare with Anthropic console. Variance > 20 %? Investigate.
 - [ ] **Banned-term audit across the full session.** Search the harness artefact JSON files: `grep -l "banned_term_hits.*\[.\+\]" tests/dogfood/artifacts/*.json`. Any hits → log in findings as a P0/P1 finding.
 - [ ] **Container teardown clean.** `podman ps` empty. `~/.opentrapp/runguard.pid` absent. `~/.opentrapp/paused` absent (unless C7 was the last scenario).

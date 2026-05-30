@@ -693,6 +693,52 @@ sys.exit(0 if hit else 1)
 PY
 
 # =============================================================================
+section "13. verify.sh + dogfood harness freshness (Zone 6a)"
+# =============================================================================
+# verify.sh is the architecture-invariant baseline the dogfood harness asserts
+# on session-start and session-end (must be identical). Two staleness vectors:
+#
+# 1. verify.sh resolves the agent container by compose-service label. The
+#    service used to be `vault` and is now `vault-agent` (ADR-0009 era rename).
+#    If the script only looks up `vault`, it silently sets CONTAINER="" and
+#    runs every `exec` against an empty container ID — the harness then sees
+#    "all checks passed" for the wrong reason.
+#
+# 2. The dogfood CHECKLIST + findings-template instruct operators to run
+#    `podman exec vault-agent /vault/scripts/verify.sh`. That path doesn't
+#    exist in the container — verify.sh is a HOST-side script (it execs IN
+#    via `$RUNTIME exec`). The correct invocation is
+#    `bash workloads/agent/scripts/verify.sh` from the repo root.
+
+python3 - <<'PY' 2>/dev/null && pass "verify.sh resolves the current vault-agent service name" || fail "verify.sh still resolves only the legacy 'vault' service name — CONTAINER comes back empty post-rename (Zone 6a fix)"
+import re, sys
+src = open('workloads/agent/scripts/verify.sh').read()
+# Find the line that assigns CONTAINER from resolve_service_container.
+# It must include 'vault-agent' (as primary, or in the fallback list).
+m = re.search(r"CONTAINER=\$\(resolve_service_container\s+([^)]+)\)", src)
+if not m:
+    sys.exit(2)
+args = m.group(1).split()
+sys.exit(0 if 'vault-agent' in args else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "dogfood CHECKLIST + findings-template invoke verify.sh from the host" || fail "dogfood docs still tell operators to 'podman exec vault-agent /vault/scripts/verify.sh' — wrong path, verify.sh is a host-side script"
+import sys, pathlib
+bad_phrase = 'podman exec vault-agent /vault/scripts/verify.sh'
+hits = []
+for p in [
+    pathlib.Path('tests/dogfood/CHECKLIST.md'),
+    pathlib.Path('tests/dogfood/findings-template.md'),
+]:
+    if not p.exists():
+        continue
+    text = p.read_text()
+    if bad_phrase in text:
+        hits.append(str(p))
+sys.exit(0 if not hits else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
