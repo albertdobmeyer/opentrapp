@@ -105,46 +105,59 @@ export default function App() {
         <ErrorBoundary>
           <ModeSwitcher />
           <Routes>
-            {/* Setup wizard — no layout, outside modes */}
+            {/* Setup wizard — no layout, outside modes. Always reachable so
+                the wizard can run to completion regardless of routing-guard
+                state below. */}
             <Route path="/setup" element={<Setup />} />
 
-            {/* Developer mode subtree — only active when mode === 'developer' */}
-            {mode === "developer" ? (
-              <Route path="/dev" element={<DevLayout />}>
-                <Route index element={<DevOverview />} />
-                <Route path="components" element={<DevComponents />} />
-                <Route path="components/:id" element={<DevComponentDetail />} />
-                <Route path="logs" element={<DevLogs />} />
-                <Route path="manifests" element={<DevManifests />} />
-                <Route path="security" element={<DevSecurity />} />
-                <Route path="allowlist" element={<DevAllowlist />} />
-                <Route path="shell-levels" element={<DevShellLevels />} />
-                <Route path="preferences" element={<DevPreferences />} />
-              </Route>
+            {/* Routing guard (Zone 1): if the wizard has not completed yet,
+                every non-setup path redirects to /setup. Prevents the dead-end
+                where a fresh user lands on Home and sees a silent bootstrap
+                failure with no path to recovery. Once `wizardCompleted` is
+                true, normal routing resumes. */}
+            {!settings.wizardCompleted ? (
+              <Route path="*" element={<Navigate to="/setup" replace />} />
             ) : (
-              <Route path="/dev/*" element={<Navigate to="/" replace />} />
-            )}
+              <>
+                {/* Developer mode subtree — only active when mode === 'developer' */}
+                {mode === "developer" ? (
+                  <Route path="/dev" element={<DevLayout />}>
+                    <Route index element={<DevOverview />} />
+                    <Route path="components" element={<DevComponents />} />
+                    <Route path="components/:id" element={<DevComponentDetail />} />
+                    <Route path="logs" element={<DevLogs />} />
+                    <Route path="manifests" element={<DevManifests />} />
+                    <Route path="security" element={<DevSecurity />} />
+                    <Route path="allowlist" element={<DevAllowlist />} />
+                    <Route path="shell-levels" element={<DevShellLevels />} />
+                    <Route path="preferences" element={<DevPreferences />} />
+                  </Route>
+                ) : (
+                  <Route path="/dev/*" element={<Navigate to="/" replace />} />
+                )}
 
-            {/* User mode — UserLayout shell with five icon-sidebar routes */}
-            <Route element={<UserLayout />}>
-              <Route
-                index
-                element={
-                  mode === "developer" ? (
-                    <Navigate to="/dev" replace />
-                  ) : (
-                    <Home />
-                  )
-                }
-              />
-              <Route path="/security" element={<SecurityMonitor />} />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/preferences" element={<Preferences />} />
-              <Route path="/help" element={<Help />} />
-              {/* Back-compat: /settings used to be the user-mode preferences route. */}
-              <Route path="/settings" element={<Navigate to="/preferences" replace />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
+                {/* User mode — UserLayout shell with five icon-sidebar routes */}
+                <Route element={<UserLayout />}>
+                  <Route
+                    index
+                    element={
+                      mode === "developer" ? (
+                        <Navigate to="/dev" replace />
+                      ) : (
+                        <Home />
+                      )
+                    }
+                  />
+                  <Route path="/security" element={<SecurityMonitor />} />
+                  <Route path="/discover" element={<Discover />} />
+                  <Route path="/preferences" element={<Preferences />} />
+                  <Route path="/help" element={<Help />} />
+                  {/* Back-compat: /settings used to be the user-mode preferences route. */}
+                  <Route path="/settings" element={<Navigate to="/preferences" replace />} />
+                  <Route path="*" element={<NotFound />} />
+                </Route>
+              </>
+            )}
           </Routes>
         </ErrorBoundary>
       </ToastProvider>

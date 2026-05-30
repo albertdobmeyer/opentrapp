@@ -54,6 +54,49 @@ pub fn spawn_bootstrap(handle: AppHandle, root: PathBuf) {
     });
 }
 
+/// On-launch entry point. Spawns the bootstrap *only* if the user has already
+/// provided real credentials (`.env` exists with a non-placeholder
+/// `ANTHROPIC_API_KEY`). On a fresh install with no `.env`, this returns
+/// without firing the pipeline — the wizard's "Install" button calls
+/// `retry_bootstrap` (which goes through `spawn_bootstrap` directly) once the
+/// user saves their keys. Prevents the dead-end where bootstrap silently fails
+/// at step 4 before the user has had a chance to configure anything (Zone 1).
+pub fn spawn_bootstrap_on_launch(handle: AppHandle, root: PathBuf) {
+    let env_path = root.join(".env");
+    if !has_real_anthropic_key(&env_path) {
+        eprintln!(
+            "[bootstrap] no credentials yet at {} — deferring to wizard",
+            env_path.display()
+        );
+        return;
+    }
+    spawn_bootstrap(handle, root);
+}
+
+/// True iff `.env` exists and `ANTHROPIC_API_KEY` is set to a non-placeholder
+/// value. Mirrors `auto_activate::read_env_value`'s placeholder rule
+/// (`REPLACE` substring, length ≥ 8) so the two stay in sync.
+fn has_real_anthropic_key(env_path: &Path) -> bool {
+    let Ok(content) = std::fs::read_to_string(env_path) else {
+        return false;
+    };
+    for line in content.lines() {
+        let line = line.trim();
+        if line.starts_with('#') {
+            continue;
+        }
+        if let Some((k, v)) = line.split_once('=') {
+            if k.trim() == "ANTHROPIC_API_KEY" {
+                let v = v.trim().trim_matches(|c| c == '"' || c == '\'');
+                if !v.is_empty() && !v.contains("REPLACE") && v.len() >= 8 {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
 async fn run_bootstrap(handle: AppHandle, root: PathBuf) {
     // Step 0: stage verified resources + load signed images from the bundle.
     prepare_bundle(&handle);

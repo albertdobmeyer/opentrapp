@@ -198,7 +198,7 @@ pub fn run() {
             // Spawn the bootstrap service. Idempotent 7-step pipeline that brings
             // the security shell up; then auto_activate decides whether to start
             // vault-agent based on activation + credentials markers.
-            bootstrap::spawn_bootstrap(app.handle().clone(), perimeter_root_setup.clone());
+            bootstrap::spawn_bootstrap_on_launch(app.handle().clone(), perimeter_root_setup.clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

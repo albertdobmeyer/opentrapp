@@ -172,6 +172,12 @@ function KeysSection() {
     <div className="card-raised">
       <SectionHeader icon={Key} title="Your keys" />
 
+      <p className="mb-5 text-sm text-neutral-400">
+        Both keys are stored only on this computer, in a file readable only by
+        your user account. Your assistant never sees the literal values — the
+        secure gateway substitutes them on every request.
+      </p>
+
       <KeyRow
         label="Anthropic API key"
         mask={anthropicMask}
@@ -185,6 +191,7 @@ function KeysSection() {
         onToggleShow={() => { setShowDraft((v) => !v); }}
         onSave={() => save("anthropic")}
         placeholder="sk-ant-api03-…"
+        helpText="What it does: lets your assistant call Anthropic to think and respond. Get one at console.anthropic.com under API Keys."
       />
 
       <div className="my-4 border-t border-neutral-800" />
@@ -202,6 +209,7 @@ function KeysSection() {
         onToggleShow={() => { setShowDraft((v) => !v); }}
         onSave={() => save("telegram")}
         placeholder="1234567890:ABCdef…"
+        helpText="What it does: lets you chat with your assistant from Telegram. Create a bot by messaging @BotFather on Telegram and copy the token it gives you."
       />
     </div>
   );
@@ -220,13 +228,15 @@ interface KeyRowProps {
   onToggleShow: () => void;
   onSave: () => void;
   placeholder: string;
+  helpText: string;
 }
 
 function KeyRow(props: KeyRowProps) {
   if (props.editing) {
     return (
       <div>
-        <p className="mb-2 text-sm font-medium text-neutral-100">{props.label}</p>
+        <p className="mb-1 text-sm font-medium text-neutral-100">{props.label}</p>
+        <p className="mb-3 text-xs text-neutral-500">{props.helpText}</p>
         <div className="relative mb-3">
           <input
             type={props.showDraft ? "text" : "password"}
@@ -275,13 +285,16 @@ function KeyRow(props: KeyRowProps) {
         {props.mask ? (
           <code className="block truncate text-xs text-neutral-400">{props.mask}</code>
         ) : (
-          <p className="text-xs text-neutral-500">Not set</p>
+          <p className="mb-1 text-xs text-neutral-500">Not set yet</p>
+        )}
+        {!props.mask && (
+          <p className="text-xs text-neutral-500">{props.helpText}</p>
         )}
       </div>
       <button
         type="button"
         onClick={props.onChangeClick}
-        className="btn btn-sm btn-ghost"
+        className="btn btn-sm btn-ghost shrink-0"
       >
         {props.mask ? "Change" : "Set"}
       </button>

@@ -3,6 +3,7 @@ import { MessageCircle, Play, RotateCcw, StopCircle } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useBootstrapProgress } from "@/hooks/useBootstrapProgress";
 import { useSettings } from "@/hooks/useSettings";
 import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
@@ -157,6 +158,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const [retryLoading, setRetryLoading] = useState(false);
   const [showFailureDetails, setShowFailureDetails] = useState(false);
+  const bootstrapProgress = useBootstrapProgress();
 
   const telegramLink =
     settings.telegramBotUrl ??
@@ -193,10 +195,10 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
       addToast,
       removeToast,
       action: retryBootstrap,
-      pendingTitle: "Retrying setup…",
-      pendingMessage: undefined,
-      successTitle: "Retrying in the background",
-      successMessage: "We'll update you when it's done.",
+      pendingTitle: "Restarting setup…",
+      pendingMessage: "Live progress will appear on this card.",
+      successTitle: "Setup running — watch the progress above",
+      successMessage: undefined,
       errorFallbackTitle: "Couldn't restart setup",
     });
 
@@ -234,12 +236,40 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
         {copy.subline}
       </p>
 
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        {(state === "installing" || state === "bootstrapping") && (
-          <span className="text-xs text-neutral-500">
-            Working on it — no action needed.
-          </span>
+      {(state === "installing" || state === "bootstrapping" || retryLoading) &&
+        bootstrapProgress.label && (
+          <div className="mx-auto mb-6 max-w-md" aria-live="polite">
+            <div className="mb-2 flex items-baseline justify-between text-xs">
+              <span className="font-medium text-neutral-300">
+                {bootstrapProgress.label}
+              </span>
+              <span className="text-neutral-500">
+                Step {bootstrapProgress.current} of {bootstrapProgress.total}
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
+              <div
+                className="h-full bg-primary-500 transition-all duration-500"
+                style={{
+                  width: `${Math.round(
+                    (bootstrapProgress.current / Math.max(bootstrapProgress.total, 1)) * 100,
+                  )}%`,
+                }}
+              />
+            </div>
+            {bootstrapProgress.detail && (
+              <p className="mt-2 text-xs text-neutral-500">{bootstrapProgress.detail}</p>
+            )}
+          </div>
         )}
+
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {(state === "installing" || state === "bootstrapping") &&
+          !bootstrapProgress.label && (
+            <span className="text-xs text-neutral-500">
+              Working on it — no action needed.
+            </span>
+          )}
 
         {state === "shell_ready_absent" && (
           <button
