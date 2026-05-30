@@ -68,7 +68,7 @@ const STATUS_INTERVAL: Duration = Duration::from_secs(60);
 /// Resolve the runtime data home (`~/.opentrapp/`), creating it if absent.
 ///
 /// Replaces the old `find_monorepo_root()`, which walked the filesystem
-/// looking for a `components/` source tree — an assumption that only held when
+/// looking for a source tree of workloads — an assumption that only held when
 /// the app ran from a dev clone and broke on every installed AppImage. The
 /// perimeter no longer needs a source tree: images are pre-built and verified,
 /// and policy files live under `<data_dir>/perimeter/` (the resource dir).

@@ -1,0 +1,45 @@
+# vault-egress — L3 egress policy container (ADR-0009 Tier 4 + Tier 5)
+#
+# Role: kernel-level destination-IP filtering + pinned-resolver DNS for the
+# entire perimeter. Sits between vault-proxy and the public internet.
+#
+# Holds: NET_ADMIN capability (only container in the perimeter that does)
+# Holds NOT: API keys, application code, persistent state
+# Attack surface: nftables ruleset + tinyproxy HTTP CONNECT proxy + DoH resolver
+#
+# Built from the same node:22-alpine digest the rest of the perimeter pins.
+# Reusing this digest avoids adding a new image to the supply-chain audit;
+# the unused Node runtime is dead weight in the image (~50 MB) but the
+# attack-surface tradeoff favours fewer pinned digests over slimmer images.
+
+FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00
+
+# TODO(supply-chain): pin package versions explicitly once the supply-chain
+# audit workflow runs against this image. The unpinned `apk add` here matches
+# the existing pattern in components/opencli-container/Containerfile; tighten
+# both together in a follow-up. Tracking: ADR-0009 implementation pending.
+RUN apk add --no-cache \
+        nftables \
+        tinyproxy \
+        iproute2 \
+        unbound \
+        ca-certificates \
+    && update-ca-certificates
+
+# Layout: config files are baked in (read-only); runtime data lives in tmpfs.
+RUN mkdir -p /opt/vault /var/log/vault-egress \
+    && chown -R nobody:nobody /var/log/vault-egress
+COPY entrypoint.sh nftables.conf tinyproxy.conf unbound.conf /opt/vault/
+RUN chmod 0755 /opt/vault/entrypoint.sh \
+    && chmod 0644 /opt/vault/nftables.conf /opt/vault/tinyproxy.conf /opt/vault/unbound.conf
+
+# tinyproxy listens on 8888 (matches compose.yml port mapping)
+EXPOSE 8888
+
+# Healthcheck: nftables ruleset must be loaded and tinyproxy must be reachable.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD nft list ruleset | grep -q 'vault_egress_drop_private' \
+        && timeout 2 nc -z 127.0.0.1 8888 \
+        || exit 1
+
+ENTRYPOINT ["/opt/vault/entrypoint.sh"]

@@ -40,8 +40,8 @@ cd "$REPO_ROOT"
 section "1. Repository Structure"
 # =============================================================================
 
-# Check essential directories exist
-for dir in components schemas app app/src app/src-tauri; do
+# Check essential directories exist (post ADR-0013: workloads + infra, no components)
+for dir in workloads infra schemas app app/src app/src-tauri; do
   if [ -d "$dir" ]; then
     pass "Directory exists: $dir"
   else
@@ -87,7 +87,7 @@ section "3. Component Manifests"
 MANIFEST_COUNT=0
 MANIFEST_ERRORS=0
 
-for manifest in components/*/component.yml; do
+for manifest in workloads/*/component.yml; do
   if [ ! -f "$manifest" ]; then
     continue
   fi
@@ -205,7 +205,7 @@ fi
 # Check for placeholder components
 python3 -c "
 import yaml, sys, os, glob
-manifests = glob.glob('components/*/component.yml')
+manifests = glob.glob('workloads/*/component.yml')
 for m_path in manifests:
     m = yaml.safe_load(open(m_path))
     role = m.get('identity', {}).get('role')
@@ -218,75 +218,36 @@ for m_path in manifests:
 " 2>/dev/null && pass "Placeholder components have no commands" || fail "Placeholder component has commands"
 
 # =============================================================================
-section "4. Submodule Synchronization"
+section "4. Monorepo workload layout (post ADR-0013)"
 # =============================================================================
 
-# Check .gitmodules exists
+# Post ADR-0013: no submodules. Verify the flat workloads/ + infra/ layout exists.
 if [ -f ".gitmodules" ]; then
-  pass ".gitmodules exists"
+  fail ".gitmodules should NOT exist (ADR-0013 removed submodules)"
 else
-  fail ".gitmodules missing"
+  pass "No .gitmodules (monorepo layout)"
 fi
 
-# Check submodule status
-SUBMODULE_ISSUES=0
-while IFS= read -r line; do
-  status_char="${line:0:1}"
-  submodule_path="$(echo "$line" | awk '{print $2}')"
-
-  case "$status_char" in
-    " ")
-      pass "Submodule in sync: $submodule_path"
-      ;;
-    "+")
-      warn "Submodule has new commits (not staged): $submodule_path"
-      if [ "$FIX_MODE" = "--fix" ]; then
-        echo "  -> Auto-fix: updating submodule reference"
-        git add "$submodule_path"
-      fi
-      SUBMODULE_ISSUES=$((SUBMODULE_ISSUES+1))
-      ;;
-    "-")
-      warn "Submodule not initialized: $submodule_path"
-      if [ "$FIX_MODE" = "--fix" ]; then
-        echo "  -> Auto-fix: initializing submodule"
-        git submodule update --init "$submodule_path"
-      fi
-      SUBMODULE_ISSUES=$((SUBMODULE_ISSUES+1))
-      ;;
-    "U")
-      fail "Submodule merge conflict: $submodule_path"
-      SUBMODULE_ISSUES=$((SUBMODULE_ISSUES+1))
-      ;;
-    *)
-      warn "Unknown submodule status '$status_char': $submodule_path"
-      SUBMODULE_ISSUES=$((SUBMODULE_ISSUES+1))
-      ;;
-  esac
-done < <(git submodule status 2>/dev/null || echo "")
-
-# Verify each submodule with a manifest has it accessible
-for manifest in components/*/component.yml; do
-  component_dir="$(dirname "$manifest")"
-  component_name="$(basename "$component_dir")"
-
-  # Check if this is a submodule
-  if [ -f "$component_dir/.git" ] || [ -d "$component_dir/.git" ]; then
-    pass "Component is git-tracked: $component_name"
-  elif [ -f "$component_dir/.gitkeep" ]; then
-    pass "Component is placeholder (gitkeep): $component_name"
+# Each workload must have a component.yml manifest.
+for workload in agent forge social; do
+  if [ -f "workloads/$workload/component.yml" ]; then
+    pass "Workload manifest present: $workload"
   else
-    warn "Component has no git tracking: $component_name"
+    fail "Workload manifest missing: workloads/$workload/component.yml"
   fi
 done
 
-# Check for orphaned submodules (in .gitmodules but no manifest)
-if [ -f ".gitmodules" ]; then
-  while IFS= read -r sub_path; do
-    if [ -n "$sub_path" ] && [ ! -f "$sub_path/component.yml" ]; then
-      warn "Submodule '$sub_path' has no component.yml manifest"
-    fi
-  done < <(git config -f .gitmodules --get-regexp 'submodule\..*\.path' 2>/dev/null | awk '{print $2}')
+# infra/proxy/ uses the upstream mitmproxy image (pinned by digest, bind-mounted script),
+# so it has no Containerfile — only a script + allowlist. infra/egress/ builds locally.
+if [ -f "infra/proxy/vault-proxy.py" ] && [ -f "infra/proxy/allowlist.txt" ]; then
+  pass "Infra proxy script + allowlist present"
+else
+  fail "Infra proxy script/allowlist missing"
+fi
+if [ -f "infra/egress/Containerfile" ]; then
+  pass "Infra Containerfile present: egress"
+else
+  fail "Infra Containerfile missing: infra/egress/Containerfile"
 fi
 
 # =============================================================================
@@ -399,7 +360,7 @@ section "7. Manifest-Schema Alignment"
 python3 -c "
 import yaml, sys, glob
 
-manifests = glob.glob('components/*/component.yml')
+manifests = glob.glob('workloads/*/component.yml')
 valid_output_displays = ['log', 'table', 'badge', 'checklist', 'card-grid', 'terminal', 'report']
 valid_config_formats = ['yaml', 'json', 'json5', 'env', 'line-list']
 valid_parse_types = ['regex', 'json_path', 'line_count', 'exit_code']
@@ -441,7 +402,7 @@ section "8. Prerequisites Validation"
 python3 -c "
 import yaml, sys, glob
 
-manifests = glob.glob('components/*/component.yml')
+manifests = glob.glob('workloads/*/component.yml')
 errors = []
 for m_path in manifests:
     m = yaml.safe_load(open(m_path))
@@ -477,7 +438,7 @@ section "9. Workflow Validation"
 python3 -c "
 import yaml, sys, glob
 
-manifests = glob.glob('components/*/component.yml')
+manifests = glob.glob('workloads/*/component.yml')
 errors = []
 total_workflows = 0
 for m_path in manifests:
@@ -538,7 +499,7 @@ orch_wfs = orch.get('workflows', [])
 
 # Load component data
 components = {}
-for m_path in glob.glob('components/*/component.yml'):
+for m_path in glob.glob('workloads/*/component.yml'):
     m = yaml.safe_load(open(m_path))
     cid = m.get('identity', {}).get('id', 'unknown')
     components[cid] = {
@@ -590,7 +551,7 @@ python3 - <<'PY' 2>/dev/null && pass "compose.yml declares five perimeter servic
 import sys, yaml
 with open('compose.yml') as f:
     c = yaml.safe_load(f)
-expected = {'vault-agent', 'vault-proxy', 'vault-forge', 'vault-pioneer', 'vault-egress'}
+expected = {'vault-agent', 'vault-proxy', 'vault-forge', 'vault-social', 'vault-egress'}
 got = set(c.get('services', {}).keys())
 sys.exit(0 if got == expected else 1)
 PY

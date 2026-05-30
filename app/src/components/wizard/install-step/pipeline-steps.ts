@@ -68,23 +68,23 @@ export async function runBuildStep(
 ): Promise<void> {
   updateStep("build", { status: "running", startedAt: Date.now() });
 
-  if (componentIds.has("opencli-container")) {
+  if (componentIds.has("agent")) {
     await withRetry(
       async () => {
         appendLog("build", "→ Your assistant: install");
-        await streamOneCommand("opencli-container", "setup", "build");
+        await streamOneCommand("agent", "setup", "build");
         appendLog("build", "→ Your assistant: start");
-        await streamOneCommand("opencli-container", "start", "build");
+        await streamOneCommand("agent", "start", "build");
       },
       2,
       (attempt) => { updateStep("build", { retryAttempt: attempt }); },
     );
   }
-  if (componentIds.has("openskill-forge")) {
+  if (componentIds.has("forge")) {
     await withRetry(
       async () => {
         appendLog("build", "→ Skill scanner: install");
-        await streamOneCommand("openskill-forge", "setup", "build");
+        await streamOneCommand("forge", "setup", "build");
       },
       2,
       (attempt) => { updateStep("build", { retryAttempt: attempt }); },
@@ -102,13 +102,13 @@ export async function runSafetyStep(
   await withRetry(
     async () => {
       const tasks: Promise<unknown>[] = [];
-      if (componentIds.has("opencli-container")) {
+      if (componentIds.has("agent")) {
         appendLog("safety", "Running assistant security audit (24 checks)…");
-        tasks.push(executeWorkflow("opencli-container", "full-verify"));
+        tasks.push(executeWorkflow("agent", "full-verify"));
       }
-      if (componentIds.has("openskill-forge")) {
+      if (componentIds.has("forge")) {
         appendLog("safety", "Running skill scanner pipeline check…");
-        tasks.push(executeWorkflow("openskill-forge", "full-check"));
+        tasks.push(executeWorkflow("forge", "full-check"));
       }
       const results = await Promise.all(tasks);
       for (const r of results as { status: string }[]) {

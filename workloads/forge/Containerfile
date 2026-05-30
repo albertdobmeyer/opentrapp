@@ -1,0 +1,60 @@
+# OpenSkill-Forge: Containerized Security Scanner & Skill Workshop
+# Part of the OpenTrApp perimeter — handles untrusted SKILL files
+# inside the container, never on the host.
+#
+# Build:  podman build -t vault-forge -f Containerfile .
+# Or:     docker build -t vault-forge -f Containerfile .
+#
+# Run:    podman run --rm vault-forge make scan SKILL=api-dev
+#         podman run --rm vault-forge make verify SKILL=api-dev
+
+FROM python:3.10-slim
+
+LABEL maintainer="OpenSkill-Forge" \
+      description="Skill security scanner — scans, verifies, and rebuilds untrusted SKILL files inside the perimeter"
+
+# Install system dependencies — bash-first toolchain
+# curl: download skills from ClawHub registry
+# git: skill scaffolding (make new)
+# make: entry point for all operations
+# grep/sed/gawk/findutils: text processing for scanners and parsers
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    curl \
+    git \
+    make \
+    grep \
+    sed \
+    gawk \
+    findutils \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# No external Python packages needed — all scripts use stdlib only
+# (json, sys, re, subprocess, urllib.request)
+
+# Non-root user — forge doesn't need root for anything
+RUN groupadd -g 1000 forge \
+    && useradd -u 1000 -g forge -m -s /bin/bash forge
+
+WORKDIR /app
+
+# Copy project files
+COPY --chown=forge:forge . /app
+
+# Ensure scripts are executable
+RUN chmod +x tools/*.sh tools/lib/*.sh 2>/dev/null; \
+    chmod +x tools/lib/*.py 2>/dev/null; \
+    true
+
+# Create directories for runtime data
+# quarantine/: CDR pipeline downloads untrusted files here (never leaves container)
+# exports/: certified skills ready for delivery to agent workspace
+RUN mkdir -p quarantine exports \
+    && chown -R forge:forge quarantine exports
+
+# Run as non-root
+USER forge
+
+# Default: interactive bash (compose overrides with specific commands)
+CMD ["bash"]

@@ -14,8 +14,8 @@ pub struct DiscoveredComponent {
 /// Each candidate is a directory containing `*/component.yml`. The app passes,
 /// in priority order: the bundled manifests dir (inside the signed AppImage —
 /// the shipping case), the runtime-staged copy, and finally the dev source
-/// tree's `components/` dir. This is what lets the UI render dashboards on a
-/// clean machine with no source clone.
+/// tree's `workloads/` dir (post ADR-0013 monorepo consolidation). This is
+/// what lets the UI render dashboards on a clean machine with no source clone.
 pub fn discover_first(candidates: &[PathBuf]) -> Result<Vec<DiscoveredComponent>, OrchestratorError> {
     for dir in candidates {
         if dir.exists() {
@@ -28,14 +28,14 @@ pub fn discover_first(candidates: &[PathBuf]) -> Result<Vec<DiscoveredComponent>
     Ok(Vec::new())
 }
 
-/// Discover all `component.yml` manifests under `monorepo_root/components`.
+/// Discover all `component.yml` manifests under `monorepo_root/workloads`.
 /// Retained for the dev source-tree path and unit tests.
 pub fn discover_components(monorepo_root: &Path) -> Result<Vec<DiscoveredComponent>, OrchestratorError> {
-    let components_dir = monorepo_root.join("components");
-    if !components_dir.exists() {
+    let workloads_dir = monorepo_root.join("workloads");
+    if !workloads_dir.exists() {
         return Ok(Vec::new());
     }
-    discover_components_at(&components_dir)
+    discover_components_at(&workloads_dir)
 }
 
 /// Discover all `component.yml` manifests directly under `dir/*/component.yml`.

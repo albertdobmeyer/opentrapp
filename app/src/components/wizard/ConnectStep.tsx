@@ -89,7 +89,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
   // Load existing keys from .env if available — pre-populate as masked.
   useEffect(() => {
     let cancelled = false;
-    readConfig("opencli-container", ".env")
+    readConfig("agent", ".env")
       .then((content) => {
          
         if (cancelled) return;
@@ -353,7 +353,7 @@ async function persistKeys({ anthropicKey, telegramToken }: { anthropicKey: stri
 
   let content = "";
   try {
-    content = await readConfig("opencli-container", ".env");
+    content = await readConfig("agent", ".env");
   } catch {
     content = "# OpenTrApp agent configuration\n";
   }
@@ -361,5 +361,5 @@ async function persistKeys({ anthropicKey, telegramToken }: { anthropicKey: stri
   if (anthropicKey) content = upsertEnvVar(content, "ANTHROPIC_API_KEY", anthropicKey);
   if (telegramToken) content = upsertEnvVar(content, "TELEGRAM_BOT_TOKEN", telegramToken);
 
-  await writeConfig("opencli-container", ".env", content);
+  await writeConfig("agent", ".env", content);
 }

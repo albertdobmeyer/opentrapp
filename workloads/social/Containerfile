@@ -1,0 +1,58 @@
+# OpenAgent-Social: Containerized Feed Scanner & Monitoring Station
+# Part of the OpenTrApp perimeter — processes untrusted Moltbook
+# content inside the container, never on the host.
+#
+# Build:  podman build -t vault-social -f Containerfile .
+# Or:     docker build -t vault-social -f Containerfile .
+#
+# Run:    podman run --rm vault-social make scan
+#         podman run --rm vault-social make census
+
+FROM python:3.10-slim
+
+LABEL maintainer="OpenAgent-Social" \
+      description="Feed injection scanner — filters untrusted social content inside the perimeter"
+
+# Install system dependencies
+# curl: fetch posts from Moltbook API
+# jq: JSON formatting for API responses
+# grep/sed: text processing for pattern matching
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    curl \
+    jq \
+    make \
+    grep \
+    sed \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# PyYAML is the only external Python dependency — used by export-patterns.py
+RUN pip install --no-cache-dir PyYAML
+
+# Non-root user — social doesn't need root for anything
+RUN groupadd -g 1000 social \
+    && useradd -u 1000 -g social -m -s /bin/bash social
+
+WORKDIR /app
+
+# Copy project files
+COPY --chown=social:social . /app
+
+# Ensure scripts are executable
+RUN chmod +x tools/*.sh scripts/*.sh 2>/dev/null; \
+    chmod +x scripts/*.py 2>/dev/null; \
+    true
+
+# Create data directory for census snapshots and scan results
+RUN mkdir -p data \
+    && chown -R social:social data
+
+# Copy .env template if no .env exists (setup step)
+RUN cp -n config/.env.example config/.env 2>/dev/null; true
+
+# Run as non-root
+USER social
+
+# Default: interactive bash (compose overrides with specific commands)
+CMD ["bash"]

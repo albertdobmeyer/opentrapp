@@ -1,0 +1,14 @@
+# All flagged lines are educational examples in a DNS/networking skill
+# L64,L380: dig examples — core topic of this skill
+L65
+L381
+# L186-L224: curl examples demonstrating HTTP debugging and TLS
+L187
+L201
+L204
+L225
+# L309-L319: curl proxy examples
+L310
+L316
+L317
+L320

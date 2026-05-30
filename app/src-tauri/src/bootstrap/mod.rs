@@ -27,7 +27,7 @@ const TOTAL_STEPS: u8 = 7;
 /// The security shell — everything except the agent tenant. Per ADR-0009,
 /// `vault-egress` joined the shell (it must be healthy before `vault-proxy`).
 const SHELL_SERVICES: [&str; 4] =
-    ["vault-egress", "vault-proxy", "vault-forge", "vault-pioneer"];
+    ["vault-egress", "vault-proxy", "vault-forge", "vault-social"];
 
 // ─── Public entry point ───────────────────────────────────────────────
 

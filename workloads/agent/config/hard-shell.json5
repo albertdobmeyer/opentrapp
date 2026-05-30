@@ -1,0 +1,94 @@
+// OpenCli-Container: Hardened OpenClaw Agent Configuration (Hard Shell)
+//
+// ██████████████████████████████████████████████████████████████████████
+// █  DO NOT INSTALL SKILLS FROM CLAWHUB WITHOUT MANUAL CODE REVIEW   █
+// █  11.9% malicious rate (ClawHavoc). You have been warned.         █
+// ██████████████████████████████████████████████████████████████████████
+//
+// JSON5 format — comments and trailing commas are valid.
+// Unknown keys cause the Gateway to refuse to start (Zod schema validation).
+// Config key paths match: https://docs.openclaw.ai/gateway/configuration
+{
+  // --- Agent defaults ---
+  agents: {
+    defaults: {
+      // Model: use the cheapest model for testing. Override per shell level.
+      model: {
+        primary: "anthropic/claude-haiku-4-5",
+      },
+
+      // Sandbox: "off" because the vault container IS the sandbox.
+      // OpenClaw's sandbox mode tries to spawn Docker containers, but we have no
+      // Docker socket (by design). Our security comes from Layers 1-2 (container
+      // isolation + network proxy), not from OpenClaw's built-in sandbox.
+      sandbox: {
+        mode: "off",
+      },
+    },
+  },
+
+  // --- Tool restrictions (Hard Shell: maximum lockdown) ---
+  tools: {
+    profile: "minimal",
+    deny: [
+      "group:runtime",
+      "group:automation",
+      "group:fs",
+      "group:sessions",
+      "sessions_spawn",
+      "sessions_send",
+      "gateway",
+      "cron",
+      "exec",
+      "bash",
+      "process",
+      "browser",
+    ],
+
+    // Exec: completely blocked in Hard Shell
+    exec: {
+      security: "deny",
+      ask: "always",
+      host: "sandbox",
+    },
+
+    // Elevated access: PERMANENTLY DISABLED in all shell levels
+    elevated: {
+      enabled: false,
+    },
+
+    // Filesystem: workspace only (defense-in-depth, exec is already denied)
+    fs: {
+      workspaceOnly: true,
+    },
+  },
+
+  // --- Gateway: local mode, loopback only ---
+  gateway: {
+    mode: "local",
+    bind: "loopback",
+  },
+
+  // --- Session: per-channel-peer isolation ---
+  session: {
+    dmScope: "per-channel-peer",
+  },
+
+  // --- DM policy: pairing mode (strictest) ---
+  channels: {
+    telegram: {
+      dmPolicy: "pairing",
+      proxy: "http://vault-proxy:8080",
+    },
+    // WhatsApp: disabled — not configured, causes health-monitor spam if enabled
+    whatsapp: {
+      enabled: false,
+      dmPolicy: "pairing",
+    },
+  },
+
+  // --- Telemetry: disabled ---
+  logging: {
+    redactSensitive: "tools",
+  },
+}

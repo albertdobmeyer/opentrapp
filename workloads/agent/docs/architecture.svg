@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="hostGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1a1e2e"/>
+      <stop offset="100%" stop-color="#141824"/>
+    </linearGradient>
+    <linearGradient id="vaultGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e2a3a"/>
+      <stop offset="100%" stop-color="#162030"/>
+    </linearGradient>
+    <linearGradient id="proxyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1a2e2a"/>
+      <stop offset="100%" stop-color="#142420"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="620" rx="8" fill="#0d1117"/>
+
+  <!-- Title -->
+  <text x="450" y="36" text-anchor="middle" fill="#e6edf3" font-size="18" font-weight="600">OpenCli-Container Architecture</text>
+
+  <!-- Host boundary -->
+  <rect x="30" y="52" width="840" height="540" rx="12" fill="url(#hostGrad)" stroke="#30363d" stroke-width="1.5"/>
+  <text x="56" y="78" fill="#8b949e" font-size="13" font-weight="500">HOST MACHINE</text>
+
+  <!-- Network labels -->
+  <!-- vault-internal network -->
+  <rect x="52" y="96" width="536" height="406" rx="8" fill="none" stroke="#1f6feb" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>
+  <text x="68" y="116" fill="#1f6feb" font-size="11" opacity="0.8">vault-internal network</text>
+
+  <!-- vault-external network -->
+  <rect x="540" y="96" width="316" height="406" rx="8" fill="none" stroke="#3fb950" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>
+  <text x="556" y="116" fill="#3fb950" font-size="11" opacity="0.8">vault-external network</text>
+
+  <!-- ═══════════ Vault Container ═══════════ -->
+  <rect x="68" y="130" width="440" height="284" rx="10" fill="url(#vaultGrad)" stroke="#1f6feb" stroke-width="1.5"/>
+  <text x="88" y="158" fill="#58a6ff" font-size="15" font-weight="600">Hardened Container (opencli-container)</text>
+
+  <!-- OpenClaw runtime -->
+  <rect x="88" y="172" width="400" height="48" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="288" y="200" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="500">OpenClaw Agent Runtime</text>
+
+  <!-- Security features grid -->
+  <rect x="88" y="232" width="192" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="184" y="253" text-anchor="middle" fill="#8b949e" font-size="11">read-only root filesystem</text>
+
+  <rect x="296" y="232" width="192" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="392" y="253" text-anchor="middle" fill="#8b949e" font-size="11">ALL capabilities dropped</text>
+
+  <rect x="88" y="274" width="192" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="184" y="295" text-anchor="middle" fill="#8b949e" font-size="11">custom seccomp profile</text>
+
+  <rect x="296" y="274" width="192" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="392" y="295" text-anchor="middle" fill="#8b949e" font-size="11">non-root user (uid 1000)</text>
+
+  <rect x="88" y="316" width="192" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="184" y="337" text-anchor="middle" fill="#8b949e" font-size="11">no-new-privileges</text>
+
+  <rect x="296" y="316" width="192" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="392" y="337" text-anchor="middle" fill="#8b949e" font-size="11">4 GB RAM · 256 PIDs</text>
+
+  <rect x="88" y="358" width="400" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="288" y="379" text-anchor="middle" fill="#8b949e" font-size="11">no host mounts · no Docker socket · no shared credentials</text>
+
+  <!-- "API key never enters here" callout -->
+  <rect x="108" y="396" width="220" height="10" rx="4" fill="none"/>
+  <text x="288" y="410" text-anchor="middle" fill="#f85149" font-size="12" font-weight="600" filter="url(#glow)">API key never enters this container</text>
+
+  <!-- ═══════════ Proxy Sidecar ═══════════ -->
+  <rect x="556" y="130" width="286" height="284" rx="10" fill="url(#proxyGrad)" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="576" y="158" fill="#3fb950" font-size="15" font-weight="600">Proxy Sidecar (mitmproxy)</text>
+
+  <!-- Proxy features -->
+  <rect x="576" y="172" width="246" height="40" rx="6" fill="#0d1117" stroke="#3fb950" stroke-width="1" opacity="0.8"/>
+  <text x="699" y="190" text-anchor="middle" fill="#3fb950" font-size="12" font-weight="600">API Key Injection</text>
+  <text x="699" y="204" text-anchor="middle" fill="#8b949e" font-size="10">adds auth header to outbound requests</text>
+
+  <rect x="576" y="222" width="246" height="40" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.75"/>
+  <text x="699" y="240" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="500">Domain Allowlist</text>
+  <text x="699" y="254" text-anchor="middle" fill="#8b949e" font-size="10">blocks unauthorized destinations</text>
+
+  <rect x="576" y="272" width="246" height="40" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.75"/>
+  <text x="699" y="290" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="500">Exfiltration Alerts</text>
+  <text x="699" y="304" text-anchor="middle" fill="#8b949e" font-size="10">flags suspicious request patterns</text>
+
+  <rect x="576" y="322" width="246" height="40" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="0.75"/>
+  <text x="699" y="340" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="500">Request Logging (JSON)</text>
+  <text x="699" y="354" text-anchor="middle" fill="#8b949e" font-size="10">every request logged to host volume</text>
+
+  <rect x="576" y="372" width="118" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="635" y="393" text-anchor="middle" fill="#8b949e" font-size="11">custom seccomp</text>
+
+  <rect x="704" y="372" width="118" height="32" rx="4" fill="#161b22" stroke="#30363d" stroke-width="0.75"/>
+  <text x="763" y="393" text-anchor="middle" fill="#8b949e" font-size="11">read-only root</text>
+
+  <!-- ═══════════ Arrows ═══════════ -->
+  <!-- Vault → Proxy (internal traffic) -->
+  <line x1="508" y1="196" x2="556" y2="192" stroke="#58a6ff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <defs>
+    <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#58a6ff"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#3fb950"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#f85149"/>
+    </marker>
+  </defs>
+
+  <!-- Proxy → Internet (arrow exiting top-right of proxy) -->
+  <line x1="699" y1="130" x2="699" y2="110" stroke="#3fb950" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <text x="720" y="106" fill="#3fb950" font-size="10">→ api.anthropic.com (allowlisted only)</text>
+
+  <!-- No default gateway indicator (between the two containers) -->
+  <line x1="508" y1="270" x2="522" y2="270" stroke="#f85149" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="515" y="260" fill="#f85149" font-size="9" text-anchor="middle">no default</text>
+  <text x="515" y="282" fill="#f85149" font-size="9" text-anchor="middle">gateway</text>
+
+  <!-- ═══════════ Kill Switch ═══════════ -->
+  <rect x="68" y="516" width="774" height="60" rx="8" fill="#1a1215" stroke="#f85149" stroke-width="1.5"/>
+  <text x="88" y="542" fill="#f85149" font-size="14" font-weight="600">Kill Switch</text>
+  <text x="88" y="564" fill="#8b949e" font-size="12">--soft</text>
+  <text x="140" y="564" fill="#6e7681" font-size="11">stop + preserve</text>
+  <text x="330" y="564" fill="#8b949e" font-size="12">--hard</text>
+  <text x="384" y="564" fill="#6e7681" font-size="11">nuke containers + volumes</text>
+  <text x="600" y="564" fill="#8b949e" font-size="12">--nuclear</text>
+  <text x="672" y="564" fill="#6e7681" font-size="11">destroy VM (Phase 2)</text>
+
+  <!-- ═══════════ API Key Flow annotation ═══════════ -->
+  <rect x="52" y="460" width="488" height="44" rx="6" fill="#1a1215" stroke="#f85149" stroke-width="1" opacity="0.9"/>
+  <text x="296" y="478" text-anchor="middle" fill="#f85149" font-size="12" font-weight="500">env | grep API → nothing</text>
+  <text x="296" y="494" text-anchor="middle" fill="#8b949e" font-size="11">Key stored only in proxy sidecar — injected at network layer</text>
+
+  <!-- Proxy holds key annotation -->
+  <rect x="556" y="460" width="286" height="44" rx="6" fill="#122117" stroke="#3fb950" stroke-width="1" opacity="0.9"/>
+  <text x="699" y="478" text-anchor="middle" fill="#3fb950" font-size="12" font-weight="500">API key lives here</text>
+  <text x="699" y="494" text-anchor="middle" fill="#8b949e" font-size="11">Injected into Authorization header on proxy</text>
+</svg>

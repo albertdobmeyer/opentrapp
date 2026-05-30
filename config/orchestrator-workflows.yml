@@ -22,13 +22,13 @@ workflows:
     shell_requirement: split
     steps:
       - id: download-and-scan
-        component: openskill-forge
+        component: forge
         workflow: safe-download
         args:
           skill_name: "{{input.skill_name}}"
         abort_on_failure: true
       - id: install
-        component: opencli-container
+        component: agent
         command: install-skill
         args:
           skill_path: "exports/{{input.skill_name}}"
@@ -51,15 +51,15 @@ workflows:
     danger: caution
     steps:
       - id: vault-setup
-        component: opencli-container
+        component: agent
         workflow: secure-start
         abort_on_failure: true
       - id: forge-setup
-        component: openskill-forge
+        component: forge
         command: setup
         depends_on: vault-setup
-      - id: pioneer-setup
-        component: openagent-social
+      - id: social-setup
+        component: social
         command: setup
         depends_on: vault-setup
     inputs: []
@@ -75,17 +75,17 @@ workflows:
     danger: safe
     steps:
       - id: vault-verify
-        component: opencli-container
+        component: agent
         workflow: full-verify
       - id: forge-verify
-        component: openskill-forge
+        component: forge
         workflow: full-check
-      - id: pioneer-verify
-        component: openagent-social
+      - id: social-verify
+        component: social
         workflow: safety-check
 
   # ─── Enable Feed Monitoring ────────────────────────────────────
-  # Export pioneer's injection patterns for the proxy to use,
+  # Export social's injection patterns for the proxy to use,
   # then enable Moltbook domains in the allowlist.
   # NOTE: Currently deferred — Moltbook API is down.
   - id: enable-feeds
@@ -98,10 +98,10 @@ workflows:
     shell_requirement: split
     steps:
       - id: export-patterns
-        component: openagent-social
+        component: social
         workflow: export-patterns
         abort_on_failure: true
       - id: safety-preflight
-        component: openagent-social
+        component: social
         workflow: safety-check
         depends_on: export-patterns

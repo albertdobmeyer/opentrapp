@@ -248,15 +248,15 @@ commands:
     // =========================================================================
 
     #[test]
-    fn test_parse_openclaw_vault_manifest() {
-        let manifest_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../components/opencli-container/component.yml");
+    fn test_parse_agent_manifest() {
+        let manifest_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../workloads/agent/component.yml");
         if !std::path::Path::new(manifest_path).exists() {
             // Skip if running outside monorepo context
             return;
         }
         let content = std::fs::read_to_string(manifest_path).unwrap();
         let manifest: Manifest = serde_yaml::from_str(&content).unwrap();
-        assert_eq!(manifest.identity.id, "opencli-container");
+        assert_eq!(manifest.identity.id, "agent");
         assert_eq!(manifest.identity.role, Role::Runtime);
         assert!(!manifest.commands.is_empty());
         assert!(!manifest.configs.is_empty());
@@ -264,29 +264,29 @@ commands:
     }
 
     #[test]
-    fn test_parse_clawhub_forge_manifest() {
-        let manifest_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../components/openskill-forge/component.yml");
+    fn test_parse_forge_manifest() {
+        let manifest_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../workloads/forge/component.yml");
         if !std::path::Path::new(manifest_path).exists() {
             return;
         }
         let content = std::fs::read_to_string(manifest_path).unwrap();
         let manifest: Manifest = serde_yaml::from_str(&content).unwrap();
-        assert_eq!(manifest.identity.id, "openskill-forge");
+        assert_eq!(manifest.identity.id, "forge");
         assert_eq!(manifest.identity.role, Role::Toolchain);
         // Should have commands with options_from
         let has_options_from = manifest.commands.iter().any(|c| c.args.iter().any(|a| a.options_from.is_some()));
-        assert!(has_options_from, "openskill-forge should have commands with options_from");
+        assert!(has_options_from, "forge should have commands with options_from");
     }
 
     #[test]
-    fn test_parse_moltbook_pioneer_manifest() {
-        let manifest_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../components/openagent-social/component.yml");
+    fn test_parse_social_manifest() {
+        let manifest_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../workloads/social/component.yml");
         if !std::path::Path::new(manifest_path).exists() {
             return;
         }
         let content = std::fs::read_to_string(manifest_path).unwrap();
         let manifest: Manifest = serde_yaml::from_str(&content).unwrap();
-        assert_eq!(manifest.identity.id, "openagent-social");
+        assert_eq!(manifest.identity.id, "social");
         assert_eq!(manifest.identity.role, Role::Network);
         assert!(!manifest.commands.is_empty());
     }
@@ -350,12 +350,12 @@ prerequisites:
     #[test]
     fn test_real_manifests_have_prerequisites() {
         for (component, expect_container) in [
-            ("opencli-container", true),
-            ("openskill-forge", false),
-            ("openagent-social", false),
+            ("agent", true),
+            ("forge", false),
+            ("social", false),
         ] {
             let manifest_path = format!(
-                "{}/../../components/{}/component.yml",
+                "{}/../../workloads/{}/component.yml",
                 env!("CARGO_MANIFEST_DIR"),
                 component
             );

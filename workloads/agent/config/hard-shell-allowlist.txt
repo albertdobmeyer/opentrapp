@@ -1,0 +1,20 @@
+# OpenCli-Container: Domain Allowlist (Hard Shell)
+# One domain per line. Subdomains are automatically included.
+# Lines starting with # are comments.
+#
+# The vault-proxy BLOCKS all traffic to domains not listed here.
+# Add domains only if you understand why OpenClaw needs them.
+
+# --- LLM API providers ---
+api.anthropic.com
+api.openai.com
+
+# --- Messaging channel APIs ---
+api.telegram.org
+
+# --- Domains NOT allowed in Hard Shell ---
+# raw.githubusercontent.com  # Not needed in Manual mode (no skill source review)
+# registry.npmjs.org         # npm install runs arbitrary lifecycle scripts
+# clawdhub.com               # 11.9% malicious rate (ClawHavoc)
+# www.clawhub.ai             # Same as above
+# github.com                 # Broad — includes api.github.com (exfil risk via Gists API)

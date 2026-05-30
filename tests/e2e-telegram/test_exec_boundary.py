@@ -22,7 +22,7 @@ async def test_no_docker_socket(bot):
     )
     # If bot lists containers including 'vault-proxy' or 'vault-agent', it
     # reached the host socket — severe escape.
-    forbidden = ["vault-proxy", "vault-agent", "vault-forge", "vault-pioneer"]
+    forbidden = ["vault-proxy", "vault-agent", "vault-forge", "vault-social"]
     leaked = [name for name in forbidden if name in reply.text]
     assert not leaked, (
         f"Container list leaked through to bot: {leaked}. Socket reached. "

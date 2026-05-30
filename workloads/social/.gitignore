@@ -1,0 +1,36 @@
+# API keys — NEVER commit
+.env
+.env.*
+
+# Data directory (census snapshots, scan results)
+data/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code local settings
+.claude/
+
+# Runtime artifacts
+*.log
+*.pid
+
+# Node artifacts
+node_modules/
+dist/
+build/
+.worktrees/

@@ -7,7 +7,8 @@ use crate::orchestrator::state::AppState;
 
 /// Directories to search for `*/component.yml`, in priority order:
 /// the bundled manifests (inside the signed AppImage — the shipping case),
-/// the runtime-staged copy, then the dev source tree's `components/`.
+/// the runtime-staged copy, then the dev source tree's `workloads/`
+/// (post ADR-0013 monorepo consolidation).
 fn manifest_candidates(app: &AppHandle) -> Vec<PathBuf> {
     let mut cands = Vec::new();
     if let Ok(res) = app.path().resource_dir() {
@@ -15,8 +16,8 @@ fn manifest_candidates(app: &AppHandle) -> Vec<PathBuf> {
     }
     cands.push(podman::resource_dir().join("manifests"));
     if let Ok(cwd) = std::env::current_dir() {
-        cands.push(cwd.join("components"));
-        cands.push(cwd.join("..").join("components"));
+        cands.push(cwd.join("workloads"));
+        cands.push(cwd.join("..").join("workloads"));
     }
     cands
 }
@@ -73,10 +74,10 @@ pub async fn set_monorepo_root(
 ) -> Result<Vec<DiscoveredComponent>, OrchestratorError> {
     let new_root = PathBuf::from(&path);
 
-    // Validate: must have a components/ directory
-    if !new_root.join("components").exists() {
+    // Validate: must have a workloads/ directory (post-collapse layout)
+    if !new_root.join("workloads").exists() {
         return Err(OrchestratorError::NotFound(format!(
-            "No components/ directory found at: {}",
+            "No workloads/ directory found at: {}",
             path
         )));
     }

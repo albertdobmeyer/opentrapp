@@ -1,0 +1,12 @@
+# All flagged lines are educational examples in a cron/scheduling skill
+# L86,L89,L101,L322: crontab -e/-l examples — core topic of this skill
+L87
+L90
+L102
+L323
+# L165: systemctl enable example — demonstrates timer activation
+L166
+# L236: at(1) scheduling example
+L237
+# L325: env -i clean environment execution — demonstrates secure cron patterns
+L326

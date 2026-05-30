@@ -1,0 +1,49 @@
+# API keys — NEVER commit
+.env
+.env.*
+
+# Proxy logs (may contain request/response data)
+*.jsonl
+**/proxy-logs/
+
+# Container workspace data
+workspace/
+
+# Runtime artifacts
+*.pid
+*.sock
+*.log
+.vault-audit-timestamp
+.vault-config-hash
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# Node artifacts (if ever added)
+node_modules/
+dist/
+build/
+
+# Claude Code local settings
+.claude/
+
+# Screenshots / temp images
+*.png
+!docs/*.png

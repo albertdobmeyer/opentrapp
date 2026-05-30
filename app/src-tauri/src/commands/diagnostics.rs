@@ -51,8 +51,8 @@ fn collect_container_status() -> String {
     // Try podman first, then docker; surface unavailability cleanly.
     // Filter by `com.docker.compose.service` label so we don't depend on the
     // compose project name (which is directory-derived and varies by install).
-    const SERVICES: [&str; 4] =
-        ["vault-agent", "vault-proxy", "vault-forge", "vault-pioneer"];
+    const SERVICES: [&str; 5] =
+        ["vault-agent", "vault-proxy", "vault-egress", "vault-forge", "vault-social"];
     for tool in &["podman", "docker"] {
         let mut lines: Vec<String> = Vec::new();
         let mut tool_ok = false;

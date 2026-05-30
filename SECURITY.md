@@ -2,12 +2,16 @@
 
 ## Scope
 
-This policy covers the four repositories that compose the OpenTrApp distribution:
+Single monorepo since [ADR-0013](docs/adr/0013-monorepo-consolidation.md). This policy covers all workloads and infrastructure containers in the OpenTrApp distribution:
 
-- [`opentrapp`](https://github.com/albertdobmeyer/opentrapp) — desktop application and perimeter orchestrator
-- [`opencli-container`](https://github.com/albertdobmeyer/opencli-container) — runtime-containment module (`vault-agent`, `vault-proxy`)
-- [`openskill-forge`](https://github.com/albertdobmeyer/openskill-forge) — supply-chain defense module (`vault-forge`)
-- [`openagent-social`](https://github.com/albertdobmeyer/openagent-social) — social-content analysis module (`vault-pioneer`); **parked since 2026-05-03**, see the repository's README
+- [`opentrapp`](https://github.com/albertdobmeyer/opentrapp) — desktop application and perimeter orchestrator (the entire repository)
+- `workloads/agent/`  — runtime-containment workload (`vault-agent`)
+- `infra/proxy/`      — L7 egress policy (`vault-proxy`) — domain allowlist + API-key injection
+- `infra/egress/`     — L3 egress policy (`vault-egress`) — kernel RFC1918 drop + pinned DNS
+- `workloads/forge/`  — supply-chain defense workload (`vault-forge`) — skill scanner + CDR
+- `workloads/social/` — agent-social-feed analysis workload (`vault-social`); **parked since 2026-05-03**
+
+The previously-separate `opencli-container`, `openskill-forge`, and `openagent-social` GitHub repositories are archived references — please report vulnerabilities here, not there.
 
 Vulnerabilities in upstream dependencies (Tauri, mitmproxy, Rust crates, npm packages) and in the third-party platforms this software interfaces with (Anthropic API, Telegram, OpenClaw, ClawHub, Moltbook) are out of scope; please report those to their respective maintainers.
 
@@ -30,10 +34,10 @@ Reports are acknowledged within 48 hours. Severity is assessed using a CVSS-styl
 
 The following classes of issue are accepted:
 
-- Container-escape vectors in `opencli-container` (capability gain, mount escape, kernel-namespace escape, seccomp bypass)
+- Container-escape vectors in `workloads/agent/` (capability gain, mount escape, kernel-namespace escape, seccomp bypass)
 - Privilege escalation through the OpenTrApp manifest runner (command injection, path traversal, environment-variable leakage)
 - Credential exposure (API keys or tokens visible to a container that should not have them, leakage to logs or stderr)
-- Supply-chain bypasses in `openskill-forge` (skill-scanner false negatives, CDR pipeline bypass, manifest tampering between scan and delivery)
+- Supply-chain bypasses in `workloads/forge/` (skill-scanner false negatives, CDR pipeline bypass, manifest tampering between scan and delivery)
 - Network-allowlist bypasses through `vault-proxy` (egress to denylisted hosts, request smuggling, header injection enabling unauthorised endpoints)
 - Defects in the perimeter lifecycle that leave containers running after the desktop application exits or that allow unauthorised re-entry into a "paused" state
 
@@ -41,5 +45,5 @@ The following classes of issue are accepted:
 
 - Issues that require physical access to the host machine
 - Social-engineering attacks that require explicit user approval to succeed (the agent runs in an approval-gated mode by default)
-- Issues affecting `vault-pioneer` until the Moltbook API stabilises and the module is un-parked
+- Issues affecting `vault-social` until the Moltbook API stabilises and the module is un-parked
 - Configuration mistakes by an end user that override defaults documented as security-critical

@@ -2,29 +2,30 @@ use std::path::Path;
 
 /// Policy/config files that must be bundled into the AppImage so the perimeter
 /// can bind-mount verified copies at runtime (never from a writable host path).
-/// Source of truth is the submodule; we stage a copy into `resources/perimeter/`
-/// which `tauri.conf.json` bundle.resources packages. (Image tarballs +
-/// image-digests.json are dropped into `resources/perimeter/images/` by CI.)
+/// Source of truth is the workload/infra directory; we stage a copy into
+/// `resources/perimeter/` which `tauri.conf.json` bundle.resources packages.
+/// (Image tarballs + image-digests.json are dropped into
+/// `resources/perimeter/images/` by CI.)
 const STAGED_RESOURCES: &[&str] = &[
-    "../../components/opencli-container/config/vault-seccomp.json",
-    "../../components/opencli-container/config/vault-proxy-seccomp.json",
-    "../../components/opencli-container/proxy/vault-proxy.py",
-    "../../components/opencli-container/proxy/allowlist.txt",
-    "../../components/opencli-container/egress/resolv.conf",
+    "../../workloads/agent/config/vault-seccomp.json",
+    "../../workloads/agent/config/vault-proxy-seccomp.json",
+    "../../infra/proxy/vault-proxy.py",
+    "../../infra/proxy/allowlist.txt",
+    "../../infra/egress/resolv.conf",
 ];
 
-/// Components whose `component.yml` manifest is bundled so the UI can render
+/// Workloads whose `component.yml` manifest is bundled so the UI can render
 /// dashboards on a clean machine without a source clone (discovered via
-/// `discover_first` → `resources/perimeter/manifests/<component>/component.yml`).
-const STAGED_MANIFESTS: &[&str] =
-    &["opencli-container", "openskill-forge", "openagent-social"];
+/// `discover_first` → `resources/perimeter/manifests/<workload>/component.yml`).
+/// Post ADR-0013 monorepo consolidation: directories live under `workloads/`.
+const STAGED_MANIFESTS: &[&str] = &["agent", "forge", "social"];
 
 fn stage_manifests() {
     let base = Path::new("resources/perimeter/manifests");
-    for component in STAGED_MANIFESTS {
-        let src = format!("../../components/{component}/component.yml");
+    for workload in STAGED_MANIFESTS {
+        let src = format!("../../workloads/{workload}/component.yml");
         println!("cargo:rerun-if-changed={src}");
-        let dest_dir = base.join(component);
+        let dest_dir = base.join(workload);
         if std::fs::create_dir_all(&dest_dir).is_err() {
             continue;
         }
@@ -41,10 +42,10 @@ fn stage_perimeter_resources() {
         println!("cargo:rerun-if-changed={src}");
         let src_path = Path::new(src);
         if let Some(name) = src_path.file_name() {
-            // Best-effort: a fresh checkout always has the submodule files; if a
-            // file is missing (e.g. submodule not initialized in a dev tree), we
-            // skip rather than fail the build — the bundle will simply lack it
-            // and the orchestrator will surface a clear runtime error.
+            // Best-effort: a fresh checkout always has the workload files; if a
+            // file is missing in a dev tree, we skip rather than fail the build
+            // — the bundle will simply lack it and the orchestrator will
+            // surface a clear runtime error.
             let _ = std::fs::copy(src_path, dest_dir.join(name));
         }
     }

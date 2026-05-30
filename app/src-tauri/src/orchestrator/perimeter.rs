@@ -208,7 +208,7 @@ pub fn load() -> Result<PerimeterSpec, serde_yaml::Error> {
 
 impl PerimeterSpec {
     /// Service names in dependency-respecting start order (egress → proxy →
-    /// agent/forge/pioneer). Topological sort over `depends_on`.
+    /// agent/forge/social). Topological sort over `depends_on`.
     pub fn start_order(&self) -> Vec<String> {
         let mut ordered: Vec<String> = Vec::new();
         let mut remaining: Vec<String> = self.services.keys().cloned().collect();
@@ -249,7 +249,7 @@ mod tests {
         let spec = load().expect("embedded perimeter.yml must parse");
         assert_eq!(spec.version, 1);
         assert_eq!(spec.services.len(), 5, "five-container perimeter (ADR-0009)");
-        for svc in ["vault-agent", "vault-proxy", "vault-egress", "vault-forge", "vault-pioneer"] {
+        for svc in ["vault-agent", "vault-proxy", "vault-egress", "vault-forge", "vault-social"] {
             assert!(spec.services.contains_key(svc), "missing service {svc}");
         }
     }

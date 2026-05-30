@@ -12,9 +12,9 @@ The desktop application (`opentrapp`) is the only surface non-technical users se
 
 | Developer term | User-facing term | Where used |
 |---|---|---|
-| `opencli-container` | **My Assistant** | Sidebar, dashboard, component detail |
-| `openskill-forge` | **Skills** / **Skill Store** | Sidebar, dashboard |
-| `openagent-social` | **Agent Network** | Sidebar, dashboard (parked in v0.3.0) |
+| `agent` (workload) | **My Assistant** | Sidebar, dashboard, component detail |
+| `forge` (workload) | **Skills** / **Skill Store** | Sidebar, dashboard |
+| `social` (workload) | **Agent Network** | Sidebar, dashboard (parked in v0.3.0) |
 | Hard Shell | **Chat Only** | Mode descriptions |
 | Split Shell | **Supervised** | Mode descriptions |
 | Soft Shell | *(default — no mode label shown)* | Default user experience |
@@ -56,7 +56,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 |---|---|
 | **Perimeter** | The five-container security boundary defined in `compose.yml`. All untrusted content (the agent process, skill files, fetched network content) stays inside the perimeter; nothing untrusted reaches the host filesystem. L7 (application-layer) policy lives in `vault-proxy`; L3 (network-layer) policy lives in `vault-egress` — see [ADR-0009](docs/adr/0009-five-container-perimeter.md). |
 | **Container hardening** | The fixed set of OS-level restrictions applied to every perimeter container regardless of shell level: read-only root filesystem, all Linux capabilities dropped, custom seccomp profile, `noexec` mounts. Independent of shell level. The single exception is `vault-egress`, which holds `NET_ADMIN` (only) because it owns the L3 policy ruleset; it holds no secrets and runs no application code. |
-| **Vault** | The complete runtime-containment package: container hardening + proxy egress filter + tool policy + shell configuration. Implemented by the `opencli-container` module. |
+| **Vault** | The complete runtime-containment package: container hardening + proxy egress filter + tool policy + shell configuration. The agent runtime lives in `workloads/agent/`; the L7+L3 egress chain lives in `infra/proxy/` + `infra/egress/`. |
 | **Proxy** (`vault-proxy`) | The mitmproxy-based L7 egress gateway. Enforces the domain allowlist, injects API keys per request, performs a post-resolve destination-IP check (ADR-0009 Tier 2), and logs every transaction. Chains upstream to `vault-egress`; has no direct internet attachment. |
 | **Egress** (`vault-egress`) | The L3 egress gateway. Drops outbound packets destined for RFC1918 / loopback / link-local / multicast / reserved ranges at the kernel level (nftables) and runs a pinned DoT resolver (Quad9 + Cloudflare) with a minimum-TTL cache. The only container with public-internet attachment. Holds `NET_ADMIN` but no API keys. Defined in [ADR-0009](docs/adr/0009-five-container-perimeter.md) and [ADR-0010](docs/adr/0010-pinned-resolver-dns.md). |
 | **Protected resources** | Host-level resources that are denied at every shell level without exception: root, SSH keys, GPG keys, password stores and keyrings, administrative accounts, the Docker / Podman socket, and the perimeter's own configuration files. |
@@ -70,7 +70,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | Term | Definition |
 |---|---|
 | **Tier 1** (trusted) | Components running on the user's host with full filesystem and network access: the user, the trusted CLI coordinator (Claude Code or equivalent), and the OpenTrApp desktop GUI. Tier 1 makes decisions and issues commands. |
-| **Tier 2** (infrastructure) | The container perimeter. Enforces boundaries mechanically; does not make security decisions. Implemented by OpenTrApp's compose orchestration plus the four `vault-*` containers. |
+| **Tier 2** (infrastructure) | The container perimeter. Enforces boundaries mechanically; does not make security decisions. Implemented by OpenTrApp's compose orchestration plus the five `vault-*` containers (`vault-agent`, `vault-forge`, `vault-social`, `vault-proxy`, `vault-egress`). |
 | **Tier 3** (contained) | The OpenClaw agent process, Telegram gateway, loaded skills, and any fetched network content. Performs the work the user wants done, within the boundaries Tier 2 enforces. |
 | **CLI coordinator** | The reasoning model running on the host (Claude Code, Anthropic's Opus, or an equivalent CLI agent) that translates user intent into perimeter operations, reads scanner results, adjusts shell level by context, and surfaces security events to the user in plain language. The coordinator decides; the perimeter enforces. |
 
@@ -83,20 +83,22 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | **Workflow** | A multi-step automated sequence declared in `component.yml` or `config/orchestrator-workflows.yml`. Chains individual commands into a single user-facing action. |
 | **Component workflow** | A workflow that operates within a single component. Defined in that component's `component.yml`; references the component's own command IDs only. |
 | **Orchestrator workflow** | A workflow that spans multiple components. Defined in `config/orchestrator-workflows.yml`; references component IDs plus command or workflow IDs. |
-| **Manifest** | The `component.yml` file in each component repository. Declares the component's identity, status states, commands, configs, health probes, and workflows. |
+| **Manifest** | The `component.yml` file in each workload directory. Declares the workload's identity, status states, commands, configs, health probes, and workflows. |
 | **Command** | A single declared operation a component exposes (e.g., forge's `scan`). Has an ID, an executable, an argument schema, and a danger level. |
 | **Health probe** | A lightweight, repeatable command declared in the manifest that returns a status badge for the GUI dashboard. |
 
 ---
 
-## 6. Component repositories
+## 6. Workloads and infrastructure (monorepo since ADR-0013)
 
-| Repository | Role | Container | Status at v0.3.0 |
+| Directory | Role | Container | Status |
 |---|---|---|---|
-| [`opencli-container`](https://github.com/albertdobmeyer/opencli-container) | Runtime containment | `vault-agent` + `vault-proxy` | Active |
-| [`openskill-forge`](https://github.com/albertdobmeyer/openskill-forge) | Supply-chain defense (scanner, CDR) | `vault-forge` | Active |
-| [`openagent-social`](https://github.com/albertdobmeyer/openagent-social) | Social-content analysis | `vault-pioneer` | **Parked** (Moltbook acquired by Meta 2026-03-10; API intermittent since 2026-04-05) |
-| [`opentrapp`](https://github.com/albertdobmeyer/opentrapp) | Desktop application + perimeter orchestrator | none (host) | Active |
+| `app/`             | Desktop application + perimeter orchestrator | none (host) | Active |
+| `workloads/agent/` | Runtime containment | `vault-agent` | Active |
+| `workloads/forge/` | Supply-chain defense (scanner, CDR) | `vault-forge` | Active |
+| `workloads/social/` | Agent-social-feed analysis | `vault-social` | **Parked** (Moltbook acquired by Meta 2026-03-10; re-aim to generalized agent-social shield tracked in MISSION.md Thread C) |
+| `infra/proxy/`     | L7 egress policy | `vault-proxy` | Active |
+| `infra/egress/`    | L3 egress policy | `vault-egress` | Active |
 
 ---
 
@@ -106,7 +108,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 |---|---|
 | **OpenClaw** | The third-party autonomous AI agent runtime that OpenTrApp is designed to contain. Not a project of this repository; this software wraps it. |
 | **ClawHub** | The third-party skill registry for OpenClaw. Skills downloaded from ClawHub are scanned by `vault-forge` before reaching the agent. |
-| **Moltbook** | A third-party AI-agent social network. Acquired by Meta on 2026-03-10. Originally the data source for `vault-pioneer`. |
+| **Moltbook** | A third-party AI-agent social network. Acquired by Meta on 2026-03-10. Originally the data source for `vault-social`. |
 | **ClawHavoc** | The 2026-Q1 study that classified 11.9 % of published ClawHub skills (341 of 2,857) as malicious. Cited as the empirical motivation for the supply-chain scanning layer. |
 
 ---
@@ -123,7 +125,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | **Content Disarm & Reconstruction (CDR)** | The supply-chain defense pattern used by `openskill-forge`: the original downloaded artifact is held in a quarantine volume, parsed for its semantic intent, and rebuilt from scratch. The original file is discarded; only the rebuilt artifact reaches the agent. |
 | **Quarantine** | The temporary directory inside `vault-forge` where downloaded skills are held during scanning and reconstruction. Bound to the container; never reaches the host filesystem. |
 | **Clearance report** | A signed JSON certificate generated after a skill passes the full pipeline (lint, scan, line verification, rebuild). Required by `vault-agent` before a skill is loaded. |
-| **Network isolation** | The compose topology's use of separate `internal: true` Docker networks. Each `vault-*` container has its own internal network; only `vault-proxy` bridges them. `vault-agent` cannot reach `vault-forge` or `vault-pioneer` directly. |
+| **Network isolation** | The compose topology's use of separate `internal: true` Docker networks. Each `vault-*` container has its own internal network; only `vault-proxy` bridges them. `vault-agent` cannot reach `vault-forge` or `vault-social` directly. |
 
 ---
 

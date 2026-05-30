@@ -64,7 +64,7 @@ skip() {
 # ── Group 1: counted artefacts (offline) ────────────────────────────────────
 echo "── Group 1: counted artefacts (offline) ──"
 
-patterns=$(grep -cE "^\s*'(CRITICAL|HIGH|MEDIUM)\|" components/openskill-forge/tools/lib/patterns.sh 2>/dev/null || echo "0")
+patterns=$(grep -cE "^\s*'(CRITICAL|HIGH|MEDIUM)\|" workloads/forge/tools/lib/patterns.sh 2>/dev/null || echo "0")
 row "1. malicious-skill patterns" "87" "$patterns"
 
 # verify.sh uses two patterns: `check N "..." \\` (checks 1–13) and an inline
@@ -72,9 +72,9 @@ row "1. malicious-skill patterns" "87" "$patterns"
 # check numbers across both patterns.
 verify_checks=$(
   {
-    grep -oE '^check [0-9]+' components/opencli-container/scripts/verify.sh \
+    grep -oE '^check [0-9]+' workloads/agent/scripts/verify.sh \
       | grep -oE '[0-9]+'
-    grep -oE 'printf "  \[%2d\][^"]*" [0-9]+' components/opencli-container/scripts/verify.sh \
+    grep -oE 'printf "  \[%2d\][^"]*" [0-9]+' workloads/agent/scripts/verify.sh \
       | grep -oE '[0-9]+$'
   } 2>/dev/null | sort -u | wc -l
 )

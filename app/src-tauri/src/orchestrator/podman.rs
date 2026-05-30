@@ -751,7 +751,7 @@ fn is_running(service_name: &str) -> bool {
 // Each takes the runtime data dir (where `.env` lives) and internally loads
 // the signed spec + builds the run context. Keeps call sites a one-liner.
 
-/// Bring up every service in dependency order (proxy+forge+pioneer+egress+agent).
+/// Bring up every service in dependency order (egress+proxy+forge+social+agent).
 pub fn perimeter_up(data_dir: &Path) -> Result<(), OrchestratorError> {
     let spec = load_spec()?;
     let env = load_runtime_env(data_dir);
@@ -1103,6 +1103,6 @@ mod tests {
         let joined = args.join(" ");
         assert!(joined.contains("/run/opentrapp/perimeter/vault-proxy.py:/opt/vault/vault-proxy.py:ro"));
         assert!(joined.contains("/run/opentrapp/perimeter/allowlist.txt:/opt/vault/allowlist.txt:ro"));
-        assert!(!joined.contains("components/opencli-container"), "no source-tree paths");
+        assert!(!joined.contains("workloads/agent") && !joined.contains("infra/proxy"), "no source-tree paths");
     }
 }

@@ -1,0 +1,209 @@
+// OpenCli-Container: Soft Shell configuration
+//
+// Broad autonomy within a fixed protected-resource boundary. The agent can
+// search the web, schedule tasks, process files, and act autonomously
+// within its sandboxed workspace. SafeBins commands auto-approve
+// (ask: "on-miss"). Unknown commands still require Telegram approval.
+//
+// What's different from Split Shell:
+//   - ask: "on-miss" instead of "always" — safeBins auto-execute
+//   - web_search + web_fetch ENABLED (research, content, intelligence)
+//   - cron ENABLED (scheduled recurring tasks)
+//   - process ENABLED (background task management)
+//   - canvas ENABLED (visual workspace)
+//   - message ENABLED (send on authorized channels)
+//   - Extended safeBins: +grep, sed, awk, diff, xargs, basename, dirname,
+//     env, true, false, test, printf (28 total, was 16)
+//   - Proxy allowlist: +raw.githubusercontent.com (user-configurable)
+//
+// What stays the same (the protected-resource boundary):
+//   - gateway DENIED (agent cannot modify itself)
+//   - bash DENIED (distinct from exec, always blocked)
+//   - nodes DENIED (no device access)
+//   - browser DENIED by default (user can enable via tool-control)
+//   - sessions_spawn DENIED by default (user can enable via tool-control)
+//   - Elevated permanently disabled
+//   - rm stripped from image (constructive only)
+//   - Interpreters stripped (no python, bash, ruby, perl)
+//   - Config locked read-only (chmod 444 by entrypoint)
+//   - Proxy allowlist still deny-by-default
+//   - Container hardening fully enforced (read-only root, caps dropped, seccomp, noexec)
+//
+// NEVER add to safeBins: sh, bash, node, python, ruby, perl (interpreters)
+// NEVER add to safeBins: curl, wget (network tools — stripped from image)
+// NEVER add to safeBins: rm, rmdir (destructive — stripped from image)
+// NEVER add to safeBins: chmod, chown (permission manipulation)
+//
+// JSON5 format — comments and trailing commas are valid.
+// Unknown keys cause the Gateway to refuse to start (Zod schema validation).
+{
+  // --- Agent defaults ---
+  agents: {
+    defaults: {
+      model: {
+        primary: "anthropic/claude-haiku-4-5",
+      },
+
+      // Sandbox: "off" — the vault container IS the sandbox.
+      sandbox: {
+        mode: "off",
+      },
+    },
+  },
+
+  // --- Tool restrictions (Soft Shell: broad autonomy within fixed protected-resource boundary) ---
+  tools: {
+    // "coding" profile includes: exec, read, write, edit, apply_patch, grep,
+    // find, ls, process, and groups: fs, runtime, sessions, memory.
+    // We deny what we don't want from this broad set.
+    profile: "coding",
+
+    // F11: tools with profiles:[] in OpenClaw's tool catalog (web_fetch,
+    // web_search, cron, canvas, message) are NOT auto-allowed by the
+    // "coding" profile. They must be listed in alsoAllow or the agent
+    // never sees them. The generator emits this list from the soft preset's
+    // also_allow field in tool-manifest.yml — keep this block in sync there.
+    alsoAllow: [
+      "web_fetch",     // Fetch URL content (raw.githubusercontent.com etc)
+      "web_search",    // Search the web
+      "cron",          // Schedule persistent jobs
+      "canvas",        // Visual workspace
+      "message",       // Send on authorized channels
+    ],
+
+    deny: [
+      // Protected resources — NEVER enabled:
+      "gateway",            // Agent cannot modify its own security
+      "bash",               // Distinct from exec in group:runtime — always denied
+
+      // Denied by default — user can enable via tool-control:
+      "browser",            // No web browsing (enable per-capability if needed)
+
+      // Sessions denied by default — user can enable for multi-agent:
+      "group:sessions",     // No sub-agents by default
+      "sessions_spawn",     // Explicit: no sub-agent spawning
+      "sessions_send",      // Explicit: no cross-session messaging
+
+      // Always denied:
+      "nodes",              // No device control
+    ],
+
+    // Exec: ENABLED with broader auto-approval
+    exec: {
+      // "allowlist" = only commands matching safeBins or approved patterns.
+      security: "allowlist",
+
+      // "on-miss" = safeBins commands auto-execute without Telegram approval.
+      // Unknown commands (not in safeBins) still require user approval.
+      // This is the key change from Split Shell's "always".
+      ask: "on-miss",
+
+      // "gateway" = commands run in the Gateway process (inside our container).
+      host: "gateway",
+
+      // safeBins: 28 pre-approved binaries (was 16 in Split Shell).
+      // All constructive file/text operations. No interpreters. No network. No rm.
+      safeBins: [
+        // Carried from Split Shell (16):
+        "cat",       // Read file contents
+        "echo",      // Write text to files
+        "mkdir",     // Create directories
+        "cp",        // Copy files
+        "mv",        // Move/rename files
+        "touch",     // Create empty files
+        "date",      // Get current date/time
+        "head",      // Read first N lines
+        "tail",      // Read last N lines
+        "wc",        // Word/line count
+        "sort",      // Sort file contents
+        "uniq",      // Deduplicate lines
+        "tr",        // Character translation
+        "cut",       // Extract columns
+        "jq",        // JSON processing
+        "tee",       // Write to file and stdout
+        // New in Soft Shell (12):
+        "grep",      // Search file contents
+        "sed",       // Stream editor (text transformation)
+        "awk",       // Pattern scanning and processing
+        "diff",      // Compare files
+        "xargs",     // Build command lines from stdin
+        "basename",  // Strip directory from filename
+        "dirname",   // Extract directory from path
+        "env",       // Print environment (no modification)
+        // Note: "true" and "false" commands removed — JSON serializes them as
+        // booleans, not strings, which OpenClaw's Zod schema rejects.
+        "test",      // Evaluate conditions
+        "printf",    // Formatted output
+      ],
+
+      // safeBinProfiles: REQUIRED by OpenClaw for each safeBins entry.
+      safeBinProfiles: {
+        cat: {},
+        echo: {},
+        mkdir: {},
+        cp: {},
+        mv: {},
+        touch: {},
+        date: {},
+        head: {},
+        tail: {},
+        wc: {},
+        sort: {},
+        uniq: {},
+        tr: {},
+        cut: {},
+        jq: {},
+        tee: {},
+        grep: {},
+        sed: {},
+        awk: {},
+        diff: {},
+        xargs: {},
+        basename: {},
+        dirname: {},
+        env: {},
+        test: {},
+        printf: {},
+      },
+    },
+
+    // Elevated access: PERMANENTLY DISABLED in all shell levels
+    elevated: {
+      enabled: false,
+    },
+
+    // Filesystem: workspace only — the critical boundary.
+    fs: {
+      workspaceOnly: true,
+    },
+  },
+
+  // --- Gateway: local mode, loopback only ---
+  gateway: {
+    mode: "local",
+    bind: "loopback",
+  },
+
+  // --- Session: per-channel-peer isolation ---
+  session: {
+    dmScope: "per-channel-peer",
+  },
+
+  // --- Channels ---
+  channels: {
+    telegram: {
+      dmPolicy: "pairing",
+      proxy: "http://vault-proxy:8080",
+    },
+    // WhatsApp: disabled — not configured
+    whatsapp: {
+      enabled: false,
+      dmPolicy: "pairing",
+    },
+  },
+
+  // --- Telemetry: disabled ---
+  logging: {
+    redactSensitive: "tools",
+  },
+}

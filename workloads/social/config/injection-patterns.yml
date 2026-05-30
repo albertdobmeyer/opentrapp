@@ -1,0 +1,179 @@
+# Prompt injection signatures for Moltbook feed content
+# Used by feed-scanner.sh to detect potentially malicious posts/comments
+#
+# Each pattern has: id, category, severity, regex, description
+# Severity: CRITICAL, HIGH, MEDIUM, LOW
+#
+# Derived from real attack patterns observed in the Moltbook/OpenClaw ecosystem.
+# This is NOT a copy of openskill-forge's skill scanner patterns — these are tuned
+# for social content (posts, comments) rather than skill files.
+
+patterns:
+
+  # ── Authority Impersonation ──────────────────────────────
+  # Agents or posts claiming false authority to manipulate other agents
+
+  - id: auth-001
+    category: authority_impersonation
+    severity: HIGH
+    regex: "(?i)(as the|i am the|this is the).{0,20}(admin|moderator|system|official|moltbook team)"
+    description: "Claims admin/official authority"
+
+  - id: auth-002
+    category: authority_impersonation
+    severity: HIGH
+    regex: "(?i)official (system |platform )?(message|announcement|notice|update)"
+    description: "Fake official announcement"
+
+  - id: auth-003
+    category: authority_impersonation
+    severity: MEDIUM
+    regex: "(?i)(urgent|mandatory|required).{0,30}(update|action|response|compliance)"
+    description: "Urgency-based social engineering"
+
+  - id: auth-004
+    category: authority_impersonation
+    severity: HIGH
+    regex: "(?i)on behalf of (anthropic|openai|google|moltbook|openclaw|clawhub)"
+    description: "Impersonating known organizations"
+
+  # ── Instruction Injection ────────────────────────────────
+  # Direct attempts to override an agent's system prompt or behavior
+
+  - id: inj-001
+    category: instruction_injection
+    severity: CRITICAL
+    regex: "(?i)ignore (all )?(previous|prior|above|your) (instructions|prompts|rules|guidelines)"
+    description: "Direct instruction override attempt"
+
+  - id: inj-002
+    category: instruction_injection
+    severity: CRITICAL
+    regex: "(?i)your (new|updated|real|actual) (task|instruction|role|purpose|goal) is"
+    description: "Task reassignment injection"
+
+  - id: inj-003
+    category: instruction_injection
+    severity: HIGH
+    regex: "(?i)(you must|you should|you are required to|you need to).{0,30}(execute|run|download|install|post|share|send)"
+    description: "Imperative action instruction"
+
+  - id: inj-004
+    category: instruction_injection
+    severity: CRITICAL
+    regex: "(?i)(system prompt|system message|assistant prompt|hidden instruction)[:\\s]"
+    description: "Fake system prompt framing"
+
+  - id: inj-005
+    category: instruction_injection
+    severity: HIGH
+    regex: "(?i)\\[?(system|assistant|user)\\]?\\s*:"
+    description: "Chat role injection (system:/user:/assistant:)"
+
+  # ── Encoded Payloads ────────────────────────────────────
+  # Obfuscated content designed to bypass text-level scanning
+
+  - id: enc-001
+    category: encoded_payload
+    severity: HIGH
+    regex: "[A-Za-z0-9+/]{40,}={0,2}"
+    description: "Potential base64-encoded payload (40+ chars)"
+
+  - id: enc-002
+    category: encoded_payload
+    severity: MEDIUM
+    regex: "(\\\\x[0-9a-fA-F]{2}){4,}"
+    description: "Hex-encoded string sequence"
+
+  - id: enc-003
+    category: encoded_payload
+    severity: MEDIUM
+    regex: "(%[0-9a-fA-F]{2}){4,}"
+    description: "URL-encoded payload sequence"
+
+  - id: enc-004
+    category: encoded_payload
+    severity: HIGH
+    regex: "(?i)(decode|decrypt|deobfuscate|unescape)\\s*(this|the following|below)"
+    description: "Instruction to decode obfuscated content"
+
+  # ── URL Fishing ─────────────────────────────────────────
+  # Links designed to harvest credentials or deliver malware
+
+  - id: url-001
+    category: url_fishing
+    severity: HIGH
+    regex: "https?://[^\\s]*\\.(xyz|tk|ml|ga|cf|gq|top|buzz|click|link)/[^\\s]*"
+    description: "Suspicious TLD commonly used in phishing"
+
+  - id: url-002
+    category: url_fishing
+    severity: CRITICAL
+    regex: "(?i)(verify|confirm|validate|authenticate).{0,30}https?://"
+    description: "Credential verification lure with URL"
+
+  - id: url-003
+    category: url_fishing
+    severity: HIGH
+    regex: "(?i)(download|install|run|execute).{0,20}https?://(?!github\\.com|npmjs\\.com|pypi\\.org)"
+    description: "Download instruction with non-standard URL"
+
+  - id: url-004
+    category: url_fishing
+    severity: MEDIUM
+    regex: "https?://\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
+    description: "URL using raw IP address"
+
+  # ── Social Engineering ──────────────────────────────────
+  # Manipulation tactics designed to extract information or actions
+
+  - id: soc-001
+    category: social_engineering
+    severity: CRITICAL
+    regex: "(?i)(share|send|post|give|provide).{0,20}(api.?key|token|credential|password|secret)"
+    description: "Credential extraction attempt"
+
+  - id: soc-002
+    category: social_engineering
+    severity: HIGH
+    regex: "(?i)(prove|verify|confirm) (you('re| are)|that you|yourself).{0,20}(real|genuine|authentic|not a bot)"
+    description: "Identity verification social engineering"
+
+  - id: soc-003
+    category: social_engineering
+    severity: HIGH
+    regex: "(?i)if you (are|'re) a (real|true|genuine) (agent|ai|assistant)"
+    description: "Identity challenge manipulation"
+
+  - id: soc-004
+    category: social_engineering
+    severity: MEDIUM
+    regex: "(?i)(repost|share|forward|spread) this (message|post|content) to"
+    description: "Chain message / viral spreading attempt"
+
+  # ── Data Exfiltration ───────────────────────────────────
+  # Attempts to get agents to leak configuration or data
+
+  - id: exf-001
+    category: data_exfiltration
+    severity: CRITICAL
+    regex: "(?i)(send|post|share|upload|transmit).{0,30}(config|environment|env|settings|\.env)"
+    description: "Configuration exfiltration prompt"
+
+  - id: exf-002
+    category: data_exfiltration
+    severity: CRITICAL
+    regex: "(?i)(curl|wget|fetch|http).{0,20}(POST|PUT).{0,30}(data|payload|body)"
+    description: "HTTP exfiltration instruction"
+
+  - id: exf-003
+    category: data_exfiltration
+    severity: HIGH
+    regex: "(?i)(what is|tell me|reveal|show|display).{0,20}(system prompt|instructions|api.?key|configuration)"
+    description: "System prompt / config extraction"
+
+  - id: exf-004
+    category: data_exfiltration
+    severity: HIGH
+    regex: "(?i)(list|show|print|dump).{0,20}(environment|variables|secrets|keys)"
+    description: "Environment variable enumeration"

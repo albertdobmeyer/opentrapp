@@ -1,0 +1,105 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anthropic/claude-haiku-4-5"
+      },
+      "sandbox": {
+        "mode": "off"
+      }
+    }
+  },
+  "tools": {
+    "profile": "coding",
+    "deny": [
+      "bash",
+      "browser",
+      "canvas",
+      "cron",
+      "gateway",
+      "group:automation",
+      "group:messaging",
+      "group:nodes",
+      "group:sessions",
+      "group:ui",
+      "group:web",
+      "message",
+      "nodes",
+      "process",
+      "session_status",
+      "sessions_history",
+      "sessions_list",
+      "sessions_send",
+      "sessions_spawn",
+      "web_fetch",
+      "web_search"
+    ],
+    "exec": {
+      "security": "allowlist",
+      "ask": "always",
+      "host": "gateway",
+      "safeBins": [
+        "cat",
+        "echo",
+        "mkdir",
+        "cp",
+        "mv",
+        "touch",
+        "date",
+        "head",
+        "tail",
+        "wc",
+        "sort",
+        "uniq",
+        "tr",
+        "cut",
+        "jq",
+        "tee"
+      ],
+      "safeBinProfiles": {
+        "cat": {},
+        "echo": {},
+        "mkdir": {},
+        "cp": {},
+        "mv": {},
+        "touch": {},
+        "date": {},
+        "head": {},
+        "tail": {},
+        "wc": {},
+        "sort": {},
+        "uniq": {},
+        "tr": {},
+        "cut": {},
+        "jq": {},
+        "tee": {}
+      }
+    },
+    "elevated": {
+      "enabled": false
+    },
+    "fs": {
+      "workspaceOnly": true
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback"
+  },
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "channels": {
+    "telegram": {
+      "dmPolicy": "pairing",
+      "proxy": "http://vault-proxy:8080"
+    },
+    "whatsapp": {
+      "enabled": false,
+      "dmPolicy": "pairing"
+    }
+  },
+  "logging": {
+    "redactSensitive": "tools"
+  }
+}

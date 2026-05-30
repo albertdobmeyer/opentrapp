@@ -11,7 +11,7 @@
 
 A desktop application that runs an autonomous CLI agent inside a five-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT. Ships pre-wired for [OpenClaw](https://www.getopenclaw.ai); the perimeter is designed to extend to other CLI agents.
 
-The architecture, threat model, and per-component capabilities are described in [`docs/trifecta.md`](docs/trifecta.md).
+For a one-page elevator explainer of the five-container perimeter, see [`docs/perimeter-explained.md`](docs/perimeter-explained.md). The full architecture, threat model, and per-component capabilities are in [`docs/trifecta.md`](docs/trifecta.md).
 
 **Author:** [@albertdobmeyer](https://github.com/albertdobmeyer) · **Public landing page:** [opentrapp.com](https://opentrapp.com)
 
@@ -42,7 +42,7 @@ These are the principles that shape every design and product decision in this pr
 - 24-point startup verification of the perimeter topology
 - API keys held by `vault-proxy` and injected per request; the agent container never reads the literal key
 
-Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled by default. They are available at "Soft Shell" via CLI configuration in v0.3.0; see [`components/opencli-container/`](components/opencli-container/).
+Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled by default. They are available at "Soft Shell" via CLI configuration in v0.3.0; see [`workloads/agent/`](workloads/agent/).
 
 ## Limitations
 
@@ -50,7 +50,7 @@ Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled b
 - Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility. The full attacker-capability matrix and residual-risk enumeration are in [`docs/threat-model.md`](docs/threat-model.md); the differential against alternative containment strategies (Firejail, gVisor, VM-only isolation, scanner-only, etc.) is in [`docs/why-not-x.md`](docs/why-not-x.md).
 - The agent's reasoning is not local. Operating OpenTrApp without internet access to Anthropic's API is not supported.
 - Installer binaries are signed with the Tauri auto-updater key, not with OS-level code-signing certificates. macOS Gatekeeper and Windows SmartScreen will display a first-launch warning.
-- One of the three originally-planned modules (`openagent-social`) is **parked since 2026-05-03**. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook. The container is still defined in `compose.yml`; the code is preserved at [`components/openagent-social/`](components/openagent-social/).
+- The social-feed workload (`vault-social`, formerly `vault-pioneer`) is **parked since 2026-05-03**. The target API (Moltbook) has been intermittent since 2026-04-05 following Meta's acquisition. The container is still defined in `compose.yml`; the code is preserved at [`workloads/social/`](workloads/social/). Re-aim to a generalized agent-to-agent social shield is tracked in MISSION.md (Thread C).
 
 ## Requirements
 
@@ -85,7 +85,7 @@ The runtime perimeter consists of five containers connected by per-service inter
 | `vault-agent`   | Runtime containment | Read-only root filesystem, all Linux capabilities dropped, custom syscall profile, workspace mount only |
 | `vault-forge`   | Supply-chain defense | 87-pattern skill scanner, zero-trust line verifier, Content Disarm & Reconstruction pipeline |
 | `vault-proxy`   | **L7 egress policy** | Domain allowlist, API-key injection, request logging, post-resolve destination-IP check. Holds API keys; **no internet attachment** (chains to `vault-egress`). |
-| `vault-pioneer` | Social-content analysis | **Parked** — see *Limitations* |
+| `vault-social` | Social-content analysis | **Parked** — see *Limitations* |
 | `vault-egress`  | **L3 egress policy** | Kernel-level RFC1918 drop; pinned DoT resolver (Quad9 + Cloudflare); the *only* container with internet attachment. Holds `NET_ADMIN` but **no secrets**. |
 
 `vault-proxy` is the bridge between the internal containers. `vault-egress` is the bridge to the public internet. Neither container holds both API credentials *and* elevated network capabilities — that separation is the load-bearing security property the five-container topology exists for.
@@ -98,7 +98,7 @@ flowchart LR
     subgraph PERIMETER["Perimeter"]
         AGENT[vault-agent]
         FORGE[vault-forge]
-        PIONEER["vault-pioneer<br/>(parked)"]
+        PIONEER["vault-social<br/>(parked)"]
         PROXY["vault-proxy<br/>(L7 policy)"]
         EGRESS["vault-egress<br/>(L3 policy + DoT)"]
     end
@@ -122,10 +122,10 @@ Five Mermaid drawings (topology, trust tiers, network-isolation matrix, the skil
 <details>
 <summary><strong>Building from source</strong></summary>
 
-All three submodules are public; no special access is required.
+Single monorepo (post [ADR-0013](docs/adr/0013-monorepo-consolidation.md)); no submodules.
 
 ```bash
-git clone --recurse-submodules https://github.com/albertdobmeyer/opentrapp.git
+git clone https://github.com/albertdobmeyer/opentrapp.git
 cd opentrapp/app
 npm install
 npm run dev                              # frontend dev server
@@ -168,15 +168,18 @@ cosign verify-attestation --type slsaprovenance ...
 ### Repository layout
 
 ```
-opentrapp/                       (this repository — desktop GUI + perimeter orchestrator)
-├── components/
-│   ├── opencli-container/              runtime containment (vault-agent + vault-proxy)
-│   ├── openskill-forge/               supply-chain defense (vault-forge)
-│   └── openagent-social/            social-content analysis (vault-pioneer) — parked
-├── app/                             Tauri 2 + React 18 desktop application
-├── compose.yml                      4-service perimeter with network isolation
-├── schemas/component.schema.json    component manifest contract
-└── config/orchestrator-workflows.yml  cross-component workflow definitions
+opentrapp/                            (this repository — single monorepo)
+├── app/                              Tauri 2 + React 18 desktop application (the orchestrator)
+├── workloads/                        one directory per workload container
+│   ├── agent/                          → vault-agent  (runtime containment)
+│   ├── forge/                          → vault-forge  (supply-chain defense — skill scanner + CDR)
+│   └── social/                         → vault-social (agent-social-feed analysis — parked)
+├── infra/                            shared infrastructure containers
+│   ├── proxy/                          → vault-proxy  (L7 egress policy)
+│   └── egress/                         → vault-egress (L3 egress policy)
+├── compose.yml                       5-service perimeter with network isolation
+├── schemas/component.schema.json     workload manifest contract
+└── config/orchestrator-workflows.yml cross-workload workflow definitions
 ```
 
 See [`CLAUDE.md`](CLAUDE.md) for the full architecture specification and contribution rules.

@@ -32,7 +32,7 @@ host-compose invocations (zero-trust bar held).
 | vault-agent (Node + OpenClaw) | **619 MB** |
 | vault-proxy (mitmproxy) | 53 MB |
 | vault-egress | 11 MB |
-| vault-forge / vault-pioneer | ~0.1 MB each |
+| vault-forge / vault-social | ~0.1 MB each |
 | **Total app + perimeter** | **~1.14 GB** |
 
 Host at measurement: 7.2 GB total, 3.5 GB used, 3.7 GB available (cache-reclaimable). Tight

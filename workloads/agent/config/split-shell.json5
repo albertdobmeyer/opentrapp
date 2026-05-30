@@ -1,0 +1,181 @@
+// OpenCli-Container: Split Shell Configuration
+//
+// Split Shell enables the agent to do useful work through controlled exec access
+// with a strict safeBins allowlist and human approval for every command.
+//
+// What's different from Hard Shell:
+//   - exec ENABLED with security: "allowlist" + ask: "always"
+//   - safeBins: file manipulation commands only (cat, mkdir, cp, mv, etc.)
+//   - group:fs removed from deny → read, apply_patch available
+//   - Persistent volume → memory, identity, and pairing survive restarts
+//
+// What stays the same:
+//   - Browser denied (no web access)
+//   - Cron denied (no scheduled tasks)
+//   - Sessions denied (no sub-agents)
+//   - Elevated permanently disabled
+//   - Proxy allowlist unchanged (3 domains)
+//   - Exoskeleton fully enforced (read-only root, caps dropped, seccomp, noexec)
+//
+// Safety model (three independent layers):
+//   Layer 1: safeBins allowlist — only approved binaries can run
+//   Layer 2: ask "always" — every command shown to user for approval via Telegram
+//   Layer 3: Exoskeleton — even if layers 1-2 fail, container limits damage
+//
+// NEVER add to safeBins: sh, bash, node, python, ruby, perl (interpreters)
+// NEVER add to safeBins: curl, wget (network tools — stripped from image anyway)
+// NEVER add to safeBins: chmod, chown (permission manipulation)
+//
+// JSON5 format — comments and trailing commas are valid.
+// Unknown keys cause the Gateway to refuse to start (Zod schema validation).
+{
+  // --- Agent defaults ---
+  agents: {
+    defaults: {
+      model: {
+        primary: "anthropic/claude-haiku-4-5",
+      },
+
+      // Sandbox: "off" — the vault container IS the sandbox.
+      sandbox: {
+        mode: "off",
+      },
+    },
+  },
+
+  // --- Tool restrictions (Split Shell: controlled exec + file I/O) ---
+  tools: {
+    // Valid profiles: minimal, coding, messaging, full
+    // "coding" includes: exec, read, apply_patch, grep, find, ls, process.
+    // "minimal" does NOT include exec — which is why exec was never available before.
+    // We use "coding" and deny what we don't want from this set.
+    profile: "coding",
+    deny: [
+      // DENIED in Split Shell — things "standard" includes that we don't want:
+      "browser",            // No web browsing
+      "web_search",         // No web search
+      "web_fetch",          // No URL fetching
+      "group:automation",   // No cron, no webhooks
+      "group:sessions",     // No sub-agents
+      "sessions_spawn",     // Explicit: no sub-agent spawning
+      "sessions_send",      // Explicit: no cross-session messaging
+      "gateway",            // Cannot modify its own gateway
+      "bash",               // Distinct from exec in group:runtime — always denied
+      "cron",               // No scheduled tasks
+      "canvas",             // No visual workspace
+      "nodes",              // No device control
+      "process",            // No background processes
+    ],
+
+    // Exec: ENABLED with strict controls
+    exec: {
+      // "allowlist" = only commands matching safeBins or approved patterns are allowed.
+      // Unknown commands trigger an approval request to the user via Telegram.
+      security: "allowlist",
+
+      // "always" = EVERY exec invocation requires user approval via Telegram,
+      // even if the binary is in safeBins. The user sees the exact command
+      // and taps Approve or Deny. No silent execution.
+      ask: "always",
+
+      // Note: askFallback is documented in official docs but rejected by
+      // OpenClaw 2026.2.26 Zod schema as "Unrecognized key". Omitted.
+
+      // "gateway" = commands run in the Gateway process (inside our container).
+      // "sandbox" would try to spawn Docker (which doesn't exist).
+      // The container IS the sandbox — gateway exec is already contained.
+      host: "gateway",
+
+      // safeBins: binaries that are pre-approved for the allowlist check.
+      // With ask: "always", these STILL require user approval — safeBins just means
+      // the command won't be rejected before reaching the approval step.
+      //
+      // ONLY constructive file commands. No interpreters. No network tools.
+      // NEVER add: rm (destructive — user-side only), chmod/chown (permission manipulation),
+      //            sh/bash/node/python (interpreters), curl/wget (network tools)
+      safeBins: [
+        "cat",       // Read file contents
+        "echo",      // Write text to files
+        "mkdir",     // Create directories
+        "cp",        // Copy files
+        "mv",        // Move/rename files
+        "touch",     // Create empty files
+        "date",      // Get current date/time (for timestamped notes)
+        "head",      // Read first N lines
+        "tail",      // Read last N lines
+        "wc",        // Word/line count
+        "sort",      // Sort file contents
+        "uniq",      // Deduplicate lines
+        "tr",        // Character translation
+        "cut",       // Extract columns
+        "jq",        // JSON processing
+        "tee",       // Write to file and stdout
+      ],
+
+      // safeBinProfiles: REQUIRED by OpenClaw for each safeBins entry.
+      // Without profiles, safeBins are silently dropped ("ignoring unprofiled").
+      // Empty object = no argument restrictions (all args allowed for that binary).
+      // Future: add argument restrictions per-binary for tighter control.
+      safeBinProfiles: {
+        cat: {},
+        echo: {},
+        mkdir: {},
+        cp: {},
+        mv: {},
+        touch: {},
+        date: {},
+        head: {},
+        tail: {},
+        wc: {},
+        sort: {},
+        uniq: {},
+        tr: {},
+        cut: {},
+        jq: {},
+        tee: {},
+      },
+    },
+
+    // Elevated access: PERMANENTLY DISABLED in all shell levels
+    elevated: {
+      enabled: false,
+    },
+
+    // Filesystem: workspace only — the critical boundary.
+    // Agent can read/write inside ~/.openclaw/workspace/ but NOWHERE ELSE.
+    // Enforced by assertSandboxPath() with symlink escape detection.
+    // Defense-in-depth: even if this check fails, the container's hardening (read-only root, dropped capabilities, seccomp) limits the blast radius.
+    fs: {
+      workspaceOnly: true,
+    },
+  },
+
+  // --- Gateway: local mode, loopback only ---
+  gateway: {
+    mode: "local",
+    bind: "loopback",
+  },
+
+  // --- Session: per-channel-peer isolation ---
+  session: {
+    dmScope: "per-channel-peer",
+  },
+
+  // --- Channels ---
+  channels: {
+    telegram: {
+      dmPolicy: "pairing",
+      proxy: "http://vault-proxy:8080",
+    },
+    // WhatsApp: disabled — not configured, causes health-monitor spam if enabled
+    whatsapp: {
+      enabled: false,
+      dmPolicy: "pairing",
+    },
+  },
+
+  // --- Telemetry: disabled ---
+  logging: {
+    redactSensitive: "tools",
+  },
+}

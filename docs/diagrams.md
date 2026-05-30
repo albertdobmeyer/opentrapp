@@ -25,7 +25,7 @@ flowchart TB
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway<br/>read-only root, dropped capabilities,<br/>narrow syscall profile, workspace-only mount"]
         FORGE["vault-forge<br/>87-pattern scanner +<br/>line classifier + CDR pipeline"]
-        PIONEER["vault-pioneer<br/>(parked)"]
+        PIONEER["vault-social<br/>(parked)"]
         PROXY["vault-proxy<br/>L7 policy: allowlist, key injection,<br/>post-resolve IP check, request log"]
         EGRESS["vault-egress<br/>L3 policy: nftables RFC1918 drop,<br/>unbound DoT resolver (Quad9 + Cloudflare)"]
     end
@@ -63,7 +63,7 @@ flowchart TB
     class ANTHROPIC,TELEGRAM,CLAWHUB external
 ```
 
-**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-forge` is the write-only `forge-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-pioneer` indicates the parked status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment** — it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
+**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-forge` is the write-only `forge-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-social` indicates the parked status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment** — it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
 
 ---
 
@@ -83,7 +83,7 @@ flowchart TD
     subgraph T2["TIER 2 — INFRASTRUCTURE (perimeter)"]
         direction LR
         T2A["OpenTrApp container orchestrator"]
-        T2B["Five containers: vault-agent,<br/>vault-forge, vault-pioneer,<br/>vault-proxy (L7), vault-egress (L3)"]
+        T2B["Five containers: vault-agent,<br/>vault-forge, vault-social,<br/>vault-proxy (L7), vault-egress (L3)"]
     end
 
     subgraph T3["TIER 3 — CONTAINED (inside perimeter)"]
@@ -125,8 +125,8 @@ flowchart LR
         FORGE[vault-forge]
     end
 
-    subgraph N3["network: pioneer-net (internal)"]
-        PIONEER[vault-pioneer]
+    subgraph N3["network: social-net (internal)"]
+        PIONEER[vault-social]
     end
 
     subgraph N4["network: proxy-bridge"]
@@ -135,7 +135,7 @@ flowchart LR
 
     PROXY -- "agent-net" --> AGENT
     PROXY -- "forge-net" --> FORGE
-    PROXY -- "pioneer-net" --> PIONEER
+    PROXY -- "social-net" --> PIONEER
     PROXY -->|public internet| INET[Public internet]
 
     AGENT -.->|"NO routed path"| FORGE
@@ -153,7 +153,7 @@ flowchart LR
     class INET inet
 ```
 
-**Reading guide.** Each container has its own `internal: true` network; only `vault-proxy` is dual-homed onto each. Solid arrows are the only routed paths; the dotted lines from `vault-agent` to `vault-forge` and `vault-pioneer` are emphatically *not-paths* (drawn for clarity, to make the absence visible). The `==>` line is the `forge-deliveries` shared volume — a unidirectional file-system surface, not a network path. Public-internet egress is the single arrow from `vault-proxy`; no other container has a path out.
+**Reading guide.** Each container has its own `internal: true` network; only `vault-proxy` is dual-homed onto each. Solid arrows are the only routed paths; the dotted lines from `vault-agent` to `vault-forge` and `vault-social` are emphatically *not-paths* (drawn for clarity, to make the absence visible). The `==>` line is the `forge-deliveries` shared volume — a unidirectional file-system surface, not a network path. Public-internet egress is the single arrow from `vault-proxy`; no other container has a path out.
 
 ---
 

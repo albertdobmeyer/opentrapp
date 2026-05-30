@@ -69,3 +69,4 @@ app/src-tauri/resources/perimeter/
 
 # Agent working scratchpad — future-work list, not part of the repo
 /AGENT-TODO.md
+/MISSION.md

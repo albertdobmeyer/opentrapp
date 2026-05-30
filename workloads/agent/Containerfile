@@ -1,0 +1,89 @@
+# OpenCli-Container: Hardened OpenClaw Container
+# Defense-in-depth Layer 2 — rootless container with minimal attack surface
+#
+# Build:  podman build -t opencli-container -f Containerfile .
+# Or:     docker build -t opencli-container -f Containerfile .
+
+# node 22.22.1-alpine — pinned 2026-03-23 (OpenClaw requires Node >=22.12.0)
+FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00 AS builder
+
+# Install build dependencies (git required by some openclaw npm deps)
+RUN apk --no-cache add git
+
+# Install OpenClaw agent runtime
+# --ignore-scripts skips node-llama-cpp's postinstall (native LLM compilation).
+# The vault doesn't use local LLMs — it connects to Anthropic/OpenAI via the proxy.
+# If openclaw has its own postinstall that's needed, we run it selectively below.
+# Updated to 2026.2.26 (from 2026.2.17) — includes fix for Telegram proxy support
+# (PR #30367: preserve proxy env vars in Telegram global dispatcher)
+RUN npm install -g openclaw@2026.2.26 --ignore-scripts
+
+# --- Production stage ---
+# node 22.22.1-alpine — pinned 2026-03-23 (OpenClaw requires Node >=22.12.0)
+FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00
+
+LABEL maintainer="OpenCli-Container" \
+      description="Hardened OpenClaw sandbox — rootless, read-only, proxy-gated"
+
+# Remove package managers and network tools after base setup
+# Keep only what OpenClaw needs to function
+RUN apk --no-cache add tini ca-certificates \
+    && rm -rf /sbin/apk /usr/bin/wget /usr/bin/curl \
+    && rm -rf /var/cache/apk/* /tmp/*
+
+# Copy OpenClaw from builder and create proper bin symlink.
+# npm creates a symlink at /usr/local/bin/openclaw -> ../lib/node_modules/openclaw/openclaw.mjs
+# but COPY flattens symlinks, breaking relative imports. We recreate the link.
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -sf ../lib/node_modules/openclaw/openclaw.mjs /usr/local/bin/openclaw
+
+# Apply security patches — fix Telegram proxy bypass (upstream issue #30338, fix PR #30367).
+# This ensures ALL traffic (including Telegram) routes through the vault proxy.
+# See patches/fix-telegram-proxy.sh for full documentation.
+COPY patches/fix-telegram-proxy.sh /tmp/fix-telegram-proxy.sh
+RUN chmod +x /tmp/fix-telegram-proxy.sh && /tmp/fix-telegram-proxy.sh && rm /tmp/fix-telegram-proxy.sh
+
+# Reuse the existing node user (uid/gid 1000) as our vault user.
+# Node 22-alpine already has node:1000. We rename it and set the home dir.
+RUN deluser node 2>/dev/null; delgroup node 2>/dev/null; \
+    addgroup -g 1000 -S vault \
+    && adduser -u 1000 -S vault -G vault -h /home/vault -s /bin/sh
+
+# Hardened OpenClaw config — stored in /opt so tmpfs on ~/.openclaw doesn't shadow it.
+# entrypoint.sh copies it to ~/.openclaw/openclaw.json at startup.
+COPY config/openclaw-hardening.json5 /opt/openclaw-hardening.json5
+RUN chown -R vault:vault /home/vault
+
+# Entrypoint wrapper — waits for proxy CA cert before starting OpenClaw
+COPY scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY scripts/proxy-bootstrap.mjs /opt/proxy-bootstrap.mjs
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Proxy configuration — all traffic routes through vault-proxy sidecar
+# The container NEVER contacts external services directly
+ENV HTTP_PROXY=http://vault-proxy:8080 \
+    HTTPS_PROXY=http://vault-proxy:8080 \
+    NO_PROXY=localhost,127.0.0.1 \
+    NODE_EXTRA_CA_CERTS=/opt/proxy-ca/mitmproxy-ca-cert.pem \
+    HOME=/home/vault
+
+# Strip destructive and ownership binaries — agent is constructive only.
+# rm/rmdir: no deletion from inside the container
+# chown/chgrp: no ownership manipulation
+# NOTE: chmod is KEPT — the entrypoint uses it to lock the config read-only.
+# These are Alpine busybox applets — remove the symlinks, not busybox itself.
+RUN rm -f /bin/rm /bin/rmdir /bin/chown /bin/chgrp \
+         /usr/bin/rm /usr/bin/rmdir /usr/bin/chown /usr/bin/chgrp 2>/dev/null; \
+    true
+
+# Run as non-root
+USER vault
+WORKDIR /home/vault/workspace
+
+# tini handles PID 1 responsibilities (signal forwarding, zombie reaping)
+# entrypoint.sh waits for proxy CA cert, then execs into the CMD
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint.sh"]
+# Start the OpenClaw gateway in foreground mode.
+# --import loads the proxy bootstrap first, forcing all undici/fetch through the vault proxy.
+# Config is loaded from ~/.openclaw/openclaw.json (placed by entrypoint.sh).
+CMD ["node", "--import", "/opt/proxy-bootstrap.mjs", "/usr/local/lib/node_modules/openclaw/openclaw.mjs", "gateway"]

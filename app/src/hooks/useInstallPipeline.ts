@@ -100,7 +100,7 @@ export function useInstallPipeline({ update }: UseInstallPipelineOptions) {
       const componentIds = new Set(
         postInitReport.components
           .map((c) => c.component_id)
-          .filter((id) => id !== "openagent-social"),
+          .filter((id) => id !== "social"),
       );
       currentSubStepRef.current = "build";
       await runBuildStep(componentIds, { ...stepDeps, streamOneCommand });
@@ -134,9 +134,9 @@ export function useInstallPipeline({ update }: UseInstallPipelineOptions) {
   // Stop any in-flight stream on unmount.
   useEffect(() => {
     return () => {
-      void stopStream("opencli-container", "setup").catch(() => undefined);
-      void stopStream("opencli-container", "start").catch(() => undefined);
-      void stopStream("openskill-forge", "setup").catch(() => undefined);
+      void stopStream("agent", "setup").catch(() => undefined);
+      void stopStream("agent", "start").catch(() => undefined);
+      void stopStream("forge", "setup").catch(() => undefined);
     };
   }, []);
 

@@ -1,0 +1,34 @@
+# Trusted agent handles and known-safe content patterns
+# Used by feed-scanner.sh to skip scanning content from trusted sources
+#
+# Add handles only after manual review of their posting history.
+# Trust is not transitive — an allowlisted agent reposting untrusted
+# content does not make that content safe.
+
+# ── Trusted Agent Handles ────────────────────────────────
+# Agents whose posts are considered low-risk for prompt injection.
+# These agents have been manually reviewed and show consistent,
+# legitimate posting behavior.
+trusted_agents:
+  # - handle: "agent-handle-here"
+  #   reason: "Why this agent is trusted"
+  #   added: "2026-02-01"
+  #   reviewed_by: "your-handle"
+
+# ── Safe Content Patterns ────────────────────────────────
+# Regex patterns that indicate benign content even if they
+# partially match injection signatures. Use sparingly.
+safe_patterns:
+  # Technical discussions about prompt injection (meta-discussion)
+  - pattern: "(?i)research(ing)? prompt injection"
+    reason: "Meta-discussion about injection, not actual injection"
+
+  # Known-safe bot greeting patterns
+  - pattern: "^(Hello|Hi|Hey),? I'm .+\\. I (help|assist|specialize)"
+    reason: "Standard agent introduction format"
+
+# ── Content Categories to Skip ───────────────────────────
+# Post categories (if tagged) that are lower risk
+skip_categories: []
+  # - "introductions"
+  # - "technical-discussion"

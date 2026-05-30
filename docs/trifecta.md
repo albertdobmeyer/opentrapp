@@ -34,7 +34,7 @@ TIER 1 — TRUSTED (host)
 
 TIER 2 — INFRASTRUCTURE (perimeter)
   OpenTrApp container orchestrator
-  5 containers: vault-agent, vault-forge, vault-pioneer, vault-proxy, vault-egress
+  5 containers: vault-agent, vault-forge, vault-social, vault-proxy, vault-egress
     └─ L7 application policy lives in vault-proxy (credentials, allowlist)
     └─ L3 network policy lives in vault-egress (kernel RFC1918 drop, DoT resolver)
     └─ See ADR-0009 for the L7/L3 split rationale
@@ -64,7 +64,7 @@ flowchart TB
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway"]
         FORGE["vault-forge<br/>87-pattern scanner + CDR"]
-        PIONEER["vault-pioneer (parked)"]
+        PIONEER["vault-social (parked)"]
         PROXY["vault-proxy<br/>L7 policy: allowlist, key injection"]
         EGRESS["vault-egress<br/>L3 policy: nftables drop, DoT resolver"]
     end
@@ -104,7 +104,7 @@ HOST
     │     vault-agent via a write-only shared volume
     │     Network isolated from vault-agent
     │
-    ├── vault-pioneer (parked — see §8)
+    ├── vault-social (parked — see §8)
     │     Originally: scan posts on the Moltbook agent social
     │     network for prompt-injection patterns
     │     Container is defined; target API has been intermittent
@@ -118,7 +118,7 @@ HOST
     │     - Payload-size limits + reflected-key redaction + request logging
     │     Holds API keys; NO direct internet attachment.
     │     Chains upstream to vault-egress for actual internet reach.
-    │     Internal network bridge between vault-agent, vault-forge, vault-pioneer.
+    │     Internal network bridge between vault-agent, vault-forge, vault-social.
     │
     └── vault-egress
           L3 (network-layer) egress policy (ADR-0009 + ADR-0010):
@@ -140,11 +140,11 @@ Each internal container has its own internal network. `vault-proxy` bridges them
 | vault-proxy         | vault-egress      | Yes     | L7 → L3 chain (HTTP CONNECT upstream) |
 | vault-egress        | public internet   | Yes     | The only external attachment |
 | vault-agent         | vault-forge       | No      | Prevents the agent from influencing skill scans |
-| vault-agent         | vault-pioneer     | No      | Prevents the agent from influencing feed analysis |
+| vault-agent         | vault-social     | No      | Prevents the agent from influencing feed analysis |
 | vault-agent         | host              | No      | No host-side filesystem or process visibility |
 | vault-forge         | vault-proxy       | Yes     | Skill download via filtered egress |
 | vault-forge         | vault-agent       | Volume only | Delivers certified skills via write-only mount |
-| vault-pioneer       | vault-proxy       | Yes     | Feed fetch via filtered egress |
+| vault-social       | vault-proxy       | Yes     | Feed fetch via filtered egress |
 | vault-proxy         | public internet   | **No**  | Removed by ADR-0009 — chains through vault-egress |
 | host (GUI / coordinator) | vault-proxy  | Yes     | Management, monitoring, control |
 
@@ -177,7 +177,7 @@ Output is delivered to `vault-agent` via a write-only volume. The agent has no p
 
 ### 4.3 openagent-social — social-content analysis (parked)
 
-Runs as `vault-pioneer`. Built to scan posts on Moltbook, an AI-agent social network, for prompt-injection patterns before the content was relayed to `vault-agent`. The container is still defined in `compose.yml`. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook (2026-03-10), so the module has been parked since 2026-05-03; see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes are preserved in [`components/openagent-social/`](../components/openagent-social/).
+Runs as `vault-social`. Built to scan posts on Moltbook, an AI-agent social network, for prompt-injection patterns before the content was relayed to `vault-agent`. The container is still defined in `compose.yml`. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook (2026-03-10), so the module has been parked since 2026-05-03; see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes are preserved in [`components/openagent-social/`](../components/openagent-social/).
 
 ### 4.4 vault-proxy — egress gateway
 
@@ -187,7 +187,7 @@ The single point of contact between the perimeter and the public internet. Imple
 - Replaces a placeholder string in outbound requests with the real key, so no other container ever has the literal key
 - Enforces a domain allowlist; requests to unallowlisted hosts are rejected with a logged 403
 - Records every request (timestamp, host, status, byte counts) to a structured log readable by the host
-- Bridges the otherwise-isolated networks of `vault-agent`, `vault-forge`, and `vault-pioneer`
+- Bridges the otherwise-isolated networks of `vault-agent`, `vault-forge`, and `vault-social`
 
 ---
 
@@ -251,7 +251,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 | Layer | Owner | Container | Mitigation |
 |-------|-------|-----------|-----------|
-| Feed scanner       | pioneer (parked) | vault-pioneer | 25 prompt-injection patterns |
+| Feed scanner       | pioneer (parked) | vault-social | 25 prompt-injection patterns |
 | Network isolation  | perimeter | compose network | Pioneer has no path to the agent |
 | DM pairing policy  | vault | vault-agent | Each Telegram counterpart explicitly approved by the user |
 | Tool policy        | vault | vault-agent | Denied tools stay invisible to the LLM |
@@ -265,7 +265,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 |--------------------|----------------------------------|--------------------|
 | opencli-container     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
 | openskill-forge      | vault-forge                      | Active. 87-pattern scanner + CDR pipeline operational. |
-| openagent-social   | vault-pioneer                    | **Parked since 2026-05-03.** Code preserved; target API intermittent following Meta's acquisition of Moltbook. |
+| openagent-social   | vault-social                    | **Parked since 2026-05-03.** Code preserved; target API intermittent following Meta's acquisition of Moltbook. |
 | opentrapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
 
 **Current implementation:**
@@ -308,7 +308,7 @@ Each capability has exactly one owning module to avoid duplication or ambiguity.
 | Skill linting and structure validation | forge | vault-forge |
 | Zero-trust line verification | forge | vault-forge |
 | Content Disarm & Reconstruction | forge | vault-forge |
-| Feed-injection scanning (25 patterns) | pioneer (parked) | vault-pioneer |
+| Feed-injection scanning (25 patterns) | pioneer (parked) | vault-social |
 | Workflow orchestration | opentrapp | GUI / CLI |
 | Cross-component workflows | opentrapp | `config/orchestrator-workflows.yml` |
 

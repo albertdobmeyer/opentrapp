@@ -1,9 +1,0 @@
-[submodule "components/opencli-container"]
-	path = components/opencli-container
-	url = git@github.com:albertdobmeyer/opencli-container.git
-[submodule "components/openskill-forge"]
-	path = components/openskill-forge
-	url = git@github.com:albertdobmeyer/openskill-forge.git
-[submodule "components/openagent-social"]
-	path = components/openagent-social
-	url = git@github.com:albertdobmeyer/openagent-social.git

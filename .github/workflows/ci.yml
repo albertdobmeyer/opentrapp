@@ -27,9 +27,6 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
@@ -49,9 +46,6 @@ jobs:
         working-directory: app/src-tauri
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
@@ -71,9 +65,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
@@ -95,7 +86,7 @@ jobs:
       # vault-proxy policy unit tests — pin IP-literal denial against regression.
       # See ~/.claude/plans/discuss-which-one-is-buzzing-crab.md (A1).
       - name: vault-proxy policy unit tests
-        run: python3 -m unittest discover -s components/opencli-container/proxy -p 'test_*.py' -v
+        run: python3 -m unittest discover -s infra/proxy -p 'test_*.py' -v
 
   integration-tests:
     name: Integration tests (cross-module contracts)
@@ -103,9 +94,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: "3.12"
@@ -126,9 +114,6 @@ jobs:
         working-directory: app
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
@@ -159,9 +144,6 @@ jobs:
       attestations: write       # SLSA build-provenance
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
 
       - name: Build, push (by digest), sign, and export each image
@@ -182,10 +164,10 @@ jobs:
 
           # service → build context (Containerfile lives in each context dir)
           declare -A CTX=(
-            [vault-agent]=components/opencli-container
-            [vault-egress]=components/opencli-container/egress
-            [vault-forge]=components/openskill-forge
-            [vault-pioneer]=components/openagent-social
+            [vault-agent]=workloads/agent
+            [vault-egress]=infra/egress
+            [vault-forge]=workloads/forge
+            [vault-social]=workloads/social
           )
 
           # Begin the signed digest overlay the runtime verifies against.
@@ -200,7 +182,7 @@ jobs:
           } > images/image-digests.json
 
           first=1
-          for svc in vault-agent vault-egress vault-forge vault-pioneer; do
+          for svc in vault-agent vault-egress vault-forge vault-social; do
             ctx="${CTX[$svc]}"
             img="${REG}/${svc}"
             echo "::group::build ${svc}"
@@ -293,9 +275,6 @@ jobs:
       release_id: ${{ steps.tauri.outputs.releaseId }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          submodules: true
-
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20

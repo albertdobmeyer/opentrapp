@@ -14,35 +14,43 @@ The agent's reasoning is delegated to the agent's vendor API (Anthropic's, for O
 
 ## 2. Repository layout
 
+Post [ADR-0013](docs/adr/0013-monorepo-consolidation.md): single monorepo. 3 workloads
++ 2 infra + 1 orchestrator. Directory name matches container name 1:1.
+
 ```
-opentrapp/                          (this repository — public)
-├── components/
-│   ├── opencli-container/                 git submodule — runtime containment (vault-agent + vault-proxy)
-│   ├── openskill-forge/                  git submodule — supply-chain defense (vault-forge)
-│   └── openagent-social/               git submodule — social-content analysis (vault-pioneer); parked
-├── app/                                Tauri 2 + React 18 desktop application
+opentrapp/                              (this repository — public, monorepo)
+├── app/                                Tauri 2 + React 18 desktop application (the orchestrator)
 │   ├── src/                            React frontend
 │   └── src-tauri/                      Rust backend
-├── compose.yml                         four-service perimeter compose definition
+├── workloads/                          one directory per workload container
+│   ├── agent/                          → vault-agent       (runtime containment)
+│   ├── forge/                          → vault-forge       (skill scanner + CDR)
+│   └── social/                         → vault-social      (agent-social analysis; parked)
+├── infra/                              shared infrastructure containers
+│   ├── proxy/                          → vault-proxy       (L7 egress policy)
+│   └── egress/                         → vault-egress      (L3 egress policy)
+├── compose.yml                         five-service perimeter compose definition
 ├── schemas/
 │   └── component.schema.json           manifest contract schema
 ├── config/
-│   └── orchestrator-workflows.yml      cross-component workflow definitions
+│   └── orchestrator-workflows.yml      cross-workload workflow definitions
 ├── tests/
 │   └── orchestrator-check.sh           42-check validation suite
 └── docs/
-    ├── trifecta.md                     architecture, threat model, defense layers
+    ├── perimeter-explained.md          one-page elevator architecture
+    ├── trifecta.md                     full architecture, threat model, defense layers
     ├── handoff.md                      current session-state documentation
+    ├── adr/                            architecture decisions (current numbering: 0001–0013)
     └── archive/                        historical planning artifacts
 ```
 
-### Component status
+### Workload status
 
-| Component | Role | Container | Status |
-|-----------|------|-----------|--------|
-| `opencli-container` | runtime containment | `vault-agent` + `vault-proxy` | Active |
-| `openskill-forge` | supply-chain defense | `vault-forge` | Active |
-| `openagent-social` | social-content analysis | `vault-pioneer` | Parked since 2026-05-03 (Moltbook acquired by Meta 2026-03-10; API intermittent since 2026-04-05) |
+| Workload | Directory | Container | Role | Status |
+|----------|-----------|-----------|------|--------|
+| Agent  | `workloads/agent/`  | `vault-agent`  | Runtime containment | Active |
+| Forge  | `workloads/forge/`  | `vault-forge`  | Supply-chain defense (skill scanner + CDR) | Active |
+| Social | `workloads/social/` | `vault-social` | Agent-to-agent social-feed analysis | Parked since 2026-05-03 (Moltbook acquired by Meta 2026-03-10; re-aim to generalized agent-social shield is Thread C of MISSION.md) |
 
 ## 3. UI rule (non-negotiable)
 
@@ -105,7 +113,7 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Prior-art comparison | [`docs/why-not-x.md`](docs/why-not-x.md) |
 | Reproducibility recipe | [`docs/reproduce.md`](docs/reproduce.md) + [`docs/reproduce.sh`](docs/reproduce.sh) |
 | Mermaid architecture diagrams | [`docs/diagrams.md`](docs/diagrams.md) |
-| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — nine records covering proxy-side credentials, adaptive shells, CDR, pioneer parking, deserve-to-exist, four-container topology (partially superseded by 0009), manifest-driven backend, Tauri, and the five-container L7/L3 split |
+| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — 13 records covering proxy-side credentials, adaptive shells, CDR, social-workload parking, deserve-to-exist, four-container topology (superseded by 0009), manifest-driven backend, Tauri, five-container L7/L3 split, pinned-resolver DNS, zero-trust bootstrap, subscription-OAuth feasibility, and monorepo consolidation (0013) |
 | Whitepaper | [`docs/whitepaper.md`](docs/whitepaper.md) |
 | Architecture v2 design spec (historical, supersded by `docs/trifecta.md`) | [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) |
 
@@ -135,32 +143,22 @@ podman compose down                     # stop perimeter
 
 1. Repository structure (directories, essential files)
 2. JSON Schema validity (six sections)
-3. All component manifests parse, valid identity, cross-references, enums
-4. Submodule synchronization status
-5. Build artifacts (`Cargo.toml`, `tauri.conf.json`, `package.json`, `tsconfig.json`)
-6. Frontend-backend contract: every Rust command handler has a matching frontend invoke wrapper
-7. Manifest enum values match Rust serde expectations
-8. Prerequisites cross-references valid
-9. Workflow step → command references valid; orchestrator workflow references valid
+3. All workload manifests parse, valid identity, cross-references, enums
+4. Build artifacts (`Cargo.toml`, `tauri.conf.json`, `package.json`, `tsconfig.json`)
+5. Frontend-backend contract: every Rust command handler has a matching frontend invoke wrapper
+6. Manifest enum values match Rust serde expectations
+7. Prerequisites cross-references valid
+8. Workflow step → command references valid; orchestrator workflow references valid
 
-## 8. Submodule discipline
+## 8. Working in the monorepo
 
-Each component exists in two places on a contributor's machine:
+Post [ADR-0013](docs/adr/0013-monorepo-consolidation.md): no submodules. Every workload
+and infra container lives in this repository. Edit, build, and commit in one place.
 
-- **Standalone clone:** `~/<component>/` (focused development on one component)
-- **Submodule copy:** `~/opentrapp/components/<component>/` (orchestrator integration)
-
-These are independent git checkouts. Changes in one do not propagate to the other automatically.
-
-### Sync workflow after a submodule change
-
-```bash
-cd components/<component>
-git pull
-cd ../..
-git add components/<component>
-git commit -m "Update <component> submodule reference"
-```
+The earlier three-submodule layout (`components/{opencli-container,openskill-forge,openagent-social}/`)
+was consolidated 2026-05-30 because the lifecycle test failed — the submodules co-shipped
+in lockstep with the parent and had zero external consumers. Three archived GitHub repos
+exist as a historical reference; do not push to them.
 
 ## 9. Security considerations
 
@@ -175,16 +173,15 @@ git commit -m "Update <component> submodule reference"
 
 The application must not:
 
-- Contain component-specific logic in Rust or React (the generic-backend constraint)
-- Duplicate domain logic that belongs in a submodule
+- Contain workload-specific logic in Rust or React (the generic-backend constraint)
+- Duplicate domain logic that belongs in a workload directory (`workloads/<name>/`)
 - Run AI models or agent code directly
 - Expose network services (no remote-management surface)
 - Process untrusted content on the host filesystem
 
 When contributing:
 
-- Do not add component-specific logic to the Tauri backend; it must remain generic
-- Do not modify `component.yml` files in submodules without also pushing the change to the component's own remote
+- Do not add workload-specific logic to the Tauri backend; it must remain generic
+- Workload code lives under `workloads/<name>/`; infra container code lives under `infra/<name>/`
 - Do not change the manifest schema without updating all three alignment layers (`schemas/component.schema.json`, `manifest.rs`, `types.ts`)
 - Do not commit `node_modules/`, `target/`, `app/src-tauri/gen/`, or `.env` (covered by `.gitignore`)
-- Do not force-push submodule references; this breaks other clones

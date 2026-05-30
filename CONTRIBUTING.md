@@ -8,49 +8,41 @@ By participating in this project, you agree to follow our [Code of Conduct](CODE
 
 ## Cloning the repository
 
-The project uses three git submodules (`opencli-container`, `openskill-forge`, `openagent-social`). Clone with `--recurse-submodules` so they are populated on first clone:
+Single monorepo since [ADR-0013](docs/adr/0013-monorepo-consolidation.md) (2026-05-30); no submodules.
 
 ```bash
-git clone --recurse-submodules https://github.com/albertdobmeyer/opentrapp.git
+git clone https://github.com/albertdobmeyer/opentrapp.git
 ```
 
-If you cloned without `--recurse-submodules`, populate the submodules afterwards:
+If you prefer SSH (and have an authenticated key configured for GitHub):
 
 ```bash
-cd opentrapp
-git submodule update --init --recursive
+git clone git@github.com:albertdobmeyer/opentrapp.git
 ```
 
-The default URLs are HTTPS. If you prefer SSH (and have an authenticated key configured for GitHub), edit the `.gitmodules` file or run:
+## Repository layout
 
-```bash
-git config --global url."git@github.com:".insteadOf "https://github.com/"
+Three workloads (agent, forge, social) + two infrastructure containers (proxy, egress) +
+one Tauri orchestrator (`app/`). Each workload and infra directory builds exactly one
+container; the directory name matches the container name.
+
+```
+opentrapp/
+├── app/             Tauri 2 + React 18 desktop application
+├── workloads/
+│   ├── agent/       → vault-agent
+│   ├── forge/       → vault-forge
+│   └── social/      → vault-social  (parked)
+├── infra/
+│   ├── proxy/       → vault-proxy
+│   └── egress/      → vault-egress
+├── compose.yml
+├── schemas/
+└── config/
 ```
 
-before the clone. The reverse mapping works equally well if you start with SSH URLs and need HTTPS.
-
-## Submodule discipline
-
-Each component exists in two places on a contributor's machine:
-
-- **Standalone clone** at `~/<component>/` — for focused work on a single component
-- **Submodule copy** at `~/opentrapp/components/<component>/` — for orchestrator integration
-
-These are independent git checkouts. Changes in one do not propagate to the other automatically.
-
-Sync workflow after a submodule change has been pushed to its component remote:
-
-```bash
-cd components/<component>
-git pull
-cd ../..
-git add components/<component>
-git commit -m "Update <component> submodule reference"
-```
-
-Please avoid modifying a component's `component.yml`, scripts, or library code directly inside the submodule directory of this repository without also pushing the change to the component's own remote. The submodule pointer is a record of *which commit* of the component this orchestrator integrates against; making changes only inside the submodule produces a divergent copy that is awkward for other contributors to work with.
-
-Please also avoid force-pushing submodule references — other clones will need to re-fetch from a different history.
+Edit, build, and commit in one place. See [ADR-0013](docs/adr/0013-monorepo-consolidation.md)
+for why the earlier three-submodule layout was consolidated.
 
 ## Building from source
 

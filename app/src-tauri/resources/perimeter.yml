@@ -77,7 +77,7 @@ services:
     cap_add: [NET_BIND_SERVICE, SETUID, SETGID, CHOWN, DAC_OVERRIDE]
     mem_limit: 2g
     pids_limit: 128
-    networks: [agent-net, forge-net, pioneer-net, egress-net]
+    networks: [agent-net, forge-net, social-net, egress-net]
     depends_on:
       - { service: vault-egress, condition: healthy }
     tmpfs:
@@ -142,15 +142,15 @@ services:
       - { name: SSL_CERT_FILE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
     restart: unless-stopped
 
-  # ─── vault-pioneer — social-content analysis (parked) ───────────
-  vault-pioneer:
-    image: { repo: "ghcr.io/albertdobmeyer/opentrapp/vault-pioneer", source: built }
+  # ─── vault-social — social-content analysis (parked) ────────────
+  vault-social:
+    image: { repo: "ghcr.io/albertdobmeyer/opentrapp/vault-social", source: built }
     no_new_privileges: true
     cap_drop_all: true
     mem_limit: 512m
     pids_limit: 64
-    networks: [pioneer-net]
-    command: ["bash", "-c", "echo 'vault-pioneer ready' && sleep infinity"]
+    networks: [social-net]
+    command: ["bash", "-c", "echo 'vault-social ready' && sleep infinity"]
     volumes:
       - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
     env:
@@ -166,7 +166,7 @@ services:
 networks:
   agent-net:   { internal: true }
   forge-net:   { internal: true }
-  pioneer-net: { internal: true }
+  social-net:  { internal: true }
   egress-net:  { internal: true, subnet: "10.230.0.0/24" }
   external-net: { internal: false }
 

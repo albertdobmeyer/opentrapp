@@ -40,17 +40,17 @@ describe("IPC contract: each function calls invoke with correct command and args
 
   test("getComponent calls get_component with componentId", async () => {
     mockInvoke.mockResolvedValue({});
-    await getComponent("opencli-container");
+    await getComponent("agent");
     expect(mockInvoke).toHaveBeenCalledWith("get_component", {
-      componentId: "opencli-container",
+      componentId: "agent",
     });
   });
 
   test("runCommand calls run_command with componentId, commandId, args", async () => {
     mockInvoke.mockResolvedValue({});
-    await runCommand("opencli-container", "start", { env: "prod" });
+    await runCommand("agent", "start", { env: "prod" });
     expect(mockInvoke).toHaveBeenCalledWith("run_command", {
-      componentId: "opencli-container",
+      componentId: "agent",
       commandId: "start",
       args: { env: "prod" },
     });
@@ -58,9 +58,9 @@ describe("IPC contract: each function calls invoke with correct command and args
 
   test("runCommand defaults args to empty object", async () => {
     mockInvoke.mockResolvedValue({});
-    await runCommand("opencli-container", "start");
+    await runCommand("agent", "start");
     expect(mockInvoke).toHaveBeenCalledWith("run_command", {
-      componentId: "opencli-container",
+      componentId: "agent",
       commandId: "start",
       args: {},
     });
@@ -68,9 +68,9 @@ describe("IPC contract: each function calls invoke with correct command and args
 
   test("loadOptions calls load_options with timeout", async () => {
     mockInvoke.mockResolvedValue([]);
-    await loadOptions("opencli-container", "docker ps", 10);
+    await loadOptions("agent", "docker ps", 10);
     expect(mockInvoke).toHaveBeenCalledWith("load_options", {
-      componentId: "opencli-container",
+      componentId: "agent",
       commandString: "docker ps",
       timeoutSeconds: 10,
     });
@@ -78,9 +78,9 @@ describe("IPC contract: each function calls invoke with correct command and args
 
   test("loadOptions defaults timeout to 5", async () => {
     mockInvoke.mockResolvedValue([]);
-    await loadOptions("opencli-container", "docker ps");
+    await loadOptions("agent", "docker ps");
     expect(mockInvoke).toHaveBeenCalledWith("load_options", {
-      componentId: "opencli-container",
+      componentId: "agent",
       commandString: "docker ps",
       timeoutSeconds: 5,
     });
@@ -88,9 +88,9 @@ describe("IPC contract: each function calls invoke with correct command and args
 
   test("startStream calls start_stream", async () => {
     mockInvoke.mockResolvedValue(undefined);
-    await startStream("opencli-container", "logs", { tail: "100" });
+    await startStream("agent", "logs", { tail: "100" });
     expect(mockInvoke).toHaveBeenCalledWith("start_stream", {
-      componentId: "opencli-container",
+      componentId: "agent",
       commandId: "logs",
       args: { tail: "100" },
     });
@@ -98,27 +98,27 @@ describe("IPC contract: each function calls invoke with correct command and args
 
   test("stopStream calls stop_stream", async () => {
     mockInvoke.mockResolvedValue(undefined);
-    await stopStream("opencli-container", "logs");
+    await stopStream("agent", "logs");
     expect(mockInvoke).toHaveBeenCalledWith("stop_stream", {
-      componentId: "opencli-container",
+      componentId: "agent",
       commandId: "logs",
     });
   });
 
   test("readConfig calls read_config", async () => {
     mockInvoke.mockResolvedValue("content");
-    await readConfig("opencli-container", "config.yml");
+    await readConfig("agent", "config.yml");
     expect(mockInvoke).toHaveBeenCalledWith("read_config", {
-      componentId: "opencli-container",
+      componentId: "agent",
       configPath: "config.yml",
     });
   });
 
   test("writeConfig calls write_config", async () => {
     mockInvoke.mockResolvedValue(undefined);
-    await writeConfig("opencli-container", "config.yml", "new content");
+    await writeConfig("agent", "config.yml", "new content");
     expect(mockInvoke).toHaveBeenCalledWith("write_config", {
-      componentId: "opencli-container",
+      componentId: "agent",
       configPath: "config.yml",
       content: "new content",
     });
@@ -126,9 +126,9 @@ describe("IPC contract: each function calls invoke with correct command and args
 
   test("runHealthProbe calls run_health_probe with default timeout", async () => {
     mockInvoke.mockResolvedValue({});
-    await runHealthProbe("opencli-container", "docker ps");
+    await runHealthProbe("agent", "docker ps");
     expect(mockInvoke).toHaveBeenCalledWith("run_health_probe", {
-      componentId: "opencli-container",
+      componentId: "agent",
       probeCommand: "docker ps",
       timeoutSeconds: 10,
     });
@@ -136,9 +136,9 @@ describe("IPC contract: each function calls invoke with correct command and args
 
   test("getStatus calls get_status", async () => {
     mockInvoke.mockResolvedValue({});
-    await getStatus("opencli-container");
+    await getStatus("agent");
     expect(mockInvoke).toHaveBeenCalledWith("get_status", {
-      componentId: "opencli-container",
+      componentId: "agent",
     });
   });
 

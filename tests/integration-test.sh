@@ -44,9 +44,9 @@ section() { echo -e "\n${BLUE}=== $1 ===${NC}"; }
 
 cd "$REPO_ROOT"
 
-VAULT="components/opencli-container"
-FORGE="components/openskill-forge"
-PIONEER="components/openagent-social"
+VAULT="workloads/agent"
+FORGE="workloads/forge"
+SOCIAL="workloads/social"
 
 # =============================================================================
 section "1. Clearance Report Contract (forge -> vault)"
@@ -180,11 +180,11 @@ rm -f "$REPORT"
 section "2. Pattern Export Contract (pioneer -> vault)"
 # =============================================================================
 
-PATTERNS_EXPORT="$PIONEER/data/patterns-export.yml"
-PATTERNS_SOURCE="$PIONEER/config/injection-patterns.yml"
+PATTERNS_EXPORT="$SOCIAL/data/patterns-export.yml"
+PATTERNS_SOURCE="$SOCIAL/config/injection-patterns.yml"
 
 # 2.1: Export produces the file
-if make -C "$PIONEER" export-patterns > /dev/null 2>&1; then
+if make -C "$SOCIAL" export-patterns > /dev/null 2>&1; then
   if [[ -f "$PATTERNS_EXPORT" ]]; then
     pass "2.1 make export-patterns produces patterns-export.yml"
   else
@@ -323,7 +323,7 @@ for ref_path in \
   "GLOSSARY.md" \
   "$VAULT/docs/roadmap.md" \
   "$FORGE/docs/roadmap.md" \
-  "$PIONEER/docs/roadmap.md" \
+  "$SOCIAL/docs/roadmap.md" \
 ; do
   if [[ ! -f "$ref_path" ]]; then
     fail "3.1 trifecta.md references missing file: $ref_path"
@@ -370,7 +370,7 @@ fi
 
 # 3.4: All modules have CLAUDE.md and component.yml
 ALL_MANIFESTS=true
-for mod in "$VAULT" "$FORGE" "$PIONEER"; do
+for mod in "$VAULT" "$FORGE" "$SOCIAL"; do
   for f in "CLAUDE.md" "component.yml"; do
     if [[ ! -f "$mod/$f" ]]; then
       fail "3.4 Missing: $mod/$f"
@@ -388,9 +388,9 @@ for f in \
   "$FORGE/tools/skill-scan.sh" \
   "$FORGE/tools/skill-verify.sh" \
   "$FORGE/tools/skill-lint.sh" \
-  "$PIONEER/tools/feed-scanner.sh" \
-  "$PIONEER/tools/agent-census.sh" \
-  "$PIONEER/tools/identity-checklist.sh" \
+  "$SOCIAL/tools/feed-scanner.sh" \
+  "$SOCIAL/tools/agent-census.sh" \
+  "$SOCIAL/tools/identity-checklist.sh" \
   "$VAULT/scripts/verify.sh" \
   "$VAULT/proxy/vault-proxy.py"; do
   if [[ ! -f "$f" ]]; then
@@ -406,7 +406,7 @@ fi
 section "4. Submodule Health"
 # =============================================================================
 
-for mod in "$VAULT" "$FORGE" "$PIONEER"; do
+for mod in "$VAULT" "$FORGE" "$SOCIAL"; do
   mod_name="$(basename "$mod")"
 
   # 4.1: component.yml exists

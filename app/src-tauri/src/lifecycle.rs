@@ -22,12 +22,12 @@ use tauri::{AppHandle, Emitter, Manager};
 
 pub const REDACTED: &str = "<REDACTED>";
 
-/// The 4 compose *services* that constitute the perimeter. Container names
+/// The 5 compose *services* that constitute the perimeter. Container names
 /// are project-prefixed at runtime (e.g. `opentrapp_vault-proxy_1`); we
 /// filter by `com.docker.compose.service` label so the same code works
 /// regardless of project name.
-const PERIMETER_CONTAINERS: [&str; 4] =
-    ["vault-agent", "vault-proxy", "vault-forge", "vault-pioneer"];
+const PERIMETER_CONTAINERS: [&str; 5] =
+    ["vault-agent", "vault-proxy", "vault-egress", "vault-forge", "vault-social"];
 
 // ─── State types (frontend-visible) ───────────────────────────────────
 

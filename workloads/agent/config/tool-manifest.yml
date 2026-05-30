@@ -1,0 +1,567 @@
+# OpenCli-Container: Tool Manifest — Single Source of Truth
+#
+# This file documents every tool the OpenClaw agent can use, its risk level,
+# injection vectors, and what enabling it requires across all defense layers.
+# scripts/tool-control.sh reads this to generate configs.
+#
+# SECURITY: Each tool enabled is a potential injection attack vector.
+# The agent is constructive only — no destructive operations.
+#
+# Sources:
+#   - docs/openclaw-reference.md (tool inventory)
+#   - docs/research/openclaw-tool-policy-research.md (official docs)
+#   - docs.openclaw.ai/gateway/configuration-reference (profiles)
+#   - docs.openclaw.ai/tools/exec (exec controls)
+
+version: 1
+
+# --- NEVER-ENABLED TOOLS ---
+# tool-control.sh refuses to enable these regardless of user input.
+never_enable:
+  - gateway         # Agent cannot modify its own config or security settings
+  - nodes           # No device access (camera, contacts, SMS, location)
+  - bash            # Distinct from exec in group:runtime — always denied
+
+# --- NEVER-SAFEBINS ---
+# These binaries are never added to safeBins regardless of user input.
+# Interpreters can execute arbitrary code. Network tools bypass the proxy.
+# Destructive tools violate the constructive-only principle.
+never_safebins:
+  # Interpreters (arbitrary code execution)
+  - sh
+  - bash
+  - node
+  - python
+  - python3
+  - ruby
+  - perl
+  # Network tools (bypass proxy at binary level)
+  - curl
+  - wget
+  # Destructive tools (agent is constructive only)
+  - rm
+  - rmdir
+  # Permission manipulation
+  - chmod
+  - chown
+  - chgrp
+
+# --- INVARIANT CONFIG ---
+# tool-control.sh always sets these regardless of tool selection.
+# These values define the universal container hardening and cannot be changed by tool choices.
+invariants:
+  agents.defaults.sandbox.mode: "off"        # Container IS the sandbox
+  tools.elevated.enabled: false              # Permanently disabled
+  tools.fs.workspaceOnly: true               # Agent stays in workspace
+  # Note: askFallback documented but rejected by OpenClaw 2026.2.26 Zod schema
+  gateway.mode: "local"                      # Loopback only
+  gateway.bind: "loopback"                   # No external access
+  channels.telegram.dmPolicy: "pairing"      # Each user must pair
+  channels.whatsapp.enabled: false           # Disabled until configured
+  logging.redactSensitive: "tools"           # Redact tool output in logs
+
+# --- BASE PROXY DOMAINS ---
+# Always included in every allowlist, regardless of tool selection.
+base_domains:
+  - api.anthropic.com    # LLM API
+  - api.openai.com       # LLM API (backup)
+  - api.telegram.org     # Messaging channel
+
+# --- TOOL GROUPS (from official OpenClaw docs) ---
+# Used for deny list generation. When denying a tool, also deny its group
+# if all members of that group are denied.
+groups:
+  runtime:
+    - exec
+    - bash
+    - process
+  fs:
+    - read
+    - write
+    - edit
+    - apply_patch
+  sessions:
+    - sessions_list
+    - sessions_history
+    - sessions_send
+    - sessions_spawn
+    - session_status
+  memory:
+    - memory_search
+    - memory_get
+  ui:
+    - browser
+    - canvas
+  automation:
+    - cron
+    - gateway
+  messaging:
+    - message
+  nodes:
+    - nodes
+  web:
+    - web_search
+    - web_fetch
+    - browser
+
+# --- SHELL PRESETS ---
+# Named tool selections — convenience shortcuts on the 0.0-0.9 scale.
+presets:
+  hard:
+    score: 0.0
+    description: "Maximum lockdown — conversation only"
+    profile: minimal
+    exec_security: "deny"
+    exec_ask: "always"
+    exec_host: "sandbox"
+    enabled_tools: []
+    safeBins: []
+    extra_domains: []
+
+  split:
+    score: 0.2
+    description: "Workspace file I/O with controlled exec and approval"
+    profile: coding
+    exec_security: "allowlist"
+    exec_ask: "always"
+    exec_host: "gateway"
+    enabled_tools:
+      - read
+      - write
+      - edit
+      - apply_patch
+      - exec
+      - grep
+      - find
+      - ls
+      - memory_search
+      - memory_get
+      - image
+    safeBins:
+      - cat
+      - echo
+      - mkdir
+      - cp
+      - mv
+      - touch
+      - date
+      - head
+      - tail
+      - wc
+      - sort
+      - uniq
+      - tr
+      - cut
+      - jq
+      - tee
+    extra_domains: []
+
+  soft:
+    score: 0.34
+    description: "Soft Shell — broad autonomy with safeBins auto-approval; protected resources remain denied"
+    profile: coding
+    exec_security: "allowlist"
+    exec_ask: "on-miss"
+    exec_host: "gateway"
+    # F11 fix: tools listed below have profiles:[] in OpenClaw's tool catalog,
+    # meaning they're NOT auto-allowed by ANY profile (including "coding").
+    # Without explicit alsoAllow, the agent never sees them — even when listed
+    # in enabled_tools. The generator emits these as tools.alsoAllow in the
+    # generated openclaw.json. Each entry MUST also appear in enabled_tools
+    # (the generator filters the intersection — defense in depth).
+    also_allow:
+      - web_fetch
+      - web_search
+      - cron
+      - canvas
+      - message
+    enabled_tools:
+      # All Split Shell tools
+      - read
+      - write
+      - edit
+      - apply_patch
+      - exec
+      - grep
+      - find
+      - ls
+      - memory_search
+      - memory_get
+      - image
+      # New in Soft Shell
+      - web_search
+      - web_fetch
+      - cron
+      - process
+      - canvas
+      - message
+    safeBins:
+      # All Split Shell safeBins (16)
+      - cat
+      - echo
+      - mkdir
+      - cp
+      - mv
+      - touch
+      - date
+      - head
+      - tail
+      - wc
+      - sort
+      - uniq
+      - tr
+      - cut
+      - jq
+      - tee
+      # New in Soft Shell (12)
+      - grep
+      - sed
+      - awk
+      - diff
+      - xargs
+      - basename
+      - dirname
+      - env
+      - test
+      - printf
+    extra_domains:
+      - raw.githubusercontent.com    # Read public GitHub repos (skill source review)
+
+# --- TOOL DEFINITIONS ---
+# Every tool the agent can potentially use.
+# risk: critical | high | medium | low
+# risk_score: numeric weight for computing the 0.0-0.9 scale
+# group: which OpenClaw group this tool belongs to
+# requires_profile: minimum profile that includes this tool
+# requires_exec: whether this tool needs exec to be enabled
+# extra_domains: proxy domains needed when this tool is enabled
+# injection_vectors: known attack patterns (for user awareness)
+
+tools:
+  # --- File Operations (group:fs) ---
+  read:
+    risk: high
+    risk_score: 0.02
+    group: fs
+    description: "Read file contents"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Path traversal to read sensitive files outside workspace"
+      - "Information gathering from agent config or credentials"
+
+  write:
+    risk: high
+    risk_score: 0.02
+    group: fs
+    description: "Create or overwrite files"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Write malicious content to workspace"
+      - "Overwrite agent memory or identity files"
+
+  edit:
+    risk: high
+    risk_score: 0.02
+    group: fs
+    description: "Modify existing files (find/replace)"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Subtle modification of files to inject content"
+      - "Alter agent config or identity via edit"
+
+  apply_patch:
+    risk: high
+    risk_score: 0.02
+    group: fs
+    description: "Apply diffs to files"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Programmatic mass file modification"
+
+  # --- Search/Enumerate ---
+  grep:
+    risk: medium
+    risk_score: 0.01
+    group: none
+    description: "Search file contents by pattern"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Information gathering from workspace files"
+      - "Regex-based data extraction"
+
+  find:
+    risk: medium
+    risk_score: 0.01
+    group: none
+    description: "Search for files by name or path"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Filesystem enumeration"
+      - "Discover files outside workspace (blocked by workspaceOnly)"
+
+  ls:
+    risk: medium
+    risk_score: 0.01
+    group: none
+    description: "List directory contents"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Filesystem enumeration"
+
+  # --- Execution (group:runtime) ---
+  exec:
+    risk: critical
+    risk_score: 0.05
+    group: runtime
+    description: "Run shell commands"
+    requires_profile: coding
+    requires_exec: true
+    extra_domains: []
+    injection_vectors:
+      - "Arbitrary code execution via crafted commands"
+      - "Command injection via argument manipulation"
+      - "Pipeline chaining (;, &&, ||) to bypass safeBins"
+      - "Inline eval (python -c, node -e) if not restricted"
+
+  bash:
+    risk: critical
+    risk_score: 0.05
+    group: runtime
+    description: "Run shell commands via bash (distinct from exec per official docs)"
+    requires_profile: never
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Arbitrary code execution — same risk as exec"
+      - "May bypass exec deny if not explicitly denied"
+      - "Distinct tool from exec in OpenClaw's group:runtime"
+
+  process:
+    risk: critical
+    risk_score: 0.04
+    group: runtime
+    description: "Manage background processes"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Persistent execution that outlives the session"
+      - "Resource exhaustion via process spawning"
+      - "Hidden background activity"
+
+  # --- Web (group:web, group:ui) ---
+  browser:
+    risk: high
+    risk_score: 0.04
+    group: ui
+    description: "Control Chromium browser (navigate, click, screenshot, fill forms)"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []  # User must configure per-site domains
+    injection_vectors:
+      - "Access web content with potential cookie theft"
+      - "Navigation to malicious sites"
+      - "Form filling with user data"
+      - "Screenshot-based data exfiltration"
+
+  web_search:
+    risk: medium
+    risk_score: 0.02
+    group: web
+    description: "Search the web"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []  # Depends on search provider API
+    injection_vectors:
+      - "Search queries that leak conversation context"
+      - "Information gathering for social engineering"
+
+  web_fetch:
+    risk: medium
+    risk_score: 0.02
+    group: web
+    description: "Fetch URL content"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []  # Fetched domains must be on allowlist
+    injection_vectors:
+      - "Data exfiltration via URL parameters"
+      - "SSRF if internal URLs somehow reachable"
+      - "Fetch malicious content for injection"
+
+  # --- Communication (group:messaging) ---
+  message:
+    risk: high
+    risk_score: 0.03
+    group: messaging
+    description: "Send messages on connected channels"
+    requires_profile: messaging
+    requires_exec: false
+    extra_domains: []  # Channel API domains (already in base)
+    injection_vectors:
+      - "Impersonation — agent sends messages as user"
+      - "Social engineering via automated messaging"
+      - "Spam or unwanted messages to contacts"
+
+  # --- Automation (group:automation) ---
+  cron:
+    risk: high
+    risk_score: 0.04
+    group: automation
+    description: "Schedule persistent jobs"
+    requires_profile: coding
+    requires_exec: true
+    extra_domains: []
+    injection_vectors:
+      - "Persistent execution that survives restarts"
+      - "Delayed payload delivery"
+      - "Scheduled data exfiltration"
+
+  gateway:
+    risk: critical
+    risk_score: 0.10
+    group: automation
+    description: "Control the OpenClaw gateway configuration"
+    requires_profile: never
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Self-modification — agent changes its own security config"
+      - "Disable tool policy, allowlist, or approval requirements"
+      - "Escalate own privileges"
+
+  # --- Sessions (group:sessions) ---
+  sessions_spawn:
+    risk: high
+    risk_score: 0.05
+    group: sessions
+    description: "Create autonomous sub-agents"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Autonomous delegation to unmonitored sub-agents"
+      - "Resource exhaustion via agent spawning"
+      - "Sub-agent used to bypass tool restrictions"
+
+  sessions_send:
+    risk: medium
+    risk_score: 0.02
+    group: sessions
+    description: "Send messages between sessions"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Cross-session data leakage"
+      - "Coordinate between sessions to bypass restrictions"
+
+  sessions_list:
+    risk: low
+    risk_score: 0.005
+    group: sessions
+    description: "List active sessions"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Enumerate active sessions for targeting"
+
+  sessions_history:
+    risk: low
+    risk_score: 0.005
+    group: sessions
+    description: "Read session history"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Access historical conversation data"
+
+  session_status:
+    risk: low
+    risk_score: 0.005
+    group: sessions
+    description: "Check session status"
+    requires_profile: minimal
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Minimal — status info only"
+
+  # --- Memory (group:memory) ---
+  memory_search:
+    risk: low
+    risk_score: 0.005
+    group: memory
+    description: "Search agent memory"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Memory poisoning via crafted search patterns"
+      - "Access to persisted sensitive information"
+
+  memory_get:
+    risk: low
+    risk_score: 0.005
+    group: memory
+    description: "Retrieve specific memory entries"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Direct access to persisted sensitive information"
+
+  # --- Visual (group:ui) ---
+  canvas:
+    risk: low
+    risk_score: 0.005
+    group: ui
+    description: "Agent visual workspace"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Low — display only, no external access"
+
+  # --- Media ---
+  image:
+    risk: medium
+    risk_score: 0.01
+    group: none
+    description: "Analyze or generate images"
+    requires_profile: coding
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Steganographic data in images"
+      - "Generated images containing hidden instructions"
+
+  # --- Device (group:nodes) ---
+  nodes:
+    risk: critical
+    risk_score: 0.10
+    group: nodes
+    description: "iOS/Android device access (camera, location, contacts, SMS)"
+    requires_profile: never
+    requires_exec: false
+    extra_domains: []
+    injection_vectors:
+      - "Full phone access — camera, contacts, SMS, location"
+      - "Silent data exfiltration from mobile device"
+      - "Send messages or make calls without user knowledge"

@@ -25,7 +25,7 @@ Output:
   - stdout — pytest summary + latency stats + banned-term hit table
 
 Out of scope: modifying frontend code, modifying the bot's system prompt
-(in `components/opencli-container` submodule), wizard live-run, post-wizard pages.
+(in `workloads/agent` submodule), wizard live-run, post-wizard pages.
 """
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ GUI_CANONICAL_BANNED = [
 # Pass 1 P0 codebase-narrative leaks the GUI banned-list hasn't picked up yet.
 # Capturing in the bot's own replies confirms whether the system prompt /
 # default OpenClaw greeting leaks them too. Surfaces the gap to the
-# `components/opencli-container` submodule maintainer (out of parent scope to fix).
+# `workloads/agent` submodule maintainer (out of parent scope to fix).
 PASS1_P0_ADDITIONS = [
     "opencli-container",
     "openskill-forge",

@@ -94,7 +94,7 @@ export async function prefetchTelegramUrl(
   update: (patch: SettingsPatch) => Promise<void>,
 ): Promise<void> {
   try {
-    const envContent = await readConfig("opencli-container", ".env").catch(() => "");
+    const envContent = await readConfig("agent", ".env").catch(() => "");
     const { telegramToken } = parseEnvKeys(envContent);
     if (!telegramToken) {
       await update({ telegramBotUrl: null, telegramBotUsername: null });

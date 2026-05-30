@@ -1,0 +1,14 @@
+{
+  "name": "clawhub-workbench",
+  "version": "2.0.0",
+  "description": "Skill Development Workbench for ClawHub",
+  "private": true,
+  "scripts": {
+    "lint": "bash tools/skill-lint.sh skills",
+    "scan": "bash tools/skill-scan.sh skills",
+    "test": "bash tools/skill-test.sh",
+    "publish": "bash tools/skill-publish.sh"
+  },
+  "author": "Albert K Dobmeyer",
+  "license": "MIT"
+}
