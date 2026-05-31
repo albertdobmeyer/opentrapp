@@ -1,12 +1,20 @@
 import { test, expect } from "@playwright/test";
+import { skipRoutingGuard } from "./_demo-helpers";
 
 test.describe("Navigation and routing", () => {
+  // Most tests in this file exercise user-mode routes (/preferences,
+  // /component/..., /nonexistent-page). Without this, the Zone 1 routing
+  // guard sends them to /setup and the assertions fail.
+  test.beforeEach(async ({ page }) => {
+    await skipRoutingGuard(page);
+  });
+
   test("sidebar links are rendered or wizard is shown", async ({ page }) => {
     await page.goto("/");
     // On first run, the app shows the setup wizard (no sidebar); otherwise sidebar with Preferences link
     const prefsLink = page.getByRole("link", { name: /preferences/i });
-    const setup = page.getByText(/welcome|setup|prerequisites/i);
-    await expect(prefsLink.or(setup)).toBeVisible();
+    const setup = page.getByText(/welcome|prerequisites/i);
+    await expect(prefsLink.or(setup).first()).toBeVisible();
   });
 
   test("preferences page has controls", async ({ page }) => {

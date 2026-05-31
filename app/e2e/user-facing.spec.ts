@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { skipRoutingGuard } from "./_demo-helpers";
 
 /**
  * Non-technical user experience tests.
@@ -94,6 +95,13 @@ function assertNoBannedTerms(text: string, pageName: string) {
 }
 
 test.describe("Non-technical user experience", () => {
+  // Skip Zone 1 routing guard for post-wizard tests. The wizard-specific
+  // test below explicitly navigates to /setup which is exempt from the
+  // guard regardless.
+  test.beforeEach(async ({ page }) => {
+    await skipRoutingGuard(page);
+  });
+
   test("setup wizard welcome uses friendly language", async ({ page }) => {
     await page.goto("/setup");
     await expect(

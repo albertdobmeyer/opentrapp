@@ -86,36 +86,39 @@ interface SecurityCell {
 }
 
 function securityFromHero(state: HeroState): SecurityCell {
+  // Vocabulary: "sandbox" is a banned developer term in user-facing text
+  // (see app/e2e/user-facing.spec.ts and the Zone 5 fix in CONSTRAINTS.md).
+  // Use "protected setup" / "walled off" instead.
   switch (state) {
     case "installing":
     case "bootstrapping":
-      return { value: "Setting up…", subline: "Sandbox is being built.", tone: "neutral" };
+      return { value: "Setting up…", subline: "Your protected setup is being built.", tone: "neutral" };
     case "shell_ready_absent":
-      return { value: "Ready", subline: "Sandbox is up. Launch your assistant.", tone: "neutral" };
+      return { value: "Ready", subline: "Protected setup is up. Launch your assistant.", tone: "neutral" };
     case "shell_failed":
-      return { value: "Needs attention", subline: "Sandbox setup failed.", tone: "danger" };
+      return { value: "Needs attention", subline: "Protected setup didn't finish.", tone: "danger" };
     case "running_safely":
-      return { value: "Safe", subline: "Sandbox is active.", tone: "neutral" };
+      return { value: "Safe", subline: "Walled off and running.", tone: "neutral" };
     case "starting":
-      return { value: "Starting…", subline: "Sandbox is coming up.", tone: "neutral" };
+      return { value: "Starting…", subline: "Protected setup is coming up.", tone: "neutral" };
     case "recovering":
       return {
         value: "Recovering",
-        subline: "Sandbox is restarting itself.",
+        subline: "Protected setup is restarting itself.",
         tone: "warning",
       };
     case "error_perimeter":
       return {
         value: "Needs attention",
-        subline: "Sandbox isn't running.",
+        subline: "Protected setup isn't running.",
         tone: "danger",
       };
     case "error_key":
-      // Sandbox itself is fine; the assistant just can't reach Anthropic.
-      return { value: "Safe", subline: "Sandbox is active.", tone: "neutral" };
+      // The protected setup itself is fine; the assistant just can't reach Anthropic.
+      return { value: "Safe", subline: "Walled off and running.", tone: "neutral" };
     case "not_setup":
       return { value: "Not set up", subline: "Run setup to begin.", tone: "neutral" };
     case "paused_by_user":
-      return { value: "Stopped", subline: "Sandbox is stopped on purpose.", tone: "neutral" };
+      return { value: "Stopped", subline: "Protected setup is stopped on purpose.", tone: "neutral" };
   }
 }

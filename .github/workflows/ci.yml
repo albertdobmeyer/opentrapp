@@ -122,7 +122,9 @@ jobs:
 
       - run: npm ci
       - run: npx playwright install chromium --with-deps
-      - run: npx playwright test
+      # --project=default excludes the `demo` project (e2e/demo-*.spec.ts),
+      # which exists only to record docs gifs via `npm run demo:record`.
+      - run: npx playwright test --project=default
 
   # ── Perimeter images (tag builds only) ─────────────────────────────────
   # Builds the four OpenTrApp container images in CI — never on the user's

@@ -95,6 +95,15 @@ export default function App() {
 
   const mode = settings.mode;
 
+  // Demo escape hatch: only honoured when window.__OPENTRAPP_DEMO__ is set,
+  // which only happens from the e2e/demo-tour.spec.ts Playwright recorder via
+  // page.addInitScript. Production users never set this; the routing guard
+  // behaves identically for them.
+  const demoOverride =
+    typeof window !== "undefined" &&
+    Boolean((window as unknown as { __OPENTRAPP_DEMO__?: boolean }).__OPENTRAPP_DEMO__);
+  const wizardCompletedForRouting = demoOverride || settings.wizardCompleted;
+
   return (
     <AppContextProvider
       settings={settings}
@@ -115,7 +124,7 @@ export default function App() {
                 where a fresh user lands on Home and sees a silent bootstrap
                 failure with no path to recovery. Once `wizardCompleted` is
                 true, normal routing resumes. */}
-            {!settings.wizardCompleted ? (
+            {!wizardCompletedForRouting ? (
               <Route path="*" element={<Navigate to="/setup" replace />} />
             ) : (
               <>

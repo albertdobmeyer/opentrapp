@@ -1,13 +1,21 @@
 import { test, expect } from "@playwright/test";
+import { skipRoutingGuard } from "./_demo-helpers";
 
 test.describe("Smoke tests", () => {
+  // Skip the Zone 1 routing guard so tests can hit user-mode routes
+  // without being redirected to /setup. The wizard-specific test below
+  // is independent — /setup is exempt from the guard either way.
+  test.beforeEach(async ({ page }) => {
+    await skipRoutingGuard(page);
+  });
+
   test("app loads with home page or Setup wizard", async ({ page }) => {
     await page.goto("/");
     await expect(page).toHaveTitle(/OpenTrApp/i);
     // On first run, the app may redirect to the setup wizard; otherwise shows home page with sidebar
     const homeLoaded = page.getByRole("link", { name: /preferences/i });
-    const setup = page.getByText(/welcome|setup|prerequisites/i);
-    await expect(homeLoaded.or(setup)).toBeVisible();
+    const setup = page.getByText(/welcome|prerequisites/i);
+    await expect(homeLoaded.or(setup).first()).toBeVisible();
   });
 
   test("content renders (not a blank white screen)", async ({ page }) => {

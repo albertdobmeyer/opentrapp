@@ -19,6 +19,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "demo:record": "bash ../scripts/demo-gif.sh",
+    "demo:wizard": "bash ../scripts/demo-gif.sh demo-wizard.spec.ts",
+    "demo:tour": "bash ../scripts/demo-gif.sh demo-tour.spec.ts",
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
