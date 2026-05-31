@@ -52,7 +52,7 @@ fn collect_container_status() -> String {
     // Filter by `com.docker.compose.service` label so we don't depend on the
     // compose project name (which is directory-derived and varies by install).
     const SERVICES: [&str; 5] =
-        ["vault-agent", "vault-proxy", "vault-egress", "vault-forge", "vault-social"];
+        ["vault-agent", "vault-proxy", "vault-egress", "vault-skills", "vault-social"];
     for tool in &["podman", "docker"] {
         let mut lines: Vec<String> = Vec::new();
         let mut tool_ok = false;

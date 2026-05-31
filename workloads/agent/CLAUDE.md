@@ -70,7 +70,7 @@ Two-container stack (compose.yml):
 
 This repo's 2-container stack (vault-agent + vault-proxy) is the core of a larger 4-container perimeter defined in `compose.yml` at the opentrapp root. Two additional containers operate inside this perimeter:
 
-- **vault-forge** (openskill-forge) — downloads and scans SKILL files inside the fence, delivers certified clean output to the agent via a shared volume (forge-deliveries). Runs on forge-net.
+- **vault-skills** (openagent-skills) — downloads and scans SKILL files inside the fence, delivers certified clean output to the agent via a shared volume (skills-deliveries). Runs on skills-net.
 - **vault-social** (openagent-social) — originally scanned Moltbook feed content for injection patterns. **Parked since 2026-05-03** following Meta's acquisition of Moltbook (2026-03-10) and the resulting API instability since 2026-04-05. The container is still defined in `compose.yml` for completeness.
 
 Both connect to vault-proxy for internet access but cannot reach vault-agent or each other directly. The vault is the inner perimeter; forge and pioneer operate alongside it inside the same compose network.
@@ -78,11 +78,11 @@ Both connect to vault-proxy for internet access but cannot reach vault-agent or 
 ```
 4-container perimeter (opentrapp compose.yml):
 
-vault-proxy ←── forge-net ──→ vault-forge
+vault-proxy ←── skills-net ──→ vault-skills
      ↑
  agent-net
      ↓
-vault-agent ←── forge-deliveries (shared volume, read-only) ──→ vault-forge
+vault-agent ←── skills-deliveries (shared volume, read-only) ──→ vault-skills
      ↑
  social-net ──→ vault-social
 ```

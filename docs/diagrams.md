@@ -24,7 +24,7 @@ flowchart TB
 
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway<br/>read-only root, dropped capabilities,<br/>narrow syscall profile, workspace-only mount"]
-        FORGE["vault-forge<br/>87-pattern scanner +<br/>line classifier + CDR pipeline"]
+        FORGE["vault-skills<br/>87-pattern scanner +<br/>line classifier + CDR pipeline"]
         PIONEER["vault-social<br/>(parked)"]
         PROXY["vault-proxy<br/>L7 policy: allowlist, key injection,<br/>post-resolve IP check, request log"]
         EGRESS["vault-egress<br/>L3 policy: nftables RFC1918 drop,<br/>unbound DoT resolver (Quad9 + Cloudflare)"]
@@ -45,7 +45,7 @@ flowchart TB
     AGENT --> PROXY
     FORGE --> PROXY
     PIONEER -.-> PROXY
-    AGENT <-.->|"write-only volume<br/>(forge-deliveries)"| FORGE
+    AGENT <-.->|"write-only volume<br/>(skills-deliveries)"| FORGE
 
     PROXY --> EGRESS
     EGRESS --> ANTHROPIC
@@ -63,7 +63,7 @@ flowchart TB
     class ANTHROPIC,TELEGRAM,CLAWHUB external
 ```
 
-**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-forge` is the write-only `forge-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-social` indicates the parked status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment** — it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
+**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-skills` is the write-only `skills-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-social` indicates the parked status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment** — it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
 
 ---
 
@@ -83,7 +83,7 @@ flowchart TD
     subgraph T2["TIER 2 — INFRASTRUCTURE (perimeter)"]
         direction LR
         T2A["OpenTrApp container orchestrator"]
-        T2B["Five containers: vault-agent,<br/>vault-forge, vault-social,<br/>vault-proxy (L7), vault-egress (L3)"]
+        T2B["Five containers: vault-agent,<br/>vault-skills, vault-social,<br/>vault-proxy (L7), vault-egress (L3)"]
     end
 
     subgraph T3["TIER 3 — CONTAINED (inside perimeter)"]
@@ -121,8 +121,8 @@ flowchart LR
         AGENT[vault-agent]
     end
 
-    subgraph N2["network: forge-net (internal)"]
-        FORGE[vault-forge]
+    subgraph N2["network: skills-net (internal)"]
+        FORGE[vault-skills]
     end
 
     subgraph N3["network: social-net (internal)"]
@@ -134,13 +134,13 @@ flowchart LR
     end
 
     PROXY -- "agent-net" --> AGENT
-    PROXY -- "forge-net" --> FORGE
+    PROXY -- "skills-net" --> FORGE
     PROXY -- "social-net" --> PIONEER
     PROXY -->|public internet| INET[Public internet]
 
     AGENT -.->|"NO routed path"| FORGE
     AGENT -.->|"NO routed path"| PIONEER
-    AGENT <==>|"write-only volume<br/>forge-deliveries"| FORGE
+    AGENT <==>|"write-only volume<br/>skills-deliveries"| FORGE
 
     HOST[Host / GUI] --> PROXY
 
@@ -153,21 +153,21 @@ flowchart LR
     class INET inet
 ```
 
-**Reading guide.** Each container has its own `internal: true` network; only `vault-proxy` is dual-homed onto each. Solid arrows are the only routed paths; the dotted lines from `vault-agent` to `vault-forge` and `vault-social` are emphatically *not-paths* (drawn for clarity, to make the absence visible). The `==>` line is the `forge-deliveries` shared volume — a unidirectional file-system surface, not a network path. Public-internet egress is the single arrow from `vault-proxy`; no other container has a path out.
+**Reading guide.** Each container has its own `internal: true` network; only `vault-proxy` is dual-homed onto each. Solid arrows are the only routed paths; the dotted lines from `vault-agent` to `vault-skills` and `vault-social` are emphatically *not-paths* (drawn for clarity, to make the absence visible). The `==>` line is the `skills-deliveries` shared volume — a unidirectional file-system surface, not a network path. Public-internet egress is the single arrow from `vault-proxy`; no other container has a path out.
 
 ---
 
 ## 4. Agent-skill-loading flow (the CDR pipeline)
 
-Source of truth: [`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) and [`components/openskill-forge/tools/skill-cdr.sh`](../components/openskill-forge/tools/skill-cdr.sh).
+Source of truth: [`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) and [`components/openagent-skills/tools/skill-cdr.sh`](../components/openagent-skills/tools/skill-cdr.sh).
 
 ```mermaid
 sequenceDiagram
     participant U as User (via GUI)
     participant K as Trusted coordinator (Karen)
-    participant F as vault-forge
+    participant F as vault-skills
     participant P as vault-proxy
-    participant V as forge-deliveries volume
+    participant V as skills-deliveries volume
     participant A as vault-agent
 
     U->>K: "Install skill X from ClawHub"
@@ -200,7 +200,7 @@ sequenceDiagram
     K->>U: "Skill X installed at Split Shell"
 ```
 
-**Reading guide.** The path from ClawHub to `vault-agent` is one-way through the perimeter: `vault-proxy` mediates the egress; `vault-forge` runs the pipeline offline (no further network access during scan / classify / parse / rebuild); the `forge-deliveries` volume is the single delivery channel into `vault-agent`. The agent verifies the SHA-256 hash on every load; a side-loaded skill that bypassed forge will fail this check and be refused. The user explicit-approval gate (`"Skill X passed; install? (Y/N)"`) is the friction layer the architecture relies on for the Telegram-first, click-to-install case.
+**Reading guide.** The path from ClawHub to `vault-agent` is one-way through the perimeter: `vault-proxy` mediates the egress; `vault-skills` runs the pipeline offline (no further network access during scan / classify / parse / rebuild); the `skills-deliveries` volume is the single delivery channel into `vault-agent`. The agent verifies the SHA-256 hash on every load; a side-loaded skill that bypassed forge will fail this check and be refused. The user explicit-approval gate (`"Skill X passed; install? (Y/N)"`) is the friction layer the architecture relies on for the Telegram-first, click-to-install case.
 
 ---
 

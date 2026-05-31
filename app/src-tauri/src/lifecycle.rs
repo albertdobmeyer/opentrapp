@@ -27,7 +27,7 @@ pub const REDACTED: &str = "<REDACTED>";
 /// filter by `com.docker.compose.service` label so the same code works
 /// regardless of project name.
 const PERIMETER_CONTAINERS: [&str; 5] =
-    ["vault-agent", "vault-proxy", "vault-egress", "vault-forge", "vault-social"];
+    ["vault-agent", "vault-proxy", "vault-egress", "vault-skills", "vault-social"];
 
 // ─── State types (frontend-visible) ───────────────────────────────────
 

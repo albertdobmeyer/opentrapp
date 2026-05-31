@@ -124,7 +124,7 @@ Do not substitute alternates. If the project's positioning changes, update all t
 | Repo | Background | Style |
 |---|---|---|
 | opencli-container | Red | Centered text, solid bg |
-| openskill-forge | Blue | Centered text, solid bg |
+| openagent-skills | Blue | Centered text, solid bg |
 | openagent-social | Purple | Centered text, solid bg |
 | **opentrapp** | **Slate gradient + brand glow** | **Centered banner + tagline** |
 

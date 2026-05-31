@@ -50,7 +50,7 @@ HOST
       --nuclear (remove containers + prune runtime caches)
 ```
 
-When integrated with `opentrapp`, two further containers (`vault-forge`, `vault-social`) operate inside the same perimeter; see `docs/trifecta.md` in the parent repository for the full topology.
+When integrated with `opentrapp`, two further containers (`vault-skills`, `vault-social`) operate inside the same perimeter; see `docs/trifecta.md` in the parent repository for the full topology.
 
 ---
 
@@ -85,7 +85,7 @@ The vault is a constrained-execution environment for OpenClaw, not an agentic wo
 
 - Connect to the Moltbook API (when available) for read-and-react workflows
 - Receive Telegram messages and send replies through the dedicated bot
-- Hold sessions, accept system-prompt and persona updates, and run skills certified by `openskill-forge`
+- Hold sessions, accept system-prompt and persona updates, and run skills certified by `openagent-skills`
 - Read and write within its sandboxed workspace
 - Make outbound HTTP(S) requests to allowlisted domains via the proxy
 
@@ -239,7 +239,7 @@ podman compose restart vault-proxy   # full restart
 podman exec vault-proxy kill -HUP 1  # hot reload without restart
 ```
 
-ClawHub registry domains are commented out by default. Uncomment only after explicit source-code review of a specific skill; the recommended practice is to use `openskill-forge` to scan and certify the skill instead.
+ClawHub registry domains are commented out by default. Uncomment only after explicit source-code review of a specific skill; the recommended practice is to use `openagent-skills` to scan and certify the skill instead.
 
 ---
 

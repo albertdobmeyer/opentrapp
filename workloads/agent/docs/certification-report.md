@@ -88,7 +88,7 @@ Six defense layers verified across three shell levels:
 
 All three modules discovered via manifest-driven architecture:
 - `opencli-container` — role: runtime
-- `openskill-forge` — role: toolchain
+- `openagent-skills` — role: toolchain
 - `openagent-social` — role: network
 
 ---
@@ -98,7 +98,7 @@ All three modules discovered via manifest-driven architecture:
 | Module | Phases | Status | Key Artifacts |
 |--------|--------|--------|---------------|
 | opencli-container | 1-8 | Complete | 3 shell configs, 24-point verify, 13 security tests, tool manifest |
-| openskill-forge | 1-4 | Complete (Phase 5 deferred) | 87-pattern scanner, CDR pipeline, AI creation wizard, 25 certified skills |
+| openagent-skills | 1-4 | Complete (Phase 5 deferred) | 87-pattern scanner, CDR pipeline, AI creation wizard, 25 certified skills |
 | openagent-social | 1-5 | Complete | 25 injection patterns, pattern export with ReDoS hardening, 3 tools |
 
 ---

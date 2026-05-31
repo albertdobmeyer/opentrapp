@@ -73,7 +73,7 @@ GUI_CANONICAL_BANNED = [
 # `workloads/agent` submodule maintainer (out of parent scope to fix).
 PASS1_P0_ADDITIONS = [
     "opencli-container",
-    "openskill-forge",
+    "openagent-skills",
     "vault-agent",
     "vault-proxy",
     "split-shell",

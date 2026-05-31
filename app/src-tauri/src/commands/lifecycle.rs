@@ -136,7 +136,7 @@ pub fn retry_bootstrap(
 
     // Tear down any half-built perimeter from the failed attempt before
     // re-running. Without this, the partially-created containers collide on the
-    // next `podman run` (`name "vault-forge" is already in use`) and every retry
+    // next `podman run` (`name "vault-skills" is already in use`) and every retry
     // fails forever. Idempotent — safe when nothing is up.
     bring_perimeter_down_sync(&root);
 

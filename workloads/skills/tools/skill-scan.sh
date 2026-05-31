@@ -270,7 +270,7 @@ render_summary() {
 
 render_json() {
   echo '{'
-  echo '  "scanner": "openskill-forge-skill-scan",'
+  echo '  "scanner": "openagent-skills-skill-scan",'
   echo '  "version": "2.0.0",'
   echo "  \"patternCount\": ${#SCAN_PATTERNS[@]},"
   echo "  \"skillsScanned\": ${#skills[@]},"

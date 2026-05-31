@@ -87,7 +87,7 @@ if you want a clean chat.
 
 ## What this harness does NOT cover (yet)
 
-- **Skill-install flow** via forge (`vault-forge` integration). Writing a
+- **Skill-install flow** via forge (`vault-skills` integration). Writing a
   deliberately-malicious skill end-to-end was scoped out for the v1 pass;
   add as `test_skill_install.py` when ready.
 - **Long-running conversation memory probing.** Each test is a fresh

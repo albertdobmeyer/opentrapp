@@ -18,7 +18,7 @@ const STAGED_RESOURCES: &[&str] = &[
 /// dashboards on a clean machine without a source clone (discovered via
 /// `discover_first` → `resources/perimeter/manifests/<workload>/component.yml`).
 /// Post ADR-0013 monorepo consolidation: directories live under `workloads/`.
-const STAGED_MANIFESTS: &[&str] = &["agent", "forge", "social"];
+const STAGED_MANIFESTS: &[&str] = &["agent", "skills", "social"];
 
 fn stage_manifests() {
     let base = Path::new("resources/perimeter/manifests");

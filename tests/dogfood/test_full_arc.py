@@ -194,7 +194,7 @@ async def test_a4_install_skill_from_clawhub(bot, budget):
         f"Bot reply leaked banned terms: {_scan_banned(reply.text)}"
     )
     # Keystone post-conditions (verified out-of-band by operator, not asserted
-    # here — the harness can't probe the forge-deliveries volume from outside
+    # here — the harness can't probe the skills-deliveries volume from outside
     # the perimeter cleanly):
     #   - The skill appears under ~/.openclaw/skills/<name>/ inside vault-agent
     #   - A clearance-report.json accompanies it
@@ -418,7 +418,7 @@ def test_c3_state_recovering():
     """C3: recovering — kill 1 of 4 containers mid-session."""
     pytest.skip(
         "Operator-driven: see CHECKLIST.md §C3. Procedure: "
-        "(1) start app + wait for ok, (2) podman stop vault-forge, "
+        "(1) start app + wait for ok, (2) podman stop vault-skills, "
         "(3) wait ≤60s for the status_aggregator to re-evaluate, "
         "(4) screenshot the hero card."
     )

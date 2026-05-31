@@ -64,7 +64,7 @@ skip() {
 # ── Group 1: counted artefacts (offline) ────────────────────────────────────
 echo "── Group 1: counted artefacts (offline) ──"
 
-patterns=$(grep -cE "^\s*'(CRITICAL|HIGH|MEDIUM)\|" workloads/forge/tools/lib/patterns.sh 2>/dev/null || echo "0")
+patterns=$(grep -cE "^\s*'(CRITICAL|HIGH|MEDIUM)\|" workloads/skills/tools/lib/patterns.sh 2>/dev/null || echo "0")
 row "1. malicious-skill patterns" "87" "$patterns"
 
 # verify.sh uses two patterns: `check N "..." \\` (checks 1–13) and an inline

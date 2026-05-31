@@ -250,7 +250,7 @@ fi
 # ----------------------------------------------------------------------
 echo "=== Security-option sanity ==="
 
-for svc in vault-agent vault-proxy vault-forge vault-social; do
+for svc in vault-agent vault-proxy vault-skills vault-social; do
     out=$(podman inspect "$svc" --format '{{.HostConfig.ReadonlyRootfs}}|{{.HostConfig.SecurityOpt}}|{{.HostConfig.CapDrop}}' 2>&1)
     log_probe "compose-sanity" "PASS" "inspect: $svc" "$out"
 done

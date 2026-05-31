@@ -1,14 +1,14 @@
 # yaml-language-server: $schema=../../schemas/component.schema.json
 
 identity:
-  id: forge
+  id: skills
   name: OpenSkill Forge
   version: "0.1.0"
   description: Skill development workbench and security scanner
   role: toolchain
   icon: hammer
   color: "#3b82f6"
-  repo: https://github.com/albertdobmeyer/openskill-forge
+  repo: https://github.com/albertdobmeyer/openagent-skills
 
 status:
   states:

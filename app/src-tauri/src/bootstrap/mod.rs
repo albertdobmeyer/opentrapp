@@ -27,14 +27,14 @@ const TOTAL_STEPS: u8 = 7;
 /// The security shell — everything except the agent tenant. Per ADR-0009,
 /// `vault-egress` joined the shell (it must be healthy before `vault-proxy`).
 const SHELL_SERVICES: [&str; 4] =
-    ["vault-egress", "vault-proxy", "vault-forge", "vault-social"];
+    ["vault-egress", "vault-proxy", "vault-skills", "vault-social"];
 
 // ─── Public entry point ───────────────────────────────────────────────
 
 /// Guards against concurrent bootstrap runs. The app kicks off a bootstrap on
 /// launch *and* the wizard / retry path can trigger one; without this guard two
 /// runs race on `podman run`, colliding on container names
-/// (`name "vault-forge" is already in use`). Single-flight: a second spawn while
+/// (`name "vault-skills" is already in use`). Single-flight: a second spawn while
 /// one is in flight is ignored.
 static BOOTSTRAP_IN_FLIGHT: AtomicBool = AtomicBool::new(false);
 

@@ -106,7 +106,7 @@ This caveat does not apply to fresh installs — they get a clean slate from the
 - [ ] Send: *"Find a CSV-formatting skill on ClawHub and install it for me."*
 - [ ] **Wait** for the agent to do its thing — this can take 1–3 minutes (forge.scan + line classifier + CDR + clearance + delivery + agent reload).
 - [ ] **Out-of-band verification suite (the load-bearing checks):**
-  - `podman exec vault-forge ls /workspace/skills/<skill-name>/` — original artefact present in forge
+  - `podman exec vault-skills ls /workspace/skills/<skill-name>/` — original artefact present in forge
   - `podman exec vault-agent ls /home/vault/.openclaw/skills/<skill-name>/` — clean rebuilt artefact present in agent
   - `podman exec vault-agent cat /home/vault/.openclaw/skills/<skill-name>/.trust` — trust file exists
   - `podman exec vault-agent cat /home/vault/.openclaw/skills/<skill-name>/clearance-report.json | jq .scan.status` — should be "PASS" or "CLEAR"
@@ -167,10 +167,10 @@ For each: **screenshot the Home hero card** in each state, label the file `c<N>-
 
 ### C3 — `recovering`
 - [ ] Wait for `ok`.
-- [ ] `podman stop vault-forge` (single container).
+- [ ] `podman stop vault-skills` (single container).
 - [ ] Wait ≤60s for the status_aggregator to re-evaluate.
 - [ ] Screenshot. Look for: "Recovering..." copy. User not pushed to take action.
-- [ ] `podman start vault-forge` (restore).
+- [ ] `podman start vault-skills` (restore).
 
 ### C4 — `ok`
 - [ ] Wait for steady state.

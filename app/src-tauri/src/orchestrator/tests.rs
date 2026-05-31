@@ -264,18 +264,18 @@ commands:
     }
 
     #[test]
-    fn test_parse_forge_manifest() {
-        let manifest_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../workloads/forge/component.yml");
+    fn test_parse_skills_manifest() {
+        let manifest_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../workloads/skills/component.yml");
         if !std::path::Path::new(manifest_path).exists() {
             return;
         }
         let content = std::fs::read_to_string(manifest_path).unwrap();
         let manifest: Manifest = serde_yaml::from_str(&content).unwrap();
-        assert_eq!(manifest.identity.id, "forge");
+        assert_eq!(manifest.identity.id, "skills");
         assert_eq!(manifest.identity.role, Role::Toolchain);
         // Should have commands with options_from
         let has_options_from = manifest.commands.iter().any(|c| c.args.iter().any(|a| a.options_from.is_some()));
-        assert!(has_options_from, "forge should have commands with options_from");
+        assert!(has_options_from, "skills should have commands with options_from");
     }
 
     #[test]
@@ -351,7 +351,7 @@ prerequisites:
     fn test_real_manifests_have_prerequisites() {
         for (component, expect_container) in [
             ("agent", true),
-            ("forge", false),
+            ("skills", false),
             ("social", false),
         ] {
             let manifest_path = format!(

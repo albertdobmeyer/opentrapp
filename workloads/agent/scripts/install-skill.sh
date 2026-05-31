@@ -207,12 +207,12 @@ else:
     else
         echo ""
         echo -e "${RED}  ERROR: Clearance report required.${NC}"
-        echo "  Skills must be vetted by openskill-forge before installation."
+        echo "  Skills must be vetted by openagent-skills before installation."
         echo "  Option A (recommended): use the forge export directory, which bundles the report:"
-        echo "    cd components/openskill-forge && make export SKILL=$skill_name"
-        echo "    bash scripts/install-skill.sh ../openskill-forge/exports/$skill_name/"
+        echo "    cd components/openagent-skills && make export SKILL=$skill_name"
+        echo "    bash scripts/install-skill.sh ../openagent-skills/exports/$skill_name/"
         echo "  Option B: run certification and pass the report explicitly:"
-        echo "    cd components/openskill-forge && make certify SKILL=$skill_name"
+        echo "    cd components/openagent-skills && make certify SKILL=$skill_name"
         echo "    bash scripts/install-skill.sh $skill_dir --clearance <path-to-clearance-report.json>"
         exit 1
     fi
@@ -279,8 +279,8 @@ case "${1:-}" in
         echo "  $0 --list                                 List installed skills"
         echo "  $0 --remove <name>                        Remove an installed skill"
         echo ""
-        echo "Skills must be vetted by openskill-forge before installation."
-        echo "Run: cd components/openskill-forge && make scan-one SKILL=<name>"
+        echo "Skills must be vetted by openagent-skills before installation."
+        echo "Run: cd components/openagent-skills && make scan-one SKILL=<name>"
         exit 0
         ;;
     "")

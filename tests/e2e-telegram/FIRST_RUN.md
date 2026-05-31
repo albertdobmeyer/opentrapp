@@ -6,7 +6,7 @@
 
 - [x] `.env.test` populated at repo root (api_id, api_hash, phone, bot handle, session path)
 - [x] `~/.opentrapp/test-sessions/` exists with mode 700
-- [x] `podman ps` shows 5 containers up (vault-proxy, vault-forge, vault-social, vault-agent, vault-egress)
+- [x] `podman ps` shows 5 containers up (vault-proxy, vault-skills, vault-social, vault-agent, vault-egress)
 - [x] `@LogoTrappBot` paired to your Telegram user id (happened last night)
 - [x] Anthropic credits loaded ($5)
 - [x] vault-proxy patched to redact bot tokens in logs (submodule 4f5b560, parent 0ac3e9e)

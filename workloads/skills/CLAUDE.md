@@ -25,11 +25,11 @@ The forge makes all security decisions FOR the user and presents clear pass/fail
 
 ## This Repo Is a OpenTrApp Component
 
-This repo is integrated into [opentrapp](https://github.com/albertdobmeyer/opentrapp) as a git submodule under `components/openskill-forge/`. The file `component.yml` in this repo's root is the **manifest contract** that tells the OpenTrApp GUI how to discover, display, and control this component.
+This repo is integrated into [opentrapp](https://github.com/albertdobmeyer/opentrapp) as a git submodule under `components/openagent-skills/`. The file `component.yml` in this repo's root is the **manifest contract** that tells the OpenTrApp GUI how to discover, display, and control this component.
 
 ### Manifest Contract Rules
 - `component.yml` must always parse as valid YAML
-- `identity.id` must be `openskill-forge` (the GUI uses this as a stable key)
+- `identity.id` must be `openagent-skills` (the GUI uses this as a stable key)
 - `identity.role` must be `toolchain`
 - Commands with `options_from` must have working commands (e.g., `ls skills/` must work from repo root)
 - All `available_when` values must reference states declared in `status.states`
@@ -44,27 +44,27 @@ cargo test -p opentrapp          # Rust tests parse this manifest specifically
 
 ## Containerized Deployment (Perimeter Model)
 
-In production, forge runs inside **vault-forge** — a dedicated container in the OpenTrApp 4-container perimeter. All untrusted content (downloaded SKILL files) is processed inside this container, never on the user's host machine.
+In production, forge runs inside **vault-skills** — a dedicated container in the OpenTrApp 4-container perimeter. All untrusted content (downloaded SKILL files) is processed inside this container, never on the user's host machine.
 
 - **Containerfile** in this repo's root defines the image (~233MB, python:3.10-slim + bash toolchain)
-- **vault-forge** is one of 4 services in `compose.yml` at the opentrapp root
-- Runs on **forge-net** (internal network) — can reach vault-proxy but CANNOT reach vault-agent or vault-social
-- Certified skills delivered to agent via **forge-deliveries** shared volume (write in forge, read-only in agent)
+- **vault-skills** is one of 4 services in `compose.yml` at the opentrapp root
+- Runs on **skills-net** (internal network) — can reach vault-proxy but CANNOT reach vault-agent or vault-social
+- Certified skills delivered to agent via **skills-deliveries** shared volume (write in forge, read-only in agent)
 - Non-root user, capabilities dropped, 1GB memory limit
 - HTTPS through vault-proxy (mitmproxy CA cert shared via environment)
 
 | Context | How Forge Runs | When to Use |
 |---------|---------------|-------------|
 | **Development** | CLI/Makefile on host (`make scan`, `make test`) | Feature development, debugging, writing new patterns |
-| **Production** | Inside vault-forge container via compose | Deployed perimeter, user-facing product |
-| **Integration testing** | `podman compose up vault-forge` | Verifying container behavior and network isolation |
+| **Production** | Inside vault-skills container via compose | Deployed perimeter, user-facing product |
+| **Integration testing** | `podman compose up vault-skills` | Verifying container behavior and network isolation |
 
 The CLI/Makefile usage documented below still applies for development. The Containerfile copies this repo and runs the same bash toolchain.
 
 ## Directory Structure
 
 ```
-openskill-forge/
+openagent-skills/
 ├── Makefile                      Single entry point for all commands (~35 targets)
 ├── component.yml                 MANIFEST — OpenTrApp contract
 ├── skills/                       25 published skills
@@ -165,14 +165,14 @@ The original downloaded file is NEVER accessible. Binary: clean rebuild or disca
 
 This repo may exist as both a standalone clone and a submodule under opentrapp.
 
-**GitHub**: https://github.com/albertdobmeyer/openskill-forge
+**GitHub**: https://github.com/albertdobmeyer/openagent-skills
 
 After pushing changes from either location, sync the other:
 ```bash
 # In the other copy:
 git pull
 # If submodule copy, also update parent:
-cd ../.. && git add components/openskill-forge && git commit -m "Update openskill-forge ref"
+cd ../.. && git add components/openagent-skills && git commit -m "Update openagent-skills ref"
 ```
 
 ## Development Principles

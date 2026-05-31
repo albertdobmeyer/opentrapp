@@ -2,7 +2,7 @@
 
 > Audience: contributors and maintainers who need a straight answer to *"how
 > does a user actually install a skill in this thing today, and what's the
-> plan?"*. Companion to [`docs/forge-spotlight.md`](forge-spotlight.md) (the
+> plan?"*. Companion to [`docs/skills-spotlight.md`](skills-spotlight.md) (the
 > *why* forge exists) and [ADR-0003](adr/0003-content-disarm-reconstruction.md)
 > (the *how* of CDR). Pinned by `tests/orchestrator-check.sh §15`.
 
@@ -10,7 +10,7 @@
 
 | Phase | Where it works | What the user does | Status |
 |-------|----------------|--------------------|--------|
-| **v0.6 (today)** | Host CLI only | Power user runs `make` targets in `workloads/forge/`; certified skills land in the agent's workspace via the shared volume | **shipped** |
+| **v0.6 (today)** | Host CLI only | Power user runs `make` targets in `workloads/skills/`; certified skills land in the agent's workspace via the shared volume | **shipped** |
 | **v0.7 (interim GUI)** | Desktop app + bot | Bot says "I can't install skills directly — here is the exact command to paste into a terminal", or GUI shows a "Paste this command" panel; user runs it; new skill appears | designed below, not built |
 | **v0.8 (target)** | Desktop app, end-to-end | "Skills" page in user mode: search → candidate cards → one-click install with progress | sketched below, not designed |
 
@@ -33,25 +33,25 @@ Three independent observations forced the issue:
    blind installs. I'll review it with you before installing."* This is
    correct security posture but the user had nowhere to go from there.
    `docs/specs/2026-05-20-dogfood-full-arc-findings.md` records the gap.
-3. **Thread D's editorial spotlight** ([`docs/forge-spotlight.md`](forge-spotlight.md))
+3. **Thread D's editorial spotlight** ([`docs/skills-spotlight.md`](skills-spotlight.md))
    pitches forge as the supply-chain defence — and the inevitable follow-up
    question is "how do I, the user, actually trigger it?". Until this doc
    exists, the spotlight is hollow.
 
 ## What's shipped today (v0.6 path)
 
-`vault-forge` is fully functional via its host-side CLI. The shipped path:
+`vault-skills` is fully functional via its host-side CLI. The shipped path:
 
 ```bash
 # 1. Bring the perimeter up (or use the desktop app, which does the same).
 podman compose up -d
 
 # 2. Download + scan + rebuild a skill, end to end.
-cd workloads/forge
+cd workloads/skills
 bash tools/skill-cdr.sh <skill-name>
 
-# 3. The certified rebuild lands at workloads/forge/exports/<skill-name>/
-#    The agent reads it via the shared `forge-deliveries` volume (read-only
+# 3. The certified rebuild lands at workloads/skills/exports/<skill-name>/
+#    The agent reads it via the shared `skills-deliveries` volume (read-only
 #    from the agent's side).
 ```
 
@@ -77,7 +77,7 @@ The CONSTRAINTS.md heredoc is updated to be honest:
 
 > *"I can't install skills directly — installing requires running a setup
 > command from a terminal on this computer. If you can ask whoever set this
-> up to run `cd workloads/forge && bash tools/skill-cdr.sh <skill-name>`,
+> up to run `cd workloads/skills && bash tools/skill-cdr.sh <skill-name>`,
 > the new skill will appear in my workspace and I'll let you know when I can
 > see it."*
 
@@ -157,7 +157,7 @@ priority for v0.7.
 - **The bot's role is discovery, not execution.** It can suggest, it
   can refuse, it can emit a structured request for the GUI to surface —
   but it never reaches forge directly. The "agent cannot influence the
-  inspection" property of [`docs/forge-spotlight.md`](forge-spotlight.md)
+  inspection" property of [`docs/skills-spotlight.md`](skills-spotlight.md)
   depends on this.
 - **The CLI path is supported indefinitely.** Even after v0.8, the host
   CLI remains the documented power-user / CI / debugging path. Forge's
@@ -165,10 +165,10 @@ priority for v0.7.
 
 ## Cross-references
 
-- [`docs/forge-spotlight.md`](forge-spotlight.md) — why forge exists at all.
+- [`docs/skills-spotlight.md`](skills-spotlight.md) — why forge exists at all.
 - [ADR-0003](adr/0003-content-disarm-reconstruction.md) — CDR as the third
   supply-chain defence.
-- [`workloads/forge/README.md`](../workloads/forge/README.md) — the
+- [`workloads/skills/README.md`](../workloads/skills/README.md) — the
   toolchain reference for the CLI path.
 - [`config/orchestrator-workflows.yml`](../config/orchestrator-workflows.yml)
   `install-skill` — the workflow definition the v0.7 GUI banner will

@@ -8,14 +8,14 @@
 # Architecture (see docs/adr/0009-five-container-perimeter.md for the L7/L3 split;
 # docs/adr/0013-monorepo-consolidation.md for the 3 workloads / 2 infra layout):
 #   vault-agent  — agent runtime containment   (workloads/agent/)
-#   vault-forge  — supply-chain defense        (workloads/forge/)
+#   vault-skills  — supply-chain defense        (workloads/skills/)
 #   vault-social — social-content analysis     (workloads/social/, parked since 2026-05-03)
 #   vault-proxy  — L7 egress policy            (infra/proxy/)
 #   vault-egress — L3 egress policy            (infra/egress/)
 #
 # Network isolation:
 #   vault-agent  ↔ vault-proxy   (agent-net,  internal)
-#   vault-forge  ↔ vault-proxy   (forge-net,  internal)
+#   vault-skills  ↔ vault-proxy   (skills-net,  internal)
 #   vault-social ↔ vault-proxy   (social-net, internal)
 #   vault-proxy  ↔ vault-egress  (egress-net, internal)
 #   vault-egress ↔ internet      (external-net, bridged)
@@ -61,7 +61,7 @@ services:
       - proxy-ca:/opt/proxy-ca:ro
       - vault-data:/home/vault/.openclaw
       # Skills delivered by forge — read-only from agent's perspective
-      - forge-deliveries:/home/vault/workspace/skills:ro
+      - skills-deliveries:/home/vault/workspace/skills:ro
     environment:
       - HTTP_PROXY=http://vault-proxy:8080
       - HTTPS_PROXY=http://vault-proxy:8080
@@ -121,7 +121,7 @@ services:
       # ADR-0009 — vault-proxy LOSES external-net attachment. Internet
       # reachable only via vault-egress on egress-net.
       - agent-net
-      - forge-net
+      - skills-net
       - social-net
       - egress-net
     depends_on:
@@ -202,9 +202,9 @@ services:
   # INTO this container, scans with 87 MITRE patterns, rebuilds
   # from scratch. Clean output delivered to agent via shared volume.
   # ISOLATED from agent — agent cannot tamper with inspection.
-  vault-forge:
+  vault-skills:
     build:
-      context: ./workloads/forge
+      context: ./workloads/skills
       dockerfile: Containerfile
     security_opt:
       - no-new-privileges:true
@@ -213,10 +213,10 @@ services:
     mem_limit: 1g
     pids_limit: 128
     networks:
-      - forge-net
+      - skills-net
     volumes:
       # Certified skills are written here — agent reads them (ro)
-      - forge-deliveries:/app/exports
+      - skills-deliveries:/app/exports
       # Trust the proxy's CA cert for HTTPS interception
       - proxy-ca:/opt/proxy-ca:ro
     environment:
@@ -231,7 +231,7 @@ services:
     # Forge is a task runner, not a daemon. It starts, runs a scan/CDR
     # pipeline when triggered, and can idle between tasks.
     # Keep alive so the orchestrator can exec commands into it.
-    command: ["bash", "-c", "echo 'vault-forge ready' && sleep infinity"]
+    command: ["bash", "-c", "echo 'vault-skills ready' && sleep infinity"]
     restart: unless-stopped
 
   # ─── THE MONITORING STATION ─────────────────────────────────────
@@ -274,7 +274,7 @@ services:
 networks:
   agent-net:
     internal: true    # No default gateway — agent is trapped here
-  forge-net:
+  skills-net:
     internal: true    # No default gateway — forge is trapped here
   social-net:
     internal: true    # No default gateway — social is trapped here
@@ -304,5 +304,5 @@ volumes:
   # Forge writes certified skills here. Agent reads them.
   # This is the only data path between forge and agent —
   # no network connection, just a shared filesystem.
-  forge-deliveries:
+  skills-deliveries:
     driver: local

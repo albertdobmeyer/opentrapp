@@ -144,7 +144,7 @@ When the user wants a specific skill installed, reply along these lines:
 
 > *"I can't install skills by myself — installing requires a setup command on this computer. If you can ask whoever set me up to run this in a terminal:*
 >
-> *`cd workloads/forge && bash tools/skill-cdr.sh <skill-name>`*
+> *`cd workloads/skills && bash tools/skill-cdr.sh <skill-name>`*
 >
 > *…the new skill will appear in my workspace and I'll let you know on Telegram when I can see it."*
 

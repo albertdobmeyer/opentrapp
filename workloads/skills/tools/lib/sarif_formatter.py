@@ -49,9 +49,9 @@ def to_sarif(data: dict) -> dict:
             {
                 "tool": {
                     "driver": {
-                        "name": "openskill-forge-skill-scan",
+                        "name": "openagent-skills-skill-scan",
                         "version": "2.0.0",
-                        "informationUri": "https://github.com/albertdobmeyer/openskill-forge",
+                        "informationUri": "https://github.com/albertdobmeyer/openagent-skills",
                         "rules": list(rules.values()),
                     }
                 },

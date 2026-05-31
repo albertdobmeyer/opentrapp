@@ -22,7 +22,7 @@ workflows:
     shell_requirement: split
     steps:
       - id: download-and-scan
-        component: forge
+        component: skills
         workflow: safe-download
         args:
           skill_name: "{{input.skill_name}}"
@@ -54,8 +54,8 @@ workflows:
         component: agent
         workflow: secure-start
         abort_on_failure: true
-      - id: forge-setup
-        component: forge
+      - id: skills-setup
+        component: skills
         command: setup
         depends_on: vault-setup
       - id: social-setup
@@ -77,8 +77,8 @@ workflows:
       - id: vault-verify
         component: agent
         workflow: full-verify
-      - id: forge-verify
-        component: forge
+      - id: skills-verify
+        component: skills
         workflow: full-check
       - id: social-verify
         component: social

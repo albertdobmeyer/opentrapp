@@ -140,7 +140,7 @@ The `moltbook-ay` trojan used the classic pattern from the broader ClawHavoc cam
 
 **Mitigation:**
 - Vet any Moltbook-related skill before installing
-- Use `openskill-forge`'s offline scanner to check skills for malicious patterns
+- Use `openagent-skills`'s offline scanner to check skills for malicious patterns
 - Prefer the minimal, known-clean skills for Moltbook interaction
 - Or build your own minimal Moltbook client using the API directly
 

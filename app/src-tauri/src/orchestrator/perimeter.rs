@@ -258,7 +258,7 @@ mod tests {
         let spec = load().expect("embedded perimeter.yml must parse");
         assert_eq!(spec.version, 1);
         assert_eq!(spec.services.len(), 5, "five-container perimeter (ADR-0009)");
-        for svc in ["vault-agent", "vault-proxy", "vault-egress", "vault-forge", "vault-social"] {
+        for svc in ["vault-agent", "vault-proxy", "vault-egress", "vault-skills", "vault-social"] {
             assert!(spec.services.contains_key(svc), "missing service {svc}");
         }
     }

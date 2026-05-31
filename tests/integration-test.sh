@@ -45,7 +45,7 @@ section() { echo -e "\n${BLUE}=== $1 ===${NC}"; }
 cd "$REPO_ROOT"
 
 VAULT="workloads/agent"
-FORGE="workloads/forge"
+FORGE="workloads/skills"
 SOCIAL="workloads/social"
 
 # =============================================================================
@@ -448,7 +448,7 @@ fi
 
 # 5.2: Each component.yml declares the expected role
 ROLE_OK=true
-for pair in "opencli-container:runtime" "openskill-forge:toolchain" "openagent-social:network"; do
+for pair in "opencli-container:runtime" "openagent-skills:toolchain" "openagent-social:network"; do
   comp="${pair%%:*}"
   expected="${pair##*:}"
   actual=$(python3 -c "

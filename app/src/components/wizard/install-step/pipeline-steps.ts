@@ -80,11 +80,11 @@ export async function runBuildStep(
       (attempt) => { updateStep("build", { retryAttempt: attempt }); },
     );
   }
-  if (componentIds.has("forge")) {
+  if (componentIds.has("skills")) {
     await withRetry(
       async () => {
         appendLog("build", "→ Skill scanner: install");
-        await streamOneCommand("forge", "setup", "build");
+        await streamOneCommand("skills", "setup", "build");
       },
       2,
       (attempt) => { updateStep("build", { retryAttempt: attempt }); },
@@ -106,9 +106,9 @@ export async function runSafetyStep(
         appendLog("safety", "Running assistant security audit (24 checks)…");
         tasks.push(executeWorkflow("agent", "full-verify"));
       }
-      if (componentIds.has("forge")) {
+      if (componentIds.has("skills")) {
         appendLog("safety", "Running skill scanner pipeline check…");
-        tasks.push(executeWorkflow("forge", "full-check"));
+        tasks.push(executeWorkflow("skills", "full-check"));
       }
       const results = await Promise.all(tasks);
       for (const r of results as { status: string }[]) {

@@ -104,8 +104,8 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 **What it does not offer.**
 
-- **Pattern N+1 problem.** A scanner with $N$ patterns detects $N$ attacks. Pattern $N{+}1$ — a novel obfuscation, a new persistence mechanism, a category nobody has yet enumerated — slips through. The 87-pattern catalogue in `vault-forge` is the architectural floor, not the ceiling.
-- **Obfuscation tolerance.** Layered base-64, zero-width Unicode, HTML-comment-encoded payloads, and similar tricks defeat pure-text pattern matching. A line-level zero-trust classifier (also in `vault-forge`) addresses some of this; both layers stack against obfuscation but neither is sufficient.
+- **Pattern N+1 problem.** A scanner with $N$ patterns detects $N$ attacks. Pattern $N{+}1$ — a novel obfuscation, a new persistence mechanism, a category nobody has yet enumerated — slips through. The 87-pattern catalogue in `vault-skills` is the architectural floor, not the ceiling.
+- **Obfuscation tolerance.** Layered base-64, zero-width Unicode, HTML-comment-encoded payloads, and similar tricks defeat pure-text pattern matching. A line-level zero-trust classifier (also in `vault-skills`) addresses some of this; both layers stack against obfuscation but neither is sufficient.
 - **Same-shape-as-safe attacks.** A skill whose surface looks like a known-safe template but whose semantic effect is malicious passes a scanner that asks *"is the *artefact* safe?"*.
 
 **Differential against this work.** The forge pipeline applies all three layers — static scanner ($N$ = 87), zero-trust line classifier, *and* Content Disarm and Reconstruction. CDR ([`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md)) is the architectural innovation: rather than asking "is this artefact safe?" (an answer only as good as the catalogue of known badness), it asks "can the artefact's intent be re-expressed in a known-safe form?" — and if yes, the original artefact is discarded. CDR catches a strict superset of what the scanner catches and addresses categories the scanner cannot enumerate.

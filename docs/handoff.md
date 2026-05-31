@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-05-21 (full Karen E2E against v0.5.0; verdict SHIP-WITH-CAVEATS; work rescoped into construction zones)
 **Current phase:** v0.5.0 released + E2E-validated; v0.5.1 work rescoped into focused zones
-**Branch:** `main` at `136c76a` — **local commits NOT yet pushed** (`e52541f` retry fix, `2bd6edb` harness, `136c76a` findings+ADR-0012). Submodules clean: `opencli-container` @ `ebb5717`, `openskill-forge` @ `7aa51fd`, `openagent-social` @ `75fc40a`.
+**Branch:** `main` at `136c76a` — **local commits NOT yet pushed** (`e52541f` retry fix, `2bd6edb` harness, `136c76a` findings+ADR-0012). Submodules clean: `opencli-container` @ `ebb5717`, `openagent-skills` @ `7aa51fd`, `openagent-social` @ `75fc40a`.
 
 > ## ⟶ 2026-05-21 — E2E run + rescope (read this first)
 >
@@ -67,7 +67,7 @@ Multi-day rebrand from Lobster-TrApp → OpenTrApp landed end-to-end. **Done is 
 - Parent repo renamed: `albertdobmeyer/lobster-trapp` → `albertdobmeyer/opentrapp` (GitHub auto-redirects from the old URL)
 - 3 submodule repos renamed:
   - `openclaw-vault` → `opencli-container`
-  - `clawhub-forge` → `openskill-forge`
+  - `clawhub-forge` → `openagent-skills`
   - `moltbook-pioneer` → `openagent-social`
 - 4 release titles fixed (`Lobster-TrApp v0.x.y` → `OpenTrApp v0.x.y`)
 - 4 release bodies rewritten to use new repo URL + OpenTrApp branding; v0.4.0 has a "🪧 Note on naming" banner explaining its pre-rebrand asset filenames
@@ -78,7 +78,7 @@ Multi-day rebrand from Lobster-TrApp → OpenTrApp landed end-to-end. **Done is 
 
 ### Code, config, docs
 - 147+ files swept in PR #57 (parent rename + first-run migration script)
-- 3 submodules rebranded inside their own repos via PRs #4 / #3 / #1, then wired in PR #59 (`refactor(submodules): wire opencli-container / openskill-forge / openagent-social`)
+- 3 submodules rebranded inside their own repos via PRs #4 / #3 / #1, then wired in PR #59 (`refactor(submodules): wire opencli-container / openagent-skills / openagent-social`)
 - README + whitepaper + trifecta + ADRs + active specs reframed so **OpenClaw is the reference deployment, not the protagonist**. The architecture is described agent-agnostically; OpenClaw is named at upstream-link/CVE/feature-citation level, not in section titles or generic claims.
 - Five-commitments **Values** section added to README + landing page:
   1. Safety-first, safety-always
@@ -168,13 +168,13 @@ e48fc23 brand(banner): regenerate banner with full "OpenTrApp" wordmark rendered
 f9d9a87 docs(values): demote OpenClaw to specific example + add five-commitments values section
 9de26bb docs(reframe): generalize OpenClaw mentions to agent-agnostic framing
 e5b56c0 Merge pull request #59 from albertdobmeyer/rebrand-submodule-integration
-b5149c8 refactor(submodules): wire opencli-container / openskill-forge / openagent-social
+b5149c8 refactor(submodules): wire opencli-container / openagent-skills / openagent-social
 1d1a1cb Merge pull request #57 from albertdobmeyer/rebrand-opentrapp
 
 $ git submodule status
  75fc40a  components/openagent-social   (heads/main)
  190e66a  components/opencli-container  (heads/main)
- a2b0af8  components/openskill-forge    (heads/main)
+ a2b0af8  components/openagent-skills    (heads/main)
 ```
 
 Working tree clean. All test gates green at v0.4.1:

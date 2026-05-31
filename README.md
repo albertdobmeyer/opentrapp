@@ -47,10 +47,10 @@ Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled b
 ## Skill scanner & Content Disarm & Reconstruction
 
 The most novel piece of the project is the supply-chain defence in
-[`workloads/forge/`](workloads/forge/). The ClawHavoc study (2026-Q1) found
+[`workloads/skills/`](workloads/skills/). The ClawHavoc study (2026-Q1) found
 **11.9 % of published ClawHub skills were malicious** (341 of 2,857) — the
 gap container hardening doesn't close, because a malicious skill loaded by
-the agent runs *as part of* the agent's reasoning. `vault-forge` runs five
+the agent runs *as part of* the agent's reasoning. `vault-skills` runs five
 independent defences against that before any skill reaches the agent:
 
 1. **87-pattern static scanner**, MITRE ATT&CK-mapped, calibrated to skills
@@ -76,7 +76,7 @@ forge to a different agent's skill registry is a connector question, not a
 redesign.
 
 **Full narrative + the pitch to other CLI-agent maintainers:**
-[`docs/forge-spotlight.md`](docs/forge-spotlight.md).
+[`docs/skills-spotlight.md`](docs/skills-spotlight.md).
 
 ## Limitations
 
@@ -117,7 +117,7 @@ The runtime perimeter consists of five containers connected by per-service inter
 | Container | Role | Description |
 |-----------|------|-------------|
 | `vault-agent`   | Runtime containment | Read-only root filesystem, all Linux capabilities dropped, custom syscall profile, workspace mount only |
-| `vault-forge`   | Supply-chain defense | 87-pattern skill scanner, zero-trust line verifier, Content Disarm & Reconstruction pipeline |
+| `vault-skills`   | Supply-chain defense | 87-pattern skill scanner, zero-trust line verifier, Content Disarm & Reconstruction pipeline |
 | `vault-proxy`   | **L7 egress policy** | Domain allowlist, API-key injection, request logging, post-resolve destination-IP check. Holds API keys; **no internet attachment** (chains to `vault-egress`). |
 | `vault-social` | Social-content analysis | **Parked** — see *Limitations* |
 | `vault-egress`  | **L3 egress policy** | Kernel-level RFC1918 drop; pinned DoT resolver (Quad9 + Cloudflare); the *only* container with internet attachment. Holds `NET_ADMIN` but **no secrets**. |
@@ -131,7 +131,7 @@ flowchart LR
 
     subgraph PERIMETER["Perimeter"]
         AGENT[vault-agent]
-        FORGE[vault-forge]
+        FORGE[vault-skills]
         PIONEER["vault-social<br/>(parked)"]
         PROXY["vault-proxy<br/>(L7 policy)"]
         EGRESS["vault-egress<br/>(L3 policy + DoT)"]
@@ -206,7 +206,7 @@ opentrapp/                            (this repository — single monorepo)
 ├── app/                              Tauri 2 + React 18 desktop application (the orchestrator)
 ├── workloads/                        one directory per workload container
 │   ├── agent/                          → vault-agent  (runtime containment)
-│   ├── forge/                          → vault-forge  (supply-chain defense — skill scanner + CDR)
+│   ├── forge/                          → vault-skills  (supply-chain defense — skill scanner + CDR)
 │   └── social/                         → vault-social (agent-social-feed analysis — parked)
 ├── infra/                            shared infrastructure containers
 │   ├── proxy/                          → vault-proxy  (L7 egress policy)

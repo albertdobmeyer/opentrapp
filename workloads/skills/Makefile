@@ -13,7 +13,7 @@ setup: ## Set up the workbench (verify tools and directories)
 
 help: ## Show available commands
 	@echo ""
-	@echo "  openskill-forge workbench"
+	@echo "  openagent-skills workbench"
 	@echo "  ====================="
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \

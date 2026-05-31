@@ -24,13 +24,13 @@ The document is structured in three groups: counted artefacts (1–8), test-suit
 
 ## Group 1 — counted artefacts (offline)
 
-### 1. Eighty-seven malicious-skill patterns in `vault-forge`
+### 1. Eighty-seven malicious-skill patterns in `vault-skills`
 
 | Field | Value |
 |-------|-------|
 | Claim | The skill scanner contains 87 patterns mapped to MITRE ATT&CK techniques |
 | Source | [`README.md`](../README.md) "Capabilities", [`docs/whitepaper.md`](whitepaper.md) §6, [`docs/trifecta.md`](trifecta.md) §4.2 |
-| Command | `grep -cE "^\s*'(CRITICAL\|HIGH\|MEDIUM)\|" workloads/forge/tools/lib/patterns.sh` |
+| Command | `grep -cE "^\s*'(CRITICAL\|HIGH\|MEDIUM)\|" workloads/skills/tools/lib/patterns.sh` |
 | Expected output | `87` |
 | Runtime | < 1 s |
 
@@ -39,7 +39,7 @@ The `SCAN_PATTERNS` array in `patterns.sh` is the single source of truth for the
 To inspect the category breakdown:
 
 ```bash
-grep -oE "^\s*'(CRITICAL|HIGH|MEDIUM)\|[a-z_]+" workloads/forge/tools/lib/patterns.sh \
+grep -oE "^\s*'(CRITICAL|HIGH|MEDIUM)\|[a-z_]+" workloads/skills/tools/lib/patterns.sh \
   | awk -F'|' '{print $2}' | sort | uniq -c | sort -rn
 ```
 
@@ -99,7 +99,7 @@ awk '/const BANNED_TERMS = \[/,/^\];/' app/e2e/user-facing.spec.ts | grep -oE '"
 | Expected output | `5` |
 | Runtime | < 1 s |
 
-The five services are `vault-agent`, `vault-forge`, `vault-social`, `vault-proxy` (L7 policy), `vault-egress` (L3 policy + pinned DoT resolver). The social container is parked but its definition remains in the compose file (see [`docs/whitepaper.md`](whitepaper.md) §3.2). The L7/L3 split between vault-proxy and vault-egress is enforced by `tests/orchestrator-check.sh` §10 (no container holds both API keys and `NET_ADMIN`).
+The five services are `vault-agent`, `vault-skills`, `vault-social`, `vault-proxy` (L7 policy), `vault-egress` (L3 policy + pinned DoT resolver). The social container is parked but its definition remains in the compose file (see [`docs/whitepaper.md`](whitepaper.md) §3.2). The L7/L3 split between vault-proxy and vault-egress is enforced by `tests/orchestrator-check.sh` §10 (no container holds both API keys and `NET_ADMIN`).
 
 ### 6. Three trust tiers
 

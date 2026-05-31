@@ -168,7 +168,7 @@ jobs:
           declare -A CTX=(
             [vault-agent]=workloads/agent
             [vault-egress]=infra/egress
-            [vault-forge]=workloads/forge
+            [vault-skills]=workloads/skills
             [vault-social]=workloads/social
           )
 
@@ -184,7 +184,7 @@ jobs:
           } > images/image-digests.json
 
           first=1
-          for svc in vault-agent vault-egress vault-forge vault-social; do
+          for svc in vault-agent vault-egress vault-skills vault-social; do
             ctx="${CTX[$svc]}"
             img="${REG}/${svc}"
             echo "::group::build ${svc}"

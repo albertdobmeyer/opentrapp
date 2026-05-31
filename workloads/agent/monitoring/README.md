@@ -13,6 +13,6 @@ Both tools treat all input as **untrusted data** from inside the container. All 
 
 ## Skill Scanning Does NOT Belong Here
 
-Skill scanning is a **supply chain concern**, not a runtime concern. It lives in **openskill-forge** (`tools/skill-scan.sh`), which has a complete 87-pattern scanner with MITRE ATT&CK mapping, zero-trust verification, and SARIF output.
+Skill scanning is a **supply chain concern**, not a runtime concern. It lives in **openagent-skills** (`tools/skill-scan.sh`), which has a complete 87-pattern scanner with MITRE ATT&CK mapping, zero-trust verification, and SARIF output.
 
 See `docs/trifecta.md` in the opentrapp root for the full ownership matrix.

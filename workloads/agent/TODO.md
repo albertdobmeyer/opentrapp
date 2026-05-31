@@ -11,7 +11,7 @@ The following scripts exist but are placeholder implementations (~15 lines each,
 - [x] `monitoring/network-log-parser.py` — Implemented: anomaly detection on proxy logs (2026-03-27)
 - [x] `monitoring/session-report.py` — Implemented: post-session summary generator (2026-03-27)
 
-Skill scanning was removed from this module — it belongs in openskill-forge (`tools/skill-scan.sh`). See `monitoring/README.md`.
+Skill scanning was removed from this module — it belongs in openagent-skills (`tools/skill-scan.sh`). See `monitoring/README.md`.
 
 ---
 
@@ -32,7 +32,7 @@ These scripts exist for future Hyper-V and WSL isolation (beyond containers). Co
 - [x] rm removed from safeBins — Drift bug fixed, agent is constructive only (2026-03-30)
 - [x] askFallback removed — Documented in official docs but rejected by OpenClaw 2026.2.26 Zod schema (2026-03-30)
 - [x] Test scripts fixed — 12/12 pass (was 5/12), seccomp/escape/config tests rewritten (2026-03-30)
-- [x] `monitoring/skill-scanner.sh` — Removed (2026-03-27). Skill scanning lives in openskill-forge.
+- [x] `monitoring/skill-scanner.sh` — Removed (2026-03-27). Skill scanning lives in openagent-skills.
 - [x] Gear → Shell terminology — Migrated across all docs and configs (2026-03-27).
 - [x] `component.yml` config paths — Fixed: `allowlist.txt` → `proxy/allowlist.txt`, `openclaw-hardening.yml` → `config/openclaw-hardening.json5` (2026-03-27).
 - [x] `CLAUDE.md` profile claim — Updated from `minimal` to `coding` for Split Shell state (2026-03-27).

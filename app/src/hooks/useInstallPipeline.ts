@@ -136,7 +136,7 @@ export function useInstallPipeline({ update }: UseInstallPipelineOptions) {
     return () => {
       void stopStream("agent", "setup").catch(() => undefined);
       void stopStream("agent", "start").catch(() => undefined);
-      void stopStream("forge", "setup").catch(() => undefined);
+      void stopStream("skills", "setup").catch(() => undefined);
     };
   }, []);
 

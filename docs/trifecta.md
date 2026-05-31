@@ -34,7 +34,7 @@ TIER 1 — TRUSTED (host)
 
 TIER 2 — INFRASTRUCTURE (perimeter)
   OpenTrApp container orchestrator
-  5 containers: vault-agent, vault-forge, vault-social, vault-proxy, vault-egress
+  5 containers: vault-agent, vault-skills, vault-social, vault-proxy, vault-egress
     └─ L7 application policy lives in vault-proxy (credentials, allowlist)
     └─ L3 network policy lives in vault-egress (kernel RFC1918 drop, DoT resolver)
     └─ See ADR-0009 for the L7/L3 split rationale
@@ -63,7 +63,7 @@ flowchart TB
 
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway"]
-        FORGE["vault-forge<br/>87-pattern scanner + CDR"]
+        FORGE["vault-skills<br/>87-pattern scanner + CDR"]
         PIONEER["vault-social (parked)"]
         PROXY["vault-proxy<br/>L7 policy: allowlist, key injection"]
         EGRESS["vault-egress<br/>L3 policy: nftables drop, DoT resolver"]
@@ -96,7 +96,7 @@ HOST
     │     custom seccomp profile, workspace mount only
     │     Adaptive shell controls allowed tool surface
     │
-    ├── vault-forge
+    ├── vault-skills
     │     Skill scanner: 87 MITRE-ATT&CK-mapped patterns
     │     Content Disarm & Reconstruction (CDR) pipeline
     │     Untrusted skill files are downloaded into this container,
@@ -118,7 +118,7 @@ HOST
     │     - Payload-size limits + reflected-key redaction + request logging
     │     Holds API keys; NO direct internet attachment.
     │     Chains upstream to vault-egress for actual internet reach.
-    │     Internal network bridge between vault-agent, vault-forge, vault-social.
+    │     Internal network bridge between vault-agent, vault-skills, vault-social.
     │
     └── vault-egress
           L3 (network-layer) egress policy (ADR-0009 + ADR-0010):
@@ -139,11 +139,11 @@ Each internal container has its own internal network. `vault-proxy` bridges them
 | vault-agent         | vault-proxy       | Yes     | Filtered, key-injected, logged egress |
 | vault-proxy         | vault-egress      | Yes     | L7 → L3 chain (HTTP CONNECT upstream) |
 | vault-egress        | public internet   | Yes     | The only external attachment |
-| vault-agent         | vault-forge       | No      | Prevents the agent from influencing skill scans |
+| vault-agent         | vault-skills       | No      | Prevents the agent from influencing skill scans |
 | vault-agent         | vault-social     | No      | Prevents the agent from influencing feed analysis |
 | vault-agent         | host              | No      | No host-side filesystem or process visibility |
-| vault-forge         | vault-proxy       | Yes     | Skill download via filtered egress |
-| vault-forge         | vault-agent       | Volume only | Delivers certified skills via write-only mount |
+| vault-skills         | vault-proxy       | Yes     | Skill download via filtered egress |
+| vault-skills         | vault-agent       | Volume only | Delivers certified skills via write-only mount |
 | vault-social       | vault-proxy       | Yes     | Feed fetch via filtered egress |
 | vault-proxy         | public internet   | **No**  | Removed by ADR-0009 — chains through vault-egress |
 | host (GUI / coordinator) | vault-proxy  | Yes     | Management, monitoring, control |
@@ -165,9 +165,9 @@ The core runtime layer. Wraps the agent in a hardened container with a six-layer
 
 Verified at startup by a 24-point security check covering filesystem permissions, network reachability, capability set, mount layout, and tool-policy consistency.
 
-### 4.2 openskill-forge — supply-chain defense
+### 4.2 openagent-skills — supply-chain defense
 
-Runs as `vault-forge`, isolated from the agent at the network layer. Implements three defenses against malicious skills:
+Runs as `vault-skills`, isolated from the agent at the network layer. Implements three defenses against malicious skills:
 
 - **Static scanner** — 87 patterns mapped to MITRE ATT&CK techniques. Detects credential exfiltration, persistence, command-and-control, defense-evasion, and other indicators on the skill source itself.
 - **Zero-trust line verifier** — every line of every skill is classified before the rebuilt artifact is approved.
@@ -187,7 +187,7 @@ The single point of contact between the perimeter and the public internet. Imple
 - Replaces a placeholder string in outbound requests with the real key, so no other container ever has the literal key
 - Enforces a domain allowlist; requests to unallowlisted hosts are rejected with a logged 403
 - Records every request (timestamp, host, status, byte counts) to a structured log readable by the host
-- Bridges the otherwise-isolated networks of `vault-agent`, `vault-forge`, and `vault-social`
+- Bridges the otherwise-isolated networks of `vault-agent`, `vault-skills`, and `vault-social`
 
 ---
 
@@ -240,9 +240,9 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 | Layer | Owner | Container | Mitigation |
 |-------|-------|-----------|-----------|
-| Static scanner   | forge | vault-forge | 87 patterns mapped to MITRE ATT&CK |
-| Line verifier    | forge | vault-forge | Every line of every skill classified |
-| CDR rebuild      | forge | vault-forge | Original artifact discarded; rebuild from parsed intent |
+| Static scanner   | forge | vault-skills | 87 patterns mapped to MITRE ATT&CK |
+| Line verifier    | forge | vault-skills | Every line of every skill classified |
+| CDR rebuild      | forge | vault-skills | Original artifact discarded; rebuild from parsed intent |
 | Domain allowlist | vault | vault-proxy | ClawHub registry domains denied by default |
 | Network isolation| perimeter | compose network | Forge has no path to the agent except a write-only volume |
 | Container hardening | vault | vault-agent | Limits the blast radius of an undetected malicious skill |
@@ -264,7 +264,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 | Module             | Container                        | Maturity at v0.3.0 |
 |--------------------|----------------------------------|--------------------|
 | opencli-container     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
-| openskill-forge      | vault-forge                      | Active. 87-pattern scanner + CDR pipeline operational. |
+| openagent-skills      | vault-skills                      | Active. 87-pattern scanner + CDR pipeline operational. |
 | openagent-social   | vault-social                    | **Parked since 2026-05-03.** Code preserved; target API intermittent following Meta's acquisition of Moltbook. |
 | opentrapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
 
@@ -304,10 +304,10 @@ Each capability has exactly one owning module to avoid duplication or ambiguity.
 | Kill switch (graceful / hard / nuclear) | vault | host → container management |
 | Runtime monitoring (proxy logs, session audit) | vault | vault-proxy + host volume |
 | 24-point security verification | vault | vault-agent |
-| Skill scanning (87 MITRE-mapped patterns) | forge | vault-forge |
-| Skill linting and structure validation | forge | vault-forge |
-| Zero-trust line verification | forge | vault-forge |
-| Content Disarm & Reconstruction | forge | vault-forge |
+| Skill scanning (87 MITRE-mapped patterns) | forge | vault-skills |
+| Skill linting and structure validation | forge | vault-skills |
+| Zero-trust line verification | forge | vault-skills |
+| Content Disarm & Reconstruction | forge | vault-skills |
 | Feed-injection scanning (25 patterns) | pioneer (parked) | vault-social |
 | Workflow orchestration | opentrapp | GUI / CLI |
 | Cross-component workflows | opentrapp | `config/orchestrator-workflows.yml` |

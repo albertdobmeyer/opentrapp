@@ -30,7 +30,7 @@ In production, pioneer runs inside **vault-social** — a dedicated container in
 
 - **Containerfile** in this repo's root defines the image (~153MB, python:3.10-slim)
 - **vault-social** is one of 4 services in `compose.yml` at the opentrapp root
-- Runs on **social-net** (internal network) — can reach vault-proxy but CANNOT reach vault-agent or vault-forge
+- Runs on **social-net** (internal network) — can reach vault-proxy but CANNOT reach vault-agent or vault-skills
 - Agent never sees unfiltered feed data — scanning and filtering happen inside the container
 - Non-root user, capabilities dropped, 512MB memory limit
 - HTTPS through vault-proxy (mitmproxy CA cert shared via environment)

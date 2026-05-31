@@ -31,7 +31,7 @@ in one container that shouldn't be.
 | # | Container | Owns | Directory | Capabilities | Holds secrets? | Reaches internet? |
 |--:|-----------|------|-----------|--------------|----------------|-------------------|
 | 1 | `vault-agent`  | Agent runtime + Telegram gateway + loaded skills | `workloads/agent/`  | all dropped | no | only via vault-proxy |
-| 2 | `vault-forge`  | Skill scanner + CDR pipeline                     | `workloads/forge/`  | all dropped | no | only via vault-proxy |
+| 2 | `vault-skills`  | Skill scanner + CDR pipeline                     | `workloads/skills/`  | all dropped | no | only via vault-proxy |
 | 3 | `vault-social` | Agent-to-agent social-feed analyser *(parked)*   | `workloads/social/` | all dropped | no | only via vault-proxy |
 | 4 | `vault-proxy`  | **L7 policy** — allowlist, API-key injection, TLS interception, payload limits, response redaction | `infra/proxy/`  | unprivileged | **yes** (live API keys) | **no** — chains upstream |
 | 5 | `vault-egress` | **L3 policy** — kernel RFC1918/loopback drop, pinned DNS, masquerade | `infra/egress/` | `NET_ADMIN` only | no | **yes — only container with `external-net`** |
@@ -40,7 +40,7 @@ in one container that shouldn't be.
 
 ```
   agent-net ─┐
-  forge-net ─┼──→ vault-proxy ──→ egress-net ──→ vault-egress ──→ external-net
+  skills-net ─┼──→ vault-proxy ──→ egress-net ──→ vault-egress ──→ external-net
 social-net ─┘    (L7 policy:                     (L3 policy:
                    credentials,                    NET_ADMIN,
                    allowlist,                      kernel drop,

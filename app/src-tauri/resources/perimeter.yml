@@ -42,7 +42,7 @@ services:
     volumes:
       - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
       - { source: vault-data, target: /home/vault/.openclaw, kind: named }
-      - { source: forge-deliveries, target: /home/vault/workspace/skills, read_only: true, kind: named }
+      - { source: skills-deliveries, target: /home/vault/workspace/skills, read_only: true, kind: named }
     env:
       - { name: HTTP_PROXY, kind: literal, value: "http://vault-proxy:8080" }
       - { name: HTTPS_PROXY, kind: literal, value: "http://vault-proxy:8080" }
@@ -77,7 +77,7 @@ services:
     cap_add: [NET_BIND_SERVICE, SETUID, SETGID, CHOWN, DAC_OVERRIDE]
     mem_limit: 2g
     pids_limit: 128
-    networks: [agent-net, forge-net, social-net, egress-net]
+    networks: [agent-net, skills-net, social-net, egress-net]
     depends_on:
       - { service: vault-egress, condition: healthy }
     tmpfs:
@@ -124,17 +124,17 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # ─── vault-forge — supply-chain defense (skill scanner + CDR) ────
-  vault-forge:
-    image: { repo: "ghcr.io/albertdobmeyer/opentrapp/vault-forge", source: built }
+  # ─── vault-skills — supply-chain defense (skill scanner + CDR) ────
+  vault-skills:
+    image: { repo: "ghcr.io/albertdobmeyer/opentrapp/vault-skills", source: built }
     no_new_privileges: true
     cap_drop_all: true
     mem_limit: 1g
     pids_limit: 128
-    networks: [forge-net]
-    command: ["bash", "-c", "echo 'vault-forge ready' && sleep infinity"]
+    networks: [skills-net]
+    command: ["bash", "-c", "echo 'vault-skills ready' && sleep infinity"]
     volumes:
-      - { source: forge-deliveries, target: /app/exports, kind: named }
+      - { source: skills-deliveries, target: /app/exports, kind: named }
       - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
     env:
       - { name: HTTP_PROXY, kind: literal, value: "http://vault-proxy:8080" }
@@ -168,7 +168,7 @@ services:
 # ─── networks ────────────────────────────────────────────────────
 networks:
   agent-net:   { internal: true }
-  forge-net:   { internal: true }
+  skills-net:   { internal: true }
   social-net:  { internal: true }
   egress-net:  { internal: true, subnet: "10.230.0.0/24" }
   external-net: { internal: false }
@@ -178,4 +178,4 @@ volumes:
   - vault-proxy-logs
   - proxy-ca
   - vault-data
-  - forge-deliveries
+  - skills-deliveries

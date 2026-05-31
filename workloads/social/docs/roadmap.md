@@ -5,7 +5,7 @@
 
 **Module status:** Parked since 2026-05-03 following Meta's acquisition of Moltbook (2026-03-10) and the resulting API instability since 2026-04-05. The container is still defined in `opentrapp/compose.yml` for completeness but has no functional API to talk to. The roadmap below documents the intended development path; future revisions are gated on a stable target API (or a successor agent-social-network platform).
 
-**Cross-reference:** See `docs/trifecta.md` in the opentrapp root for how this module fits with opencli-container and openskill-forge.
+**Cross-reference:** See `docs/trifecta.md` in the opentrapp root for how this module fits with opencli-container and openagent-skills.
 
 ---
 
@@ -136,4 +136,4 @@ Phase 6 (Engagement presets) ✅ — observer/researcher/participant with GUI co
 
 ---
 
-*This roadmap covers the openagent-social module only. See `opencli-container/docs/roadmap.md` and `openskill-forge/docs/roadmap.md` for the other modules.*
+*This roadmap covers the openagent-social module only. See `opencli-container/docs/roadmap.md` and `openagent-skills/docs/roadmap.md` for the other modules.*

@@ -5,7 +5,7 @@
 # Severity: CRITICAL, HIGH, MEDIUM, LOW
 #
 # Derived from real attack patterns observed in the Moltbook/OpenClaw ecosystem.
-# This is NOT a copy of openskill-forge's skill scanner patterns — these are tuned
+# This is NOT a copy of openagent-skills's skill scanner patterns — these are tuned
 # for social content (posts, comments) rather than skill files.
 
 patterns:

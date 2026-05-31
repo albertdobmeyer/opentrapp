@@ -131,6 +131,6 @@ Phase 5 (CI/CD) <-- deferred (ClawHub API)
 
 ---
 
-*This roadmap covers the openskill-forge module only. See `opencli-container/docs/roadmap.md` and `openagent-social/docs/roadmap.md` for the other modules. See `docs/forge-identity-and-design.md` for the full identity, architecture, and design rationale.*
+*This roadmap covers the openagent-skills module only. See `opencli-container/docs/roadmap.md` and `openagent-social/docs/roadmap.md` for the other modules. See `docs/forge-identity-and-design.md` for the full identity, architecture, and design rationale.*
 
 *Last updated: 2026-04-07*

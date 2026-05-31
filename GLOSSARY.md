@@ -70,7 +70,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | Term | Definition |
 |---|---|
 | **Tier 1** (trusted) | Components running on the user's host with full filesystem and network access: the user, the trusted CLI coordinator (Claude Code or equivalent), and the OpenTrApp desktop GUI. Tier 1 makes decisions and issues commands. |
-| **Tier 2** (infrastructure) | The container perimeter. Enforces boundaries mechanically; does not make security decisions. Implemented by OpenTrApp's compose orchestration plus the five `vault-*` containers (`vault-agent`, `vault-forge`, `vault-social`, `vault-proxy`, `vault-egress`). |
+| **Tier 2** (infrastructure) | The container perimeter. Enforces boundaries mechanically; does not make security decisions. Implemented by OpenTrApp's compose orchestration plus the five `vault-*` containers (`vault-agent`, `vault-skills`, `vault-social`, `vault-proxy`, `vault-egress`). |
 | **Tier 3** (contained) | The OpenClaw agent process, Telegram gateway, loaded skills, and any fetched network content. Performs the work the user wants done, within the boundaries Tier 2 enforces. |
 | **CLI coordinator** | The reasoning model running on the host (Claude Code, Anthropic's Opus, or an equivalent CLI agent) that translates user intent into perimeter operations, reads scanner results, adjusts shell level by context, and surfaces security events to the user in plain language. The coordinator decides; the perimeter enforces. |
 
@@ -95,7 +95,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 |---|---|---|---|
 | `app/`             | Desktop application + perimeter orchestrator | none (host) | Active |
 | `workloads/agent/` | Runtime containment | `vault-agent` | Active |
-| `workloads/forge/` | Supply-chain defense (scanner, CDR) | `vault-forge` | Active |
+| `workloads/skills/` | Supply-chain defense (scanner, CDR) | `vault-skills` | Active |
 | `workloads/social/` | Agent-social-feed analysis | `vault-social` | **Parked** (Moltbook acquired by Meta 2026-03-10; re-aim to generalized agent-social shield tracked in MISSION.md Thread C) |
 | `infra/proxy/`     | L7 egress policy | `vault-proxy` | Active |
 | `infra/egress/`    | L3 egress policy | `vault-egress` | Active |
@@ -107,7 +107,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | Term | Definition |
 |---|---|
 | **OpenClaw** | The third-party autonomous AI agent runtime that OpenTrApp is designed to contain. Not a project of this repository; this software wraps it. |
-| **ClawHub** | The third-party skill registry for OpenClaw. Skills downloaded from ClawHub are scanned by `vault-forge` before reaching the agent. |
+| **ClawHub** | The third-party skill registry for OpenClaw. Skills downloaded from ClawHub are scanned by `vault-skills` before reaching the agent. |
 | **Moltbook** | A third-party AI-agent social network. Acquired by Meta on 2026-03-10. Originally the data source for `vault-social`. |
 | **ClawHavoc** | The 2026-Q1 study that classified 11.9 % of published ClawHub skills (341 of 2,857) as malicious. Cited as the empirical motivation for the supply-chain scanning layer. |
 
@@ -122,10 +122,10 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | **Proxy key injection** | The mechanism by which `vault-proxy` substitutes a placeholder string in outbound requests with the real API-key value. Implemented at the network layer. |
 | **Kill switch** | The three-level emergency stop: graceful stop (preserves data), hard kill (destroys containers and volumes), and full perimeter teardown (purges all state and prompts the user to rotate the API key). |
 | **Pairing** | The Telegram identity-verification step in which a chat counterpart proves their identity to the bot. Required after restart in Hard Shell. |
-| **Content Disarm & Reconstruction (CDR)** | The supply-chain defense pattern used by `openskill-forge`: the original downloaded artifact is held in a quarantine volume, parsed for its semantic intent, and rebuilt from scratch. The original file is discarded; only the rebuilt artifact reaches the agent. |
-| **Quarantine** | The temporary directory inside `vault-forge` where downloaded skills are held during scanning and reconstruction. Bound to the container; never reaches the host filesystem. |
+| **Content Disarm & Reconstruction (CDR)** | The supply-chain defense pattern used by `openagent-skills`: the original downloaded artifact is held in a quarantine volume, parsed for its semantic intent, and rebuilt from scratch. The original file is discarded; only the rebuilt artifact reaches the agent. |
+| **Quarantine** | The temporary directory inside `vault-skills` where downloaded skills are held during scanning and reconstruction. Bound to the container; never reaches the host filesystem. |
 | **Clearance report** | A signed JSON certificate generated after a skill passes the full pipeline (lint, scan, line verification, rebuild). Required by `vault-agent` before a skill is loaded. |
-| **Network isolation** | The compose topology's use of separate `internal: true` Docker networks. Each `vault-*` container has its own internal network; only `vault-proxy` bridges them. `vault-agent` cannot reach `vault-forge` or `vault-social` directly. |
+| **Network isolation** | The compose topology's use of separate `internal: true` Docker networks. Each `vault-*` container has its own internal network; only `vault-proxy` bridges them. `vault-agent` cannot reach `vault-skills` or `vault-social` directly. |
 
 ---
 

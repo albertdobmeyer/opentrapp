@@ -1,12 +1,12 @@
-# openskill-forge — the supply-chain defence
+# openagent-skills — the supply-chain defence
 
 > Audience: someone evaluating OpenTrApp's security claims, or any CLI-agent
 > maintainer (e.g. the opencode team) wondering whether the skill-loading
 > attack surface has a real answer. For the architecture context, see
 > [`docs/perimeter-explained.md`](perimeter-explained.md). For the full
 > threat model, see [`docs/threat-model.md`](threat-model.md). The
-> implementation lives at [`workloads/forge/`](../workloads/forge/) and runs
-> as the `vault-forge` container in the perimeter.
+> implementation lives at [`workloads/skills/`](../workloads/skills/) and runs
+> as the `vault-skills` container in the perimeter.
 
 ## The problem nobody else is solving
 
@@ -37,7 +37,7 @@ the gap forge is built to close.
 
 ## What forge does
 
-`vault-forge` is the third workload container in the
+`vault-skills` is the third workload container in the
 [five-container perimeter](perimeter-explained.md). It runs the skill scanner
 and the Content Disarm & Reconstruction (CDR) pipeline. The agent in
 `vault-agent` cannot reach it directly; it can only read the **certified
@@ -126,12 +126,12 @@ are rejected: blanket suppression of large file regions is the most common
        ┌─────────────────────────────────────────────────────┐
        │ vault-agent  (cannot reach the registry directly)   │
        │     ↓ requests download via the desktop app         │
-       │ desktop app routes download to vault-forge          │
+       │ desktop app routes download to vault-skills          │
        │ via vault-proxy (allowlisted destinations only)     │
        └────────────────────┬────────────────────────────────┘
                             ▼
        ┌─────────────────────────────────────────────────────┐
-       │ vault-forge  (separate container, no agent reach)   │
+       │ vault-skills  (separate container, no agent reach)   │
        │  1. scanner          (87 patterns, MITRE)           │
        │  2. injection check  (16 patterns)                  │
        │  3. line verifier    (every line classified)        │
@@ -186,12 +186,12 @@ Honest list of the residual risks documented in
 
 | Goal | How |
 |------|-----|
-| Read the patterns | [`workloads/forge/tools/lib/patterns.sh`](../workloads/forge/tools/lib/patterns.sh) |
-| Run the scanner self-test | `cd workloads/forge && make verify` |
-| Scan a SKILL.md file | `cd workloads/forge && make scan SKILL=path/to/SKILL.md` |
-| Run the CDR pipeline on a file | `cd workloads/forge && bash tools/skill-cdr.sh path/to/skill/` |
-| See the line-verifier output | `cd workloads/forge && make verify-all` |
-| Read the workload's own README | [`workloads/forge/README.md`](../workloads/forge/README.md) |
+| Read the patterns | [`workloads/skills/tools/lib/patterns.sh`](../workloads/skills/tools/lib/patterns.sh) |
+| Run the scanner self-test | `cd workloads/skills && make verify` |
+| Scan a SKILL.md file | `cd workloads/skills && make scan SKILL=path/to/SKILL.md` |
+| Run the CDR pipeline on a file | `cd workloads/skills && bash tools/skill-cdr.sh path/to/skill/` |
+| See the line-verifier output | `cd workloads/skills && make verify-all` |
+| Read the workload's own README | [`workloads/skills/README.md`](../workloads/skills/README.md) |
 | Read the original CDR ADR | [`docs/adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) |
 
 ## Where this came from
@@ -199,8 +199,8 @@ Honest list of the residual risks documented in
 forge began as a standalone toolchain for the project author's own ClawHub
 skills (twenty-five published skills are still included as the corpus the
 scanner is regression-tested against). The same scanner is now the engine of
-the `vault-forge` perimeter container, after the v0.5.0 monorepo
-consolidation lifted it to [`workloads/forge/`](../workloads/forge/) (see
+the `vault-skills` perimeter container, after the v0.5.0 monorepo
+consolidation lifted it to [`workloads/skills/`](../workloads/skills/) (see
 [ADR-0013](adr/0013-monorepo-consolidation.md)).
 
 The original ADR introducing CDR as the third-tier supply-chain defence —

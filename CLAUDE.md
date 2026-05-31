@@ -24,7 +24,7 @@ opentrapp/                              (this repository — public, monorepo)
 │   └── src-tauri/                      Rust backend
 ├── workloads/                          one directory per workload container
 │   ├── agent/                          → vault-agent       (runtime containment)
-│   ├── forge/                          → vault-forge       (skill scanner + CDR)
+│   ├── forge/                          → vault-skills       (skill scanner + CDR)
 │   └── social/                         → vault-social      (agent-social analysis; parked)
 ├── infra/                              shared infrastructure containers
 │   ├── proxy/                          → vault-proxy       (L7 egress policy)
@@ -49,7 +49,7 @@ opentrapp/                              (this repository — public, monorepo)
 | Workload | Directory | Container | Role | Status |
 |----------|-----------|-----------|------|--------|
 | Agent  | `workloads/agent/`  | `vault-agent`  | Runtime containment | Active |
-| Forge  | `workloads/forge/`  | `vault-forge`  | Supply-chain defense (skill scanner + CDR) | Active |
+| Forge  | `workloads/skills/`  | `vault-skills`  | Supply-chain defense (skill scanner + CDR) | Active |
 | Social | `workloads/social/` | `vault-social` | Agent-to-agent social-feed analysis | Parked since 2026-05-03 (Moltbook acquired by Meta 2026-03-10; re-aim to generalized agent-social shield is Thread C of MISSION.md) |
 
 ## 3. UI rule (non-negotiable)
@@ -155,7 +155,7 @@ podman compose down                     # stop perimeter
 Post [ADR-0013](docs/adr/0013-monorepo-consolidation.md): no submodules. Every workload
 and infra container lives in this repository. Edit, build, and commit in one place.
 
-The earlier three-submodule layout (`components/{opencli-container,openskill-forge,openagent-social}/`)
+The earlier three-submodule layout (`components/{opencli-container,openagent-skills,openagent-social}/`)
 was consolidated 2026-05-30 because the lifecycle test failed — the submodules co-shipped
 in lockstep with the parent and had zero external consumers. Three archived GitHub repos
 exist as a historical reference; do not push to them.

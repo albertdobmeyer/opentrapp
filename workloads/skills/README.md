@@ -1,20 +1,20 @@
 # forge — the supply-chain defence
 
 The skill-authoring toolchain and security scanner that runs as the
-`vault-forge` container in OpenTrApp's [five-container
+`vault-skills` container in OpenTrApp's [five-container
 perimeter](../../docs/perimeter-explained.md). Offline static analysis
 (87 patterns, MITRE ATT&CK-mapped), 16-pattern prompt-injection detector,
 line-level zero-trust verification, Content Disarm & Reconstruction, and a
 gated publishing pipeline.
 
-This directory lives at `workloads/forge/` in the OpenTrApp monorepo since
+This directory lives at `workloads/skills/` in the OpenTrApp monorepo since
 the v0.5.0 consolidation ([ADR-0013](../../docs/adr/0013-monorepo-consolidation.md)).
 The same toolchain doubles as the author's environment for publishing skills
 to [ClawHub](https://clawdhub.com); twenty-five published skills are included
 as the corpus the scanner is regression-tested against.
 
 **For the elevator pitch and the narrative on why CDR-for-skills is original
-work**, see [`docs/forge-spotlight.md`](../../docs/forge-spotlight.md) at the
+work**, see [`docs/skills-spotlight.md`](../../docs/skills-spotlight.md) at the
 repo root.
 
 **Author:** [@albertdobmeyer](https://github.com/albertdobmeyer)
@@ -177,12 +177,12 @@ make publish SKILL=my-tool VERSION=1.0.0
 
 ## Containerised deployment
 
-In production, the toolchain runs inside the `vault-forge` container of the OpenTrApp five-container perimeter. All untrusted content (downloaded skills) is processed inside the container and never reaches the host filesystem.
+In production, the toolchain runs inside the `vault-skills` container of the OpenTrApp five-container perimeter. All untrusted content (downloaded skills) is processed inside the container and never reaches the host filesystem.
 
 - The `Containerfile` in this repository's root defines the image (~233 MB, `python:3.10-slim` plus the bash toolchain).
-- `vault-forge` is one of five services in `compose.yml` at the opentrapp root (see [ADR-0009](../../docs/adr/0009-five-container-perimeter.md) for the topology).
-- It runs on `forge-net`, an internal network. It can reach `vault-proxy` for outbound HTTPS but cannot reach `vault-agent` or `vault-social` directly.
-- Certified skills are delivered to the agent through the `forge-deliveries` shared volume, which is writable in `vault-forge` and read-only in `vault-agent`.
+- `vault-skills` is one of five services in `compose.yml` at the opentrapp root (see [ADR-0009](../../docs/adr/0009-five-container-perimeter.md) for the topology).
+- It runs on `skills-net`, an internal network. It can reach `vault-proxy` for outbound HTTPS but cannot reach `vault-agent` or `vault-social` directly.
+- Certified skills are delivered to the agent through the `skills-deliveries` shared volume, which is writable in `vault-skills` and read-only in `vault-agent`.
 - Non-root user, capabilities dropped, 1 GB memory limit, custom seccomp profile.
 
 The CLI/Makefile usage documented above remains the supported interface for development. The `Containerfile` copies this repository into the image and runs the same bash toolchain.
@@ -240,10 +240,10 @@ The toolchain's design was informed by ecosystem analysis. The following researc
 ## Repository structure
 
 ```
-openskill-forge/
+openagent-skills/
 ├── Makefile                       single entry point for all commands (~35 targets)
 ├── component.yml                  OpenTrApp manifest contract
-├── Containerfile                  vault-forge container image
+├── Containerfile                  vault-skills container image
 ├── skills/                        25 reference skills
 ├── tools/
 │   ├── lib/

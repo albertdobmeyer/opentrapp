@@ -195,7 +195,7 @@ The three modules cover the OpenClaw / ClawHub / Moltbook ecosystem:
 | Repository | Role | Description |
 |---|---|---|
 | [`opencli-container`](https://github.com/albertdobmeyer/opencli-container) | Runtime containment | Hardened container, proxy-side API-key injection, domain allowlist, three-level kill switch |
-| [`openskill-forge`](https://github.com/albertdobmeyer/openskill-forge) | Supply-chain defence | Offline linter, 87-pattern scanner, zero-trust line verifier, gated publishing pipeline |
+| [`openagent-skills`](https://github.com/albertdobmeyer/openagent-skills) | Supply-chain defence | Offline linter, 87-pattern scanner, zero-trust line verifier, gated publishing pipeline |
 | `openagent-social` *(this repository)* | Social-content analysis | Feed scanning for prompt-injection patterns. **Parked since 2026-05-03**; see banner above. |
 
 ---

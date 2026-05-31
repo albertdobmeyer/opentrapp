@@ -8,7 +8,7 @@ This handoff is scoped to the code-quality workstream. The general session-state
 ## 1. Repository state at the start of this workstream
 
 - **Branch:** `main` clean and aligned with `origin/main` at `9fee9b8` ("fix(ci): replace github/codeql-action tag-object SHA with commit SHA (#17)").
-- **Submodules:** synchronised against the recorded pointers (`openskill-forge`, `openagent-social`, `opencli-container`).
+- **Submodules:** synchronised against the recorded pointers (`openagent-skills`, `openagent-social`, `opencli-container`).
 - **Open pull requests:** zero.
 - **Preserved local-only branch:** `feat/brand-assets-blue-gradient` carries an unmerged commit (`596e8d2`) introducing the gradient FontLogo, the OpenTrApp-Blue accent token, and supporting render scripts. Either land it as a PR or delete it deliberately; do not let it drift further out of date.
 

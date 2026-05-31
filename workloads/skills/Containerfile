@@ -2,11 +2,11 @@
 # Part of the OpenTrApp perimeter — handles untrusted SKILL files
 # inside the container, never on the host.
 #
-# Build:  podman build -t vault-forge -f Containerfile .
-# Or:     docker build -t vault-forge -f Containerfile .
+# Build:  podman build -t vault-skills -f Containerfile .
+# Or:     docker build -t vault-skills -f Containerfile .
 #
-# Run:    podman run --rm vault-forge make scan SKILL=api-dev
-#         podman run --rm vault-forge make verify SKILL=api-dev
+# Run:    podman run --rm vault-skills make scan SKILL=api-dev
+#         podman run --rm vault-skills make verify SKILL=api-dev
 
 FROM python:3.10-slim
 

@@ -229,7 +229,7 @@ else
 fi
 
 # Each workload must have a component.yml manifest.
-for workload in agent forge social; do
+for workload in agent skills social; do
   if [ -f "workloads/$workload/component.yml" ]; then
     pass "Workload manifest present: $workload"
   else
@@ -551,7 +551,7 @@ python3 - <<'PY' 2>/dev/null && pass "compose.yml declares five perimeter servic
 import sys, yaml
 with open('compose.yml') as f:
     c = yaml.safe_load(f)
-expected = {'vault-agent', 'vault-proxy', 'vault-forge', 'vault-social', 'vault-egress'}
+expected = {'vault-agent', 'vault-proxy', 'vault-skills', 'vault-social', 'vault-egress'}
 got = set(c.get('services', {}).keys())
 sys.exit(0 if got == expected else 1)
 PY
@@ -741,14 +741,14 @@ PY
 # =============================================================================
 section "14. Forge spotlight (MISSION Thread D)"
 # =============================================================================
-# openskill-forge is the most novel piece of the project (per MISSION.md
+# openagent-skills is the most novel piece of the project (per MISSION.md
 # Thread D). It got buried under UI/UX issues during the v0.5.0 push. These
 # checks pin the editorial work that lifts it back into view, so the spotlight
 # can't quietly decay back into a one-line mention in the next refactor.
 
-python3 - <<'PY' 2>/dev/null && pass "docs/forge-spotlight.md exists and is substantive" || fail "docs/forge-spotlight.md missing or too thin — Thread D spotlight isn't shipped"
+python3 - <<'PY' 2>/dev/null && pass "docs/skills-spotlight.md exists and is substantive" || fail "docs/skills-spotlight.md missing or too thin — Thread D spotlight isn't shipped"
 import sys, pathlib
-p = pathlib.Path('docs/forge-spotlight.md')
+p = pathlib.Path('docs/skills-spotlight.md')
 if not p.exists():
     sys.exit(1)
 text = p.read_text()
@@ -760,27 +760,27 @@ ok = (
     and 'Content Disarm' in text
     and ('MITRE' in text or 'ATT&CK' in text)
     and 'ClawHavoc' in text
-    and 'workloads/forge' in text
+    and 'workloads/skills' in text
 )
 sys.exit(0 if ok else 1)
 PY
 
-python3 - <<'PY' 2>/dev/null && pass "README has a dedicated forge spotlight section linked to the narrative doc" || fail "README lacks a dedicated forge spotlight section or doesn't link to docs/forge-spotlight.md (Thread D)"
+python3 - <<'PY' 2>/dev/null && pass "README has a dedicated forge spotlight section linked to the narrative doc" || fail "README lacks a dedicated forge spotlight section or doesn't link to docs/skills-spotlight.md (Thread D)"
 import re, sys, pathlib
 readme = pathlib.Path('README.md').read_text()
 # Require a Markdown heading whose text contains either 'forge' or 'skill scanner'
-# (case-insensitive) AND the section links to forge-spotlight.md somewhere nearby.
+# (case-insensitive) AND the section links to skills-spotlight.md somewhere nearby.
 # Simplest pin: a heading on a line containing forge/scanner concepts, and the
 # doc reference appears somewhere in README.
 has_heading = bool(re.search(r'^#+ .*(forge|skill scan|skill scanner|content disarm).*$',
                               readme, re.IGNORECASE | re.MULTILINE))
-links_doc = 'forge-spotlight.md' in readme or 'docs/forge-spotlight.md' in readme
+links_doc = 'skills-spotlight.md' in readme or 'docs/skills-spotlight.md' in readme
 sys.exit(0 if (has_heading and links_doc) else 1)
 PY
 
-python3 - <<'PY' 2>/dev/null && pass "workloads/forge/README.md is monorepo-aware (no stale 'four containers' or dead-repo links)" || fail "workloads/forge/README.md still reads as a separate submodule repo — update for the monorepo layout (Thread D)"
+python3 - <<'PY' 2>/dev/null && pass "workloads/skills/README.md is monorepo-aware (no stale 'four containers' or dead-repo links)" || fail "workloads/skills/README.md still reads as a separate submodule repo — update for the monorepo layout (Thread D)"
 import sys, pathlib, re
-text = pathlib.Path('workloads/forge/README.md').read_text()
+text = pathlib.Path('workloads/skills/README.md').read_text()
 problems = []
 # Stale container count (we are five since ADR-0009).
 if re.search(r'four containers|four services|4-container perimeter', text, re.IGNORECASE):
@@ -816,7 +816,7 @@ text = p.read_text()
 ok = (
     len(text) > 2000
     and 'current state' in text.lower()
-    and 'workloads/forge' in text
+    and 'workloads/skills' in text
     and ('interim' in text.lower() or 'today' in text.lower())
     and ('GUI' in text or 'gui' in text or 'desktop app' in text.lower())
     # The doc must explicitly name the v0.6 / interim path so we don't
@@ -839,6 +839,33 @@ promises_vaporware = bool(
     or "library-browse action" in body
 )
 sys.exit(0 if not promises_vaporware else 1)
+PY
+
+# =============================================================================
+section "16. forge → skills rename complete (M0)"
+# =============================================================================
+# After the v0.6 M0 naming sweep, NO live file (excluding immutable history:
+# docs/adr/, docs/archive/, dated docs/specs, historical e2e findings/verdicts,
+# and the v0.6 specs that describe the rename) may reference the old tokens.
+
+python3 - <<'PY' 2>/dev/null && pass "no live file references vault-forge / forge-net / forge-deliveries / workloads/forge" || fail "the forge→skills rename is incomplete — a live file still references an old forge token (M0)"
+import subprocess, sys, re
+# git grep the old tokens, then drop historical/immutable paths.
+out = subprocess.run(
+    ["git", "grep", "-lE", r"vault-forge|forge-net|forge-deliveries|workloads/forge"],
+    capture_output=True, text=True,
+).stdout.splitlines()
+EXCLUDE = re.compile(
+    r"^(docs/adr/|docs/archive/|docs/release-notes|docs/specs/2026-|"
+    r"docs/specs/ui-rebuild-2026|docs/specs/v0\.4-shell|docs/specs/v0\.6/|"
+    r"tests/e2e-telegram/VERDICT-|tests/e2e-telegram/direct_probing/findings-|"
+    r"tests/orchestrator-check\.sh)"  # this check holds the tokens as its search pattern
+)
+offenders = [f for f in out if not EXCLUDE.match(f)]
+if offenders:
+    sys.stderr.write("offending files:\n  " + "\n  ".join(offenders) + "\n")
+    sys.exit(1)
+sys.exit(0)
 PY
 
 # =============================================================================

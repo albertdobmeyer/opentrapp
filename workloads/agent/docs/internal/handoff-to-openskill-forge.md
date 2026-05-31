@@ -1,11 +1,11 @@
-# Handoff Document: opencli-container → openskill-forge
+# Handoff Document: opencli-container → openagent-skills
 
 **Date:** 2026-04-01
 **From:** opencli-container (certified, all 8 phases complete)
-**To:** openskill-forge (next module to polish)
+**To:** openagent-skills (next module to polish)
 
-> **NOTE (2026-04-02):** The authoritative design document for openskill-forge is now
-> `openskill-forge/docs/forge-identity-and-design.md`. It defines the forge's identity
+> **NOTE (2026-04-02):** The authoritative design document for openagent-skills is now
+> `openagent-skills/docs/forge-identity-and-design.md`. It defines the forge's identity
 > (Shield/Anvil/Stamp), the CDR innovation, the 5-phase roadmap, and all resolved
 > design decisions. The roadmap below is superseded by that document's Phase 2-3.
 
@@ -35,9 +35,9 @@ Built a complete zero-trust security harness for the OpenClaw AI agent with thre
 
 ---
 
-## What openskill-forge Needs to Do
+## What openagent-skills Needs to Do
 
-### Per the Forge Roadmap (`components/openskill-forge/docs/roadmap.md`)
+### Per the Forge Roadmap (`components/openagent-skills/docs/roadmap.md`)
 
 **Phase 1: Housekeeping**
 - Remove duplicate `docs/security-report.md` (keep `docs/research/` version)
@@ -91,7 +91,7 @@ The vault's `install-skill.sh` validates this JSON structure:
 
 ---
 
-## What NOT to Do in openskill-forge
+## What NOT to Do in openagent-skills
 
 - Do not add runtime isolation logic (that's vault's job)
 - Do not add network proxying or container orchestration (vault's job)
@@ -106,7 +106,7 @@ The vault's `install-skill.sh` validates this JSON structure:
 |---|---|---|
 | Trifecta overview | `opentrapp/docs/trifecta.md` | How all three modules work together |
 | Vault roadmap | `opencli-container/docs/roadmap.md` | All 8 phases (complete) |
-| Forge roadmap | `openskill-forge/docs/roadmap.md` | 5 phases (created 2026-03-27) |
+| Forge roadmap | `openagent-skills/docs/roadmap.md` | 5 phases (created 2026-03-27) |
 | Pioneer roadmap | `openagent-social/docs/roadmap.md` | 5 phases (created 2026-03-27) |
 | Skill installation spec | `opencli-container/docs/specs/2026-03-30-skill-installation-path.md` | Clearance report format |
 | Tool manifest | `opencli-container/config/tool-manifest.yml` | All 26 tools with injection vectors |
@@ -132,7 +132,7 @@ These were established during vault development and apply to all modules:
 ## Current System State
 
 - **opencli-container:** Soft Shell active, Hum alive on Telegram, 24/24 verify PASS
-- **openskill-forge:** 25 published skills, 87-pattern scanner, untouched since 2026-03-27
+- **openagent-skills:** 25 published skills, 87-pattern scanner, untouched since 2026-03-27
 - **openagent-social:** 3 tools (feed scanner, census, identity checklist), untouched since 2026-03-27
 - **opentrapp:** GUI framework exists, submodule references updated
 

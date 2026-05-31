@@ -1035,41 +1035,41 @@ mod tests {
 
     /// LIVE: drives the real arg builders against podman to prove the spec
     /// actually produces a working `podman run` (string assertions can't catch
-    /// a flag podman rejects). Uses vault-forge — no creds, no dependencies.
-    /// Requires `ghcr.io/albertdobmeyer/opentrapp/vault-forge:latest` present.
+    /// a flag podman rejects). Uses vault-skills — no creds, no dependencies.
+    /// Requires `ghcr.io/albertdobmeyer/opentrapp/vault-skills:latest` present.
     /// Run with: `cargo test --lib -- --ignored live_forge_brings_up`.
     #[test]
     #[ignore]
     fn live_forge_brings_up_and_tears_down() {
         let spec = perimeter::load().unwrap();
-        let svc = &spec.services["vault-forge"];
+        let svc = &spec.services["vault-skills"];
         let env = BTreeMap::new();
         let res = std::env::temp_dir().join("opentrapp-live-test");
         let ctx = ctx_with(&env, &res);
-        let image = "ghcr.io/albertdobmeyer/opentrapp/vault-forge:latest";
+        let image = "ghcr.io/albertdobmeyer/opentrapp/vault-skills:latest";
 
         // Clean slate.
-        let _ = podman(&["rm".into(), "--force".into(), "--ignore".into(), "vault-forge".into()], Duration::from_secs(20));
-        let _ = podman(&["network".into(), "rm".into(), "--force".into(), net_name("forge-net")], Duration::from_secs(20));
+        let _ = podman(&["rm".into(), "--force".into(), "--ignore".into(), "vault-skills".into()], Duration::from_secs(20));
+        let _ = podman(&["network".into(), "rm".into(), "--force".into(), net_name("skills-net")], Duration::from_secs(20));
 
         // Real network create + real run args.
-        assert!(ok(&podman(&network_create_args("forge-net", true, None), Duration::from_secs(20)).unwrap()));
-        let args = container_run_args("vault-forge", svc, image, &ctx).unwrap();
+        assert!(ok(&podman(&network_create_args("skills-net", true, None), Duration::from_secs(20)).unwrap()));
+        let args = container_run_args("vault-skills", svc, image, &ctx).unwrap();
         let run = podman(&args, Duration::from_secs(60)).unwrap();
         assert!(ok(&run), "podman run rejected the generated args");
 
         // It must be running, and carry our label.
-        assert!(is_running("vault-forge"), "vault-forge not running after up");
+        assert!(is_running("vault-skills"), "vault-skills not running after up");
         let labeled = podman(
-            &["ps".into(), "--filter".into(), "label=io.opentrapp.service=vault-forge".into(), "--format".into(), "{{.Names}}".into()],
+            &["ps".into(), "--filter".into(), "label=io.opentrapp.service=vault-skills".into(), "--format".into(), "{{.Names}}".into()],
             Duration::from_secs(10),
         ).unwrap();
-        assert!(String::from_utf8_lossy(&labeled.stdout).contains("vault-forge"));
+        assert!(String::from_utf8_lossy(&labeled.stdout).contains("vault-skills"));
 
         // Tear down.
-        assert!(ok(&podman(&["rm".into(), "--force".into(), "vault-forge".into()], Duration::from_secs(20)).unwrap()));
-        let _ = podman(&["network".into(), "rm".into(), "--force".into(), net_name("forge-net")], Duration::from_secs(20));
-        assert!(!is_running("vault-forge"), "vault-forge still running after down");
+        assert!(ok(&podman(&["rm".into(), "--force".into(), "vault-skills".into()], Duration::from_secs(20)).unwrap()));
+        let _ = podman(&["network".into(), "rm".into(), "--force".into(), net_name("skills-net")], Duration::from_secs(20));
+        assert!(!is_running("vault-skills"), "vault-skills still running after down");
     }
 
     /// LIVE: the digest-tamper guard, end to end. A real local image, an overlay
@@ -1082,7 +1082,7 @@ mod tests {
         let overlay_json = r#"{
           "version": 1, "tag": "vtest",
           "signer_identity_regexp": "x", "oidc_issuer": "y",
-          "images": { "ghcr.io/albertdobmeyer/opentrapp/vault-forge": { "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source": "built", "tar": "vault-forge.tar" } }
+          "images": { "ghcr.io/albertdobmeyer/opentrapp/vault-skills": { "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "source": "built", "tar": "vault-skills.tar" } }
         }"#;
         let verifier = BundleVerifier {
             overlay: ImageDigestOverlay::parse(overlay_json).unwrap(),
@@ -1090,7 +1090,7 @@ mod tests {
         };
         let img = ImageRef {
             source: ImageSource::Built,
-            repo: Some("ghcr.io/albertdobmeyer/opentrapp/vault-forge".into()),
+            repo: Some("ghcr.io/albertdobmeyer/opentrapp/vault-skills".into()),
             r#ref: None,
         };
         let err = verifier.verify_and_resolve(&img).unwrap_err();

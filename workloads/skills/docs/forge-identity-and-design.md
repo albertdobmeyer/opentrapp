@@ -2,9 +2,9 @@
 
 ## Context
 
-This document defines what openskill-forge IS, what it needs to become, and serves as a complete handoff for a new Claude instance to pick up development. It was produced after a thorough audit of all existing documentation, code, and cross-repo architecture across the opentrapp ecosystem.
+This document defines what openagent-skills IS, what it needs to become, and serves as a complete handoff for a new Claude instance to pick up development. It was produced after a thorough audit of all existing documentation, code, and cross-repo architecture across the opentrapp ecosystem.
 
-**Problem:** The openskill-forge documentation describes itself inconsistently — sometimes as a "skill development workbench," sometimes as a "security scanner," sometimes as a "registry contributor tool." The identity needs to be unified and the feature set needs to be complete before implementation continues.
+**Problem:** The openagent-skills documentation describes itself inconsistently — sometimes as a "skill development workbench," sometimes as a "security scanner," sometimes as a "registry contributor tool." The identity needs to be unified and the feature set needs to be complete before implementation continues.
 
 ---
 
@@ -285,7 +285,7 @@ User clicks "Publish" on a skill in GUI
 ### Forge Internal Architecture
 
 ```
-openskill-forge/
+openagent-skills/
 +-- tools/                    EXISTING -- scanning/verification pipeline
 |   +-- lib/
 |   |   +-- patterns.sh       87 malicious regex patterns (MITRE ATT&CK)
@@ -503,7 +503,7 @@ Forge has 87 skill-focused patterns. Pioneer was designed with 25 social-content
 | No mention of CDR anywhere | All docs | Add CDR as core feature after implementation |
 | Roadmap doesn't mention CDR | `docs/roadmap.md` | Rewrite with this document's phased plan |
 | Trifecta.md says "most important integration gap" is skill path | `opentrapp/docs/trifecta.md` | Update when Phase 2 (certificates) is implemented |
-| Handoff doc from vault references forge Phase 3 | `opencli-container/docs/handoff-to-openskill-forge.md` | Update when this design is approved |
+| Handoff doc from vault references forge Phase 3 | `opencli-container/docs/handoff-to-openagent-skills.md` | Update when this design is approved |
 | TODO.md is stale | `TODO.md` | Replace with roadmap-derived tasks |
 | Glossary missing forge-specific terms | `opentrapp/GLOSSARY.md` | Add CDR, quarantine, clearance report, security certificate |
 | No mention of non-technical user target | `CLAUDE.md` | Add target user section |
@@ -563,7 +563,7 @@ HOST SYSTEM (user's computer)
 | Decision | Resolution | Rationale |
 |----------|-----------|-----------|
 | **CDR backend** | Ollama default, API fallback | Maximum air-gap by default. API for users who want higher fidelity. |
-| **Document location** | `openskill-forge/docs/forge-identity-and-design.md` | It's the forge's own identity document |
+| **Document location** | `openagent-skills/docs/forge-identity-and-design.md` | It's the forge's own identity document |
 | **Certificate signing** | SHA-256 always, GPG optional | SHA-256 proves integrity. GPG proves identity for users who have it configured. |
 | **Build approach** | CLI-first (Makefile targets) | Match the vault's pattern. GUI wraps CLI via component.yml. |
 | **Original file policy** | NEVER accessible. Binary: rebuild or discard. | Eliminates social engineering attacks where user bypasses security. |
@@ -579,14 +579,14 @@ HOST SYSTEM (user's computer)
 
 ## 12. Handoff Instructions for New Instance
 
-**You are picking up development of openskill-forge.** Read these documents in order:
+**You are picking up development of openagent-skills.** Read these documents in order:
 
 1. **This document** -- the authoritative identity and feature spec
-2. **`CLAUDE.md`** in openskill-forge root -- project instructions and manifest rules
+2. **`CLAUDE.md`** in openagent-skills root -- project instructions and manifest rules
 3. **`docs/roadmap.md`** -- will be rewritten to match this document's phased plan
 4. **`opentrapp/docs/trifecta.md`** -- how forge fits with vault and pioneer
 5. **`opentrapp/GLOSSARY.md`** -- official terminology
-6. **`opencli-container/docs/handoff-to-openskill-forge.md`** -- what vault completed and what it expects from forge
+6. **`opencli-container/docs/handoff-to-openagent-skills.md`** -- what vault completed and what it expects from forge
 
 **Development principles (carry forward from vault):**
 1. Security first -- this is a public security promise
@@ -601,6 +601,6 @@ HOST SYSTEM (user's computer)
 
 ---
 
-*This document replaces the previous scattered descriptions of openskill-forge's identity. All future development should reference this as the authoritative design.*
+*This document replaces the previous scattered descriptions of openagent-skills's identity. All future development should reference this as the authoritative design.*
 
 *Last updated: 2026-04-04 — Phases 1-4 complete, only Phase 5 (CI/CD) remains*

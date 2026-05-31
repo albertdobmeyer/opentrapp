@@ -26,7 +26,7 @@ A single document enumerating every attacker capability the perimeter is designe
 For each row, the matrix records:
 
 1. The capability the attacker has
-2. The mitigating perimeter layer (vault-proxy allowlist, vault-forge scanner, vault-agent hardening, container isolation, etc.)
+2. The mitigating perimeter layer (vault-proxy allowlist, vault-skills scanner, vault-agent hardening, container isolation, etc.)
 3. The residual risk that the mitigation does not address
 4. The empirical evidence that the mitigation works (cite a verification step, a unit test, or — where unavailable — explicitly mark as untested)
 
@@ -100,7 +100,7 @@ No additional ADRs currently queued. New decisions that meet the *When to write 
 
 `docs/reproduce.md` lists every numerical claim in the README and gives the exact command sequence to verify it independently:
 
-- 87 malware patterns: `wc -l components/openskill-forge/tools/lib/patterns.sh` plus a script that summarises the categories
+- 87 malware patterns: `wc -l components/openagent-skills/tools/lib/patterns.sh` plus a script that summarises the categories
 - 11.9% ClawHavoc rate: link to the underlying ClawHavoc study; document the assumptions
 - 24-point verification: `bash components/opencli-container/scripts/verify.sh`
 - 42-check orchestrator: `bash tests/orchestrator-check.sh`
@@ -168,7 +168,7 @@ For each, one paragraph: what they offer, what they don't, the differential agai
 1. The four-container perimeter topology (replaces the ASCII tree in `trifecta.md` §3)
 2. The trust-tier flow (replaces the ASCII column in `trifecta.md` §2)
 3. The network-isolation matrix (a sequence diagram showing which container can reach which)
-4. The agent-skill-loading flow (Karen → forge → forge.scan → forge.cdr → forge-deliveries volume → vault-agent — illustrates the CDR pipeline visually)
+4. The agent-skill-loading flow (Karen → forge → forge.scan → forge.cdr → skills-deliveries volume → vault-agent — illustrates the CDR pipeline visually)
 5. The state machine for `AssistantStatus` (the seven-state hero machine; useful for contributors touching `app/src-tauri/src/status_aggregator.rs`)
 
 **Dependencies:** None.

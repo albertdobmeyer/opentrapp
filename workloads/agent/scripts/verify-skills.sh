@@ -73,13 +73,13 @@ if (( UNVERIFIED > 0 )); then
   echo ""
   echo -e "${YELLOW}WARNING: $UNVERIFIED skill(s) have no trust file.${NC}"
   echo "  These skills bypassed the forge security pipeline."
-  echo "  Run: cd components/openskill-forge && make certify SKILL=<name>"
+  echo "  Run: cd components/openagent-skills && make certify SKILL=<name>"
 fi
 
 if (( MODIFIED > 0 )); then
   echo ""
   echo -e "${YELLOW}WARNING: $MODIFIED skill(s) modified after verification.${NC}"
-  echo "  Re-certify with: cd components/openskill-forge && make certify SKILL=<name>"
+  echo "  Re-certify with: cd components/openagent-skills && make certify SKILL=<name>"
 fi
 
 echo ""
