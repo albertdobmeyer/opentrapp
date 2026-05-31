@@ -70,3 +70,7 @@ app/src-tauri/resources/perimeter/
 # Agent working scratchpad — future-work list, not part of the repo
 /AGENT-TODO.md
 /MISSION.md
+
+# Outreach drafts — kept out of public history until they're sent / accepted.
+# The opencode pitch (Thread D step 4) drafts here.
+/docs/pitch-opencode.md
