@@ -57,10 +57,15 @@ transition from rung 2 to rung 3 does **not** auto-run — it produces an
 
 ## 3. Interface
 
-Sentinel exposes one primary call. Define it as a Tauri command (frontend +
-legs invoke it) backed by a Rust module; the Rust module shells to the model
-runtime. Follow the existing `#[tauri::command]` pattern in
-`app/src-tauri/src/commands/`.
+Sentinel exposes one primary call — `judge(request) -> Verdict` — at **two
+binding levels** (lib-first, §5):
+- **Library/CLI binding:** a script/helper a standalone tool invokes directly
+  (the everyday path for `openagent-*` standalone installs). Same request/Verdict
+  JSON, called against local Ollama with no parent app.
+- **Tauri-command binding:** a thin wrapper exposing the same `judge` call to the
+  GUI, following the `#[tauri::command]` pattern in `app/src-tauri/src/commands/`,
+  plus the activity-indicator events. The GUI binding is a *consumer* of the lib,
+  not the only entry point.
 
 ### Request
 
@@ -148,25 +153,41 @@ Never auto-invoked. When a leg surfaces an `escalate` Verdict, the UI offers:
 - **(c) human decides:** show rung 2's reasoning + the evidence; the user
   rules. Always available; the default if both model options are declined.
 
-## 5. Where Sentinel runs (D4)
+## 5. Where Sentinel runs — lib-first (revised for Pillar B)
 
-Two options; recommend **host service inside the existing Tauri Rust backend**:
+**Sentinel is a shared *library*, not a GUI-only service.** This is forced by
+Pillar B ([`05-modular-distribution.md`](05-modular-distribution.md)): a
+standalone `openagent-skills` install has no GUI and no Tauri runtime, yet it
+still needs rungs 0–2. So the judgment logic cannot live only behind Tauri
+commands.
 
-- **Recommended — host Rust module + Ollama on host.** Sentinel is a module in
-  `app/src-tauri/src/` exposing Tauri commands; it talks to the host Ollama
-  (already how forge's CDR reaches `localhost:11434`). Pros: no new container,
-  shares the model runtime, simplest lifecycle, the orchestrator can pause the
-  agent for rung-3-local trivially. Cons: the judge runs on the host, not in a
-  container — acceptable because it only *reads* already-untrusted fragments
-  and never executes them.
-- **Alternative — a `vault-sentinel` container.** Stronger isolation of the
-  judge, but adds a 6th container, a model runtime inside it, and IPC
-  complexity. Heavier; violates the anti-bloat contract unless a concrete
-  threat requires it. Defer unless justified.
+The shape:
 
-If host-service is chosen, document explicitly in the new ADR why the judge
-reading untrusted fragments on the host is acceptable (read-only, no exec, the
-fragment is text the static layer already quarantined).
+- **The shared lib = the portable assets:** the rung-0 hooks (the legs' own
+  static checks), the rung-1 embedding corpus + similarity/drift helpers, the
+  rung-2 judge prompt + Verdict schema + the Ollama-call helper, and the
+  escalation contract. These are plain scripts/helpers (bash/python today, the
+  way `forge/tools/lib/cdr-intent.sh` already curls `localhost:11434`), so a
+  standalone CLI tool calls them **directly against local Ollama** with no
+  parent app. Rungs 0–2 need nothing but the tool + the lib + Ollama.
+- **The GUI is one consumer of the lib.** The Tauri Rust backend
+  (`app/src-tauri/src/sentinel/`) orchestrates the same shared lib for the
+  bundled/GUI mode, exposes Tauri commands + the activity-indicator events, and
+  owns the **rich rung-3 escalation UX** (the visual banner, pause-the-agent via
+  `pause_perimeter`, the consent dialog for cloud-fragment).
+- **Standalone CLIs get a text-prompt rung 3** — `escalate? [local-big /
+  cloud / decide]` — the same contract (§4 rung 3), a terminal UX instead of a
+  GUI banner.
+
+**Why not a `vault-sentinel` container:** it would add a 6th container + a model
+runtime inside it + IPC, and break the standalone-CLI path (a CLI tool can't
+depend on a running container just to judge a line). The lib-first design keeps
+standalone tools genuinely standalone and honours the anti-bloat contract.
+
+**Acceptable-on-host rationale (for the ADR):** the judge runs on the host (or
+in the calling tool's process), reads-only *already-untrusted* fragments the
+static layer flagged, and never executes them. Document this explicitly in the
+Sentinel ADR (suggested ADR-0015).
 
 ## 6. The activity indicator (non-negotiable)
 

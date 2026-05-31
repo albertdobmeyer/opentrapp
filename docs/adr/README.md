@@ -37,7 +37,11 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0010](0010-pinned-resolver-dns.md) | Accepted — implemented in v0.5.0 | Pinned-resolver DNS as a perimeter primitive (companion to ADR-0009) |
 | [0011](0011-zero-trust-self-sufficient-bootstrap.md) | Accepted — implemented in v0.5.0 | Zero-trust, self-sufficient first-launch bootstrap (native orchestrator + release-asset signed image delivery) |
 | [0012](0012-subscription-oauth-auth-feasibility.md) | Proposed — research only | Subscription / OAuth authentication feasibility (can a Claude Pro/Max login replace the pasted API key without weakening the perimeter?) |
+| [0013](0013-monorepo-consolidation.md) | Accepted — landed 2026-05-30 | Monorepo consolidation: collapse the three submodules into `workloads/` + `infra/` (no independent lifecycle; submodule tax for unused benefit) |
+| [0014](0014-monorepo-modular-distribution.md) | Proposed — 2026-05-31 | Monorepo dev-home + modular distribution + `openagent-*` naming (install one shield standalone, or the GUI with a profile; extends 0013, does not revert it) |
 
 ## Future ADRs
+
+- **ADR-0015 (suggested)** — the Sentinel local-AI judgment layer, once the v6 spine lands. See [`docs/specs/v6/`](../specs/v6/00-index.md).
 
 - **macOS/Windows runtime install** — `podman` is not present by default on those platforms; ADR-0011's bootstrap is Linux/AppImage-only so far. A future record should decide the Podman Desktop / Colima / WSL2 strategy.
