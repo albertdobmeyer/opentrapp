@@ -1,7 +1,7 @@
 # Sentinel — the shared judgment layer (spine spec)
 
-> Part of [OpenTrApp v6](00-index.md). This is the spine all three concern
-> legs consume. Build it once, during the forge leg ([`03`](03-cleanroom-forge.md)).
+> Part of [OpenTrApp v0.6](00-index.md). This is the spine all three concern
+> legs consume. Build it once, during the skills leg ([`03`](03-cleanroom-skills.md)).
 
 ---
 

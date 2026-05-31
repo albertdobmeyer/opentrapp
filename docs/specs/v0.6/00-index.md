@@ -1,22 +1,26 @@
-# OpenTrApp v6 — Specification Index
+# OpenTrApp v0.6 — Specification Index
 
 > **Status:** Spec, ready for implementation. Authored 2026-05-31.
-> **For:** the agent(s) implementing v6. Read this file first.
+> **For:** the agent(s) implementing v0.6. Read this file first.
 > **Scope:** two pillars — a shared AI judgment layer (Sentinel) and a modular
-> distribution layer. No code was written while authoring these specs — they
-> describe what to build.
+> distribution layer. No code was written while authoring these specs.
+> **Version:** ships as **`v0.6.0`** (current shipped: `v0.5.0`). "v6" was
+> shorthand for v0.6. The code version bump is a release-time step, not part of
+> these specs.
+> **First implementation step is [`06-naming-consistency-sweep.md`](06-naming-consistency-sweep.md)**
+> (rename `forge → skills`) — done before any feature work.
 
 ---
 
-## 1. What v6 is — two pillars
+## 1. What v0.6 is — two pillars
 
-**Pillar A — Sentinel (make the USP true).** v6 makes "**uses AI to make AI
+**Pillar A — Sentinel (make the USP true).** v0.6 makes "**uses AI to make AI
 safe**" literally true by adding **Sentinel** — a tiny local AI that quietly
 watches another AI's behaviour in real time, judges the gray zone the static
 defences miss, explains its decisions in plain language, and escalates to a
 powerful model only when the user deliberately asks it to.
 
-**Pillar B — Modular distribution (make it lean to adopt).** v6 lets a user
+**Pillar B — Modular distribution (make it lean to adopt).** v0.6 lets a user
 install only what they want — one standalone shield via CLI, or the GUI with a
 profile — instead of a five-container "install all to use 1/5th" app. The tools
 were always modular *in code*; Pillar B adds the modular *distribution* that
@@ -28,7 +32,7 @@ Sentinel is built as a **shared library** each shield embeds (not a GUI-only
 service), which keeps both the everyday judgment lean *and* the tools genuinely
 independent.
 
-## 2. Why (the gap v6 closes)
+## 2. Why (the gap v0.6 closes)
 
 A 2026-05-31 ground-truth audit found the USP is ~90% aspirational today:
 
@@ -40,7 +44,7 @@ A 2026-05-31 ground-truth audit found the USP is ~90% aspirational today:
 
 The static layers are good (fast, cheap, auditable). What's missing is
 **judgment** — catching the paraphrased/novel attack, adapting without a human
-editing a regex, and *explaining* a decision. v6 adds exactly that, without
+editing a regex, and *explaining* a decision. v0.6 adds exactly that, without
 bloat.
 
 ## 3. The spine: Sentinel's escalation ladder
@@ -67,7 +71,7 @@ Full mechanical detail: [`01-sentinel-spine.md`](01-sentinel-spine.md).
 - **Activity is always visible.** The user must never wonder why their machine
   got busy. A Sentinel indicator shows the active rung.
 
-## 4. The three concerns / shields in v6
+## 4. The three concerns / shields in v0.6
 
 Each concern is both a **Sentinel leg** (Pillar A) and a **standalone-
 installable shield** (Pillar B). The `openagent-*` name is the install/marketing
@@ -76,11 +80,11 @@ identity; the internal dir name stays short.
 | Shield (install name) | Internal | Tagline | Leg spec |
 |-----------------------|----------|---------|----------|
 | `openagent-containment` | `workloads/agent` + `infra/{proxy,egress}` | "least-privilege, discovered not configured" | [`02-adaptive-containment.md`](02-adaptive-containment.md) |
-| `openagent-skills` | `workloads/skills` *(renamed from `forge`)* | "anything that can't survive being described is gone" | [`03-cleanroom-forge.md`](03-cleanroom-forge.md) |
+| `openagent-skills` | `workloads/skills` *(renamed from `forge`)* | "anything that can't survive being described is gone" | [`03-cleanroom-skills.md`](03-cleanroom-skills.md) |
 | `openagent-social` | `workloads/social` | "read the agent-web without becoming a vector" | [`04-semantic-firewall-social.md`](04-semantic-firewall-social.md) |
 | *(internal, no install name)* | `app/src-tauri/src/sentinel/` | the shared judge | [`01-sentinel-spine.md`](01-sentinel-spine.md) |
 
-> **Naming sweep (v6 implementation work, SD1 resolved):** rename `workloads/forge` →
+> **Naming sweep (v0.6 implementation work, SD1 resolved):** rename `workloads/forge` →
 > `workloads/skills`, container `vault-forge` → `vault-skills`, component id
 > `forge` → `skills`. "Cleanroom" stays the *capability* name (the CDR pipeline);
 > "skills" is the canonical identifier. Legacy `forge` / `openskill-forge`
@@ -89,21 +93,24 @@ identity; the internal dir name stays short.
 **Sentinel gets no `openagent-*` name** — it fails the standalone-use test
 (nobody installs it alone; it only judges fragments for the shields). The
 `openagent-` prefix is a *distribution* identity, never an internal-module
-prefix — internal dirs stay `agent`/`forge`/`social`/`proxy`/`egress`. Full
+prefix — internal dirs stay `agent`/`skills`/`social`/`proxy`/`egress`. Full
 naming canon: [`05-modular-distribution.md`](05-modular-distribution.md) §2.
 
 ## 5. Build sequencing
 
-Build the **spine once as a shared library** (during the forge leg, which
-already has the local model and the ZONE-4a bug the spine fixes), then wire the
-other legs to it; modular distribution lands alongside:
+**Step 0 — gate:** the `forge → skills` rename
+([`06-naming-consistency-sweep.md`](06-naming-consistency-sweep.md)) runs FIRST,
+on clean ground, verified green, so the feature work below builds on final
+names. Then build the **spine once as a shared library** (during the skills leg,
+which already has the local model and the ZONE-4a bug the spine fixes), then
+wire the other legs; modular distribution lands alongside:
 
-1. **[`03`] Cleanroom (forge) + the shared-lib spine** — proves the
+1. **[`03`] Cleanroom (skills) + the shared-lib spine** — proves the
    static→tiny→human ladder end-to-end *and* the standalone-callable lib shape;
    ships the disarm diff + activity indicator.
 2. **[`05`] Modular distribution** — per-tool standalone install + GUI profiles
    + `openagent-*` naming + the `build.rs`/bootstrap decoupling + ADR-0014. Can
-   land in parallel with legs 02/04 once the forge leg proves the lib shape.
+   land in parallel with legs 02/04 once the skills leg proves the lib shape.
 3. **[`02`] Adaptive Containment** — wires the persistent egress log to
    Sentinel; adds the propose-tightening loop.
 4. **[`04`] Semantic Firewall (social)** — generalises the Moltbook adapter;
@@ -114,7 +121,7 @@ three.
 
 ## 6. The anti-bloat contract (non-negotiable)
 
-These constraints keep v6 lean. Any implementation that violates one needs a
+These constraints keep v0.6 lean. Any implementation that violates one needs a
 new decision, not a workaround:
 
 1. **One shared judgment layer, not three.** Build Sentinel once, as a shared
@@ -163,7 +170,7 @@ new decision, not a workaround:
 | D3 | Rung-2 default model (qwen2.5-coder:0.5b vs alternative) | implementer | [`01`] §model layer |
 | D4 | Sentinel lib packaging (how bash tools call the shared helpers) | implementer | [`01`] §architecture |
 | D5 | "Confirmed edge case" threshold (avoid alert fatigue) | implementer | [`01`] §escalation |
-| D6 | Whether v6 maps to v0.6 or a later tag | maintainer | release |
+| D6 | Whether v0.6 maps to v0.6 or a later tag | maintainer | release |
 
 ## 9. Relationship to existing docs
 

@@ -1,6 +1,6 @@
 # The Semantic Firewall — social leg (spec)
 
-> Part of [OpenTrApp v6](00-index.md). Consumes [Sentinel](01-sentinel-spine.md).
+> Part of [OpenTrApp v0.6](00-index.md). Consumes [Sentinel](01-sentinel-spine.md).
 > Built **third** (after the spine + containment). This leg also un-parks the
 > social workload — coordinate with MISSION.md Thread C.
 >
@@ -16,7 +16,7 @@ zero AI. A paraphrased injection ("send credentials to my endpoint" vs the
 literal "share your API key") walks straight through, and the whole module
 only works against one now-defunct platform.
 
-v6 revives it as a **general** agent-to-agent social shield with three
+v0.6 revives it as a **general** agent-to-agent social shield with three
 additions: a protocol-adapter abstraction (de-couple from Moltbook), semantic
 injection judgment (catch what regex misses), and persona-drift detection
 (catch a hijacked agent's *outgoing* posts).

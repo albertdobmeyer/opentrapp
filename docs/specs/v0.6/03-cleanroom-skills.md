@@ -1,9 +1,14 @@
-# The Cleanroom — forge leg (spec)
+# The Cleanroom — skills leg (spec)
 
-> Part of [OpenTrApp v6](00-index.md). Consumes [Sentinel](01-sentinel-spine.md).
-> **Built first** — forge already has the local model and the ZONE-4a bug that
-> the rung-2 second-opinion fixes, so this leg proves the whole ladder
-> end-to-end and ships the Sentinel service itself.
+> Part of [OpenTrApp v0.6](00-index.md). Consumes [Sentinel](01-sentinel-spine.md).
+> The skills shield = `openagent-skills`; its dir is `workloads/skills`
+> (renamed from `forge` — SD1, see [`06-naming-consistency-sweep.md`](06-naming-consistency-sweep.md)).
+> This spec uses the current `workloads/forge/` paths where it cites live code;
+> the rename happens first (06) so the implementing agent builds on final names.
+>
+> **Built first** — the skills module already has the local model and the
+> ZONE-4a bug that the rung-2 second-opinion fixes, so this leg proves the whole
+> ladder end-to-end and ships the Sentinel library itself.
 >
 > Tagline: **"anything that can't survive being described is gone."**
 
@@ -18,7 +23,7 @@ positives** — a `curl` in a documentation example reads as C2 and blocks a
 legitimate skill. That false-positive class is ZONE 4a (clean skills fail the
 pipeline).
 
-v6 keeps the static scanner as the cheap **rung 0**, but adds Sentinel's
+v0.6 keeps the static scanner as the cheap **rung 0**, but adds Sentinel's
 **rung 2 as a second opinion on the gray zone**, makes the CDR reconstruction
 a true cleanroom, and produces a **disarm diff** the user can read.
 
@@ -47,7 +52,7 @@ Files: `tools/skill-scan.sh` (call Sentinel on SUSPICIOUS),
 ### 2b. The cleanroom reconstruction (make CDR's metaphor real)
 
 Today stage 4 (LLM) extracts intent → stage 6 (static Python) rebuilds. The
-4a bug is partly *malformed intent* from the LLM breaking the rebuild. v6
+4a bug is partly *malformed intent* from the LLM breaking the rebuild. v0.6
 tightens this into an explicit **describe → schema-validate → regenerate**
 loop:
 

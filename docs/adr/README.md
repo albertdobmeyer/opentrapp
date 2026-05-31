@@ -42,6 +42,6 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 
 ## Future ADRs
 
-- **ADR-0015 (suggested)** — the Sentinel local-AI judgment layer, once the v6 spine lands. See [`docs/specs/v6/`](../specs/v6/00-index.md).
+- **ADR-0015 (suggested)** — the Sentinel local-AI judgment layer, once the v0.6 spine lands. See [`docs/specs/v0.6/`](../specs/v0.6/00-index.md).
 
 - **macOS/Windows runtime install** — `podman` is not present by default on those platforms; ADR-0011's bootstrap is Linux/AppImage-only so far. A future record should decide the Podman Desktop / Colima / WSL2 strategy.

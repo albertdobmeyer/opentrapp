@@ -1,6 +1,6 @@
 # Modular distribution — Pillar B (spec)
 
-> Part of [OpenTrApp v6](00-index.md). Pairs with [ADR-0014](../../adr/0014-monorepo-modular-distribution.md).
+> Part of [OpenTrApp v0.6](00-index.md). Pairs with [ADR-0014](../../adr/0014-monorepo-modular-distribution.md).
 > Resolves the "giant bloated app — install all to use 1/5th" problem **without
 > reverting the monorepo** (ADR-0013 stays).
 
@@ -41,7 +41,7 @@ a *distribution* identity, never an internal-module prefix.
 | *(internal, no install name)* | `app/src-tauri/src/sentinel/` + the shared lib | — | the shared judge |
 
 **Rules:**
-- **Internal directory names stay** `agent` / `forge` / `social` / `proxy` /
+- **Internal directory names stay** `agent` / `skills` / `social` / `proxy` /
   `egress` — no re-churn after ADR-0013. Distribution-name → internal mapping
   lives in the distribution manifest (§4); a name ≠ its dir is fine.
 - **No `openagent-` prefix inside the monorepo.** `workloads/openagent-skills`
@@ -55,11 +55,9 @@ a *distribution* identity, never an internal-module prefix.
   container `vault-forge` → `vault-skills`, component id `forge` → `skills`,
   install name `openagent-skills`. Full 1:1 consistency (dir = container = id =
   install root). "Cleanroom" remains the capability name for the CDR pipeline.
-  **Implementation sweep** (part of this leg): rename the dir + container + id,
-  and update legacy `forge` / `openskill-forge` references across README,
-  `docs/forge-spotlight.md`, the gitignored pitch, compose/perimeter.yml, Rust
-  constants, tests, and the v6 spec filenames (`03-cleanroom-forge.md` may be
-  renamed to `03-cleanroom-skills.md`).
+  **Implementation sweep** — see [`06-naming-consistency-sweep.md`](06-naming-consistency-sweep.md)
+  for the full file list, order, and tests. (The v0.6 spec docs have already
+  been swept: dir `forge`→`skills` in the canon, file `03-cleanroom-skills.md`.)
 - **SD2 — RESOLVED: `openagent-containment`.** "Runtime" undersells that it's a
   three-container fence; the product is about containment.
 
@@ -76,7 +74,7 @@ skills scan ./my-skill/SKILL.md
 skills cdr ./my-skill/
 ```
 
-- `openagent-skills` → a `skills` CLI over `workloads/forge`'s Makefile targets.
+- `openagent-skills` → a `skills` CLI over `workloads/skills`'s Makefile targets.
 - `openagent-social` → a `social` CLI over `workloads/social`.
 - `openagent-containment` → installs the agent+proxy+egress trio + the perimeter
   compose subset; the CLI brings the fence up/down around the user's agent.
@@ -89,7 +87,7 @@ the manifest discovery returns only what's bundled).
 | Profile | Containers brought up |
 |---------|----------------------|
 | `containment` (default/minimum) | vault-agent, vault-proxy, vault-egress |
-| `containment+skills` | + vault-forge |
+| `containment+skills` | + vault-skills |
 | `containment+social` | + vault-social |
 | `all` | all five |
 
@@ -115,8 +113,8 @@ shields:
     cli: containment
     standalone: true
   openagent-skills:
-    dirs: [workloads/forge]
-    containers: [vault-forge]
+    dirs: [workloads/skills]
+    containers: [vault-skills]
     cli: skills
     standalone: true
   openagent-social:
@@ -141,7 +139,7 @@ images. Default profile = `all` (preserves today's behaviour).
 ### 4c. Bootstrap profiles
 The bring-up set in `app/src-tauri/src/bootstrap/mod.rs` (`SHELL_SERVICES`, which
 this session edited) becomes the **profile's** container set, not the hardcoded
-four. `containment` brings up egress+proxy+agent only; forge/social start only
+four. `containment` brings up egress+proxy+agent only; skills/social start only
 if their profile includes them. The existing single-flight guard +
 idempotency (Zone 2) carry over.
 
@@ -155,7 +153,7 @@ script + image is the lean fit — no packaging runtime needed.
 ### 4e. Per-tool landing/docs
 Each shield gets a crisp standalone README + a landing section so it's
 discoverable as a lean tool, not buried. `openagent-skills` already has
-`forge-spotlight.md` + `workloads/forge/README.md` — replicate the shape for
+`skills-spotlight.md` + `workloads/skills/README.md` — replicate the shape for
 containment + social.
 
 ### 4f. Independent release boundary
@@ -177,11 +175,11 @@ each shield's README; the GUI's "about" lists the bundled shield versions.
 ## 6. Tests (pre-build / TDD)
 
 - **Profile bring-up:** `containment` profile starts exactly agent+proxy+egress;
-  forge/social are not started. Assert the container set.
+  skills/social are not started. Assert the container set.
 - **GUI renders the profile:** with only the agent manifest bundled, the GUI
-  shows only the containment dashboard, no forge/social tiles, no errors.
+  shows only the containment dashboard, no skills/social tiles, no errors.
 - **Standalone runs without the parent:** the `skills` CLI wrapper scans a
-  fixture with no GUI/Rust-app present (only `workloads/forge` + its image +
+  fixture with no GUI/Rust-app present (only `workloads/skills` + its image +
   local Ollama for Sentinel rungs).
 - **distribution.yml is the single source:** a check (orchestrator-check.sh §17,
   new) that every profile references defined shields, every shield's `dirs`

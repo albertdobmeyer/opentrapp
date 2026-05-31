@@ -1,8 +1,8 @@
 # ADR-0014 — Monorepo dev-home + modular distribution + `openagent-*` naming
 
-**Status:** Proposed — 2026-05-31 (part of the v6 reassessment; see [`docs/specs/v6/`](../specs/v6/00-index.md))
+**Status:** Proposed — 2026-05-31 (part of the v0.6 reassessment; see [`docs/specs/v0.6/`](../specs/v0.6/00-index.md))
 **Relationship to [ADR-0013](0013-monorepo-consolidation.md):** extends, does **not** revert. The monorepo stays the development home; this ADR adds the modular *distribution* layer ADR-0013 left unbuilt.
-**Companion spec:** [`docs/specs/v6/05-modular-distribution.md`](../specs/v6/05-modular-distribution.md)
+**Companion spec:** [`docs/specs/v0.6/05-modular-distribution.md`](../specs/v0.6/05-modular-distribution.md)
 
 ---
 
@@ -59,12 +59,12 @@ standalone-use test — nobody installs it alone).
 | Install name | Internal dir(s) | Standalone CLI |
 |--------------|-----------------|----------------|
 | `openagent-containment` | `workloads/agent` + `infra/{proxy,egress}` | run an agent inside the perimeter |
-| `openagent-skills` | `workloads/forge` | scan + CDR-rebuild skills |
+| `openagent-skills` | `workloads/skills` *(renamed from `forge`, SD1)* | scan + CDR-rebuild skills |
 | `openagent-social` | `workloads/social` | scan agent-social feeds |
 
 - The `openagent-` prefix is a **distribution identity only** — it never appears
-  on internal modules. Internal directory names stay `agent` / `forge` /
-  `social` / `proxy` / `egress` (no re-churn after ADR-0013).
+  on internal modules. Internal directory names stay `agent` / `skills` /
+  `social` / `proxy` / `egress` (no `openagent-` prefix).
 - A name ≠ its directory is acceptable; the mapping lives in a root
   `distribution.yml` (the single source for both the standalone installers and
   the GUI profiles).
@@ -102,7 +102,7 @@ the one monorepo.
   CLI wrappers, per-tool landing/docs. (Spec'd in `05-modular-distribution.md`.)
 - **Two binding levels for Sentinel.** Because shields install standalone,
   Sentinel must be a shared library callable from a bare CLI, with the GUI as a
-  consumer — not a GUI-only service (see [`docs/specs/v6/01-sentinel-spine.md`](../specs/v6/01-sentinel-spine.md) §5).
+  consumer — not a GUI-only service (see [`docs/specs/v0.6/01-sentinel-spine.md`](../specs/v0.6/01-sentinel-spine.md) §5).
 - **A name-vs-directory indirection** (`openagent-skills` ↔ `workloads/forge`).
   Mitigated by `distribution.yml` as the single source.
 
@@ -136,7 +136,7 @@ the one monorepo.
 
 ## Cross-references
 - [ADR-0013](0013-monorepo-consolidation.md) — the monorepo this extends.
-- [`docs/specs/v6/05-modular-distribution.md`](../specs/v6/05-modular-distribution.md) — the implementation spec.
-- [`docs/specs/v6/00-index.md`](../specs/v6/00-index.md) — the v6 spec index (D7/D8 record these decisions).
+- [`docs/specs/v0.6/05-modular-distribution.md`](../specs/v0.6/05-modular-distribution.md) — the implementation spec.
+- [`docs/specs/v0.6/00-index.md`](../specs/v0.6/00-index.md) — the v0.6 spec index (D7/D8 record these decisions).
 - A later ADR (suggested ADR-0015) should record the Sentinel judgment-layer
   decision once the spine lands.

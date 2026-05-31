@@ -1,7 +1,7 @@
 # Adaptive Containment — containerisation leg (spec)
 
-> Part of [OpenTrApp v6](00-index.md). Consumes [Sentinel](01-sentinel-spine.md).
-> Built **second** (after the forge leg ships the spine).
+> Part of [OpenTrApp v0.6](00-index.md). Consumes [Sentinel](01-sentinel-spine.md).
+> Built **second** (after the skills leg ships the spine).
 >
 > Tagline: **"least-privilege, discovered not configured."**
 
@@ -15,7 +15,7 @@ the proxy allowlist is 4 hardcoded domains (`infra/proxy/allowlist.txt`), and
 egress is static nftables. Nothing watches what the agent actually does and
 nothing adapts.
 
-v6 makes the perimeter **observe the agent and tighten around it**: Sentinel
+v0.6 makes the perimeter **observe the agent and tighten around it**: Sentinel
 reads the (now-persistent, Zone-3) egress log plus the user's task and
 continuously proposes the *smallest* shell that still lets the agent do its
 job — and turns blunt allowlist denials into explained, one-tap decisions.
@@ -57,7 +57,7 @@ recent tool use:
 
 ### 3b. Explained, one-tap allowlist decisions
 
-Today an off-allowlist request is a blunt BLOCK. v6 routes the gray zone
+Today an off-allowlist request is a blunt BLOCK. v0.6 routes the gray zone
 through Sentinel:
 
 - The proxy still hard-blocks on the existing EXFIL/clear-malicious paths
