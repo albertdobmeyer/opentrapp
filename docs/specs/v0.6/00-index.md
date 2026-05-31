@@ -98,26 +98,21 @@ naming canon: [`05-modular-distribution.md`](05-modular-distribution.md) §2.
 
 ## 5. Build sequencing
 
-**Step 0 — gate:** the `forge → skills` rename
-([`06-naming-consistency-sweep.md`](06-naming-consistency-sweep.md)) runs FIRST,
-on clean ground, verified green, so the feature work below builds on final
-names. Then build the **spine once as a shared library** (during the skills leg,
-which already has the local model and the ZONE-4a bug the spine fixes), then
-wire the other legs; modular distribution lands alongside:
+Full execution plan — milestones, dependency graph, the first PR, the gate,
+parallelism, and release staging — is in
+[`07-implementation-roadmap.md`](07-implementation-roadmap.md). The shape:
 
-1. **[`03`] Cleanroom (skills) + the shared-lib spine** — proves the
-   static→tiny→human ladder end-to-end *and* the standalone-callable lib shape;
-   ships the disarm diff + activity indicator.
-2. **[`05`] Modular distribution** — per-tool standalone install + GUI profiles
-   + `openagent-*` naming + the `build.rs`/bootstrap decoupling + ADR-0014. Can
-   land in parallel with legs 02/04 once the skills leg proves the lib shape.
-3. **[`02`] Adaptive Containment** — wires the persistent egress log to
-   Sentinel; adds the propose-tightening loop.
-4. **[`04`] Semantic Firewall (social)** — generalises the Moltbook adapter;
-   adds persona-drift + semantic injection judgment.
+```
+M0 Naming sweep (gate, 06)  →  M1 Sentinel lib + skills (01 + 03)  →  ┌ M2 distribution (05)
+                                                                      ├ M3 containment (02)
+                                                                      └ M4 social (04)  [parallel]
+```
 
-Each leg is its own spec → plan → build unit. The spine is consumed by all
-three.
+- **M0 first** — the `forge → skills` rename ([`06`](06-naming-consistency-sweep.md)),
+  on clean ground, so feature work builds on final names.
+- **M1 next** — the Sentinel shared library proven on the skills leg (it already
+  has the local model + the ZONE-4a bug the spine fixes). Foundation for all legs.
+- **M2 / M3 / M4 in parallel** after M1 freezes the lib.
 
 ## 6. The anti-bloat contract (non-negotiable)
 
