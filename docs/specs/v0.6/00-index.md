@@ -173,11 +173,10 @@ new decision, not a workaround:
 | # | Decision | Owner | Where |
 |---|----------|-------|-------|
 | D5 | "Confirmed edge case" threshold (alert-fatigue floor; default `SENTINEL_ESCALATE_BELOW=0.35`, tunable) | implementer | [`01`] §escalation |
-| SD-A1 | "Allow once" vs "Always allow" only (allowlist) — rec: defer "allow once" | maintainer | [`08`](08-completion-plan.md) §9 |
-| SD-A2 | Remember a "Deny" — rec: yes | maintainer | [`08`](08-completion-plan.md) §9 |
-| SD-B1 | Stage `sentinel/` into containers: bind-mount (dev) vs image copy (release) | maintainer | [`08`](08-completion-plan.md) §9 |
-| SD-B2 | Bundle Ollama? — rec: no, document the requirement | maintainer | [`08`](08-completion-plan.md) §9 |
-| SD-C1 | Which live agent-social network to scout first | maintainer | [`08`](08-completion-plan.md) §9 |
+
+The v0.6-completion sub-decisions are **resolved** (2026-06-01): SD-A1 Always+Deny
+(defer allow-once), SD-A2 remember-deny, SD-B1 bind-mount dev / image-copy release,
+SD-B2 no-bundle-Ollama, **SD-C1 AT Protocol first**. See [`08`](08-completion-plan.md) §9.
 
 ## 9. Relationship to existing docs
 

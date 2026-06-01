@@ -165,19 +165,21 @@ staging that A's allowlist-relocation extends).
 
 ## 6. Item C — M4 live network adapter
 
-Per spec [`04`](04-semantic-firewall-social.md) §2a/§7: scout **one** live
-agent-social network (Mastodon/ActivityPub · AT Protocol · Nostr · Matrix
-bot-rooms), implement an adapter against the existing contract
-(`fetch_feed`/`fetch_agent`/`post`/`stats`), validate the semantic firewall
-(incoming) + persona-guard (outgoing) against it, and write the un-park ADR.
-**Behind a flag** until a live adapter validates — do not re-park as a
-Moltbook-only revival.
+Per spec [`04`](04-semantic-firewall-social.md) §2a/§7: implement a live adapter
+against the existing contract (`fetch_feed`/`fetch_agent`/`post`/`stats`),
+validate the semantic firewall (incoming) + persona-guard (outgoing) against it,
+and write the un-park ADR. **Behind a flag** until the live adapter validates —
+do not re-park as a Moltbook-only revival.
 
-- **Files:** `workloads/social/tools/lib/adapters/<network>.sh` + tests. Fully
+- **First target (SD-C1 — RESOLVED): AT Protocol (atproto / Bluesky).** Real
+  agent/bot traffic, a documented public API (the XRPC `app.bsky.feed.*`
+  endpoints / firehose), and an open ecosystem. Implement
+  `workloads/social/tools/lib/adapters/atproto.sh` first; keep Mastodon/Nostr as
+  later adapters behind the same contract.
+- **Files:** `workloads/social/tools/lib/adapters/atproto.sh` + tests. Fully
   **disjoint** from the Opus stream → parallelisable (Sonnet for the adapter
-  mechanics).
-- **Needs a maintainer steer:** *which* network first (SD-C1) — a judgment call
-  about where real agent traffic + a reachable API exist today.
+  mechanics; scouting the specific feeds/handles to test against is a quick
+  human-or-agent step).
 
 ---
 
@@ -222,15 +224,15 @@ item's pre-build tests authored first (TDD).
 
 ---
 
-## 9. Open decisions (flag for the maintainer — resolve at session start)
+## 9. Decisions (RESOLVED 2026-06-01 — do not relitigate)
 
-| # | Decision | Recommendation (from principle) |
-|---|----------|-------------------------------|
-| SD-A1 | "Allow once" vs "Always allow" only | **Defer "allow once"** — it needs proxy one-shot/TTL support (extra L7 complexity); lean = ship Always + Deny first. |
-| SD-A2 | Remember a "Deny" to avoid re-prompting the same host | **Yes** — a denied host shouldn't nag; record it, still never auto-loosens. |
-| SD-B1 | Stage `sentinel/` into containers via compose bind-mount vs image copy | **Bind-mount in dev, copy into the image for release** (hermetic shipped artifact). |
-| SD-C1 | Which live agent-social network to scout first | **Maintainer call** — needs a judgment about where real agent traffic + a reachable API exist (AT-proto vs Mastodon vs Nostr). |
-| SD-B2 | Bundle Ollama? | **No** — out of scope; document the runtime requirement; AI rungs degrade fail-safe without it. |
+| # | Decision | Resolution |
+|---|----------|------------|
+| SD-A1 | "Allow once" vs "Always allow" only | **RESOLVED: ship "Always allow" + "Deny" only.** "Allow once" is deferred — it needs proxy one-shot/TTL support (extra L7 complexity); lean ships the two-button flow first. |
+| SD-A2 | Remember a "Deny" to avoid re-prompting the same host | **RESOLVED: yes** — record a denied host so it doesn't nag; it still never auto-loosens (deny is not a write to the allowlist). |
+| SD-B1 | Stage `sentinel/` into containers: bind-mount vs image copy | **RESOLVED: bind-mount in dev, copy into the image for release** (a hermetic shipped artifact). |
+| SD-B2 | Bundle Ollama? | **RESOLVED: no** — out of scope; document the runtime requirement; the AI rungs degrade fail-safe without it. |
+| SD-C1 | Which live agent-social network to scout first | **RESOLVED: AT Protocol (atproto / Bluesky) first.** Implement the atproto adapter + validate the firewall/persona-guard against it before any other network; keep the others as later adapters behind the same contract. |
 
 ## 10. Definition of done for v0.6.0 (updated)
 

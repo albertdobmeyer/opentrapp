@@ -40,7 +40,10 @@
 >   Sonnet runs **C / D** in parallel (disjoint files; must avoid the collision
 >   set: `build.rs`, `bootstrap/mod.rs`, `podman.rs`, `compose.yml`, `lib.rs`,
 >   `App.tsx`, `SecurityMonitor.tsx`).
-> - **Open decisions for the maintainer:** SD-A1/A2/B1/B2/C1 (`08` §9 / `00` §8).
+> - **Decisions RESOLVED (2026-06-01):** SD-A1 Always+Deny (defer allow-once),
+>   SD-A2 remember-deny, SD-B1 bind-mount dev / image-copy release, SD-B2
+>   no-bundle-Ollama, **SD-C1 scout AT Protocol first**. (`08` §9.) No open
+>   blockers — the next session implements directly.
 >
 > ### Verify (current gate at `9920c51`)
 > orchestrator-check **89/0**, cargo **96/0**, tsc clean, vitest **82/82**,
