@@ -1000,6 +1000,92 @@ else
 fi
 
 # =============================================================================
+section "21. Per-profile image bundling (spec 05 §4f + §4b image side)"
+# =============================================================================
+# build.rs must filter the image-digests.json overlay by OPENTRAPP_PROFILE
+# so that a `containment` build only bundles 3 images, not all 5. The mapping
+# must derive from distribution.yml (the single source) — not a hardcoded
+# Rust match that would duplicate it.
+
+python3 - <<'PY' 2>/dev/null && pass "build.rs has a stage_images function that filters by profile" || fail "build.rs is missing stage_images (spec 05 §4f — per-profile image bundling not implemented)"
+import sys, pathlib
+t = pathlib.Path('app/src-tauri/build.rs').read_text()
+# Must have: a stage_images function + read distribution.yml + use OPENTRAPP_PROFILE
+has_fn   = 'fn stage_images' in t
+reads_dist = 'distribution.yml' in t
+uses_profile = 'OPENTRAPP_PROFILE' in t
+sys.exit(0 if (has_fn and reads_dist and uses_profile) else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "build.rs derives profile→containers from distribution.yml (not a hardcoded match)" || fail "build.rs uses a hardcoded container match instead of reading distribution.yml (single-source violation)"
+import sys, pathlib, re
+t = pathlib.Path('app/src-tauri/build.rs').read_text()
+# A hardcoded container match would look like:
+#   match profile { "containment" => &["vault-agent", ...], ...}
+# This is a FAIL — the containers list must come from distribution.yml.
+# We allow a hardcoded *manifest* match (profile_manifests stays), but a
+# separate containers match is banned; the image function must read the file.
+bad = bool(re.search(r'"vault-agent".*"vault-proxy".*"vault-egress"', t, re.DOTALL)
+           and 'fn profile_images' in t
+           and 'distribution.yml' not in t)
+# Pass when distribution.yml IS referenced.
+sys.exit(0 if 'distribution.yml' in t else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "distribution.yml profile→containers mapping matches build.rs behaviour for 'containment'" || fail "distribution.yml or build.rs missing the containment→[vault-agent,vault-proxy,vault-egress] mapping"
+import sys, pathlib, yaml
+d = yaml.safe_load(pathlib.Path('distribution.yml').read_text())
+# Derive the containment profile's containers via the shields.
+containment_shields = d['profiles']['containment']
+containers = []
+for sh in containment_shields:
+    containers.extend(d['shields'][sh]['containers'])
+expected = {'vault-agent', 'vault-proxy', 'vault-egress'}
+sys.exit(0 if set(containers) == expected else 1)
+PY
+
+# =============================================================================
+section "22. Sentinel rung-1 embeddings (v0.6 D2)"
+# =============================================================================
+# Structural pins for the rung-1 layer — the model behaviour is verified by
+# sentinel/embed.test.sh (Ollama-gated); these assert the wiring + the banked
+# calibration finding can't silently regress.
+
+if [ -f "sentinel/embed.sh" ] && [ -f "sentinel/lib/sentinel_embed.py" ] && [ -f "sentinel/corpus/build.sh" ]; then
+  pass "Sentinel rung-1 lib present (embed.sh + lib/sentinel_embed.py + corpus/build.sh)"
+else
+  fail "Sentinel rung-1 lib missing embed.sh / lib/sentinel_embed.py / corpus/build.sh (D2)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "rung-1 config resolves D2 to all-minilm + drift/sim thresholds" || fail "config.sh missing the rung-1 embed model or thresholds (D2)"
+import sys, pathlib
+t = pathlib.Path('sentinel/config.sh').read_text()
+ok = ('SENTINEL_EMBED_MODEL' in t and 'all-minilm' in t
+      and 'SENTINEL_DRIFT_SIM_MIN' in t and 'SENTINEL_SIM_HIGH' in t)
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "embed.sh is lib-first (delegates to the python rung-1 lib)" || fail "embed.sh does not delegate to lib/sentinel_embed.py (lib-first)"
+import sys, pathlib
+t = pathlib.Path('sentinel/embed.sh').read_text()
+sys.exit(0 if 'sentinel_embed.py' in t else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "rung-1 corpus is model-tagged (refuses a mismatched-model corpus)" || fail "sentinel_embed.py does not guard the corpus model tag"
+import sys, pathlib
+t = pathlib.Path('sentinel/lib/sentinel_embed.py').read_text()
+ok = 'corpus.get("model")' in t and 'rebuild' in t.lower()
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "the recall-safe-booster finding is banked in the rung-1 lib (score never gates rung 2)" || fail "the rung-1 booster-not-gate caveat is not documented (banked finding regressed)"
+import sys, pathlib
+t = pathlib.Path('sentinel/lib/sentinel_embed.py').read_text().lower()
+ok = 'booster' in t and ('not a gate' in t or 'never a gate' in t) and 'paraphrase' in t
+sys.exit(0 if ok else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
