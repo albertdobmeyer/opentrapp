@@ -74,3 +74,6 @@ app/src-tauri/resources/perimeter/
 # Outreach drafts — kept out of public history until they're sent / accepted.
 # The opencode pitch (Thread D step 4) drafts here.
 /docs/pitch-opencode.md
+
+# Runtime scan artifacts (social feed scanner / census output)
+/data/

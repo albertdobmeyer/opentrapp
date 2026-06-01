@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Agent census — pull public stats from Moltbook API and save snapshots
+# Agent census — pull platform stats and post snapshots via a pluggable adapter.
+# Protocol-agnostic: all platform I/O is delegated to the adapter.
+#
 # Usage:
-#   agent-census.sh                 Pull current stats
-#   agent-census.sh --trend         Show trend from saved snapshots
-#   agent-census.sh --file <path>   Load census data from a local JSON file
+#   agent-census.sh [--adapter <name>]             Pull current stats
+#   agent-census.sh [--adapter <name>] --trend     Show trend from saved snapshots
+#   agent-census.sh --file <path>                  Load census data from a local JSON file
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ADAPTERS_DIR="$SCRIPT_DIR/lib/adapters"
 
 # ── Config ────────────────────────────────────────────────
 ENV_FILE="$PROJECT_ROOT/config/.env"
@@ -27,8 +30,6 @@ else
   RED='' GREEN='' YELLOW='' BLUE='' CYAN='' BOLD='' DIM='' RESET=''
 fi
 
-# Load config
-MOLTBOOK_API_BASE="${MOLTBOOK_API_BASE:-https://api.moltbook.com}"
 if [[ -f "$ENV_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$ENV_FILE"
@@ -37,11 +38,16 @@ fi
 mkdir -p "$DATA_DIR"
 
 # ── Parse Args ────────────────────────────────────────────
+ADAPTER="mock"   # sensible default; live adapters replace this
 MODE="census"
 FILE_PATH=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --adapter)
+      ADAPTER="${2:?--adapter requires a name (file, mock, moltbook)}"
+      shift 2
+      ;;
     --trend)
       MODE="trend"
       shift
@@ -52,14 +58,15 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     -h|--help)
-      echo "Usage: agent-census.sh [--trend] [--file <path>]"
+      echo "Usage: agent-census.sh [--adapter <name>] [--trend] [--file <path>]"
       echo ""
-      echo "Pull platform statistics from Moltbook API."
+      echo "Pull platform statistics via the configured adapter."
       echo ""
       echo "Options:"
-      echo "  --trend          Show trend from saved census snapshots"
-      echo "  --file <path>    Load census data from a local JSON file"
-      echo "  -h, --help       Show this help"
+      echo "  --adapter <name>  Protocol adapter: mock (default), file, moltbook"
+      echo "  --trend           Show trend from saved census snapshots"
+      echo "  --file <path>     Load census data from a local JSON file (implies --adapter file)"
+      echo "  -h, --help        Show this help"
       exit 0
       ;;
     *)
@@ -69,86 +76,73 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# --file implies adapter=file
+if [[ "$MODE" == "file" ]]; then
+  ADAPTER="file"
+fi
+
+# ── Resolve adapter ───────────────────────────────────────
+ADAPTER_SCRIPT="$ADAPTERS_DIR/${ADAPTER}.sh"
+if [[ ! -f "$ADAPTER_SCRIPT" ]]; then
+  echo -e "${RED}ERROR${RESET}: Unknown adapter '${ADAPTER}'. Available: file, mock, moltbook" >&2
+  exit 1
+fi
+
 # ── Census Mode ───────────────────────────────────────────
 run_census() {
-  echo -e "${BOLD}Moltbook Agent Census${RESET}"
-  echo -e "${DIM}API: ${MOLTBOOK_API_BASE}${RESET}"
+  local adapter_name
+  adapter_name=$(bash "$ADAPTER_SCRIPT" name 2>/dev/null || echo "$ADAPTER")
+  echo -e "${BOLD}Agent Census${RESET}"
+  echo -e "${DIM}Adapter: ${adapter_name}${RESET}"
   echo ""
 
   local timestamp
   timestamp=$(date +%Y%m%d-%H%M%S)
   local snapshot_file="$DATA_DIR/census-${timestamp}.json"
 
-  # Fetch platform stats
+  # Get platform stats from adapter
   echo -e "Fetching platform statistics..."
+  local stats_json
+  stats_json=$(bash "$ADAPTER_SCRIPT" stats '{}' 2>/dev/null || echo '{"agents":null,"posts":null,"comments":null}')
 
-  # Try to get stats from various endpoints
-  local agents_count="-"
-  local posts_count="-"
-  local comments_count="-"
+  local agents_count posts_count comments_count
+  read -r agents_count posts_count comments_count <<< "$(python3 -c "
+import json, sys
+d = json.loads(r'''${stats_json}''')
+def fmt(v): return str(v) if v is not None else '-'
+print(fmt(d.get('agents')), fmt(d.get('posts')), fmt(d.get('comments')))
+" 2>/dev/null || echo '- - -')"
 
-  # Attempt: stats/overview endpoint
-  local stats_response
-  if stats_response=$(curl -sf "${MOLTBOOK_API_BASE}/stats" 2>/dev/null); then
-    agents_count=$(echo "$stats_response" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-print(d.get('agents', d.get('total_agents', d.get('agent_count', '-'))))
-" 2>/dev/null || echo "-")
-    posts_count=$(echo "$stats_response" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-print(d.get('posts', d.get('total_posts', d.get('post_count', '-'))))
-" 2>/dev/null || echo "-")
-    comments_count=$(echo "$stats_response" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-print(d.get('comments', d.get('total_comments', d.get('comment_count', '-'))))
-" 2>/dev/null || echo "-")
-  fi
+  # Get recent posts from adapter for activity analysis
+  local opts
+  opts=$(python3 -c "import json; print(json.dumps({'limit': 50}))")
+  local recent_json
+  recent_json=$(bash "$ADAPTER_SCRIPT" fetch_feed "$opts" 2>/dev/null || echo '[]')
 
-  # Fetch recent posts for activity analysis
   local recent_posts_count=0
   local unique_agents=0
-  local recent_response
+  read -r recent_posts_count unique_agents <<< "$(python3 -c "
+import json
+posts = json.loads(r'''${recent_json}''')
+authors = set(p.get('author', '') for p in posts if p.get('author'))
+print(len(posts), len(authors))
+" 2>/dev/null || echo '0 0')"
 
-  if recent_response=$(curl -sf "${MOLTBOOK_API_BASE}/posts?limit=50" 2>/dev/null); then
-    read -r recent_posts_count unique_agents <<< "$(echo "$recent_response" | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    posts = data if isinstance(data, list) else data.get('posts', data.get('data', []))
-    handles = set()
-    for p in posts:
-        h = p.get('agent_handle', p.get('handle', ''))
-        if h:
-            handles.add(h)
-    print(len(posts), len(handles))
-except:
-    print(0, 0)
-" 2>/dev/null || echo "0 0")"
-  fi
-
-  # Fetch trending / top posts
+  # Top posts by weight (mock/file have no votes — show first 10)
   local top_posts=""
-  local top_response
-  if top_response=$(curl -sf "${MOLTBOOK_API_BASE}/posts?limit=10&sort=votes" 2>/dev/null); then
-    top_posts=$(echo "$top_response" | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    posts = data if isinstance(data, list) else data.get('posts', data.get('data', []))
-    for p in posts[:10]:
-        handle = p.get('agent_handle', p.get('handle', 'unknown'))
-        votes = p.get('upvotes', p.get('votes', 0))
-        content = p.get('content', '')[:60].replace('\n', ' ')
-        print(f'  {handle:<20} {votes:>8} votes  {content}')
-except:
-    pass
+  top_posts=$(python3 -c "
+import json
+posts = json.loads(r'''${recent_json}''')
+# Sort by votes if present, otherwise preserve order
+posts_sorted = sorted(posts, key=lambda p: p.get('votes', p.get('upvotes', 0)), reverse=True)
+for p in posts_sorted[:10]:
+    author  = p.get('author', 'unknown')
+    votes   = p.get('votes', p.get('upvotes', 0))
+    content = p.get('content', '')[:60].replace('\n', ' ')
+    print(f'  {author:<20} {votes:>8} votes  {content}')
 " 2>/dev/null || echo "")
-  fi
 
-  # Display results
+  # Display
   echo ""
   echo -e "${BOLD}Platform Overview${RESET}"
   echo -e "  Registered agents:    ${CYAN}${agents_count}${RESET}"
@@ -162,7 +156,6 @@ except:
 
   if [[ -n "$top_posts" ]]; then
     echo -e "${BOLD}Top Posts by Votes${RESET}"
-    echo -e "${DIM}  (Vote counts are unreliable — race condition in voting API)${RESET}"
     echo "$top_posts"
     echo ""
   fi
@@ -174,9 +167,10 @@ from datetime import datetime
 snapshot = {
     'timestamp': '$timestamp',
     'date': datetime.now().isoformat(),
+    'adapter': '$adapter_name',
     'platform': {
-        'agents': '$agents_count',
-        'posts': '$posts_count',
+        'agents':   '$agents_count',
+        'posts':    '$posts_count',
         'comments': '$comments_count'
     },
     'recent_activity': {
@@ -195,7 +189,7 @@ with open('$snapshot_file', 'w') as f:
 
 # ── File Mode ─────────────────────────────────────────────
 run_census_from_file() {
-  echo -e "${BOLD}Moltbook Agent Census (offline)${RESET}" >&2
+  echo -e "${BOLD}Agent Census (offline)${RESET}" >&2
   echo -e "${DIM}Source: ${FILE_PATH}${RESET}" >&2
   echo "" >&2
 
@@ -208,45 +202,45 @@ run_census_from_file() {
   timestamp=$(date +%Y%m%d-%H%M%S)
   local snapshot_file="$DATA_DIR/census-${timestamp}.json"
 
-  # Parse stats and posts from the file
+  # Delegate to file adapter
+  local opts
+  opts=$(python3 -c "import json; print(json.dumps({'path': '${FILE_PATH}'}))")
+
+  local stats_json
+  stats_json=$(bash "$ADAPTER_SCRIPT" stats "$opts" 2>/dev/null || echo '{"agents":null,"posts":null,"comments":null}')
+
   local agents_count posts_count comments_count
   read -r agents_count posts_count comments_count <<< "$(python3 -c "
-import sys, json
-with open('$FILE_PATH') as f:
-    data = json.load(f)
-stats = data.get('stats', {})
-print(stats.get('agents', '-'), stats.get('posts', '-'), stats.get('comments', '-'))
-" 2>/dev/null || echo "- - -")"
+import json
+d = json.loads(r'''${stats_json}''')
+def fmt(v): return str(v) if v is not None else '-'
+print(fmt(d.get('agents')), fmt(d.get('posts')), fmt(d.get('comments')))
+" 2>/dev/null || echo '- - -')"
+
+  local posts_json
+  posts_json=$(bash "$ADAPTER_SCRIPT" fetch_feed "$opts" 2>/dev/null || echo '[]')
 
   local recent_posts_count=0
   local unique_agents=0
   read -r recent_posts_count unique_agents <<< "$(python3 -c "
-import sys, json
-with open('$FILE_PATH') as f:
-    data = json.load(f)
-posts = data.get('posts', [])
-handles = set()
-for p in posts:
-    h = p.get('agent_handle', p.get('handle', ''))
-    if h:
-        handles.add(h)
-print(len(posts), len(handles))
-" 2>/dev/null || echo "0 0")"
+import json
+posts = json.loads(r'''${posts_json}''')
+authors = set(p.get('author','') for p in posts if p.get('author'))
+print(len(posts), len(authors))
+" 2>/dev/null || echo '0 0')"
 
   local top_posts=""
   top_posts=$(python3 -c "
 import json
-with open('$FILE_PATH') as f:
-    data = json.load(f)
-posts = sorted(data.get('posts', []), key=lambda p: p.get('upvotes', p.get('votes', 0)), reverse=True)
-for p in posts[:10]:
-    handle = p.get('agent_handle', p.get('handle', 'unknown'))
-    votes = p.get('upvotes', p.get('votes', 0))
+posts = json.loads(r'''${posts_json}''')
+posts_sorted = sorted(posts, key=lambda p: p.get('votes', p.get('upvotes', 0)), reverse=True)
+for p in posts_sorted[:10]:
+    author  = p.get('author', 'unknown')
+    votes   = p.get('votes', p.get('upvotes', 0))
     content = p.get('content', '')[:60].replace('\n', ' ')
-    print(f'  {handle:<20} {votes:>8} votes  {content}')
+    print(f'  {author:<20} {votes:>8} votes  {content}')
 " 2>/dev/null || echo "")
 
-  # Display results (same layout as live mode)
   echo ""
   echo -e "${BOLD}Platform Overview${RESET}"
   echo -e "  Registered agents:    ${CYAN}${agents_count}${RESET}"
@@ -260,21 +254,20 @@ for p in posts[:10]:
 
   if [[ -n "$top_posts" ]]; then
     echo -e "${BOLD}Top Posts by Votes${RESET}"
-    echo -e "${DIM}  (Vote counts are unreliable — race condition in voting API)${RESET}"
     echo "$top_posts"
     echo ""
   fi
 
-  # Save snapshot
   python3 -c "
 import json
 from datetime import datetime
 snapshot = {
     'timestamp': '$timestamp',
     'date': datetime.now().isoformat(),
+    'adapter': 'file',
     'platform': {
-        'agents': '$agents_count',
-        'posts': '$posts_count',
+        'agents':   '$agents_count',
+        'posts':    '$posts_count',
         'comments': '$comments_count'
     },
     'recent_activity': {
@@ -291,7 +284,7 @@ with open('$snapshot_file', 'w') as f:
 
 # ── Trend Mode ────────────────────────────────────────────
 show_trend() {
-  echo -e "${BOLD}Moltbook Census Trend${RESET}"
+  echo -e "${BOLD}Census Trend${RESET}"
   echo ""
 
   local snapshots

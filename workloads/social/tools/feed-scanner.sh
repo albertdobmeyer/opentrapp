@@ -1,14 +1,22 @@
 #!/usr/bin/env bash
-# Feed scanner — detect prompt injection patterns in Moltbook feed content
+# Feed scanner — detect prompt injection patterns in social feed content.
+# Protocol-agnostic: all platform I/O is delegated to a pluggable adapter.
+#
 # Usage:
-#   feed-scanner.sh --recent <n>          Scan n most recent posts
-#   feed-scanner.sh --agent <handle>      Scan posts by a specific agent
-#   feed-scanner.sh --file <path>         Scan a local JSON file of posts
-#   feed-scanner.sh --verbose             Show matched content lines
+#   feed-scanner.sh [--adapter <name>] --recent <n>
+#   feed-scanner.sh [--adapter <name>] --agent <handle>
+#   feed-scanner.sh [--adapter <name|file>] --file <path>
+#   feed-scanner.sh --verbose
+#
+# Adapters (tools/lib/adapters/):
+#   file      — read posts from a local JSON file (default for --file)
+#   mock      — deterministic in-memory data for tests
+#   moltbook  — archived Moltbook HTTP adapter (API defunct since 2026-04-05)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ADAPTERS_DIR="$SCRIPT_DIR/lib/adapters"
 
 # ── Config ────────────────────────────────────────────────
 ENV_FILE="$PROJECT_ROOT/config/.env"
@@ -31,21 +39,23 @@ else
 fi
 
 # ── Load Config ───────────────────────────────────────────
-MOLTBOOK_API_BASE="${MOLTBOOK_API_BASE:-https://api.moltbook.com}"
-MOLTBOOK_API_KEY="${MOLTBOOK_API_KEY:-}"
-
 if [[ -f "$ENV_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$ENV_FILE"
 fi
 
 # ── Parse Args ────────────────────────────────────────────
+ADAPTER="file"   # default; overridden by --recent/--agent when no --adapter given
 MODE=""
 TARGET=""
 VERBOSE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --adapter)
+      ADAPTER="${2:?--adapter requires a name (file, mock, moltbook)}"
+      shift 2
+      ;;
     --recent)
       MODE="recent"
       TARGET="${2:-50}"
@@ -66,14 +76,15 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     -h|--help)
-      echo "Usage: feed-scanner.sh [--recent <n>] [--agent <handle>] [--file <path>] [--verbose]"
+      echo "Usage: feed-scanner.sh [--adapter <name>] [--recent <n>] [--agent <handle>] [--file <path>] [--verbose]"
       echo ""
-      echo "Scan Moltbook feed content for prompt injection patterns."
+      echo "Scan social feed content for prompt injection patterns."
       echo ""
       echo "Options:"
+      echo "  --adapter <name>   Protocol adapter: file (default), mock, moltbook"
       echo "  --recent <n>       Scan n most recent posts (default: 50)"
       echo "  --agent <handle>   Scan posts by a specific agent"
-      echo "  --file <path>      Scan a local JSON file of posts"
+      echo "  --file <path>      Scan a local JSON file of posts (implies --adapter file)"
       echo "  --verbose          Show matched content for each finding"
       echo "  -h, --help         Show this help"
       exit 0
@@ -85,15 +96,25 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Default to recent 50
+# --file implies adapter=file regardless of --adapter flag
+if [[ "$MODE" == "file" ]]; then
+  ADAPTER="file"
+fi
+
+# Default to recent 50 if nothing specified
 if [[ -z "$MODE" ]]; then
   MODE="recent"
   TARGET="50"
 fi
 
+# ── Resolve adapter ───────────────────────────────────────
+ADAPTER_SCRIPT="$ADAPTERS_DIR/${ADAPTER}.sh"
+if [[ ! -f "$ADAPTER_SCRIPT" ]]; then
+  echo -e "${RED}ERROR${RESET}: Unknown adapter '${ADAPTER}'. Available: file, mock, moltbook" >&2
+  exit 1
+fi
+
 # ── Load Patterns ─────────────────────────────────────────
-# Parse injection-patterns.yml into arrays
-# Format: SEVERITY<TAB>CATEGORY<TAB>REGEX<TAB>DESCRIPTION
 PATTERNS=()
 
 load_patterns() {
@@ -105,13 +126,11 @@ load_patterns() {
   local severity="" category="" regex="" description="" id=""
 
   while IFS= read -r line; do
-    # Strip leading whitespace for matching
     local trimmed
     trimmed=$(echo "$line" | sed 's/^[[:space:]]*//')
 
     case "$trimmed" in
       "- id:"*)
-        # Save previous pattern if complete
         if [[ -n "$severity" && -n "$regex" ]]; then
           PATTERNS+=("${severity}	${category}	${regex}	${description}")
         fi
@@ -125,11 +144,9 @@ load_patterns() {
         category="${trimmed#*: }"
         ;;
       "regex:"*)
-        # Extract regex — everything after "regex: " with surrounding quotes stripped
         regex="${trimmed#*: }"
         regex="${regex#\"}"
         regex="${regex%\"}"
-        # Strip (?i) flag — grep -Ei already handles case insensitivity
         regex="${regex#\(\?i\)}"
         ;;
       "description:"*)
@@ -140,7 +157,6 @@ load_patterns() {
     esac
   done < "$PATTERNS_FILE"
 
-  # Don't forget the last pattern
   if [[ -n "$severity" && -n "$regex" ]]; then
     PATTERNS+=("${severity}	${category}	${regex}	${description}")
   fi
@@ -166,7 +182,6 @@ load_allowlist() {
   while IFS= read -r line; do
     local trimmed
     trimmed=$(echo "$line" | sed 's/^[[:space:]]*//')
-    # Track which YAML section we're in
     if [[ "$trimmed" == "trusted_agents:"* ]]; then
       in_section="trusted_agents"
       continue
@@ -192,7 +207,6 @@ load_allowlist() {
           local pattern="${trimmed#*: }"
           pattern="${pattern#\"}"
           pattern="${pattern%\"}"
-          # Strip (?i) flag — grep -Ei already handles case insensitivity
           pattern="${pattern#\(\?i\)}"
           SAFE_PATTERNS+=("$pattern")
         fi
@@ -221,29 +235,26 @@ is_safe_content() {
   return 1
 }
 
-# ── Fetch Posts ───────────────────────────────────────────
+# ── Fetch Posts via adapter ───────────────────────────────
 fetch_posts() {
   local tmp_file
   tmp_file=$(mktemp)
 
   case "$MODE" in
     recent)
-      echo -e "${BOLD}Fetching ${TARGET} recent posts...${RESET}" >&2
-      local curl_args=(-sf "${MOLTBOOK_API_BASE}/posts?limit=${TARGET}")
-      if [[ -n "$MOLTBOOK_API_KEY" ]]; then
-        curl_args+=(-H "Authorization: Bearer ${MOLTBOOK_API_KEY}")
-      fi
-      if ! curl "${curl_args[@]}" > "$tmp_file" 2>/dev/null; then
-        echo -e "${RED}ERROR${RESET}: Failed to fetch posts from API" >&2
-        echo "Check MOLTBOOK_API_BASE in config/.env" >&2
+      echo -e "${BOLD}Fetching ${TARGET} recent posts (adapter: ${ADAPTER})...${RESET}" >&2
+      local opts
+      opts=$(python3 -c "import json; print(json.dumps({'limit': int('${TARGET}')}))")
+      if ! bash "$ADAPTER_SCRIPT" fetch_feed "$opts" > "$tmp_file" 2>/dev/null; then
+        echo -e "${RED}ERROR${RESET}: Adapter '${ADAPTER}' failed to fetch recent posts." >&2
         rm -f "$tmp_file"
         exit 1
       fi
       ;;
     agent)
-      echo -e "${BOLD}Fetching posts by @${TARGET}...${RESET}" >&2
-      if ! curl -sf "${MOLTBOOK_API_BASE}/agents/${TARGET}/posts" > "$tmp_file" 2>/dev/null; then
-        echo -e "${RED}ERROR${RESET}: Failed to fetch posts for agent @${TARGET}" >&2
+      echo -e "${BOLD}Fetching posts by @${TARGET} (adapter: ${ADAPTER})...${RESET}" >&2
+      if ! bash "$ADAPTER_SCRIPT" fetch_agent "${TARGET}" > "$tmp_file" 2>/dev/null; then
+        echo -e "${RED}ERROR${RESET}: Adapter '${ADAPTER}' failed to fetch posts for agent @${TARGET}" >&2
         rm -f "$tmp_file"
         exit 1
       fi
@@ -254,7 +265,13 @@ fetch_posts() {
         echo -e "${RED}ERROR${RESET}: File not found: $TARGET" >&2
         exit 1
       fi
-      cp "$TARGET" "$tmp_file"
+      local opts
+      opts=$(python3 -c "import json; print(json.dumps({'path': '${TARGET}'}))")
+      if ! bash "$ADAPTER_SCRIPT" fetch_feed "$opts" > "$tmp_file" 2>/dev/null; then
+        echo -e "${RED}ERROR${RESET}: Adapter '${ADAPTER}' failed to read file ${TARGET}" >&2
+        rm -f "$tmp_file"
+        exit 1
+      fi
       ;;
   esac
 
@@ -262,6 +279,8 @@ fetch_posts() {
 }
 
 # ── Scan Content ──────────────────────────────────────────
+# Posts are in the normalised {id, author, content, timestamp} shape at this
+# point — the adapter has already translated platform-specific fields.
 scan_content() {
   local posts_file="$1"
   local critical_count=0
@@ -271,74 +290,63 @@ scan_content() {
   local total_posts=0
   local skipped_trusted=0
 
-  # Extract posts as individual content blocks
-  # Expected JSON format: array of objects with "content" and "agent_handle" fields
   local post_count
   post_count=$(python3 -c "
 import sys, json
 try:
     data = json.load(open('$posts_file'))
-    if isinstance(data, list):
-        print(len(data))
-    elif isinstance(data, dict) and 'posts' in data:
-        print(len(data['posts']))
-    elif isinstance(data, dict) and 'data' in data:
-        print(len(data['data']))
-    else:
-        print(0)
+    # Normalised output is always a top-level array
+    posts = data if isinstance(data, list) else []
+    print(len(posts))
 except:
     print(0)
 " 2>/dev/null || echo "0")
 
   if [[ "$post_count" == "0" ]]; then
     echo -e "${YELLOW}No posts found to scan${RESET}"
-    echo "If scanning from API, the response format may have changed."
+    echo "If scanning from a live adapter, the response may have no data."
     return
   fi
 
   echo -e "Scanning ${post_count} posts...\n"
 
-  # Process each post
   for (( i=0; i<post_count; i++ )); do
-    local content handle
+    local content author
     content=$(python3 -c "
 import sys, json
 data = json.load(open('$posts_file'))
-posts = data if isinstance(data, list) else data.get('posts', data.get('data', []))
+posts = data if isinstance(data, list) else []
 if $i < len(posts):
     print(posts[$i].get('content', ''))
 " 2>/dev/null || echo "")
 
-    handle=$(python3 -c "
+    author=$(python3 -c "
 import sys, json
 data = json.load(open('$posts_file'))
-posts = data if isinstance(data, list) else data.get('posts', data.get('data', []))
+posts = data if isinstance(data, list) else []
 if $i < len(posts):
-    print(posts[$i].get('agent_handle', posts[$i].get('handle', 'unknown')))
+    print(posts[$i].get('author', 'unknown'))
 " 2>/dev/null || echo "unknown")
 
     total_posts=$((total_posts + 1))
 
-    # Check trusted agent allowlist
-    if [[ ${#TRUSTED_AGENTS[@]} -gt 0 ]] && is_trusted_agent "$handle"; then
+    if [[ ${#TRUSTED_AGENTS[@]} -gt 0 ]] && is_trusted_agent "$author"; then
       skipped_trusted=$((skipped_trusted + 1))
       continue
     fi
 
-    # Check safe content patterns (suppress findings for benign content)
     if [[ ${#SAFE_PATTERNS[@]} -gt 0 ]] && is_safe_content "$content"; then
       clean_count=$((clean_count + 1))
       continue
     fi
 
-    # Scan against each pattern
     local post_findings=0
     for pattern_def in "${PATTERNS[@]}"; do
       IFS=$'\t' read -r severity category regex description <<< "$pattern_def"
 
       if echo "$content" | grep -qEi "$regex" 2>/dev/null; then
         if (( post_findings == 0 )); then
-          echo -e "${CYAN}--- Post #$((i+1)) by @${handle} ---${RESET}"
+          echo -e "${CYAN}--- Post #$((i+1)) by @${author} ---${RESET}"
         fi
         post_findings=$((post_findings + 1))
 
@@ -370,7 +378,6 @@ if $i < len(posts):
     fi
   done
 
-  # ── Summary ───────────────────────────────────────────
   echo ""
   echo -e "${BOLD}Scan Results:${RESET}"
   echo -e "  Posts scanned: ${total_posts}"
@@ -383,7 +390,6 @@ if $i < len(posts):
   echo -e "  ${GREEN}Clean posts: ${clean_count}${RESET}"
   echo ""
 
-  # Save results
   mkdir -p "$DATA_DIR"
   local timestamp
   timestamp=$(date +%Y%m%d-%H%M%S)
@@ -393,6 +399,7 @@ if $i < len(posts):
 import json
 results = {
     'timestamp': '$timestamp',
+    'adapter': '$ADAPTER',
     'mode': '$MODE',
     'target': '$TARGET',
     'total_posts': $total_posts,
@@ -413,7 +420,7 @@ with open('$results_file', 'w') as f:
 }
 
 # ── Main ──────────────────────────────────────────────────
-echo -e "${BOLD}Moltbook Feed Scanner${RESET}"
+echo -e "${BOLD}Social Feed Scanner${RESET}"
 echo ""
 
 load_patterns

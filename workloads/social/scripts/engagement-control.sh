@@ -130,7 +130,16 @@ show_status() {
 
   # Config summary
   echo -e "${BOLD}Configuration${NC}"
-  local api_key="${MOLTBOOK_API_KEY:-}"
+  # Show active adapter if configured
+  local adapter="${SOCIAL_ADAPTER:-}"
+  if [[ -n "$adapter" ]]; then
+    echo -e "  Adapter:          ${CYAN}${adapter}${NC}"
+  else
+    echo -e "  Adapter:          ${DIM}not configured (SOCIAL_ADAPTER)${NC}"
+  fi
+
+  # Generic platform API key (adapter-specific env vars live in the adapter scripts)
+  local api_key="${PLATFORM_API_KEY:-${MOLTBOOK_API_KEY:-}}"
   if [[ -n "$api_key" ]]; then
     echo -e "  API key:          ${GREEN}set${NC} (${#api_key} chars)"
   else
@@ -174,7 +183,7 @@ show_status() {
 
   if [[ "$level" == "researcher" || "$level" == "participant" ]]; then
     if [[ -z "$api_key" ]]; then
-      echo -e "  ${YELLOW}WARN${NC}  Level ${level} requires an API key (MOLTBOOK_API_KEY not set)"
+      echo -e "  ${YELLOW}WARN${NC}  Level ${level} requires an API key (PLATFORM_API_KEY or adapter-specific key not set)"
       warnings=$((warnings + 1))
     fi
     if [[ -z "$handle" ]]; then
@@ -231,7 +240,7 @@ do_dry_run() {
     val="${line#*=}"
 
     # Highlight user-specific fields that will be preserved
-    if [[ "$key" == "MOLTBOOK_API_KEY" || "$key" == "AGENT_HANDLE" ]]; then
+    if [[ "$key" == "MOLTBOOK_API_KEY" || "$key" == "PLATFORM_API_KEY" || "$key" == "AGENT_HANDLE" || "$key" == "SOCIAL_ADAPTER" ]]; then
       local current_val
       current_val=$(read_env_value "$ENV_FILE" "$key" "")
       if [[ -n "$current_val" ]]; then
@@ -301,9 +310,10 @@ do_apply() {
   # Step 1: Capture user-specific values from current config
   local saved_api_key="" saved_handle="" saved_api_base=""
   if [[ -f "$ENV_FILE" ]]; then
-    saved_api_key=$(read_env_value "$ENV_FILE" "MOLTBOOK_API_KEY" "")
+    saved_api_key=$(read_env_value "$ENV_FILE" "PLATFORM_API_KEY" "$(read_env_value "$ENV_FILE" "MOLTBOOK_API_KEY" "")")
+    saved_moltbook_key=$(read_env_value "$ENV_FILE" "MOLTBOOK_API_KEY" "")
     saved_handle=$(read_env_value "$ENV_FILE" "AGENT_HANDLE" "")
-    saved_api_base=$(read_env_value "$ENV_FILE" "MOLTBOOK_API_BASE" "https://api.moltbook.com")
+    saved_adapter=$(read_env_value "$ENV_FILE" "SOCIAL_ADAPTER" "")
   fi
 
   # Step 2: Copy preset to .env
@@ -312,16 +322,19 @@ do_apply() {
 
   # Step 3: Re-inject user-specific values
   if [[ -n "$saved_api_key" ]]; then
-    sed -i "s|^MOLTBOOK_API_KEY=.*|MOLTBOOK_API_KEY=${saved_api_key}|" "$ENV_FILE"
+    sed -i "s|^PLATFORM_API_KEY=.*|PLATFORM_API_KEY=${saved_api_key}|" "$ENV_FILE"
     echo -e "  ${GREEN}PASS${NC}  API key preserved"
+  fi
+  if [[ -n "$saved_moltbook_key" ]]; then
+    sed -i "s|^MOLTBOOK_API_KEY=.*|MOLTBOOK_API_KEY=${saved_moltbook_key}|" "$ENV_FILE"
   fi
   if [[ -n "$saved_handle" ]]; then
     sed -i "s|^AGENT_HANDLE=.*|AGENT_HANDLE=${saved_handle}|" "$ENV_FILE"
     echo -e "  ${GREEN}PASS${NC}  Agent handle preserved"
   fi
-  if [[ "$saved_api_base" != "https://api.moltbook.com" && -n "$saved_api_base" ]]; then
-    sed -i "s|^MOLTBOOK_API_BASE=.*|MOLTBOOK_API_BASE=${saved_api_base}|" "$ENV_FILE"
-    echo -e "  ${GREEN}PASS${NC}  Custom API base preserved"
+  if [[ -n "$saved_adapter" ]]; then
+    sed -i "s|^SOCIAL_ADAPTER=.*|SOCIAL_ADAPTER=${saved_adapter}|" "$ENV_FILE"
+    echo -e "  ${GREEN}PASS${NC}  Adapter setting preserved"
   fi
 
   # Step 4: Verify the result
@@ -396,8 +409,8 @@ do_apply() {
   esac
 
   # Warnings for user-specific fields
-  if [[ "$level" != "observer" && -z "${MOLTBOOK_API_KEY:-}" ]]; then
-    echo -e "  ${YELLOW}WARN${NC}  API key not set — required for ${level} level"
+  if [[ "$level" != "observer" && -z "${PLATFORM_API_KEY:-${MOLTBOOK_API_KEY:-}}" ]]; then
+    echo -e "  ${YELLOW}WARN${NC}  API key not set — required for ${level} level (set PLATFORM_API_KEY)"
     checks_warn=$((checks_warn + 1))
   fi
   if [[ "$level" != "observer" && -z "${AGENT_HANDLE:-}" ]]; then
