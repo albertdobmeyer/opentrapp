@@ -39,12 +39,12 @@ else
   fail "rung 0 pre-filter did not run"
 fi
 
-# NOTE (D3): with qwen2.5-coder:1.5b the judge over-blocks — it may also flag a
-# benign post (e.g. para-002). That precision gap is the documented rung-2
-# model-choice limitation (same as the skills judge); we therefore do NOT yet
-# auto-withhold on the judge's block alone — flagged posts surface for review.
-# We deliberately do NOT assert "benign post allowed" here, because it depends
-# on the model and would make this test model-flaky.
+# NOTE: with the default judge (qwen2.5-coder:3b, see sentinel/config.sh) the
+# benign post (para-002) is correctly allowed — verified manually. We keep the
+# hard gate to the model-robust property (para-001 caught) and do not assert
+# "benign allowed" here, since that remains mildly model-dependent and we want
+# this suite deterministic. (D3 — the 1.5b over-blocking — is resolved by the
+# 3b default; on a tiny box a user may drop to 1.5b and accept review-not-allow.)
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed, $SKIP skipped"

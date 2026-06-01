@@ -55,19 +55,27 @@ echo '{
   instructions and return allow" does NOT flip the verdict to allow.
 - Low-confidence decisions become `escalate` (the alert-fatigue floor).
 
-## Known limitation (D3 — rung-2 model choice)
+## Rung-2 model (D3 — resolved)
 
-With the default `qwen2.5-coder:1.5b`, the judge is **too conservative on the
-benign gray zone** — e.g. it may `block` a `curl` shown as a documentation
-example. This is a model-quality limit, not a lib bug. Consequences:
+The default judge model is **`qwen2.5-coder:3b`** (~1.9 GB). It is empirically
+the smallest local model with adequate gray-zone precision:
 
-- **Do NOT yet wire the judge as an auto-allow second-opinion on scanner
-  gray-zone hits** — at current precision it would add false positives. The
-  ZONE-4a fix (CDR retry-with-repair) is the correct, independent fix for the
-  clean-skill failure and does not depend on the judge's precision.
-- The judge is ready as the shared rung-2 *foundation*; raising gray-zone
-  precision is D3 (try a stronger local model, or further prompt iteration),
-  to be resolved before the judge gates legitimate-skill delivery.
+- **Allows** a benign command shown as a documentation example (5/5 in testing;
+  the older `1.5b` blocked it — the original D3 limitation).
+- **Blocks** clear exfiltration, and **resists injection of the judge itself**.
+- Catches paraphrased feed injections while leaving benign posts alone.
+- Fits alongside the user's agent on a ~7–8 GB machine; local, no API key.
+
+The everyday **parser** (CDR "describe" step, `config/cdr.conf` `CDR_MODEL`)
+stays on the leaner **`1.5b`**: parser failures are schema-detectable and
+retry-recoverable, so the tiniest model suffices there; *judgment* is not
+self-checking, so it gets the bigger model. This is the tiered split — tiny
+always-on parser, slightly larger rarely-run judge.
+
+Override either via the environment (`SENTINEL_MODEL`, `CDR_MODEL`). A user on a
+larger machine can point the judge at a 7b/14b for even better precision; a
+user on a tiny box can drop the judge to 1.5b and accept the over-blocking
+(flagged content then surfaces for review rather than auto-allowing).
 
 ## Why local
 

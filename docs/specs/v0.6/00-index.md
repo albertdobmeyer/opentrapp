@@ -157,15 +157,15 @@ new decision, not a workaround:
 | D8 | Standalone-shield naming | **`openagent-*` family** — `openagent-containment` / `openagent-skills` / `openagent-social`. Distribution identity only. |
 | SD1 | `forge` vs `skills` internally | **Rename to `skills`** — `workloads/forge` → `workloads/skills`, `vault-forge` → `vault-skills`, id `forge` → `skills`. Implementation sweep in the modular-distribution leg. |
 | SD2 | `containment` vs `runtime` | **`openagent-containment`** — the product is about containment; "runtime" undersells the three-container fence. |
+| D3 | Rung-2 judge model | **`qwen2.5-coder:3b`** (~1.9 GB) — empirically the smallest local model with adequate gray-zone precision: allows a benign documented command (5/5), blocks exfil, resists judge-injection. The 1.5b over-blocked; 3b resolves it and fits alongside the agent. The **parser** (CDR describe) stays on the leaner 1.5b — parser failures are schema-detectable + retry-recoverable, judgment is not. (M1 + the bigger-model re-test.) |
+| D4 | Sentinel lib packaging | **bash lib callable from a bare CLI** — `sentinel/judge.sh` reads a JSON request on stdin, writes a Verdict on stdout, against local Ollama. No GUI/Rust-app needed (lib-first). (M1.) |
+| D6 | Version | **Ships as `v0.6.0`** (current shipped: v0.5.0; "v6" was shorthand). Code version bump is a release-time step. |
 
 ### Open (resolve during implementation)
 | # | Decision | Owner | Where |
 |---|----------|-------|-------|
-| D2 | Embedding model (flavour, size, license) for rung 1 | implementer | [`01`] §model layer |
-| D3 | Rung-2 default model (qwen2.5-coder:0.5b vs alternative) | implementer | [`01`] §model layer |
-| D4 | Sentinel lib packaging (how bash tools call the shared helpers) | implementer | [`01`] §architecture |
-| D5 | "Confirmed edge case" threshold (avoid alert fatigue) | implementer | [`01`] §escalation |
-| D6 | Whether v0.6 maps to v0.6 or a later tag | maintainer | release |
+| D2 | Embedding model (rung 1) — deferred; rung 0→2 works without it | implementer | [`01`] §model layer |
+| D5 | "Confirmed edge case" threshold (alert-fatigue floor; default `SENTINEL_ESCALATE_BELOW=0.35`, tunable) | implementer | [`01`] §escalation |
 
 ## 9. Relationship to existing docs
 
