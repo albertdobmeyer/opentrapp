@@ -14,15 +14,29 @@ const STAGED_RESOURCES: &[&str] = &[
     "../../infra/egress/resolv.conf",
 ];
 
-/// Workloads whose `component.yml` manifest is bundled so the UI can render
-/// dashboards on a clean machine without a source clone (discovered via
-/// `discover_first` → `resources/perimeter/manifests/<workload>/component.yml`).
-/// Post ADR-0013 monorepo consolidation: directories live under `workloads/`.
-const STAGED_MANIFESTS: &[&str] = &["agent", "skills", "social"];
+/// Which workload manifests a given install profile bundles. The GUI discovers
+/// dashboards only for the manifests present, so a `containment` build shows
+/// only the containment dashboard (Pillar B, modular distribution). Mirrors
+/// `distribution.yml` at the repo root — keep the two in sync.
+/// `agent` is the containment shield's manifest; `proxy`/`egress` are infra
+/// with no component.yml.
+fn profile_manifests(profile: &str) -> &'static [&'static str] {
+    match profile {
+        "containment" => &["agent"],
+        "containment+skills" => &["agent", "skills"],
+        "containment+social" => &["agent", "social"],
+        // "all" and any unknown value default to the full set (no regression).
+        _ => &["agent", "skills", "social"],
+    }
+}
 
 fn stage_manifests() {
+    // Profile is chosen at build/install time via OPENTRAPP_PROFILE; default
+    // `all` preserves today's behaviour.
+    let profile = std::env::var("OPENTRAPP_PROFILE").unwrap_or_else(|_| "all".into());
+    println!("cargo:rerun-if-env-changed=OPENTRAPP_PROFILE");
     let base = Path::new("resources/perimeter/manifests");
-    for workload in STAGED_MANIFESTS {
+    for workload in profile_manifests(&profile) {
         let src = format!("../../workloads/{workload}/component.yml");
         println!("cargo:rerun-if-changed={src}");
         let dest_dir = base.join(workload);

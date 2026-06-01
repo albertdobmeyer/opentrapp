@@ -1,0 +1,50 @@
+# OpenTrApp — distribution manifest (the single source of truth for modular install).
+#
+# Maps install/marketing names → internal dirs → containers → CLI entrypoint.
+# Drives BOTH the standalone installers (scripts/install-shield.sh) and the GUI
+# install-profiles (app/src-tauri/build.rs staging + bootstrap bring-up), so the
+# mapping is never duplicated. See docs/specs/v0.6/05-modular-distribution.md +
+# docs/adr/0014-monorepo-modular-distribution.md.
+#
+# A shield = a standalone-installable safety tool (openagent-* family).
+# Sentinel is NOT a shield — it is an internal shared library (sentinel/),
+# embedded by every shield; it has no install name (fails the standalone-use
+# test).
+
+version: 1
+
+shields:
+  openagent-containment:
+    dirs: [workloads/agent, infra/proxy, infra/egress]
+    containers: [vault-agent, vault-proxy, vault-egress]
+    manifest: agent          # the component.yml id discovered by the GUI
+    cli: containment
+    standalone: true
+    summary: "Run any CLI agent inside the perimeter — no host access, no key, filtered egress."
+
+  openagent-skills:
+    dirs: [workloads/skills]
+    containers: [vault-skills]
+    manifest: skills
+    cli: skills
+    standalone: true
+    summary: "Scan + Content-Disarm-and-Reconstruct skills before the agent sees them."
+
+  openagent-social:
+    dirs: [workloads/social]
+    containers: [vault-social]
+    manifest: social
+    cli: social
+    standalone: true
+    summary: "Filter agent-social-network feeds; catch injections and persona drift."
+
+# The "containment" core is always present (it is the perimeter the workloads
+# attach to). Profiles add the optional workload shields on top.
+profiles:
+  containment:         [openagent-containment]
+  containment+skills:  [openagent-containment, openagent-skills]
+  containment+social:  [openagent-containment, openagent-social]
+  all:                 [openagent-containment, openagent-skills, openagent-social]
+
+# The GUI/AppImage default. `all` preserves today's behaviour (no regression).
+default_profile: all

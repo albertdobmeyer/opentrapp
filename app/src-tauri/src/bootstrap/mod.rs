@@ -24,10 +24,26 @@ use crate::lifecycle::{
 use crate::orchestrator::podman;
 
 const TOTAL_STEPS: u8 = 7;
-/// The security shell — everything except the agent tenant. Per ADR-0009,
-/// `vault-egress` joined the shell (it must be healthy before `vault-proxy`).
-const SHELL_SERVICES: [&str; 4] =
-    ["vault-egress", "vault-proxy", "vault-skills", "vault-social"];
+
+/// The security shell to verify — everything except the agent tenant. The
+/// containment core (`vault-egress` + `vault-proxy`, per ADR-0009) is always
+/// present; the optional workload containers (`vault-skills`, `vault-social`)
+/// are included only when this install's profile bundled them (modular
+/// distribution — determined by which manifests `build.rs` staged). When the
+/// manifests dir is absent (dev / unstaged), assume the full set so dev runs
+/// are unaffected.
+fn shell_services() -> Vec<&'static str> {
+    let mut services = vec!["vault-egress", "vault-proxy"];
+    let manifests = podman::resource_dir().join("manifests");
+    let unstaged = !manifests.exists();
+    if unstaged || manifests.join("skills").exists() {
+        services.push("vault-skills");
+    }
+    if unstaged || manifests.join("social").exists() {
+        services.push("vault-social");
+    }
+    services
+}
 
 // ─── Public entry point ───────────────────────────────────────────────
 
@@ -266,8 +282,8 @@ fn step_up_shell(handle: &AppHandle, root: &Path) -> Result<(), &'static str> {
 fn step_verify_shell(handle: &AppHandle, runtime: &str) -> Result<(), &'static str> {
     set_step(handle, BootstrapStep::VerifyShell, 7, None, None);
 
-    // Check all 3 shell services are running via label filter.
-    for service in &SHELL_SERVICES {
+    // Check the profile's shell services are running via label filter.
+    for service in &shell_services() {
         let running = StdCommand::new(runtime)
             .args([
                 "ps",

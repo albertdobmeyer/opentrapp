@@ -915,6 +915,54 @@ sys.exit(0 if ok else 1)
 PY
 
 # =============================================================================
+section "18. Modular distribution (v0.6 M2)"
+# =============================================================================
+# distribution.yml is the single source mapping install-names → dirs →
+# containers → CLI, consumed by both the standalone installer and the GUI
+# profiles. Pin its integrity + the profile wiring.
+
+python3 - <<'PY' 2>/dev/null && pass "distribution.yml is valid and self-consistent" || fail "distribution.yml missing/invalid: a profile references an unknown shield, or a shield's dirs/containers don't exist (M2)"
+import sys, pathlib, yaml
+p = pathlib.Path('distribution.yml')
+if not p.exists():
+    sys.exit(1)
+d = yaml.safe_load(p.read_text())
+shields = d.get('shields', {})
+# Every profile references only defined shields.
+for prof, members in d.get('profiles', {}).items():
+    for m in members:
+        if m not in shields:
+            sys.stderr.write(f"profile {prof} references unknown shield {m}\n"); sys.exit(1)
+# default_profile is a defined profile.
+if d.get('default_profile') not in d.get('profiles', {}):
+    sys.exit(1)
+# Every shield's dirs exist and its containers are declared in compose.yml.
+compose = yaml.safe_load(open('compose.yml'))
+compose_services = set(compose.get('services', {}).keys())
+for name, s in shields.items():
+    for dpath in s.get('dirs', []):
+        if not pathlib.Path(dpath).exists():
+            sys.stderr.write(f"shield {name}: dir {dpath} missing\n"); sys.exit(1)
+    for c in s.get('containers', []):
+        if c not in compose_services:
+            sys.stderr.write(f"shield {name}: container {c} not in compose.yml\n"); sys.exit(1)
+sys.exit(0)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "build.rs stages manifests by profile (GUI renders only the profile's shields)" || fail "build.rs is not profile-driven (M2)"
+import sys, pathlib
+t = pathlib.Path('app/src-tauri/build.rs').read_text()
+sys.exit(0 if ('OPENTRAPP_PROFILE' in t and 'profile_manifests' in t) else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "bootstrap verify is profile-aware + the standalone installer exists" || fail "bootstrap shell_services or scripts/install-shield.sh missing (M2)"
+import sys, pathlib
+boot = pathlib.Path('app/src-tauri/src/bootstrap/mod.rs').read_text()
+installer = pathlib.Path('scripts/install-shield.sh')
+sys.exit(0 if ('shell_services' in boot and installer.exists()) else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
