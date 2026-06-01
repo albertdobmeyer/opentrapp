@@ -963,6 +963,24 @@ sys.exit(0 if ('shell_services' in boot and installer.exists()) else 1)
 PY
 
 # =============================================================================
+section "19. Adaptive containment (v0.6 M3)"
+# =============================================================================
+
+if [ -f "sentinel/egress-advisor.sh" ]; then
+  pass "egress advisor present (proposes least-privilege from the egress log)"
+else
+  fail "sentinel/egress-advisor.sh missing (M3)"
+fi
+
+# Run the advisor's own deterministic test suite (includes the never-auto-loosen
+# invariant — ADR-0002). This is the load-bearing safety property.
+if bash sentinel/egress-advisor.test.sh > /dev/null 2>&1; then
+  pass "egress advisor never proposes a loosening (ADR-0002 invariant holds)"
+else
+  fail "egress advisor test suite failed — the never-auto-loosen invariant may be broken (M3)"
+fi
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
