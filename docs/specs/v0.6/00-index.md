@@ -55,7 +55,7 @@ slower, costlier than the one below. Cheap rungs handle ~95%.
 | Rung | What | When | Cost | Memory |
 |-----:|------|------|------|--------|
 | **0 — Static** | regex / allowlist / nftables (today's defences) | always, instant | free | ~0 |
-| **1 — Embeddings** | similarity / anomaly / drift | constantly, background | ~free | ~100 MB always-on |
+| **1 — Embeddings** | similarity / anomaly / drift | constantly, background | ~free | ~45 MB (`all-minilm`) |
 | **2 — Tiny LLM** ⭐ | semantic judgment on flagged cases | only when 0/1 flag ambiguity | cheap, local | sub-1B, load-on-demand |
 | **3 — Big judge** | confirmed edge case rung 2 can't crack | **user-triggered, never auto** | slow or paid | heavy |
 
@@ -123,7 +123,8 @@ new decision, not a workaround:
    library both the standalone CLIs and the GUI consume.
 2. **Static-first, always.** Rungs 1–3 only run on what rung 0 can't resolve.
 3. **Tiny default, load-on-demand.** Rung 2 unloads when idle. Rung 1
-   embeddings are the only always-resident AI (~100 MB).
+   embeddings (`all-minilm`, ~45 MB) are the lightest layer — Ollama loads the
+   model on call and unloads it after its keep-alive window.
 4. **Rung 3 never auto-fires.** No surprise slowdown, no surprise cost.
 5. **No new dependency tier.** Ollama is already in the stack; embeddings are
    a small addition; the rung-3 cloud call reuses the agent's key + proxy.
@@ -157,6 +158,7 @@ new decision, not a workaround:
 | D8 | Standalone-shield naming | **`openagent-*` family** — `openagent-containment` / `openagent-skills` / `openagent-social`. Distribution identity only. |
 | SD1 | `forge` vs `skills` internally | **Rename to `skills`** — `workloads/forge` → `workloads/skills`, `vault-forge` → `vault-skills`, id `forge` → `skills`. Implementation sweep in the modular-distribution leg. |
 | SD2 | `containment` vs `runtime` | **`openagent-containment`** — the product is about containment; "runtime" undersells the three-container fence. |
+| D2 | Embedding model (rung 1) | **`all-minilm`** (all-MiniLM-L6-v2, ~45 MB, 384-dim, Apache-2.0) — runs via the same local Ollama, no second runtime. Built + calibrated. Finding banked: `drift` (vs the agent's own voice) is the reliable signal and may gate; `score` (similarity to a small known-bad corpus) is a recall-safe **booster** that catches near-duplicates but misses novel paraphrases, so it must NOT suppress rung 2. See [`01`](01-sentinel-spine.md) §4. |
 | D3 | Rung-2 judge model | **`qwen2.5-coder:3b`** (~1.9 GB) — empirically the smallest local model with adequate gray-zone precision: allows a benign documented command (5/5), blocks exfil, resists judge-injection. The 1.5b over-blocked; 3b resolves it and fits alongside the agent. The **parser** (CDR describe) stays on the leaner 1.5b — parser failures are schema-detectable + retry-recoverable, judgment is not. (M1 + the bigger-model re-test.) |
 | D4 | Sentinel lib packaging | **bash lib callable from a bare CLI** — `sentinel/judge.sh` reads a JSON request on stdin, writes a Verdict on stdout, against local Ollama. No GUI/Rust-app needed (lib-first). (M1.) |
 | D6 | Version | **Ships as `v0.6.0`** (current shipped: v0.5.0; "v6" was shorthand). Code version bump is a release-time step. |
@@ -164,7 +166,6 @@ new decision, not a workaround:
 ### Open (resolve during implementation)
 | # | Decision | Owner | Where |
 |---|----------|-------|-------|
-| D2 | Embedding model (rung 1) — deferred; rung 0→2 works without it | implementer | [`01`] §model layer |
 | D5 | "Confirmed edge case" threshold (alert-fatigue floor; default `SENTINEL_ESCALATE_BELOW=0.35`, tunable) | implementer | [`01`] §escalation |
 
 ## 9. Relationship to existing docs

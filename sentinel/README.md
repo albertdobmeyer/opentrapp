@@ -3,8 +3,8 @@
 > The tiny local AI that judges the gray zone the static defences miss.
 > Internal shared library (no `openagent-*` install name — it isn't used
 > standalone). Spec: [`docs/specs/v0.6/01-sentinel-spine.md`](../docs/specs/v0.6/01-sentinel-spine.md).
-> Status: **rung-2 judge lib landed (M1)**; rung-1 embeddings + the GUI rung-3
-> UX are later milestones.
+> Status: **rung-2 judge lib + rung-1 embeddings landed**; the GUI rung-3 UX is
+> a later milestone.
 
 ## What this is
 
@@ -14,8 +14,8 @@ the shared rung-2 of the escalation ladder:
 
 ```
 rung 0  static (the caller's regex/allowlist)   ── free, always
-rung 1  embeddings (later milestone)             ── ~free, background
-rung 2  THIS — the tiny local LLM judge          ── cheap, load-on-demand
+rung 1  embeddings (similarity / drift)          ── ~free, background  [embed.sh]
+rung 2  the tiny local LLM judge                 ── cheap, load-on-demand  [judge.sh]
 rung 3  human-first escalation (later)           ── rare, user-triggered
 ```
 
@@ -44,7 +44,10 @@ echo '{
 | File | Role |
 |------|------|
 | `judge.sh` | the rung-2 judge: request (stdin JSON) → verdict (stdout JSON) |
-| `config.sh` | model + endpoint + escalation-floor defaults (env-overridable) |
+| `embed.sh` | the rung-1 engine: `vector` / `score` / `drift` over local embeddings |
+| `lib/sentinel_embed.py` | rung-1 implementation (similarity / anomaly / drift) |
+| `corpus/known-bad.json` | cached known-bad embeddings; rebuild with `corpus/build.sh` |
+| `config.sh` | model + endpoint + thresholds (env-overridable) |
 | `verdict-schema.json` | the Verdict contract |
 
 ## Verified properties (M1)
@@ -76,6 +79,41 @@ Override either via the environment (`SENTINEL_MODEL`, `CDR_MODEL`). A user on a
 larger machine can point the judge at a 7b/14b for even better precision; a
 user on a tiny box can drop the judge to 1.5b and accept the over-blocking
 (flagged content then surfaces for review rather than auto-allowing).
+
+## Rung-1 embeddings (D2 — resolved: `all-minilm`)
+
+The cheap layer between static and the judge. Engine: **`all-minilm`**
+(all-MiniLM-L6-v2, ~45 MB, 384-dim, Apache-2.0), served by the **same local
+Ollama** — no new runtime, no API key. Three uses, two reliability classes:
+
+```bash
+echo "<post>" | bash sentinel/embed.sh score sentinel/corpus/known-bad.json
+# → {"max_similarity":0.51,"nearest_ref":"mal-004","signal":"suspicious|ambiguous|clean"}
+
+echo "<outgoing post>" | bash sentinel/embed.sh drift <recent-posts.json> "<task hint>"
+# → {"similarity":0.55,"drift":0.45,"signal":"in_character|drifted"}
+```
+
+**The load-bearing rung-1 finding (banked):** the two uses are NOT equally
+reliable, so they play different roles.
+
+- **`drift` is the reliable signal.** It compares an outgoing post against the
+  agent's **own** recent voice + task — a specific, strong anchor. In
+  calibration, hijacked/off-character posts sat at ~0.11–0.15 similarity and
+  in-character posts at ~0.38–0.55; `0.25` separates them with margin. This is
+  what catches a **hijacked agent** posting something off-character (exfil,
+  spam, a different persona) — the capability the static patterns can't do.
+- **`score` (similarity to a known-bad corpus) is a recall-safe BOOSTER, not a
+  gate.** Against a small corpus, embeddings reliably fire on *near-duplicates*
+  (a reworded known-bad post → 0.96) but **miss novel paraphrases** (a
+  hand-written exfil paraphrase scored only 0.32). So a high score is a strong
+  positive a caller can act on, but **a low/clean score is never treated as
+  proof of safety** — callers still run the rung-2 judge on non-suspicious
+  content. Low similarity must never suppress rung 2.
+
+Rebuild the corpus (a cheap re-embed, not a retrain) after adding a known-bad
+example: `bash sentinel/corpus/build.sh`. Thresholds are env-overridable
+(`SENTINEL_SIM_HIGH` / `SENTINEL_SIM_LOW` / `SENTINEL_DRIFT_SIM_MIN`).
 
 ## Why local
 

@@ -127,19 +127,41 @@ role whose mistakes you cannot otherwise catch.**
   (a `curl` documentation example); judge on `qwen2.5-coder:3b` allows it 5/5
   while still blocking exfil and resisting judge-injection. Hence the split.
 
-### Rung 1 — embeddings (always-on, ~100 MB)
+### Rung 1 — embeddings (D2 — RESOLVED: `all-minilm`; built + calibrated)
 
-- A small sentence-embedding model (D2). Selection criteria: <150 MB,
-  permissive license, CPU-fast, runnable via the same runtime as rung 2 if
-  possible (Ollama supports embedding models — prefer that to avoid a second
-  runtime).
+- **D2 resolved:** `all-minilm` (all-MiniLM-L6-v2, ~45 MB, 384-dim,
+  Apache-2.0). Meets every criterion (<150 MB, permissive, CPU-fast) and runs
+  via the **same local Ollama** as rung 2 — no second runtime. Lib: `sentinel/embed.sh`
+  + `sentinel/lib/sentinel_embed.py`; corpus `sentinel/corpus/` (`build.sh` rebuilds).
 - **Three uses:** (1) similarity of `fragment` to a stored corpus of
-  known-bad examples (forge fixtures, social `malicious-posts.json`, observed
-  attacks); (2) anomaly — distance from the caller's normal traffic;
+  known-bad examples; (2) anomaly — distance from the caller's normal traffic;
   (3) drift — distance between an `outgoing_post` and the agent's recent
   post history / `task_hint`.
-- The known-bad corpus is embedded once at build/first-run and cached. Adding
-  a new known-bad example is a cheap re-embed, not a retrain.
+- The known-bad corpus is embedded once and cached (model-tagged; `score`
+  refuses a mismatched-model corpus). Adding a known-bad example is a cheap
+  re-embed (`corpus/build.sh`), not a retrain.
+
+#### Rung-1 finding (banked — the two uses are NOT equally reliable)
+
+Calibration against the repo fixtures produced a load-bearing result that
+shapes how legs must consume rung 1:
+
+- **`drift` is the reliable signal — it may gate.** Comparing an outgoing post
+  to the agent's *own* recent voice + task is a specific, strong anchor:
+  hijacked/off-character posts sat at ~0.11–0.15 cosine, in-character at
+  ~0.38–0.55; `SENTINEL_DRIFT_SIM_MIN=0.25` separates them with margin (max
+  over individual recent posts, NOT the centroid — the centroid of a diverse
+  history washes the signal out). This is the persona-drift capability the
+  static layer cannot provide.
+- **`score` (similarity-to-known-bad) is a recall-safe BOOSTER, never a gate.**
+  Against a small corpus, embeddings fire reliably on *near-duplicates* (a
+  reworded known-bad post → 0.96) but **miss novel paraphrases** (a hand-written
+  exfil paraphrase scored 0.32). Therefore a high score is a strong positive a
+  caller may act on, but **a low/"clean" score is never proof of safety** — legs
+  doing injection detection must still run the rung-2 judge on non-suspicious
+  content. Low similarity must NOT suppress rung 2. (This refines the ladder's
+  "confident-clean resolves at rung 1": clean-by-*drift* can resolve; clean-by-
+  *corpus-similarity* cannot.)
 
 ### Rung 2 — tiny LLM (load-on-demand)
 
