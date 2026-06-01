@@ -981,6 +981,25 @@ else
 fi
 
 # =============================================================================
+section "20. Semantic firewall (v0.6 M4)"
+# =============================================================================
+
+if [ -f "workloads/social/tools/semantic-firewall.sh" ]; then
+  pass "semantic firewall present (rung-0 regex → rung-2 judge on feed content)"
+else
+  fail "workloads/social/tools/semantic-firewall.sh missing (M4)"
+fi
+
+# The headline property — a paraphrased injection that evades the 25 static
+# patterns is caught by the semantic judge. Ollama-gated (the test self-skips
+# if no local model is running, so CI without Ollama still passes).
+if bash workloads/social/tests/semantic-firewall.test.sh > /dev/null 2>&1; then
+  pass "semantic firewall catches paraphrased injections the regexes miss"
+else
+  fail "semantic firewall test suite failed (M4)"
+fi
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
