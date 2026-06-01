@@ -273,3 +273,22 @@ export const DANGER_STYLES: Record<Danger, string> = {
   caution: "btn-caution",
   destructive: "btn-destructive",
 };
+
+// ── Sentinel (the local-AI judgment layer) ───────────────────────────────
+// Mirrors app/src-tauri/src/commands/sentinel.rs (serde snake_case).
+export type SentinelRung = "watching" | "thinking" | "deep_analysis";
+
+export interface SentinelActivity {
+  rung: SentinelRung;
+  /** Plain-language label (banned-vocabulary rule applies). */
+  label: string;
+  since_unix_ms: number;
+}
+
+/** The Verdict the judgment lib returns (mirrors sentinel/verdict-schema.json). */
+export interface Verdict {
+  decision: "allow" | "block" | "escalate";
+  confidence: number;
+  resolved_at_rung: number;
+  reason: string;
+}

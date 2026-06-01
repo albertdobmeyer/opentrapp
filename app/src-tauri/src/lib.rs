@@ -185,6 +185,7 @@ pub fn run() {
         ))
         .manage(PerimeterStateStore::new())
         .manage(AssistantStatusStore::new())
+        .manage(commands::sentinel::SentinelActivityStore::new())
         .manage(app_state)
         .setup(move |app| {
             setup_tray(app)?;
@@ -232,6 +233,8 @@ pub fn run() {
             commands::telegram::telegram_advance_offset,
             commands::credentials::validate_anthropic_key,
             commands::credentials::commit_activation,
+            commands::sentinel::get_sentinel_activity,
+            commands::sentinel::sentinel_judge,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

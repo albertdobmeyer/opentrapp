@@ -1086,6 +1086,43 @@ sys.exit(0 if ok else 1)
 PY
 
 # =============================================================================
+section "23. Sentinel GUI bridge + activity indicator (v0.6 slice 1)"
+# =============================================================================
+# Pins the GUI binding of the shared judgment lib: the judge command + the
+# activity indicator wiring. The runtime behaviour is covered by the cargo
+# unit tests + the vitest hook test; these assert the cross-language wiring
+# (esp. the event-name contract) can't silently regress.
+
+if [ -f "app/src-tauri/src/commands/sentinel.rs" ]; then
+  pass "Sentinel GUI bridge module present (commands/sentinel.rs)"
+else
+  fail "commands/sentinel.rs missing (v0.6 GUI slice 1)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "sentinel commands registered in lib.rs (judge + activity)" || fail "lib.rs does not register get_sentinel_activity + sentinel_judge"
+import sys, pathlib
+t = pathlib.Path('app/src-tauri/src/lib.rs').read_text()
+ok = ('commands::sentinel::get_sentinel_activity' in t
+      and 'commands::sentinel::sentinel_judge' in t
+      and 'SentinelActivityStore::new()' in t)
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "activity event-name contract matches (Rust emit ↔ React listen)" || fail "the sentinel-activity-changed event name differs between Rust and the hook"
+import sys, pathlib
+rust = pathlib.Path('app/src-tauri/src/commands/sentinel.rs').read_text()
+hook = pathlib.Path('app/src/hooks/useSentinelActivity.ts').read_text()
+ev = 'sentinel-activity-changed'
+sys.exit(0 if (ev in rust and ev in hook) else 1)
+PY
+
+if [ -f "app/src/components/user/SentinelActivityBadge.tsx" ] && [ -f "app/src/hooks/useSentinelActivity.ts" ]; then
+  pass "activity indicator surface present (badge + hook)"
+else
+  fail "the activity-indicator badge or hook is missing (GUI slice 1)"
+fi
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

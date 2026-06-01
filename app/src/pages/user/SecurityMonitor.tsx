@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import SentinelActivityBadge from "@/components/user/SentinelActivityBadge";
 import { useHero } from "@/hooks/useHero";
 
 interface Layer {
@@ -74,13 +75,21 @@ export default function SecurityMonitor() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 animate-fade-in">
       <header className="mb-8">
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500/10 text-primary-400">
-          <ShieldCheck size={24} strokeWidth={1.75} />
+        <div className="mb-3 flex items-start justify-between gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-500/10 text-primary-400">
+            <ShieldCheck size={24} strokeWidth={1.75} />
+          </div>
+          <SentinelActivityBadge />
         </div>
         <h1 className="text-2xl font-semibold text-neutral-100">Security</h1>
         <p className="mt-2 text-sm text-neutral-400">
           Five independent layers protect your assistant. Each layer catches a
           different class of mistake; one failing does not produce a problem.
+        </p>
+        <p className="mt-2 text-sm text-neutral-500">
+          A small on-device check also watches for unusual activity in the
+          background. The badge above shows what it's doing — it only works
+          harder when something genuinely needs a closer look.
         </p>
       </header>
 

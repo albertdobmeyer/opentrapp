@@ -6,6 +6,8 @@ import type {
   ComponentStatus,
   Workflow,
   WorkflowResult,
+  SentinelActivity,
+  Verdict,
 } from "./types";
 
 // Detect if running inside Tauri webview vs plain browser
@@ -452,4 +454,21 @@ export async function telegramAdvanceOffset(
  */
 export async function commitActivation(): Promise<void> {
   return invoke("commit_activation");
+}
+
+// ── Sentinel bridge (the GUI's consumer of the shared judgment lib) ───────
+
+/** Current Sentinel activity rung (drives the activity indicator). */
+export async function getSentinelActivity(): Promise<SentinelActivity> {
+  return invoke<SentinelActivity>("get_sentinel_activity");
+}
+
+/**
+ * Run the rung-2 judge on an opaque request ({context, fragment, task_hint,
+ * static_signal}). The same JSON the CLI path uses; passed to sentinel/judge.sh.
+ */
+export async function sentinelJudge(
+  request: Record<string, unknown>,
+): Promise<Verdict> {
+  return invoke<Verdict>("sentinel_judge", { request });
 }
