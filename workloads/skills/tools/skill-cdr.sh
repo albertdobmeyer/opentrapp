@@ -98,39 +98,73 @@ if [[ -n "$PREFILTER_STDERR" ]]; then
 fi
 echo -e "  ${GREEN}PASS${RESET} — safe content extracted"
 
-# ── Stage 4: Intent Extraction ──
-echo -e "${BOLD}[4/8] Intent Extraction (Ollama)${RESET}"
+# ── Stages 4-6: Describe → Validate → Regenerate (with retry-repair) ──
+#
+# The intent extractor (stage 4) is LLM-backed and non-deterministic: on a
+# CLEAN skill it intermittently emits malformed/marginal JSON that fails the
+# schema (stage 5) or breaks reconstruction (stage 6). Failing closed on that
+# blocks legitimate skills (the ZONE-4a bug). The fix is the spec's
+# "describe → validate → regenerate; quarantine on un-describable, never
+# silent": retry the describe step with the prior error as a repair hint, and
+# only quarantine — explicitly, with a reason — after the budget is exhausted.
+#
+# This does NOT weaken security: the retry only helps the model produce a
+# VALID *clean* description; the reconstruction is still scanned at stage 7,
+# and any embedded malice was already stripped at stage 3 (pre-filter). A
+# malicious skill can't be "retried" into passing — its content never survives
+# the parse → rebuild, and the scan re-runs on the output.
 INTENT_JSON="$QUARANTINE_DIR/intent.json"
-
-if ! bash "$SCRIPT_DIR/lib/cdr-intent.sh" "$FILTERED_JSON" > "$INTENT_JSON" 2>&1; then
-  echo -e "  ${RED}FAIL — intent extraction failed${RESET}"
-  cat "$INTENT_JSON" >&2
-  exit 1
-fi
-echo -e "  ${GREEN}PASS${RESET} — intent extracted"
-
-# ── Stage 5: Intent Validation ──
-echo -e "${BOLD}[5/8] Intent Validation${RESET}"
-
-if ! "$PY" "$SCRIPT_DIR/lib/cdr-validate.py" "$INTENT_JSON" > /dev/null 2>&1; then
-  VALIDATION_ERRORS=$("$PY" "$SCRIPT_DIR/lib/cdr-validate.py" "$INTENT_JSON" 2>&1 || true)
-  echo -e "  ${RED}FAIL — intent does not match schema${RESET}"
-  echo "  $VALIDATION_ERRORS"
-  exit 1
-fi
-echo -e "  ${GREEN}PASS${RESET} — schema valid"
-
-# ── Stage 6: Reconstruction ──
-echo -e "${BOLD}[6/8] Reconstruction${RESET}"
 RECON_DIR="$QUARANTINE_DIR/reconstructed"
 mkdir -p "$RECON_DIR"
+CDR_MAX_RETRIES="${CDR_MAX_RETRIES:-3}"
 
-if ! "$PY" "$SCRIPT_DIR/lib/cdr-reconstruct.py" "$INTENT_JSON" "$RECON_DIR/SKILL.md" > /dev/null 2>&1; then
-  echo -e "  ${RED}FAIL — reconstruction failed${RESET}"
+echo -e "${BOLD}[4-6/8] Describe → Validate → Regenerate${RESET}"
+cdr_ok=false
+repair_hint=""
+last_issue=""
+for attempt in $(seq 1 "$CDR_MAX_RETRIES"); do
+  hint_note=""
+  [[ -n "$repair_hint" ]] && hint_note=" (repair attempt $attempt)"
+
+  # Stage 4 — describe (intent extraction), passing any prior error as a hint.
+  if ! bash "$SCRIPT_DIR/lib/cdr-intent.sh" "$FILTERED_JSON" "$repair_hint" > "$INTENT_JSON" 2>"$QUARANTINE_DIR/intent.err"; then
+    last_issue="intent extraction failed: $(tr '\n' ' ' < "$QUARANTINE_DIR/intent.err" | head -c 300)"
+    repair_hint="$last_issue"
+    echo -e "  ${YELLOW}retry${RESET} — describe attempt $attempt failed, repairing"
+    continue
+  fi
+
+  # Stage 5 — validate against the strict schema.
+  if ! validation_errors=$("$PY" "$SCRIPT_DIR/lib/cdr-validate.py" "$INTENT_JSON" 2>&1); then
+    last_issue="schema validation: $(echo "$validation_errors" | tr '\n' ' ' | head -c 300)"
+    repair_hint="$last_issue"
+    echo -e "  ${YELLOW}retry${RESET} — schema invalid on attempt $attempt, repairing"
+    continue
+  fi
+
+  # Stage 6 — regenerate the skill from the validated description only.
+  if ! "$PY" "$SCRIPT_DIR/lib/cdr-reconstruct.py" "$INTENT_JSON" "$RECON_DIR/SKILL.md" > "$QUARANTINE_DIR/recon.err" 2>&1; then
+    last_issue="reconstruction failed: $(tr '\n' ' ' < "$QUARANTINE_DIR/recon.err" | head -c 300)"
+    repair_hint="$last_issue"
+    echo -e "  ${YELLOW}retry${RESET} — reconstruction failed on attempt $attempt, repairing"
+    continue
+  fi
+
+  cdr_ok=true
+  RECON_LINES=$(wc -l < "$RECON_DIR/SKILL.md")
+  echo -e "  ${GREEN}PASS${RESET} — described, validated, and rebuilt ($RECON_LINES lines)${hint_note}"
+  break
+done
+
+if [[ "$cdr_ok" != "true" ]]; then
+  # Explicit quarantine — NEVER a silent flaky failure (ZONE-4a invariant).
+  echo -e "  ${RED}QUARANTINE${RESET} — could not produce a valid clean reconstruction after ${CDR_MAX_RETRIES} attempts."
+  echo -e "  Last issue: ${last_issue}"
+  echo -e "  This skill is held in quarantine; it was not delivered. If it is a"
+  echo -e "  legitimate skill, re-run — the describe step is model-backed and a"
+  echo -e "  fresh attempt often succeeds."
   exit 1
 fi
-RECON_LINES=$(wc -l < "$RECON_DIR/SKILL.md")
-echo -e "  ${GREEN}PASS${RESET} — reconstructed ($RECON_LINES lines)"
 
 # ── Stage 7: Post-Verify ──
 echo -e "${BOLD}[7/8] Post-Verification${RESET}"

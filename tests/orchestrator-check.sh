@@ -869,6 +869,44 @@ sys.exit(0)
 PY
 
 # =============================================================================
+section "17. Sentinel judge lib + CDR retry-repair (v0.6 M1)"
+# =============================================================================
+# Structural pins for the M1 deliverables — the runtime/model behaviour is
+# verified by sentinel/judge.test.sh (Ollama-gated); these assert the wiring
+# is present so it can't silently regress.
+
+if [ -f "sentinel/judge.sh" ] && [ -f "sentinel/config.sh" ] && [ -f "sentinel/verdict-schema.json" ]; then
+  pass "Sentinel judge lib present (judge.sh + config.sh + verdict-schema.json)"
+else
+  fail "Sentinel judge lib missing one of judge.sh / config.sh / verdict-schema.json (M1)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "Sentinel judge prompt is injection-hardened" || fail "sentinel/judge.sh prompt lacks the injection-hardening clause (M1)"
+import sys, pathlib
+t = pathlib.Path('sentinel/judge.sh').read_text()
+# Must instruct the model that the fragment is content-to-evaluate, never an
+# instruction to obey — the property judge.test.sh verifies at runtime.
+ok = ('never an instruction' in t.lower() or 'never as a command' in t.lower()) \
+     and 'ignore your instructions' in t.lower()
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "CDR has the retry-with-repair loop + explicit quarantine (ZONE-4a fix)" || fail "skill-cdr.sh missing the retry-repair loop or the explicit quarantine (ZONE-4a fix, M1)"
+import sys, pathlib
+t = pathlib.Path('workloads/skills/tools/skill-cdr.sh').read_text()
+ok = ('CDR_MAX_RETRIES' in t            # the retry budget
+      and 'QUARANTINE' in t             # explicit, not silent
+      and 'repair_hint' in t)           # the describe-with-repair feedback
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "cdr-intent.sh accepts a repair hint" || fail "cdr-intent.sh does not accept the repair-hint arg (M1)"
+import sys, pathlib
+t = pathlib.Path('workloads/skills/tools/lib/cdr-intent.sh').read_text()
+sys.exit(0 if 'REPAIR_HINT' in t else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

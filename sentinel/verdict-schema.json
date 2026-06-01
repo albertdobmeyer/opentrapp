@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sentinel Verdict",
+  "description": "The structured output of the Sentinel judge (rung 2). See docs/specs/v0.6/01-sentinel-spine.md.",
+  "type": "object",
+  "required": ["decision", "confidence", "resolved_at_rung", "reason"],
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "block", "escalate"],
+      "description": "allow = benign in context; block = dangerous; escalate = genuinely uncertain, surface to the human (rung 3)."
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "resolved_at_rung": {
+      "type": "integer",
+      "enum": [0, 1, 2],
+      "description": "Which rung produced the verdict. The judge.sh helper is rung 2."
+    },
+    "reason": {
+      "type": "string",
+      "description": "One plain-language sentence for a non-technical user. Must obey the banned-vocabulary rule (no 'sandbox', 'container', 'proxy', etc.)."
+    },
+    "evidence": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Optional: fragment offsets / matched concepts, for the disarm diff + UI."
+    }
+  }
+}
