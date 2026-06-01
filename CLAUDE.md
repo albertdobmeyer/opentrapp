@@ -40,7 +40,7 @@ opentrapp/                              (this repository — public, monorepo)
     ├── perimeter-explained.md          one-page elevator architecture
     ├── trifecta.md                     full architecture, threat model, defense layers
     ├── handoff.md                      current session-state documentation
-    ├── adr/                            architecture decisions (current numbering: 0001–0013)
+    ├── adr/                            architecture decisions (current numbering: 0001–0015)
     └── archive/                        historical planning artifacts
 ```
 
@@ -113,7 +113,7 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Prior-art comparison | [`docs/why-not-x.md`](docs/why-not-x.md) |
 | Reproducibility recipe | [`docs/reproduce.md`](docs/reproduce.md) + [`docs/reproduce.sh`](docs/reproduce.sh) |
 | Mermaid architecture diagrams | [`docs/diagrams.md`](docs/diagrams.md) |
-| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — 13 records covering proxy-side credentials, adaptive shells, CDR, social-workload parking, deserve-to-exist, four-container topology (superseded by 0009), manifest-driven backend, Tauri, five-container L7/L3 split, pinned-resolver DNS, zero-trust bootstrap, subscription-OAuth feasibility, and monorepo consolidation (0013) |
+| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — 15 records covering proxy-side credentials, adaptive shells, CDR, social-workload parking, deserve-to-exist, four-container topology (superseded by 0009), manifest-driven backend, Tauri, five-container L7/L3 split, pinned-resolver DNS, zero-trust bootstrap, subscription-OAuth feasibility, monorepo consolidation (0013), modular distribution + `openagent-*` naming (0014), and local-AI judgment layer / Sentinel (0015) |
 | Whitepaper | [`docs/whitepaper.md`](docs/whitepaper.md) |
 | Architecture v2 design spec (historical, supersded by `docs/trifecta.md`) | [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) |
 
