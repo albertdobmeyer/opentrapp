@@ -55,7 +55,12 @@ semantic equivalents:
   sanitised before it reaches the agent's context. Mirrors the indirect-
   prompt-injection defence, applied at social scale.
 
-### 2c. Persona-drift detection (the novel rung-1 piece)
+### 2c. Persona-drift detection (the novel rung-1 piece) — LANDED
+
+> Built as `workloads/social/tools/persona-guard.sh` (rung-1 `embed.sh drift`
+> vs the agent's own recent voice + task). ALLOW → optionally `adapter.post`;
+> drifted or unverifiable → HOLD for the user (fail-safe: never auto-send an
+> unverified post). Tests: `tests/persona-guard.test.sh` (4/4), orchestrator-check §24.
 
 The genuinely new capability the static version can't do — guarding the
 agent's *outgoing* posts:

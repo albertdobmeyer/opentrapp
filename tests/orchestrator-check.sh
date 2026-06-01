@@ -1123,6 +1123,30 @@ else
 fi
 
 # =============================================================================
+section "24. Persona-drift outgoing guard (v0.6 M4 §2c)"
+# =============================================================================
+# Pins the outgoing guard: rung-1 drift on what the agent SENDS, with the
+# fail-safe hold. Runtime behaviour is covered by persona-guard.test.sh
+# (Ollama+all-minilm-gated).
+
+if [ -f "workloads/social/tools/persona-guard.sh" ] && [ -f "workloads/social/tests/persona-guard.test.sh" ]; then
+  pass "persona-drift outgoing guard present (persona-guard.sh + test)"
+else
+  fail "persona-guard.sh or its test is missing (M4 §2c)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "persona-guard uses rung-1 drift + holds fail-safe (never auto-sends unverified)" || fail "persona-guard.sh missing the rung-1 drift call or the fail-safe hold"
+import sys, pathlib
+t = pathlib.Path('workloads/social/tools/persona-guard.sh').read_text()
+# Must consult embed.sh drift, and must HOLD (not send) when it can't verify.
+ok = ('embed.sh' in t and 'drift' in t
+      and 'HOLD' in t
+      and 'exit 3' in t           # can't-verify -> fail-safe hold
+      and 'exit 1' in t)          # drifted     -> hold
+sys.exit(0 if ok else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
