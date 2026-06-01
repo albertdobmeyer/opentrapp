@@ -1,8 +1,83 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-05-21 (full Karen E2E against v0.5.0; verdict SHIP-WITH-CAVEATS; work rescoped into construction zones)
-**Current phase:** v0.5.0 released + E2E-validated; v0.5.1 work rescoped into focused zones
-**Branch:** `main` at `136c76a` — **local commits NOT yet pushed** (`e52541f` retry fix, `2bd6edb` harness, `136c76a` findings+ADR-0012). Submodules clean: `opencli-container` @ `ebb5717`, `openagent-skills` @ `7aa51fd`, `openagent-social` @ `75fc40a`.
+**Last updated:** 2026-06-01 (v0.6 implementation — M0–M4 landed; Sentinel AI-judgment layer live)
+**Current phase:** v0.6 in progress on `main` (pushed); the "AI makes AI safe" USP is now real, not aspirational
+**Branch:** `main` at `04e4dde` — **all pushed**. Monorepo (no submodules, ADR-0013). Next release is **v0.6.0** (current shipped: v0.5.0).
+
+> ## ⟶ 2026-06-01 — v0.6 implementation handoff (READ THIS FIRST)
+>
+> **What v0.6 is:** the "uses AI to make AI safe" reassessment. A tiny local AI
+> (**Sentinel**, `sentinel/`) judges the gray zone the static defences miss.
+> Full spec: **`docs/specs/v0.6/`** (00-index → 07-roadmap). Concept locked,
+> milestones M0–M4 implemented + verified against a live local model.
+>
+> ### What landed this session (all on `main`, gated green)
+> - **M0** (`b854dcc`) — renamed `forge → skills` everywhere (`workloads/skills`,
+>   `vault-skills`, `openagent-skills`). Historical ADRs/archive untouched.
+> - **M1** (`12f7e2a` + `f9f564c`) — the Sentinel judge lib (`sentinel/judge.sh`,
+>   injection-hardened, lib-first) + the **ZONE-4a fix** (CDR was ~50% flaky on
+>   clean skills → retry-with-repair makes it reliable, quarantine-never-silent)
+>   + the **disarm diff** (plain-language "what was removed", saved as
+>   `DISARM-DIFF.txt`).
+> - **M2** (`15c4362`) — modular distribution: `distribution.yml` (single
+>   source), profile-driven `build.rs` + bootstrap, `scripts/install-shield.sh`
+>   (install one shield standalone, no GUI).
+> - **M3** (`f0b1c63`) — adaptive containment: `sentinel/egress-advisor.sh`
+>   proposes least-privilege from the egress log; **never-auto-loosen invariant**
+>   (ADR-0002) structurally enforced + tested.
+> - **M4** (`d78a77e`) — semantic firewall: `workloads/social/tools/semantic-firewall.sh`
+>   catches **paraphrased injections the 25 regexes miss** (rung-0 → rung-2).
+> - **D3 fix** (`04e4dde`) — the one quality ceiling. See tiering finding below.
+>
+> ### The load-bearing finding — tiered models
+> **Give the bigger model only to the role whose mistakes you can't otherwise
+> catch.** The tiny model is the **parser** (CDR describe: skill → intent JSON);
+> its failures are schema-detectable + retry-recoverable → stays on the leaner
+> **`qwen2.5-coder:1.5b`** (6/6 once the prompt is explicit — reliability came
+> from the *prompt*, not size). The judge's failures are *not* self-checking →
+> it gets **`qwen2.5-coder:3b`** (allows benign docs-example 5/5, blocks exfil,
+> resists judge-injection; the 1.5b over-blocked). Banked in
+> `docs/specs/v0.6/01-sentinel-spine.md §4` + `sentinel/README.md`.
+> Both local, no API key. Env-overridable (`SENTINEL_MODEL`/`CDR_MODEL`).
+>
+> ### How to verify (one-liners)
+> - `bash tests/orchestrator-check.sh` → **72/0** (re-verifies §10–§20: perimeter,
+>   bot vocab, proxy-log, rename-complete, Sentinel lib, distribution, advisor,
+>   semantic firewall).
+> - USP live: `bash workloads/social/tools/semantic-firewall.sh --file workloads/social/tests/fixtures/paraphrased-injection-posts.json`
+>   (judge catches what regex can't) · `cd workloads/skills && bash tools/skill-cdr.sh tests/cdr-fixtures/clean-skill.md` (reliably delivers + disarm diff).
+> - Standalone install: `bash scripts/install-shield.sh openagent-skills` → a `skills` CLI, no GUI.
+> - Full gate: cargo `91/0`, tsc clean, vitest `74/74`, playwright `--project=default` `25/25`.
+> - **Requires Ollama** running with `qwen2.5-coder:1.5b` + `:3b` pulled (parser/judge).
+>
+> ### What's deferred (flagged in commits + specs — NOT faked)
+> - **Rung-1 embeddings** (D2) — not built; no embedding model pulled; rung 0→2
+>   works without it. Persona-drift on *outgoing* posts needs this.
+> - **GUI pieces** — the Sentinel activity indicator, the one-tap allowlist
+>   approval UX, the install-profile picker. Backends exist; the React/Tauri
+>   surfaces don't. These presuppose the GUI invoking Sentinel (currently a
+>   bash lib the CLIs call).
+> - **M4 live adapter** — `semantic-firewall.sh --adapter file` works; a live
+>   agent-social-network adapter (Mastodon/AT-proto/Nostr) + its validation is
+>   the remaining step. The adapter seam is in place.
+> - **Per-profile image bundling** (smaller AppImage) — release/packaging.
+> - **Wiring the judge as an auto-allow scanner second-opinion** — now viable
+>   with the 3b's precision (was blocked by 1.5b over-blocking); not yet wired.
+>
+> ### Suggested next-session order
+> 1. The GUI Sentinel surfaces (activity indicator + disarm-diff display +
+>    one-tap allowlist) — the biggest user-visible gap; reuse the
+>    `useBootstrapProgress` event pattern.
+> 2. ADR-0015 recording the Sentinel decision (the spec suggests it).
+> 3. Rung-1 embeddings (pull a small embed model; wire similarity/drift).
+> 4. M4 live adapter scouting (MISSION.md Thread C step 1).
+> 5. Pre-release: re-record demo gifs against a v0.6 build; update the gitignored
+>    `docs/pitch-opencode.md` to the new `skills` naming; OpenSSF badge.
+>
+> **Gitignored working docs (on the maintainer's machine, not in the repo):**
+> `MISSION.md` (multi-session north star), `AGENT-TODO.md` (zones — 1, 2, 3, 5,
+> 6a done; 4a done via M1; 4b done; 6b open), `docs/pitch-opencode.md` (opencode
+> outreach draft, awaits the right human + the skills rename).
 
 > ## ⟶ 2026-05-21 — E2E run + rescope (read this first)
 >

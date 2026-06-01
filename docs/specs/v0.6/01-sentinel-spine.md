@@ -105,6 +105,28 @@ in plain language.
 
 ## 4. The model layer
 
+### Model-tiering principle (validated — M1 + bigger-model re-test)
+
+The load-bearing finding from building M1: **give the bigger model only to the
+role whose mistakes you cannot otherwise catch.**
+
+- The tiny model plays two roles. As a **parser** (the CDR "describe" step:
+  untrusted skill → structured intent JSON) its failure mode is *invalid JSON*
+  — which is **schema-detectable** (the validator catches it) and
+  **retry-recoverable** (re-describe with the error as a hint). As a **judge**
+  (gray-zone allow/block) its failure mode is a *plausible wrong verdict* —
+  which is **not** self-checking; a confident wrong answer is indistinguishable
+  from a right one.
+- Therefore: the **parser** runs on the *leaner* model and the **judge** runs
+  on a *bigger* one. Spending model size on the parser buys little (its errors
+  are already caught + fixed); spending it on the judge buys precision you
+  cannot get any other way.
+- Measured: parser on `qwen2.5-coder:1.5b` is 6/6 valid per attempt **once the
+  schema prompt is explicit** (the reliability came from the prompt, not size —
+  see Rung 2 prompt note). Judge on `1.5b` over-blocked the benign gray zone
+  (a `curl` documentation example); judge on `qwen2.5-coder:3b` allows it 5/5
+  while still blocking exfil and resisting judge-injection. Hence the split.
+
 ### Rung 1 — embeddings (always-on, ~100 MB)
 
 - A small sentence-embedding model (D2). Selection criteria: <150 MB,
@@ -121,10 +143,15 @@ in plain language.
 
 ### Rung 2 — tiny LLM (load-on-demand)
 
-- Default `qwen2.5-coder:0.5b` (D3); configurable up. Reuse the **existing
-  Ollama integration** already wired in `workloads/forge/tools/lib/cdr-intent.sh`
-  + `config/cdr.conf` — generalise it into the shared Sentinel service rather
-  than duplicating.
+- **Judge default `qwen2.5-coder:3b`** (D3, resolved — ~1.9 GB, the smallest
+  local model with adequate gray-zone precision). **Parser default
+  `qwen2.5-coder:1.5b`** (`config/cdr.conf` `CDR_MODEL`) — see the tiering
+  principle above. Both env-overridable (`SENTINEL_MODEL` / `CDR_MODEL`); a
+  bigger box can point the judge at 7b/14b, a tiny box can drop it to 1.5b and
+  accept review-not-allow on the gray zone.
+- Reuse the **existing Ollama integration** already wired in
+  `workloads/skills/tools/lib/cdr-intent.sh` + `config/cdr.conf` — generalised
+  into the shared `sentinel/judge.sh`.
 - **Lifecycle:** loaded on first rung-2 call, kept warm for a short idle
   window (config), then unloaded so it doesn't hold ~1 GB while the user's
   agent needs RAM. Expose the load/unload state to the activity indicator.
@@ -210,7 +237,8 @@ A `sentinel` section in the existing settings store (`app_settings`, see
 ```jsonc
 {
   "sentinel": {
-    "rung2_model": "qwen2.5-coder:0.5b",   // D3 default; user-upgradable
+    "judge_model": "qwen2.5-coder:3b",       // rung-2 judge (D3, resolved)
+    "parser_model": "qwen2.5-coder:1.5b",    // CDR describe (leaner; see tiering)
     "rung2_idle_unload_seconds": 120,
     "rung3_local_model": "qwen2.5-coder:7b", // for option (a)
     "rung3_cloud_enabled": true,             // privacy-max users set false
