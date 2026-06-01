@@ -906,6 +906,14 @@ t = pathlib.Path('workloads/skills/tools/lib/cdr-intent.sh').read_text()
 sys.exit(0 if 'REPAIR_HINT' in t else 1)
 PY
 
+python3 - <<'PY' 2>/dev/null && pass "CDR emits the plain-language disarm diff (trust artifact)" || fail "the disarm diff is missing — cdr-diff.py or the emit_disarm_diff wiring (M1)"
+import sys, pathlib
+diff = pathlib.Path('workloads/skills/tools/lib/cdr-diff.py')
+cdr = pathlib.Path('workloads/skills/tools/skill-cdr.sh').read_text()
+ok = diff.exists() and 'emit_disarm_diff' in cdr and 'DISARM-DIFF.txt' in cdr
+sys.exit(0 if ok else 1)
+PY
+
 # =============================================================================
 section "Summary"
 # =============================================================================

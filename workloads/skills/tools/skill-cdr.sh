@@ -68,6 +68,31 @@ trap cleanup EXIT
 
 echo -e "  ${GREEN}PASS${RESET} — quarantined at $QUARANTINE_DIR/"
 
+# Scan the ORIGINAL (pre-CDR) skill so the disarm diff can report, in plain
+# language, what the original contained — the trust artifact the user reads.
+ORIGINAL_SCAN="$QUARANTINE_DIR/original-scan.json"
+# skill-scan exits NON-ZERO when it finds blocking content, so capture stdout
+# unconditionally (|| true) — a non-zero exit here means it found findings,
+# which is exactly what the diff needs. Only fall back to empty if no JSON
+# actually landed.
+bash "$SCRIPT_DIR/skill-scan.sh" --json "$QUARANTINE_DIR" > "$ORIGINAL_SCAN" 2>/dev/null || true
+[ -s "$ORIGINAL_SCAN" ] || echo '{"findings":[]}' > "$ORIGINAL_SCAN"
+
+# emit_disarm_diff <--delivered|--quarantined> [dest_dir]
+# Prints a plain-language summary of what CDR removed/caught; if a dest_dir is
+# given (the delivered skill), also writes it there as DISARM-DIFF.txt.
+emit_disarm_diff() {
+  local mode="$1" dest="${2:-}"
+  echo ""
+  echo -e "${BOLD}What I did (disarm summary):${RESET}"
+  local diff
+  diff=$("$PY" "$SCRIPT_DIR/lib/cdr-diff.py" "$ORIGINAL_SCAN" "$mode" 2>/dev/null || true)
+  echo "$diff" | sed 's/^/  /'
+  if [[ -n "$dest" && -d "$dest" ]]; then
+    printf '%s\n' "$diff" > "$dest/DISARM-DIFF.txt"
+  fi
+}
+
 # ── Stage 2: Structural Parse ──
 echo -e "${BOLD}[2/8] Structural Parse${RESET}"
 STRUCTURED_JSON="$QUARANTINE_DIR/structured.json"
@@ -89,6 +114,7 @@ if ! bash "$SCRIPT_DIR/lib/cdr-prefilter.sh" "$STRUCTURED_JSON" > "$FILTERED_JSO
   rm -f /tmp/cdr-prefilter-err.txt
   echo -e "  ${RED}REJECTED — dangerous content detected${RESET}"
   echo "  $PREFILTER_STDERR"
+  emit_disarm_diff --quarantined
   exit 1
 fi
 PREFILTER_STDERR=$(cat /tmp/cdr-prefilter-err.txt 2>/dev/null || true)
@@ -163,6 +189,7 @@ if [[ "$cdr_ok" != "true" ]]; then
   echo -e "  This skill is held in quarantine; it was not delivered. If it is a"
   echo -e "  legitimate skill, re-run — the describe step is model-backed and a"
   echo -e "  fresh attempt often succeeds."
+  emit_disarm_diff --quarantined
   exit 1
 fi
 
@@ -222,6 +249,11 @@ cp "$RECON_DIR/SKILL.md" "$DEST_DIR/SKILL.md"
 bash "$SCRIPT_DIR/skill-verify.sh" --trust "$DEST_DIR" > /dev/null 2>&1 || true
 
 echo -e "  ${GREEN}PASS${RESET} — delivered to skills/$CDR_SKILL_NAME/"
+
+# Disarm diff — the trust artifact. Tells the user, in plain language, what the
+# rebuild did and what (if anything) the original contained. Saved alongside
+# the delivered skill so the GUI/agent can surface it.
+emit_disarm_diff --delivered "$DEST_DIR"
 
 # Cleanup happens via trap
 echo ""
