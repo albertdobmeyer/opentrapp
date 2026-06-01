@@ -376,6 +376,19 @@ commands:
     sort_order: 30
     timeout_seconds: 120
 
+  - id: cleaned-skills
+    name: Recently cleaned skills
+    description: See what the security cleanroom removed from skills it processed — the plain-language disarm report
+    group: monitoring
+    type: query
+    danger: safe
+    command: bash tools/disarm-report.sh
+    output:
+      format: json
+      display: report
+    sort_order: 40
+    timeout_seconds: 30
+
   # Maintenance
   - id: clean
     name: Clean

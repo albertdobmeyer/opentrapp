@@ -1147,6 +1147,37 @@ sys.exit(0 if ok else 1)
 PY
 
 # =============================================================================
+section "25. Disarm-diff display — skills trust artifact (v0.6 GUI slice 2)"
+# =============================================================================
+# The read-only trust artifact, surfaced through the manifest contract (the
+# cleaned-skills command runs in-container; the GUI renders the JSON). Read-only
+# by design — it surfaces what CDR already did and must never mutate anything.
+
+if [ -f "workloads/skills/tools/disarm-report.sh" ] && [ -f "workloads/skills/tests/disarm-report.test.sh" ] \
+   && [ -f "app/src/components/user/CleanedSkillsCard.tsx" ]; then
+  pass "disarm-diff display present (disarm-report.sh + test + CleanedSkillsCard.tsx)"
+else
+  fail "disarm-diff display missing a piece (disarm-report.sh / test / CleanedSkillsCard.tsx)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "cleaned-skills manifest command declared (the in-architecture channel)" || fail "skills component.yml is missing the cleaned-skills command"
+import sys, yaml, pathlib
+m = yaml.safe_load(pathlib.Path('workloads/skills/component.yml').read_text())
+cmds = {c['id']: c for c in m.get('commands', [])}
+c = cmds.get('cleaned-skills')
+ok = bool(c) and c.get('command','').endswith('disarm-report.sh') and c.get('group') == 'monitoring'
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "disarm-report is read-only (surfaces, never mutates)" || fail "disarm-report.sh contains a mutating operation — it must be read-only"
+import sys, re, pathlib
+t = pathlib.Path('workloads/skills/tools/disarm-report.sh').read_text()
+# No deletes, no copies, no allowlist writes, no redirecting INTO skill files.
+bad = re.search(r'\brm\b|\bcp\b|\bmv\b|allowlist|>\s*"?\$ROOT', t)
+sys.exit(1 if bad else 0)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import CleanedSkillsCard from "@/components/user/CleanedSkillsCard";
 import SentinelActivityBadge from "@/components/user/SentinelActivityBadge";
 import { useHero } from "@/hooks/useHero";
 
@@ -156,6 +157,8 @@ export default function SecurityMonitor() {
           </article>
         ))}
       </div>
+
+      <CleanedSkillsCard />
 
       <footer className="mt-8 rounded-xl border border-neutral-800 bg-neutral-900/40 p-5">
         <h2 className="mb-2 text-sm font-semibold text-neutral-200">
