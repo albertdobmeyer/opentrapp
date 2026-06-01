@@ -114,6 +114,12 @@ M0 Naming sweep (gate, 06)  →  M1 Sentinel lib + skills (01 + 03)  →  ┌ M2
   has the local model + the ZONE-4a bug the spine fixes). Foundation for all legs.
 - **M2 / M3 / M4 in parallel** after M1 freezes the lib.
 
+> **M0–M4 + rung-1 + the GUI Sentinel bridge/indicator + persona-drift + the
+> disarm-diff display have LANDED** (on `main`, gated). The harmonised plan for
+> the work remaining to ship `v0.6.0` — allowlist approval (threat-modeled),
+> production Sentinel staging, the M4 live adapter, and closeout — is
+> [`08-completion-plan.md`](08-completion-plan.md). Read it for the next session.
+
 ## 6. The anti-bloat contract (non-negotiable)
 
 These constraints keep v0.6 lean. Any implementation that violates one needs a
@@ -167,6 +173,11 @@ new decision, not a workaround:
 | # | Decision | Owner | Where |
 |---|----------|-------|-------|
 | D5 | "Confirmed edge case" threshold (alert-fatigue floor; default `SENTINEL_ESCALATE_BELOW=0.35`, tunable) | implementer | [`01`] §escalation |
+| SD-A1 | "Allow once" vs "Always allow" only (allowlist) — rec: defer "allow once" | maintainer | [`08`](08-completion-plan.md) §9 |
+| SD-A2 | Remember a "Deny" — rec: yes | maintainer | [`08`](08-completion-plan.md) §9 |
+| SD-B1 | Stage `sentinel/` into containers: bind-mount (dev) vs image copy (release) | maintainer | [`08`](08-completion-plan.md) §9 |
+| SD-B2 | Bundle Ollama? — rec: no, document the requirement | maintainer | [`08`](08-completion-plan.md) §9 |
+| SD-C1 | Which live agent-social network to scout first | maintainer | [`08`](08-completion-plan.md) §9 |
 
 ## 9. Relationship to existing docs
 

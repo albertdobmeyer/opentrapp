@@ -1,10 +1,54 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-01 (v0.6 implementation — M0–M4 landed; Sentinel AI-judgment layer live)
+**Last updated:** 2026-06-01 (v0.6 continuation — rung-1, GUI bridge, persona-drift, disarm-diff landed; completion plan written)
 **Current phase:** v0.6 in progress on `main` (pushed); the "AI makes AI safe" USP is now real, not aspirational
-**Branch:** `main` at `04e4dde` — **all pushed**. Monorepo (no submodules, ADR-0013). Next release is **v0.6.0** (current shipped: v0.5.0).
+**Branch:** `main` at `9920c51` — **all pushed**. Monorepo (no submodules, ADR-0013). Next release is **v0.6.0** (current shipped: v0.5.0).
 
-> ## ⟶ 2026-06-01 — v0.6 implementation handoff (READ THIS FIRST)
+> ## ⟶ 2026-06-01 (continuation) — READ THIS FIRST: next session implements the completion plan
+>
+> **The next session is implementation, against a harmonised plan:**
+> **[`docs/specs/v0.6/08-completion-plan.md`](specs/v0.6/08-completion-plan.md)** — read it first.
+>
+> ### What landed this continuation (on `main`, gated green, pushed)
+> - **Rung-1 embeddings** (`ee5e775`) — D2 resolved → `all-minilm`; `sentinel/embed.sh`
+>   (`vector`/`score`/`drift`) + `corpus/`. Banked finding: `drift` (vs the agent's
+>   own voice) is the reliable gating signal; `score` (corpus similarity) is a
+>   **recall-safe booster, never a gate** (misses novel paraphrases → must not
+>   suppress rung 2).
+> - **Per-profile image bundling** (`1b84c5e`), **M4 adapter abstraction** (`dc5fb76`),
+>   **ADR-0015** (`d024c89`) — the three parallel Sonnet streams.
+> - **GUI Sentinel bridge + activity indicator** (`4dffcfb`) — `commands/sentinel.rs`
+>   (`sentinel_judge`, malformed→escalate-never-allow) + the watching/thinking
+>   badge on the Security page.
+> - **Persona-drift outgoing guard** (`eabbb36`) — `persona-guard.sh`; hijacked
+>   outgoing posts HELD; fail-safe never-auto-send.
+> - **Disarm-diff display** (`9920c51`) — read-only trust artifact via the
+>   **manifest channel** (`cleaned-skills` cmd in-container → `CleanedSkillsCard`).
+>
+> ### The two load-bearing principles this session established (carry forward)
+> 1. **Security-first ordering:** read-only transparency before any write/loosening
+>    surface. (Why the allowlist is deferred to its own threat-modeled slice.)
+> 2. **Right channel for the component type:** workloads → manifest command;
+>    infra (proxy/egress, no manifest) → the orchestrator's container-management
+>    layer. (`08` §3.)
+>
+> ### What remains (all in `08-completion-plan.md`, sequenced + harmonised)
+> - **A** Allowlist approval (threat-modeled write surface) · **B** production
+>   Sentinel staging (host + container) · **C** M4 live network adapter · **D**
+>   closeout (judge-as-2nd-opinion, pre-release, Zone 6b, ADR-0016).
+> - **Sequencing:** Opus does **B → A** sequential (shared runtime+GUI surfaces);
+>   Sonnet runs **C / D** in parallel (disjoint files; must avoid the collision
+>   set: `build.rs`, `bootstrap/mod.rs`, `podman.rs`, `compose.yml`, `lib.rs`,
+>   `App.tsx`, `SecurityMonitor.tsx`).
+> - **Open decisions for the maintainer:** SD-A1/A2/B1/B2/C1 (`08` §9 / `00` §8).
+>
+> ### Verify (current gate at `9920c51`)
+> orchestrator-check **89/0**, cargo **96/0**, tsc clean, vitest **82/82**,
+> playwright **25/25**; bash suites: judge 3/3, egress 5/5, embed 6/6, firewall
+> 2/2, adapter 16/16, persona-guard 4/4, disarm-report 4/4. Requires Ollama with
+> `qwen2.5-coder:1.5b` + `:3b` + `all-minilm` pulled.
+
+> ## ⟶ 2026-06-01 — v0.6 implementation handoff (M0–M4 — history)
 >
 > **What v0.6 is:** the "uses AI to make AI safe" reassessment. A tiny local AI
 > (**Sentinel**, `sentinel/`) judges the gray zone the static defences miss.
