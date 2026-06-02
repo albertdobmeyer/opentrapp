@@ -1,8 +1,31 @@
+> **EXISTING ENTRY — edit, do not re-add.** This project is already registered at
+> bestpractices.dev as **project #12755** (created 2026-05-05 under the project's
+> former name, *Lobster-TrApp*, before the OpenTrApp rebrand). A name/domain change
+> does **not** require a new application — the entry is keyed to the GitHub repo and is
+> editable in place. Re-adding would create a duplicate and orphan the ~18% already recorded.
+>
+> **Edit it here:** https://www.bestpractices.dev/en/projects/12755/edit (sign in with
+> the GitHub account that owns the repo). Update these four fields first:
+> 1. Project name: `Lobster-TrApp` → `OpenTrApp`
+> 2. Home page URL: `https://lobster-trapp.com` → `https://opentrapp.com`
+> 3. **Repository URL:** `…/lobster-trapp` → `https://github.com/albertdobmeyer/opentrapp`
+>    — this is the field Scorecard's `CII-Best-Practices` check keys on; until it points
+>    at `opentrapp`, the badge cannot credit this repo.
+> 4. Description: replace the stale "four-container / OpenClaw" text with the current
+>    five-container, agent-agnostic description (see `docs/OpenSSF-Quiz.md` §1).
+>
+> Then walk the remaining criteria using `docs/openssf-best-practices-application.md`
+> (refreshed to v0.6.0) to push 18% → Passing. The checklist below is the original
+> 2026-05 plan, kept for the criteria mapping — its "Add a project" framing is
+> superseded by the edit-in-place guidance above.
+
+---
+
  Self-attest at OpenSSF Best Practices. This is the last big Scorecard item that's purely yours to do.
 
   1. Go to https://www.bestpractices.dev/
   2. Sign in with GitHub
-  3. Click "Add a project" → enter https://github.com/albertdobmeyer/opentrapp
+  3. Open the **existing** project #12755 at https://www.bestpractices.dev/en/projects/12755/edit — do NOT click "Add a project" (see the banner above)
   4. Fill out the questionnaire. Most criteria you already meet:
     - ✅ Free/libre/open-source license (MIT)
     - ✅ Source repository public + version controlled
@@ -25,7 +48,7 @@
   For each criterion, paste the relevant URL or filename as evidence. The form auto-grants "Passing" badge level as soon as you meet the bar.
 
   5. Once issued, copy the badge markdown they give you and append it to the README badge row, e.g.:
-  [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/<id>/badge)](https://www.bestpractices.dev/projects/<id>)
+  [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12755/badge)](https://www.bestpractices.dev/projects/12755)
 
   Earning the Passing badge takes Scorecard's CII-Best-Practices from 0 → 5. Silver = 7. Gold = 10. Most projects start at Passing and graduate over time.
 

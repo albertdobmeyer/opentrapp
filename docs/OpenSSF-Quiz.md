@@ -5,8 +5,18 @@
 **Project home:** https://opentrapp.com
 **Badge series:** Metal (Passing → Silver → Gold)
 **Current target:** Passing
-**First submitted:** 2026-05-05
+**bestpractices.dev project:** [#12755](https://www.bestpractices.dev/en/projects/12755) — edit at https://www.bestpractices.dev/en/projects/12755/edit
+**First submitted:** 2026-05-05 (under the project's former name, *Lobster-TrApp* — before the 2026-05-17 rebrand)
 **Last edited:** 2026-05-05
+
+> ⚠ **The live entry still carries the old branding.** Project #12755 was filed
+> before the rebrand and still shows name `Lobster-TrApp`, home `lobster-trapp.com`,
+> repo URL `…/lobster-trapp`, and a stale "four-container / OpenClaw" description (~18%
+> complete). The answers in *this* file are current (OpenTrApp, five-container, v0.6.0);
+> the live form is not. **Do not create a new project — edit #12755 in place** (a
+> name/domain change never needs a re-application). Update the name, home-page URL,
+> repository URL (the field Scorecard's `CII-Best-Practices` check keys on), and
+> description, then continue from the ~18% already recorded toward Passing.
 
 This document records every answer submitted to the [OpenSSF Best Practices](https://www.bestpractices.dev/) questionnaire. It pairs with the criterion-to-evidence mapping at [`scorecard-plan-2026-05-05.md`](scorecard-plan-2026-05-05.md) §4 — that document shows which repository file satisfies each criterion; this document records what was actually written into each form field at submission time.
 
