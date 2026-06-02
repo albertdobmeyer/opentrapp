@@ -2,9 +2,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { renderHook, waitFor, act } from "@testing-library/react";
 
+import { useSentinelActivity } from "./useSentinelActivity";
+
 import type { SentinelActivity } from "@/lib/types";
 
-import { useSentinelActivity } from "./useSentinelActivity";
 
 // The global test-setup mocks @tauri-apps/api/core (invoke) but not /event.
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn() }));
@@ -21,7 +22,7 @@ const activity = (rung: SentinelActivity["rung"]): SentinelActivity => ({
 beforeEach(() => {
   mockInvoke.mockReset();
   mockListen.mockReset();
-  mockListen.mockResolvedValue(() => {});
+  mockListen.mockResolvedValue(vi.fn());
 });
 
 describe("useSentinelActivity", () => {
@@ -34,7 +35,7 @@ describe("useSentinelActivity", () => {
   test("reflects the backend's current activity on mount", async () => {
     mockInvoke.mockResolvedValue(activity("thinking"));
     const { result } = renderHook(() => useSentinelActivity());
-    await waitFor(() => expect(result.current.rung).toBe("thinking"));
+    await waitFor(() => { expect(result.current.rung).toBe("thinking"); });
   });
 
   test("updates when a sentinel-activity-changed event fires", async () => {
@@ -42,13 +43,13 @@ describe("useSentinelActivity", () => {
     let handler: ((e: { payload: SentinelActivity }) => void) | null = null;
     mockListen.mockImplementation((_event, cb) => {
       handler = cb as typeof handler;
-      return Promise.resolve(() => {});
+      return Promise.resolve(vi.fn());
     });
 
     const { result } = renderHook(() => useSentinelActivity());
-    await waitFor(() => expect(handler).not.toBeNull());
+    await waitFor(() => { expect(handler).not.toBeNull(); });
 
-    act(() => handler!({ payload: activity("deep_analysis") }));
+    act(() => { handler?.({ payload: activity("deep_analysis") }); });
     expect(result.current.rung).toBe("deep_analysis");
   });
 
@@ -56,7 +57,7 @@ describe("useSentinelActivity", () => {
     mockInvoke.mockRejectedValue(new Error("Tauri IPC not available"));
     const { result } = renderHook(() => useSentinelActivity());
     // Give the rejected promise a tick; the listener still registers.
-    await waitFor(() => expect(mockListen).toHaveBeenCalled());
+    await waitFor(() => { expect(mockListen).toHaveBeenCalled(); });
     expect(result.current.rung).toBe("watching");
   });
 });

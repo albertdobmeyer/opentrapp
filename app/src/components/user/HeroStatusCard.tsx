@@ -251,8 +251,12 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
               <div
                 className="h-full bg-primary-500 transition-all duration-500"
                 style={{
-                  width: `${Math.round(
-                    (bootstrapProgress.current / Math.max(bootstrapProgress.total, 1)) * 100,
+                  width: `${String(
+                    Math.round(
+                      (bootstrapProgress.current /
+                        Math.max(bootstrapProgress.total, 1)) *
+                        100,
+                    ),
                   )}%`,
                 }}
               />

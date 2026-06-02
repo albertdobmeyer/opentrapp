@@ -28,11 +28,11 @@ export default function CleanedSkillsCard() {
   const [state, setState] = useState<State>({ kind: "loading" });
 
   useEffect(() => {
-    let cancelled = false;
+    const live = { current: true };
     void (async () => {
       try {
         const res = await runCommand("skills", "cleaned-skills");
-        if (cancelled) return;
+        if (!live.current) return;
         if (res.exit_code !== 0) {
           setState({ kind: "unavailable" });
           return;
@@ -40,11 +40,11 @@ export default function CleanedSkillsCard() {
         const parsed = JSON.parse(res.stdout) as { cleaned?: CleanedSkill[] };
         setState({ kind: "ready", cleaned: parsed.cleaned ?? [] });
       } catch {
-        if (!cancelled) setState({ kind: "unavailable" });
+        if (live.current) setState({ kind: "unavailable" });
       }
     })();
     return () => {
-      cancelled = true;
+      live.current = false;
     };
   }, []);
 
@@ -55,8 +55,9 @@ export default function CleanedSkillsCard() {
         <h2 className="text-sm font-semibold">What was removed from your skills</h2>
       </div>
       <p className="mb-4 text-sm text-neutral-400">
-        Before a skill is installed, it's rebuilt from scratch and anything
-        unsafe is dropped. Here's exactly what was taken out, in plain language.
+        Before a skill is installed, it&apos;s rebuilt from scratch and anything
+        unsafe is dropped. Here&apos;s exactly what was taken out, in plain
+        language.
       </p>
 
       {state.kind === "loading" && (
@@ -71,7 +72,7 @@ export default function CleanedSkillsCard() {
 
       {state.kind === "ready" && state.cleaned.length === 0 && (
         <p className="text-sm text-neutral-500">
-          No skills have needed cleaning yet. When one does, you'll see here
+          No skills have needed cleaning yet. When one does, you&apos;ll see here
           what was removed.
         </p>
       )}

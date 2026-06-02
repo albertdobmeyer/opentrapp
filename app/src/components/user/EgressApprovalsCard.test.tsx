@@ -48,7 +48,7 @@ describe("EgressApprovalsCard", () => {
 
     fireEvent.click(screen.getByText("Tap again to confirm")); // confirms
     await waitFor(() =>
-      expect(mockApply).toHaveBeenCalledWith("news.example.com", "always"),
+      { expect(mockApply).toHaveBeenCalledWith("news.example.com", "always"); },
     );
   });
 
@@ -58,7 +58,7 @@ describe("EgressApprovalsCard", () => {
     const block = await screen.findByText("Block");
     fireEvent.click(block);
     await waitFor(() =>
-      expect(mockApply).toHaveBeenCalledWith("tracker.example.com", "deny"),
+      { expect(mockApply).toHaveBeenCalledWith("tracker.example.com", "deny"); },
     );
   });
 
@@ -71,9 +71,7 @@ describe("EgressApprovalsCard", () => {
   });
 
   test("degrades honestly when the assistant isn't running", async () => {
-    mockList.mockImplementation(async () => {
-      throw new Error("offline");
-    });
+    mockList.mockImplementation(() => Promise.reject(new Error("offline")));
     render(<EgressApprovalsCard />);
     await waitFor(() =>
       expect(

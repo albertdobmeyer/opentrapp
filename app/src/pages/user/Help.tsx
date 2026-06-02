@@ -40,6 +40,15 @@ const SECTIONS: Section[] = [
   },
 ];
 
+/** Open an external link via the shell, falling back to a new browser tab. */
+async function open(href: string) {
+  try {
+    await openUrl(href);
+  } catch {
+    window.open(href, "_blank", "noopener,noreferrer");
+  }
+}
+
 export default function Help() {
   const { settings } = useSettings();
 
@@ -48,14 +57,6 @@ export default function Help() {
     (settings.telegramBotUsername
       ? `https://t.me/${settings.telegramBotUsername}?text=Hi`
       : null);
-
-  async function open(href: string) {
-    try {
-      await openUrl(href);
-    } catch {
-      window.open(href, "_blank", "noopener,noreferrer");
-    }
-  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 animate-fade-in">
@@ -66,7 +67,7 @@ export default function Help() {
         <h1 className="text-2xl font-semibold text-neutral-100">Help & support</h1>
         <p className="mt-2 text-sm text-neutral-400">
           The quickest path to a fix is usually your assistant itself — message
-          it on Telegram and describe what's happening. The answers below cover
+          it on Telegram and describe what&apos;s happening. The answers below cover
           the most common stuck-points.
         </p>
       </header>

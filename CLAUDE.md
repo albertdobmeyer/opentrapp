@@ -126,13 +126,18 @@ cd app/src-tauri && cargo test --lib    # 56 tests at v0.3.0
 
 # Frontend
 cd app && npm install
-cd app && npm test -- --run             # vitest, 74 tests at v0.3.0
+cd app && npm run lint                  # eslint --max-warnings 0 (CI GATE — must be clean)
+cd app && npm test -- --run             # vitest
 cd app && npx tsc --noEmit              # TypeScript strict
 cd app && npx playwright test           # end-to-end, 25 tests
 cd app && npm run dev                   # Vite dev server
 
 # Manifest and orchestration validation
-bash tests/orchestrator-check.sh        # 42 checks, must report 0 warnings
+bash tests/orchestrator-check.sh        # must report 0 warnings
+bash tests/integration-test.sh --ci     # cross-module contracts (CI GATE — 0 failures)
+
+# NOTE: `npm run lint` and `integration-test.sh` are CI gate jobs in ci.yml —
+# a local "green" that omits them does NOT mean CI is green. Run the full set.
 
 # Container perimeter (smoke)
 podman compose up -d                    # start all five containers

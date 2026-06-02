@@ -2,6 +2,7 @@ import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
 import { getSentinelActivity } from "@/lib/tauri";
+
 import type { SentinelActivity } from "@/lib/types";
 
 /**
@@ -35,7 +36,7 @@ export function useSentinelActivity(): SentinelActivity {
       }
       unlisten = await listen<SentinelActivity>(
         "sentinel-activity-changed",
-        (event) => setActivity(event.payload),
+        (event) => { setActivity(event.payload); },
       );
     })();
 

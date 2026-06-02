@@ -61,18 +61,19 @@ const LAYERS: Layer[] = [
   },
 ];
 
+/** Open an external link via the shell, falling back to a new browser tab. */
+async function open(href: string) {
+  try {
+    await openUrl(href);
+  } catch {
+    window.open(href, "_blank", "noopener,noreferrer");
+  }
+}
+
 export default function SecurityMonitor() {
   const { snapshot, loading } = useHero();
   const alerts = snapshot.alerts;
   const showAlerts = !loading && alerts.length > 0;
-
-  async function open(href: string) {
-    try {
-      await openUrl(href);
-    } catch {
-      window.open(href, "_blank", "noopener,noreferrer");
-    }
-  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 animate-fade-in">
@@ -90,7 +91,7 @@ export default function SecurityMonitor() {
         </p>
         <p className="mt-2 text-sm text-neutral-500">
           A small on-device check also watches for unusual activity in the
-          background. The badge above shows what it's doing — it only works
+          background. The badge above shows what it&apos;s doing — it only works
           harder when something genuinely needs a closer look.
         </p>
       </header>
@@ -102,7 +103,7 @@ export default function SecurityMonitor() {
             <h2 className="text-sm font-semibold">
               {alerts.length === 1
                 ? "1 thing needs your attention"
-                : `${alerts.length} things need your attention`}
+                : `${String(alerts.length)} things need your attention`}
             </h2>
           </div>
           <ul className="space-y-3">

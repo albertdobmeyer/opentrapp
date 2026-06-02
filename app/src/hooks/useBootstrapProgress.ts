@@ -1,4 +1,4 @@
-import { listen } from "@tauri-apps/api/event";
+import { listen, type Event } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
 /**
@@ -81,30 +81,31 @@ export function useBootstrapProgress(): BootstrapProgress {
     let unlistenStarted: (() => void) | null = null;
     let unlistenFailed: (() => void) | null = null;
 
+    // Named handlers (defined at the effect's top level) keep the listener
+    // wiring out of a 4th nesting level under the async IIFE.
+    const onStarted = (event: Event<StepStartedPayload>) => {
+      setProgress({
+        step: event.payload.step,
+        current: event.payload.current,
+        total: event.payload.total_steps,
+        label: STEP_LABEL[event.payload.step],
+        detail: event.payload.detail,
+        active: true,
+        failed: null,
+      });
+    };
+    const onFailed = (event: Event<StepFailedPayload>) => {
+      setProgress((prev) => ({ ...prev, active: false, failed: event.payload }));
+    };
+
     void (async () => {
       unlistenStarted = await listen<StepStartedPayload>(
         "bootstrap-step-started",
-        (event) => {
-          setProgress({
-            step: event.payload.step,
-            current: event.payload.current,
-            total: event.payload.total_steps,
-            label: STEP_LABEL[event.payload.step] ?? event.payload.step,
-            detail: event.payload.detail,
-            active: true,
-            failed: null,
-          });
-        },
+        onStarted,
       );
       unlistenFailed = await listen<StepFailedPayload>(
         "bootstrap-step-failed",
-        (event) => {
-          setProgress((prev) => ({
-            ...prev,
-            active: false,
-            failed: event.payload,
-          }));
-        },
+        onFailed,
       );
     })();
 

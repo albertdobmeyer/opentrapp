@@ -2,6 +2,7 @@ import { Globe } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { listEgressApprovals, applyAllowlistDecision } from "@/lib/tauri";
+
 import type { PendingApproval, AllowlistDecision } from "@/lib/types";
 
 type State =
@@ -26,17 +27,17 @@ export default function EgressApprovalsCard() {
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    const live = { current: true };
     void (async () => {
       try {
         const pending = await listEgressApprovals();
-        if (!cancelled) setState({ kind: "ready", pending });
+        if (live.current) setState({ kind: "ready", pending });
       } catch {
-        if (!cancelled) setState({ kind: "unavailable" });
+        if (live.current) setState({ kind: "unavailable" });
       }
     })();
     return () => {
-      cancelled = true;
+      live.current = false;
     };
   }, []);
 
@@ -70,8 +71,8 @@ export default function EgressApprovalsCard() {
         <h2 className="text-sm font-semibold">Sites waiting for your approval</h2>
       </div>
       <p className="mb-4 text-sm text-neutral-400">
-        Your assistant tried to reach these sites, which aren't approved yet.
-        Approve only the ones you recognise and trust.
+        Your assistant tried to reach these sites, which aren&apos;t approved
+        yet. Approve only the ones you recognise and trust.
       </p>
 
       {state.kind === "loading" && (
@@ -87,7 +88,7 @@ export default function EgressApprovalsCard() {
       {state.kind === "ready" && state.pending.length === 0 && (
         <p className="text-sm text-neutral-500">
           Nothing is waiting. If your assistant tries to reach a new site,
-          you'll be asked here first.
+          you&apos;ll be asked here first.
         </p>
       )}
 
@@ -106,7 +107,7 @@ export default function EgressApprovalsCard() {
                 <button
                   type="button"
                   disabled={busy === p.host}
-                  onClick={() => onAllow(p.host)}
+                  onClick={() => { onAllow(p.host); }}
                   className="rounded-md bg-primary-600/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-50"
                 >
                   {confirming === p.host ? "Tap again to confirm" : "Allow always"}

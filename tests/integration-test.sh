@@ -392,7 +392,7 @@ for f in \
   "$SOCIAL/tools/agent-census.sh" \
   "$SOCIAL/tools/identity-checklist.sh" \
   "$VAULT/scripts/verify.sh" \
-  "$VAULT/proxy/vault-proxy.py"; do
+  "infra/proxy/vault-proxy.py"; do
   if [[ ! -f "$f" ]]; then
     fail "3.5 Missing tool: $f"
     TOOLS_OK=false
@@ -448,12 +448,12 @@ fi
 
 # 5.2: Each component.yml declares the expected role
 ROLE_OK=true
-for pair in "opencli-container:runtime" "openagent-skills:toolchain" "openagent-social:network"; do
+for pair in "agent:runtime" "skills:toolchain" "social:network"; do
   comp="${pair%%:*}"
   expected="${pair##*:}"
   actual=$(python3 -c "
 import yaml, sys
-with open('components/$comp/component.yml') as f:
+with open('workloads/$comp/component.yml') as f:
     d = yaml.safe_load(f)
 print(d['identity']['role'])
 " 2>/dev/null) || actual=""

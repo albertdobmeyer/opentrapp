@@ -1,8 +1,10 @@
 import { Eye, Loader2, Search } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+
 
 import { useSentinelActivity } from "@/hooks/useSentinelActivity";
+
 import type { SentinelRung } from "@/lib/types";
+import type { LucideIcon } from "lucide-react";
 
 interface RungCopy {
   label: string;
@@ -48,7 +50,7 @@ const COPY: Record<SentinelRung, RungCopy> = {
  */
 export default function SentinelActivityBadge() {
   const activity = useSentinelActivity();
-  const copy = COPY[activity.rung] ?? COPY.watching;
+  const copy = COPY[activity.rung];
   const Icon = copy.icon;
 
   return (
