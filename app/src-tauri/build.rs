@@ -65,6 +65,47 @@ fn stage_perimeter_resources() {
     }
 }
 
+/// Stage the shared Sentinel lib (`sentinel/`) into the perimeter resource dir
+/// so both consumers find it in a packaged build: the host bridge
+/// (`commands/sentinel.rs` → `resource_dir()/perimeter/sentinel`) and the
+/// in-container shields (perimeter.yml `kind: resource` mount → `/opt/sentinel`).
+/// Sentinel is a policy/lib artifact, so it rides the same verified-staged-`:ro`
+/// path as vault-proxy.py / allowlist.txt (ADR-0009/0011, spec 08 §5). It is
+/// shared across every install profile, so it is always staged regardless of
+/// `OPENTRAPP_PROFILE`. Test files (`*.test.sh`) are skipped — runtime only.
+fn stage_sentinel() {
+    println!("cargo:rerun-if-changed=../../sentinel");
+    let src_root = Path::new("../../sentinel");
+    let dest_root = Path::new("resources/perimeter/sentinel");
+    if !src_root.is_dir() {
+        // A non-source build (e.g. CI staging artefacts only) may not have the
+        // tree here; skip rather than fail — a missing lib surfaces as a clear
+        // runtime error in the resolver.
+        return;
+    }
+    let _ = copy_dir_recursive(src_root, dest_root);
+}
+
+/// Recursively copy `src` → `dest`, skipping `*.test.sh`. `std::fs::copy`
+/// preserves Unix mode bits, so `judge.sh`/`embed.sh` stay executable.
+fn copy_dir_recursive(src: &Path, dest: &Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dest)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let path = entry.path();
+        let name = entry.file_name();
+        if path.is_dir() {
+            copy_dir_recursive(&path, &dest.join(&name))?;
+        } else if path.is_file() {
+            if name.to_string_lossy().ends_with(".test.sh") {
+                continue;
+            }
+            std::fs::copy(&path, dest.join(&name))?;
+        }
+    }
+    Ok(())
+}
+
 /// Derive the set of container names for a given profile by reading
 /// `distribution.yml` (the single source of truth). Returns all containers
 /// from all shields the profile includes. Falls back to the empty set on any
@@ -225,6 +266,7 @@ fn stage_images() {
 
 fn main() {
     stage_perimeter_resources();
+    stage_sentinel();
     stage_manifests();
     stage_images();
     tauri_build::build()

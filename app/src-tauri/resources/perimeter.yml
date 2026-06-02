@@ -136,6 +136,10 @@ services:
     volumes:
       - { source: skills-deliveries, target: /app/exports, kind: named }
       - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
+      # Shared Sentinel lib — the in-container shield (skill-cdr.sh) resolves
+      # /opt/sentinel. Verified, read-only, staged from the signed bundle like
+      # every other policy artifact (ADR-0009/0011, spec 08 §5).
+      - { source: sentinel, target: /opt/sentinel, read_only: true, kind: resource }
     env:
       - { name: HTTP_PROXY, kind: literal, value: "http://vault-proxy:8080" }
       - { name: HTTPS_PROXY, kind: literal, value: "http://vault-proxy:8080" }
@@ -156,6 +160,9 @@ services:
     command: ["bash", "-c", "echo 'vault-social ready' && sleep infinity"]
     volumes:
       - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
+      # Shared Sentinel lib — semantic-firewall.sh + persona-guard.sh resolve
+      # /opt/sentinel. Same verified read-only staging as vault-skills above.
+      - { source: sentinel, target: /opt/sentinel, read_only: true, kind: resource }
     env:
       - { name: HTTP_PROXY, kind: literal, value: "http://vault-proxy:8080" }
       - { name: HTTPS_PROXY, kind: literal, value: "http://vault-proxy:8080" }

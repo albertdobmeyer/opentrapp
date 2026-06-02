@@ -618,8 +618,14 @@ pub fn stage_resources_from_bundle(bundle_perimeter_dir: &Path, runtime_resource
     for entry in std::fs::read_dir(bundle_perimeter_dir)? {
         let entry = entry?;
         let src = entry.path();
-        if src.is_file() {
-            let dest = runtime_resource_dir.join(entry.file_name());
+        let dest = runtime_resource_dir.join(entry.file_name());
+        if src.is_dir() {
+            // Recurse: the Sentinel lib (`perimeter/sentinel/**`) is a directory
+            // tree that the shield containers bind-mount at `/opt/sentinel`
+            // (spec 08 §5). The `images/` dir is handled separately and is
+            // re-staged here harmlessly if present.
+            stage_resources_from_bundle(&src, &dest)?;
+        } else if src.is_file() {
             std::fs::copy(&src, &dest)?;
         }
     }
@@ -1110,6 +1116,47 @@ mod tests {
         assert!(joined.contains("/run/opentrapp/perimeter/vault-proxy.py:/opt/vault/vault-proxy.py:ro"));
         assert!(joined.contains("/run/opentrapp/perimeter/allowlist.txt:/opt/vault/allowlist.txt:ro"));
         assert!(!joined.contains("workloads/agent") && !joined.contains("infra/proxy"), "no source-tree paths");
+    }
+
+    #[test]
+    fn shields_mount_the_shared_sentinel_lib_read_only(){
+        // The Sentinel lib is staged into the verified resource dir and bind-mounted
+        // :ro into both shields at /opt/sentinel (spec 08 §5). Mirrors the proxy.py
+        // resource-mount pattern — never a source-tree path.
+        let spec = perimeter::load().unwrap();
+        let env = BTreeMap::new();
+        let res = Path::new("/run/opentrapp/perimeter");
+        for svc in ["vault-skills", "vault-social"] {
+            let args =
+                container_run_args(svc, &spec.services[svc], "img:latest", &ctx_with(&env, &res))
+                    .unwrap();
+            let joined = args.join(" ");
+            assert!(
+                joined.contains("/run/opentrapp/perimeter/sentinel:/opt/sentinel:ro"),
+                "{svc} must mount the verified sentinel lib read-only, got: {joined}"
+            );
+        }
+    }
+
+    #[test]
+    fn stage_resources_from_bundle_recurses_into_subdirs() {
+        // The Sentinel lib is a directory tree (sentinel/lib/*, sentinel/corpus/*),
+        // so staging must recurse — not just copy top-level files.
+        let base = std::env::temp_dir().join("opentrapp-stage-recurse-test");
+        let _ = std::fs::remove_dir_all(&base);
+        let bundle = base.join("bundle");
+        let runtime = base.join("runtime");
+        std::fs::create_dir_all(bundle.join("sentinel/lib")).unwrap();
+        std::fs::write(bundle.join("allowlist.txt"), "example.com\n").unwrap();
+        std::fs::write(bundle.join("sentinel/judge.sh"), "#!/usr/bin/env bash\n").unwrap();
+        std::fs::write(bundle.join("sentinel/lib/embed.py"), "x = 1\n").unwrap();
+
+        stage_resources_from_bundle(&bundle, &runtime).unwrap();
+
+        assert!(runtime.join("allowlist.txt").is_file(), "top-level file staged");
+        assert!(runtime.join("sentinel/judge.sh").is_file(), "nested file staged");
+        assert!(runtime.join("sentinel/lib/embed.py").is_file(), "deeply-nested file staged");
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     /// Zone 3 / B-bug: the `vault-proxy-logs` named volume must be chowned on

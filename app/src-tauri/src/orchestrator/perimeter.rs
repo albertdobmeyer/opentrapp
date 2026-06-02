@@ -276,6 +276,25 @@ mod tests {
     }
 
     #[test]
+    fn shields_mount_shared_sentinel_lib_as_verified_readonly_resource() {
+        // The shared Sentinel lib is staged like every other policy artifact
+        // (kind: resource, :ro) and mounted at /opt/sentinel in both shields so
+        // the in-container bash shields resolve it in a packaged build (spec 08 §5).
+        let spec = load().unwrap();
+        for svc in ["vault-skills", "vault-social"] {
+            let mount = spec.services[svc]
+                .volumes
+                .iter()
+                .find(|v| v.target == "/opt/sentinel")
+                .unwrap_or_else(|| panic!("{svc} must mount /opt/sentinel"));
+            assert_eq!(mount.source, "sentinel", "{svc} sentinel source");
+            assert_eq!(mount.kind, MountKind::Resource, "{svc} sentinel must be a verified resource");
+            assert!(mount.read_only, "{svc} sentinel mount must be read-only");
+            assert!(!mount.chown, "{svc} sentinel mount must not chown a :ro mount");
+        }
+    }
+
+    #[test]
     fn only_egress_holds_net_admin() {
         let spec = load().unwrap();
         for (name, svc) in &spec.services {

@@ -92,6 +92,7 @@ redesign.
 - [Podman](https://podman.io/) or [Docker](https://www.docker.com/) installed and runnable by the current user
 - Approximately 4 GB free disk space for the five container images
 - An [Anthropic API key](https://console.anthropic.com/) and a Telegram bot token (the in-app setup wizard explains how to obtain both)
+- *(Optional)* [Ollama](https://ollama.com/) running locally, for the on-device AI safety checks. Without it the fast built-in checks still run; the deeper AI second opinion simply holds anything uncertain for your review instead of judging it automatically. Pull the small local models it uses: `ollama pull qwen2.5-coder:1.5b`, `ollama pull qwen2.5-coder:3b`, and `ollama pull all-minilm`.
 
 ## Installation
 

@@ -1178,6 +1178,49 @@ sys.exit(1 if bad else 0)
 PY
 
 # =============================================================================
+section "26. Production Sentinel staging (v0.6 Item B)"
+# =============================================================================
+# The shared Sentinel lib must reach a PACKAGED build the same verified way as
+# every other policy artifact: build.rs stages sentinel/ into the bundle, the
+# shields bind-mount it :ro at /opt/sentinel (perimeter.yml kind: resource +
+# dev compose.yml), and the Ollama runtime requirement is documented (spec 08 §5).
+
+python3 - <<'PY' 2>/dev/null && pass "build.rs stages the shared Sentinel lib into the bundle" || fail "build.rs does not stage sentinel/ into resources/perimeter/sentinel (Item B)"
+import sys, pathlib
+t = pathlib.Path('app/src-tauri/build.rs').read_text()
+ok = 'fn stage_sentinel' in t and 'resources/perimeter/sentinel' in t and 'stage_sentinel()' in t
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "perimeter.yml mounts sentinel :ro into both shields (verified resource)" || fail "perimeter.yml is missing the sentinel kind:resource /opt/sentinel mount on a shield"
+import sys, yaml, pathlib
+spec = yaml.safe_load(pathlib.Path('app/src-tauri/resources/perimeter.yml').read_text())
+ok = True
+for svc in ('vault-skills', 'vault-social'):
+    vols = spec['services'][svc].get('volumes', [])
+    m = next((v for v in vols if v.get('target') == '/opt/sentinel'), None)
+    ok = ok and m is not None and m.get('source') == 'sentinel' \
+         and m.get('kind') == 'resource' and m.get('read_only') is True
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "compose.yml bind-mounts sentinel :ro into both shields (dev ↔ perimeter agree)" || fail "compose.yml is missing the ./sentinel:/opt/sentinel:ro mount on a shield"
+import sys, yaml, pathlib
+c = yaml.safe_load(pathlib.Path('compose.yml').read_text())
+ok = True
+for svc in ('vault-skills', 'vault-social'):
+    vols = c['services'][svc].get('volumes', [])
+    ok = ok and any(str(v).strip() == './sentinel:/opt/sentinel:ro' for v in vols)
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "Ollama runtime requirement is documented (soft prerequisite, SD-B2)" || fail "README does not document the optional Ollama requirement for the local-AI rungs (Item B §B3)"
+import sys, pathlib
+t = pathlib.Path('README.md').read_text().lower()
+sys.exit(0 if ('ollama' in t and 'all-minilm' in t and 'optional' in t) else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

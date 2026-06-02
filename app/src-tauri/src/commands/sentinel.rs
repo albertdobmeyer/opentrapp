@@ -16,7 +16,7 @@
 //! `score`/`drift` rung-1 bridges and the rich rung-3 escalation UX land with
 //! the skills/social GUI legs.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -152,19 +152,35 @@ pub fn get_sentinel_activity(store: State<'_, SentinelActivityStore>) -> Sentine
 
 // ─── lib location ─────────────────────────────────────────────────────
 
-/// Locate the shared `sentinel/` lib. Candidate order mirrors the manifest
-/// resolver (`manifest_cmds.rs`): bundled resource → staged runtime dir → a
-/// dev fallback relative to the crate (so `cargo`/`npm run dev` work from the
-/// repo). Returns the dir that actually contains `judge.sh`.
-fn locate_sentinel_dir(app: &AppHandle) -> Option<PathBuf> {
+/// Build the ordered candidate dirs for the shared `sentinel/` lib. Pure +
+/// unit-testable (no `AppHandle`). Order:
+///   1. bundle-direct — `<resource_dir>/perimeter/sentinel`: the verified copy
+///      packaged inside the signed AppImage (`tauri.conf.json` bundles
+///      `resources/perimeter`), resolvable before bootstrap staging runs.
+///   2. flat resource — `<resource_dir>/sentinel`: any future flat-resource layout.
+///   3. staged runtime — `<runtime_perimeter>/sentinel`: copied from the bundle
+///      at first launch by `stage_resources_from_bundle` (self-heals tampering).
+///   4. dev fallback — repo-root `sentinel/` relative to the crate, so
+///      `cargo`/`npm run dev` work from a source checkout.
+fn sentinel_candidates(resource_dir: Option<&Path>, runtime_perimeter: &Path) -> Vec<PathBuf> {
     let mut cands: Vec<PathBuf> = Vec::new();
-    if let Ok(res) = app.path().resource_dir() {
+    if let Some(res) = resource_dir {
+        cands.push(res.join("perimeter").join("sentinel"));
         cands.push(res.join("sentinel"));
     }
-    cands.push(crate::orchestrator::podman::resource_dir().join("sentinel"));
-    // Dev fallback: repo-root sentinel/ relative to app/src-tauri.
+    cands.push(runtime_perimeter.join("sentinel"));
     cands.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../sentinel"));
-    cands.into_iter().find(|p| p.join("judge.sh").is_file())
+    cands
+}
+
+/// Locate the shared `sentinel/` lib — the first candidate that contains
+/// `judge.sh`. See [`sentinel_candidates`] for the search order.
+fn locate_sentinel_dir(app: &AppHandle) -> Option<PathBuf> {
+    let resource_dir = app.path().resource_dir().ok();
+    let runtime_perimeter = crate::orchestrator::podman::resource_dir();
+    sentinel_candidates(resource_dir.as_deref(), &runtime_perimeter)
+        .into_iter()
+        .find(|p| p.join("judge.sh").is_file())
 }
 
 // ─── the judge bridge ─────────────────────────────────────────────────
@@ -264,5 +280,35 @@ mod tests {
         assert_eq!(v.decision, "escalate");
         let v2 = parse_verdict(r#"{"decision":"yolo","confidence":1.0,"resolved_at_rung":2,"reason":"x"}"#);
         assert_eq!(v2.decision, "escalate");
+    }
+
+    #[test]
+    fn candidates_prefer_bundled_perimeter_layout() {
+        // The verified copy inside the signed AppImage lives at
+        // <resource_dir>/perimeter/sentinel — it must be tried first, and the
+        // staged runtime dir must also be a candidate (post-bootstrap).
+        let res = Path::new("/bundle/res");
+        let runtime = Path::new("/home/u/.opentrapp/perimeter");
+        let cands = sentinel_candidates(Some(res), runtime);
+        assert_eq!(cands[0], PathBuf::from("/bundle/res/perimeter/sentinel"));
+        assert!(cands.contains(&PathBuf::from("/home/u/.opentrapp/perimeter/sentinel")));
+    }
+
+    #[test]
+    fn resolves_lib_from_packaged_resource_layout_no_dev_fallback() {
+        // Simulate a packaged build: a resource dir with perimeter/sentinel/judge.sh
+        // present. Resolution (the same find() locate_sentinel_dir uses) must
+        // pick it without depending on the crate-relative dev fallback.
+        let base = std::env::temp_dir().join("opentrapp-sentinel-resolve-test");
+        let staged = base.join("perimeter").join("sentinel");
+        std::fs::create_dir_all(&staged).unwrap();
+        std::fs::write(staged.join("judge.sh"), "#!/usr/bin/env bash\n").unwrap();
+
+        let found = sentinel_candidates(Some(&base), Path::new("/nonexistent/perimeter"))
+            .into_iter()
+            .find(|p| p.join("judge.sh").is_file());
+
+        assert_eq!(found.as_deref(), Some(staged.as_path()));
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

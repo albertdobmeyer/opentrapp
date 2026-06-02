@@ -219,6 +219,9 @@ services:
       - skills-deliveries:/app/exports
       # Trust the proxy's CA cert for HTTPS interception
       - proxy-ca:/opt/proxy-ca:ro
+      # Shared Sentinel lib — skill-cdr.sh resolves /opt/sentinel. Dev bind-mount;
+      # the packaged build stages a verified copy (perimeter.yml kind: resource).
+      - ./sentinel:/opt/sentinel:ro
     environment:
       # Forge routes downloads through the proxy for allowlist enforcement
       - HTTP_PROXY=http://vault-proxy:8080
@@ -252,6 +255,9 @@ services:
     volumes:
       # Trust the proxy's CA cert for HTTPS interception
       - proxy-ca:/opt/proxy-ca:ro
+      # Shared Sentinel lib — semantic-firewall.sh + persona-guard.sh resolve
+      # /opt/sentinel. Dev bind-mount; packaged build stages a verified copy.
+      - ./sentinel:/opt/sentinel:ro
     networks:
       - social-net
     environment:
