@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import CleanedSkillsCard from "@/components/user/CleanedSkillsCard";
+import EgressApprovalsCard from "@/components/user/EgressApprovalsCard";
 import SentinelActivityBadge from "@/components/user/SentinelActivityBadge";
 import { useHero } from "@/hooks/useHero";
 
@@ -157,6 +158,8 @@ export default function SecurityMonitor() {
           </article>
         ))}
       </div>
+
+      <EgressApprovalsCard />
 
       <CleanedSkillsCard />
 

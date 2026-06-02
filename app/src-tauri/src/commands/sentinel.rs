@@ -189,18 +189,34 @@ fn locate_sentinel_dir(app: &AppHandle) -> Option<PathBuf> {
 /// CLI path uses (`context` / `fragment` / `task_hint` / `static_signal`); it
 /// is passed straight to `sentinel/judge.sh` on stdin. Drives the activity
 /// indicator: `thinking` while the judge runs, back to `watching` after.
+/// Run the rung-2 judge on an opaque request and return a [`Verdict`]. Reusable
+/// by any GUI consumer — the `sentinel_judge` command and the egress-approval
+/// path (`commands::egress`). Infra failures (lib/bash missing, bad serialise)
+/// return an `escalate` verdict — never a silent allow. Drives the activity
+/// indicator (`thinking` while the judge runs, back to `watching` after).
+pub(crate) async fn judge(app: &AppHandle, request: serde_json::Value) -> Verdict {
+    let Some(dir) = locate_sentinel_dir(app) else {
+        return Verdict::escalate("The local judgment helper is not available; please review manually.");
+    };
+    let Some(bash) = find_bash() else {
+        return Verdict::escalate("Could not find a shell to run the local check; please review manually.");
+    };
+    let request_json = match serde_json::to_string(&request) {
+        Ok(s) => s,
+        Err(_) => {
+            return Verdict::escalate("The local check input could not be prepared; please review manually.")
+        }
+    };
+
+    set_activity(app, SentinelRung::Thinking);
+    let result = run_judge(&bash, &dir, &request_json).await;
+    set_activity(app, SentinelRung::Watching);
+    result
+}
+
 #[tauri::command]
 pub async fn sentinel_judge(app: AppHandle, request: serde_json::Value) -> Result<Verdict, String> {
-    let dir = locate_sentinel_dir(&app)
-        .ok_or_else(|| "The local judgment helper is not available.".to_string())?;
-    let bash = find_bash().ok_or_else(|| "Could not find a shell to run the local check.".to_string())?;
-    let request_json = serde_json::to_string(&request).map_err(|e| e.to_string())?;
-
-    set_activity(&app, SentinelRung::Thinking);
-    let result = run_judge(&bash, &dir, &request_json).await;
-    set_activity(&app, SentinelRung::Watching);
-
-    Ok(result)
+    Ok(judge(&app, request).await)
 }
 
 async fn run_judge(bash: &PathBuf, dir: &PathBuf, request_json: &str) -> Verdict {

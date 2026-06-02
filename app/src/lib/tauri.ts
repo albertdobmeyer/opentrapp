@@ -8,6 +8,8 @@ import type {
   WorkflowResult,
   SentinelActivity,
   Verdict,
+  PendingApproval,
+  AllowlistDecision,
 } from "./types";
 
 // Detect if running inside Tauri webview vs plain browser
@@ -471,4 +473,27 @@ export async function sentinelJudge(
   request: Record<string, unknown>,
 ): Promise<Verdict> {
   return invoke<Verdict>("sentinel_judge", { request });
+}
+
+// ── Egress allowlist approvals (the human-mediated loosening surface) ──────
+
+/**
+ * The gray-zone off-allowlist hosts awaiting a human decision, each with the
+ * judge's plain-language reason. Read-only — listing never loosens anything.
+ * Clear exfil and rebinding blocks are filtered out server-side.
+ */
+export async function listEgressApprovals(): Promise<PendingApproval[]> {
+  return invoke<PendingApproval[]>("list_egress_approvals");
+}
+
+/**
+ * Apply a human decision on a host. "always" adds it to the allowlist + reloads
+ * the gate (the only loosening path — human-tap only). "deny" only remembers
+ * the denial; it never writes the allowlist.
+ */
+export async function applyAllowlistDecision(
+  host: string,
+  decision: AllowlistDecision,
+): Promise<void> {
+  return invoke("apply_allowlist_decision", { host, decision });
 }

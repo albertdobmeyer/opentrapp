@@ -191,6 +191,12 @@ fn prepare_bundle(handle: &AppHandle) {
         bundle_perimeter.join("images").join("image-digests.json"),
         runtime_images.join("image-digests.json"),
     );
+    // Staging just overwrote the live allowlist with the pure bundle seed. Re-apply
+    // the user's persisted "Always allow" hosts so their choices survive the
+    // relaunch (v0.6 Item A — the additions file lives outside the staged dir).
+    if let Err(e) = crate::orchestrator::allowlist::merge_seed_and_additions() {
+        eprintln!("[bootstrap] merging allowlist additions failed: {e}");
+    }
 }
 
 // ─── Step implementations ─────────────────────────────────────────────

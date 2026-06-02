@@ -292,3 +292,14 @@ export interface Verdict {
   resolved_at_rung: number;
   reason: string;
 }
+
+/** A human decision on a gray-zone off-allowlist host (v0.6 Item A). */
+export type AllowlistDecision = "always" | "deny";
+
+/** One off-allowlist host awaiting a human decision, with the judge's reason. */
+export interface PendingApproval {
+  host: string;
+  /** Plain-language reason from the judge (banned-vocabulary rule applies). */
+  reason: string;
+  judged_at_ms: number;
+}

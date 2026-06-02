@@ -759,6 +759,54 @@ fn is_running(service_name: &str) -> bool {
     .unwrap_or(false)
 }
 
+/// Read the proxy's persistent egress log (`requests.jsonl`) from the
+/// `vault-proxy-logs` named volume. Resolves the volume's host mountpoint via
+/// `podman volume inspect` and reads the file. Fail-soft: returns an empty
+/// string if the volume/file is absent (dev, fresh install, log not yet
+/// written) — the caller treats "no log" as "no pending approvals". Used by the
+/// allowlist-approval read path (v0.6 Item A).
+pub(crate) fn read_egress_log() -> String {
+    let out = match podman_probe(
+        &[
+            "volume".into(),
+            "inspect".into(),
+            "vault-proxy-logs".into(),
+            "--format".into(),
+            "{{.Mountpoint}}".into(),
+        ],
+        Duration::from_secs(10),
+    ) {
+        Ok(o) if ok(&o) => o,
+        _ => return String::new(),
+    };
+    let mountpoint = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if mountpoint.is_empty() {
+        return String::new();
+    }
+    std::fs::read_to_string(Path::new(&mountpoint).join("requests.jsonl")).unwrap_or_default()
+}
+
+/// Signal `vault-proxy` to reload its allowlist (SIGHUP → the addon's
+/// `_reload_allowlist`, which does an in-memory atomic swap). No-op when the
+/// proxy isn't running. The proxy reads the live allowlist file the host app
+/// just appended to; this makes the change take effect without a restart.
+pub(crate) fn reload_proxy_allowlist() -> Result<(), OrchestratorError> {
+    if !is_running("vault-proxy") {
+        return Ok(()); // nothing to reload; the merged file is read on next start
+    }
+    let out = podman(
+        &["kill".into(), "--signal=HUP".into(), "vault-proxy".into()],
+        Duration::from_secs(10),
+    )?;
+    if ok(&out) {
+        Ok(())
+    } else {
+        Err(OrchestratorError::ExecutionError(
+            "could not signal the gate to reload its list".into(),
+        ))
+    }
+}
+
 // ─── Lifecycle façade (drop-in replacements for run_compose call sites) ──
 // Each takes the runtime data dir (where `.env` lives) and internally loads
 // the signed spec + builds the run context. Keeps call sites a one-liner.

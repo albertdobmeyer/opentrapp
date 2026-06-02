@@ -1,6 +1,7 @@
 pub mod config;
 pub mod credentials;
 pub mod diagnostics;
+pub mod egress;
 pub mod execute;
 pub mod health;
 pub mod lifecycle;

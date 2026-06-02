@@ -1221,6 +1221,77 @@ sys.exit(0 if ('ollama' in t and 'all-minilm' in t and 'optional' in t) else 1)
 PY
 
 # =============================================================================
+section "27. Allowlist approval — human-mediated loosening (v0.6 Item A)"
+# =============================================================================
+# The one new write/loosening surface. These pin the ADR-0002 invariant
+# statically: the agent can never widen its own allowlist; clear exfil never
+# reaches the judge; exactly one code path writes the allowlist (spec 08 §4).
+
+if [ -f "app/src-tauri/src/orchestrator/allowlist.rs" ] && [ -f "app/src-tauri/src/commands/egress.rs" ]; then
+  pass "allowlist-approval modules present (orchestrator/allowlist.rs + commands/egress.rs)"
+else
+  fail "allowlist-approval modules missing (orchestrator/allowlist.rs / commands/egress.rs)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "both egress commands registered in lib.rs" || fail "lib.rs does not register list_egress_approvals + apply_allowlist_decision"
+import sys, pathlib
+t = pathlib.Path('app/src-tauri/src/lib.rs').read_text()
+ok = ('commands::egress::list_egress_approvals' in t
+      and 'commands::egress::apply_allowlist_decision' in t)
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "clear exfil never reaches the judge (only off-allowlist BLOCKED surfaces)" || fail "allowlist.rs parse does not gate on action==BLOCKED + the off-allowlist reason"
+import sys, pathlib
+t = pathlib.Path('app/src-tauri/src/orchestrator/allowlist.rs').read_text()
+# The parser must gate on BOTH action=="BLOCKED" and reason=="domain not in
+# allowlist"; EXFIL_BLOCKED / rebinding fall through and never surface.
+ok = ('"BLOCKED"' in t and 'domain not in allowlist' in t
+      and '"action"' in t and '"reason"' in t)
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "exactly one allowlist writer (the append primitive is only called inside allowlist.rs)" || fail "the allowlist write primitive is called outside orchestrator/allowlist.rs (ADR-0002 invariant)"
+import sys, pathlib
+src = pathlib.Path('app/src-tauri/src')
+al = (src / 'orchestrator' / 'allowlist.rs').read_text()
+# apply_always (the sole high-level writer) is DEFINED in allowlist.rs ...
+if 'pub fn apply_always' not in al:
+    sys.exit(1)
+# ... and the low-level write primitive append_host_inplace() may only be CALLED
+# inside allowlist.rs. Other modules go through apply_always/record_denial (which
+# they may call) — they may READ the allowlist, but never append to it directly.
+for p in src.rglob('*.rs'):
+    if p.name == 'allowlist.rs':
+        continue
+    if 'append_host_inplace(' in p.read_text():
+        sys.stderr.write(f"raw allowlist write primitive called in {p}\n"); sys.exit(1)
+sys.exit(0)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "record_denial never writes the allowlist (a denial is not a loosening)" || fail "record_denial in allowlist.rs touches the allowlist path"
+import sys, re, pathlib
+t = pathlib.Path('app/src-tauri/src/orchestrator/allowlist.rs').read_text()
+m = re.search(r'pub fn record_denial.*?\n\}', t, re.S)
+ok = bool(m) and 'live_allowlist_path' not in m.group(0) and 'denials_path' in m.group(0)
+sys.exit(0 if ok else 1)
+PY
+
+if [ -f "docs/adr/0016-host-mediated-allowlist-loosening.md" ]; then
+  pass "ADR-0016 (host-mediated allowlist loosening) present"
+else
+  fail "ADR-0016 missing"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "threat-model has the new T1/T5 rows (self-loosen + approval fatigue)" || fail "docs/threat-model.md is missing the Item A T1/T5 rows"
+import sys, pathlib
+t = pathlib.Path('docs/threat-model.md').read_text()
+ok = ('self-loosen the perimeter' in t and 'approval fatigue' in t
+      and '0016-host-mediated-allowlist-loosening' in t)
+sys.exit(0 if ok else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

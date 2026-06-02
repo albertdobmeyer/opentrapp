@@ -235,6 +235,8 @@ pub fn run() {
             commands::credentials::commit_activation,
             commands::sentinel::get_sentinel_activity,
             commands::sentinel::sentinel_judge,
+            commands::egress::list_egress_approvals,
+            commands::egress::apply_allowlist_decision,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
