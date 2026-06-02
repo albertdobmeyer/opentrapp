@@ -45,7 +45,7 @@ FILE_PATH=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --adapter)
-      ADAPTER="${2:?--adapter requires a name (file, mock, moltbook)}"
+      ADAPTER="${2:?--adapter requires a name (file, mock, moltbook, atproto)}"
       shift 2
       ;;
     --trend)
@@ -63,7 +63,7 @@ while [[ $# -gt 0 ]]; do
       echo "Pull platform statistics via the configured adapter."
       echo ""
       echo "Options:"
-      echo "  --adapter <name>  Protocol adapter: mock (default), file, moltbook"
+      echo "  --adapter <name>  Protocol adapter: mock (default), file, moltbook, atproto"
       echo "  --trend           Show trend from saved census snapshots"
       echo "  --file <path>     Load census data from a local JSON file (implies --adapter file)"
       echo "  -h, --help        Show this help"
@@ -84,7 +84,7 @@ fi
 # ── Resolve adapter ───────────────────────────────────────
 ADAPTER_SCRIPT="$ADAPTERS_DIR/${ADAPTER}.sh"
 if [[ ! -f "$ADAPTER_SCRIPT" ]]; then
-  echo -e "${RED}ERROR${RESET}: Unknown adapter '${ADAPTER}'. Available: file, mock, moltbook" >&2
+  echo -e "${RED}ERROR${RESET}: Unknown adapter '${ADAPTER}'. Available: file, mock, moltbook, atproto" >&2
   exit 1
 fi
 

@@ -30,20 +30,49 @@ done
 
 ADAPTER="file"
 SOURCE=""
+ACTOR=""
+FEED=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --file) SOURCE="$2"; ADAPTER="file"; shift 2 ;;
     --adapter) ADAPTER="$2"; shift 2 ;;
+    --actor) ACTOR="$2"; shift 2 ;;
+    --feed) FEED="$2"; shift 2 ;;
     *) echo "Unknown arg: $1" >&2; exit 2 ;;
   esac
 done
 
+# A live network adapter (e.g. atproto) fetches the posts to scan into a temp
+# file, then the SAME rung-0 + rung-2 pipeline runs on it. The default stays
+# 'file' — the live legs are opt-in (spec 04 §7, behind-a-flag).
+ADAPTERS_DIR="$SCRIPT_DIR/lib/adapters"
 if [[ "$ADAPTER" != "file" ]]; then
-  echo "Adapter '$ADAPTER' is not yet wired — only 'file' is available (live network adapters are the deferred M4 step)." >&2
-  exit 2
+  ADAPTER_SCRIPT="$ADAPTERS_DIR/${ADAPTER}.sh"
+  if [[ ! -f "$ADAPTER_SCRIPT" ]]; then
+    avail=$(find "$ADAPTERS_DIR" -maxdepth 1 -name '*.sh' -exec basename {} .sh \; | sort | paste -sd, -)
+    echo "Unknown adapter '$ADAPTER'. Available: ${avail}" >&2
+    exit 2
+  fi
+  SOURCE="$(mktemp)"
+  trap 'rm -f "$SOURCE"' EXIT
+  if [[ -n "$ACTOR" ]]; then
+    bash "$ADAPTER_SCRIPT" fetch_agent "$ACTOR" > "$SOURCE" 2>/dev/null || true
+  elif [[ -n "$FEED" ]]; then
+    bash "$ADAPTER_SCRIPT" fetch_feed "{\"feed\":\"${FEED}\"}" > "$SOURCE" 2>/dev/null || true
+  else
+    echo "Adapter '$ADAPTER' needs --actor <handle> or --feed <at-uri>." >&2
+    exit 2
+  fi
+  # An empty / [] fetch (source unreachable or no posts) is not an error — there
+  # is simply nothing to scan. Degrade cleanly rather than crash.
+  if [[ ! -s "$SOURCE" ]] || [[ "$(tr -d '[:space:]' < "$SOURCE")" == "[]" ]]; then
+    echo "=== Semantic firewall ==="
+    echo "No posts fetched from '${ADAPTER}' (source unreachable or empty). Nothing to scan."
+    exit 0
+  fi
 fi
 if [[ -z "$SOURCE" || ! -f "$SOURCE" ]]; then
-  echo "Usage: semantic-firewall.sh --file <posts.json>" >&2
+  echo "Usage: semantic-firewall.sh --file <posts.json>  |  --adapter <name> --actor <handle>" >&2
   exit 1
 fi
 if [[ -z "$JUDGE" ]]; then

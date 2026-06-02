@@ -12,6 +12,7 @@
 #   file      — read posts from a local JSON file (default for --file)
 #   mock      — deterministic in-memory data for tests
 #   moltbook  — archived Moltbook HTTP adapter (API defunct since 2026-04-05)
+#   atproto   — live AT Protocol / Bluesky adapter (public AppView; read-only)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -53,7 +54,7 @@ VERBOSE=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --adapter)
-      ADAPTER="${2:?--adapter requires a name (file, mock, moltbook)}"
+      ADAPTER="${2:?--adapter requires a name (file, mock, moltbook, atproto)}"
       shift 2
       ;;
     --recent)
@@ -81,7 +82,7 @@ while [[ $# -gt 0 ]]; do
       echo "Scan social feed content for prompt injection patterns."
       echo ""
       echo "Options:"
-      echo "  --adapter <name>   Protocol adapter: file (default), mock, moltbook"
+      echo "  --adapter <name>   Protocol adapter: file (default), mock, moltbook, atproto"
       echo "  --recent <n>       Scan n most recent posts (default: 50)"
       echo "  --agent <handle>   Scan posts by a specific agent"
       echo "  --file <path>      Scan a local JSON file of posts (implies --adapter file)"
@@ -110,7 +111,7 @@ fi
 # ── Resolve adapter ───────────────────────────────────────
 ADAPTER_SCRIPT="$ADAPTERS_DIR/${ADAPTER}.sh"
 if [[ ! -f "$ADAPTER_SCRIPT" ]]; then
-  echo -e "${RED}ERROR${RESET}: Unknown adapter '${ADAPTER}'. Available: file, mock, moltbook" >&2
+  echo -e "${RED}ERROR${RESET}: Unknown adapter '${ADAPTER}'. Available: file, mock, moltbook, atproto" >&2
   exit 1
 fi
 

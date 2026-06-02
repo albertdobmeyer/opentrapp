@@ -1292,6 +1292,49 @@ sys.exit(0 if ok else 1)
 PY
 
 # =============================================================================
+section "28. Live AT Protocol adapter — un-park social (v0.6 Item C)"
+# =============================================================================
+# The first live network adapter, on the existing contract. The shield core
+# stays protocol-agnostic; the live leg is opt-in (default 'file'); ADR-0017
+# records the un-park (spec 04 §2a/§7).
+
+if [ -f "workloads/social/tools/lib/adapters/atproto.sh" ] && [ -f "workloads/social/tools/lib/adapters/atproto_normalise.py" ]; then
+  pass "atproto adapter present (atproto.sh + atproto_normalise.py)"
+else
+  fail "atproto adapter missing (adapters/atproto.sh / atproto_normalise.py)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "atproto adapter implements every contract verb" || fail "adapters/atproto.sh dispatch is missing a contract verb"
+import sys, re, pathlib
+t = pathlib.Path('workloads/social/tools/lib/adapters/atproto.sh').read_text()
+ok = all(re.search(rf'^\s*{v}\)', t, re.M) for v in ('fetch_feed','fetch_agent','post','stats','name'))
+# reads must use the no-auth public AppView; posting must require app-password creds
+ok = ok and 'public.api.bsky.app' in t and 'ATPROTO_APP_PASSWORD' in t
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "atproto is advertised in the tool help (discoverable)" || fail "feed-scanner.sh help does not list the atproto adapter"
+import sys, pathlib
+t = pathlib.Path('workloads/social/tools/feed-scanner.sh').read_text()
+sys.exit(0 if 'atproto' in t else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "semantic-firewall no longer hard-gates to file-only (live adapters wired)" || fail "semantic-firewall.sh still rejects non-file adapters"
+import sys, pathlib
+t = pathlib.Path('workloads/social/tools/semantic-firewall.sh').read_text()
+# the old gate string must be gone, and an adapter-fetch path present
+ok = 'not yet wired' not in t and 'fetch_agent' in t and 'ADAPTERS_DIR' in t
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "ADR-0017 records the un-park (supersedes ADR-0004)" || fail "ADR-0017 missing or does not supersede ADR-0004"
+import sys, pathlib
+p = pathlib.Path('docs/adr/0017-unpark-social-live-adapter.md')
+ok = p.exists() and 'Supersedes' in p.read_text() and '0004' in p.read_text()
+sys.exit(0 if ok else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
