@@ -1,6 +1,9 @@
 # OpenTrApp v0.6 — Completion plan (spec C)
 
-> **Status:** plan, ready for implementation **next session**. Authored 2026-06-01.
+> **Status:** ✅ **IMPLEMENTED 2026-06-01** — all four items landed as local commits
+> (B `cbd2b9f` · A `665da53` · C `96d99a4` · D1 this session), gate green, **not yet
+> pushed**. The remaining work is the operator queue (D2 pre-release, D3/Zone-6b
+> dogfood) — see [`docs/handoff.md`](../../handoff.md). Plan authored 2026-06-01.
 > **For:** the agent(s) finishing v0.6. Read **after** [`00-index.md`](00-index.md)
 > and [`07-implementation-roadmap.md`](07-implementation-roadmap.md).
 > **Scope:** harmonise + sequence everything remaining to ship **`v0.6.0`**, now
@@ -29,12 +32,12 @@ tsc clean, vitest **82/82**, playwright **25/25**, plus the bash suites).
 
 ## 2. Remaining work (the inventory)
 
-| # | Item | Kind | Why it's left |
-|---|------|------|---------------|
-| **A** | Allowlist approval (GUI slice 2b) | new **write/loosening** surface | deferred *by principle* — security-first means a privilege-loosening surface gets its own threat model |
-| **B** | Production Sentinel staging | packaging | the judge/embed bridges resolve in dev + staged-runtime; a packaged build needs the lib bundled (host + in-container) |
-| **C** | M4 live network adapter | integration | un-park social for real; the seam exists, a live target is unscouted |
-| **D** | Closeout | small/docs | judge-as-scanner-2nd-opinion · pre-release (demo gifs, pitch skills-rename, OpenSSF) · Zone 6b · ADR-0016 |
+| # | Item | Kind | Status |
+|---|------|------|--------|
+| **A** | Allowlist approval (GUI slice 2b) | new **write/loosening** surface | ✅ landed `665da53` — ADR-0016, only-human-loosens, `EgressApprovalsCard` |
+| **B** | Production Sentinel staging | packaging | ✅ landed `cbd2b9f` — `sentinel/` verified `:ro` resource (host + shields) |
+| **C** | M4 live network adapter | integration | ✅ landed `96d99a4` — atproto adapter (Bluesky), ADR-0017, validated live |
+| **D** | Closeout | small/docs | **D1** ✅ judge-as-2nd-opinion (tighten-only) + ADR-0016 (with A). D2 (pre-release) + D3 (Zone 6b) = operator queue |
 
 ## 3. The decisive principle — right channel for the component type
 

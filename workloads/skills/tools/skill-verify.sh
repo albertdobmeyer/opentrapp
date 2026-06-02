@@ -16,6 +16,7 @@ STRICT=false
 REPORT=false
 JSON_OUT=false
 GENERATE_TRUST=false
+JUDGE_OPINION=false
 TARGET=""
 for arg in "$@"; do
   case "$arg" in
@@ -23,10 +24,22 @@ for arg in "$@"; do
     --report)  REPORT=true ;;
     --json)    JSON_OUT=true ;;
     --trust)   GENERATE_TRUST=true ;;
+    --judge)   JUDGE_OPINION=true ;;
     *)         TARGET="$arg" ;;
   esac
 done
 TARGET="${TARGET:-skills}"
+
+# ── Optional rung-2 judge (v0.6 Item D1) ──
+# A fail-safe SECOND OPINION on the auto-allow path. Resolved like the social
+# shields resolve the shared lib; in-container builds stage it at /opt/sentinel.
+SKILLS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+JUDGE_SH=""
+if [[ "$JUDGE_OPINION" == true ]]; then
+  for cand in "$SKILLS_ROOT/../../sentinel/judge.sh" "/opt/sentinel/judge.sh"; do
+    [[ -f "$cand" ]] && { JUDGE_SH="$cand"; break; }
+  done
+fi
 
 # Suppress colors for JSON output
 if [[ "$JSON_OUT" == true ]]; then
@@ -149,6 +162,41 @@ verify_skill() {
     fi
   fi
 
+  # ── Rung-2 judge: a fail-safe SECOND OPINION on the auto-allow (Item D1) ──
+  # Runs ONLY on --judge AND a VERIFIED verdict (the auto-allow path), and can
+  # ONLY tighten (VERIFIED -> QUARANTINED) — it never rescues a quarantine, so it
+  # is structurally incapable of loosening a static block (ADR-0002). It catches
+  # a novel/paraphrased skill-level threat the 87 patterns + classifier missed.
+  local judge_consulted=false judge_decision="allow" judge_reason=""
+  if [[ "$JUDGE_OPINION" == true && "$final_verdict" == "VERIFIED" && -n "$JUDGE_SH" && -n "$PY" ]]; then
+    judge_consulted=true
+    # Judge each substantive paragraph (not the whole file at once — that dilutes
+    # a single buried instruction into "documentation"). ANY clear block tightens.
+    local b64 chunk jreq jverdict d
+    while IFS= read -r b64; do
+      [[ -z "$b64" ]] && continue
+      chunk=$(printf '%s' "$b64" | base64 -d 2>/dev/null) || continue
+      jreq=$("$PY" -c 'import json,sys; print(json.dumps({"context":"skill_content","fragment":sys.argv[1],"static_signal":{"outcome":"static_clean","detail":"a paragraph from a skill the agent will load and follow"}}))' "$chunk")
+      jverdict=$(printf '%s' "$jreq" | bash "$JUDGE_SH" 2>/dev/null || echo '{"decision":"escalate"}')
+      d=$(printf '%s' "$jverdict" | "$PY" -c 'import sys,json; print(json.load(sys.stdin).get("decision","escalate"))' 2>/dev/null || echo escalate)
+      if [[ "$d" == "block" ]]; then
+        judge_decision="block"
+        judge_reason=$(printf '%s' "$jverdict" | "$PY" -c 'import sys,json; print(json.load(sys.stdin).get("reason",""))' 2>/dev/null || echo "")
+        break
+      fi
+    done < <(cat "${verify_files[@]}" 2>/dev/null | "$PY" "$SCRIPT_DIR/lib/skill-chunks.py" 2>/dev/null)
+    # ONLY a clear "block" tightens; allow/escalate keep the static VERIFIED
+    # (the static scan already passed — avoid over-quarantine / alert fatigue).
+    if [[ "$judge_decision" == "block" ]]; then
+      final_verdict="QUARANTINED"
+      if [[ -n "$verdict_reason" ]]; then
+        verdict_reason="${verdict_reason}; the on-device judge also flagged it"
+      else
+        verdict_reason="the on-device judge flagged this: ${judge_reason}"
+      fi
+    fi
+  fi
+
   # ── Generate trust manifest if --trust and skill passed ──
   if [[ "$GENERATE_TRUST" == true && "$final_verdict" == "VERIFIED" ]]; then
     generate_trust_manifest "$skill_dir" "$total_lines" "$safe_lines" "$suspicious_lines"
@@ -172,6 +220,13 @@ verify_skill() {
     echo "    \"malicious\": $malicious_lines"
     echo '  },'
     echo "  \"suspiciousPercent\": $sus_pct,"
+
+    # judge second-opinion outcome (Item D1)
+    if [[ "$judge_consulted" == true ]]; then
+      echo "  \"judge\": {\"consulted\": true, \"decision\": \"$judge_decision\", \"reason\": \"$(json_escape "$judge_reason")\"},"
+    else
+      echo '  "judge": {"consulted": false},'
+    fi
 
     # maliciousLines array
     echo '  "maliciousLines": ['
@@ -232,6 +287,9 @@ verify_skill() {
     echo -e "  Verdict: ${GREEN}VERIFIED${RESET} (released from quarantine)"
   else
     echo -e "  Verdict: ${RED}QUARANTINED${RESET} (${verdict_reason})"
+  fi
+  if [[ "$judge_consulted" == true ]]; then
+    echo -e "  Judge: consulted — ${judge_decision}"
   fi
 
   # Report mode: show per-line details

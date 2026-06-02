@@ -1,10 +1,49 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-01 (v0.6 continuation — rung-1, GUI bridge, persona-drift, disarm-diff landed; completion plan written)
-**Current phase:** v0.6 in progress on `main` (pushed); the "AI makes AI safe" USP is now real, not aspirational
-**Branch:** `main` at `9920c51` — **all pushed**. Monorepo (no submodules, ADR-0013). Next release is **v0.6.0** (current shipped: v0.5.0).
+**Last updated:** 2026-06-01 (v0.6 completion — Items B/A/C/D implemented; feature work complete)
+**Current phase:** v0.6 feature work **complete** on `main`; the "AI makes AI safe" USP is real, not aspirational
+**Branch:** `main` — **4 v0.6 commits ahead of origin, NOT pushed** (committed per the maintainer's commit-only rule). Monorepo (ADR-0013). Next release is **v0.6.0** (current shipped: v0.5.0).
 
-> ## ⟶ 2026-06-01 (continuation) — READ THIS FIRST: next session implements the completion plan
+> ## ⟶ 2026-06-01 (completion) — READ THIS FIRST: v0.6 feature work is done (B/A/C/D)
+>
+> The completion plan ([`docs/specs/v0.6/08-completion-plan.md`](specs/v0.6/08-completion-plan.md))
+> is fully implemented. All four items landed sequentially (parallelism was
+> dropped — the 7.2 GB box swap-storms with concurrent agents + Ollama). **Local
+> commits, not pushed** — push when the maintainer asks.
+>
+> | Item | Commit | What |
+> |------|--------|------|
+> | **B** Sentinel staging | `cbd2b9f` | `sentinel/` as a verified `:ro` bundle resource (host bridge + shields); README Ollama note |
+> | **A** Allowlist approval | `665da53` | off-allowlist blocks → explained one-tap human decision; only-human-loosens (ADR-0016); `EgressApprovalsCard` |
+> | **C** Live atproto adapter | `96d99a4` | first live network adapter (Bluesky public AppView); un-park social (ADR-0017); validated live |
+> | **D1** Judge 2nd-opinion | *(this session, uncommitted at write time)* | rung-2 judge on the skills auto-allow — tighten-only (VERIFIED→QUARANTINED), opt-in `--judge` |
+>
+> ### Gate (full, green)
+> cargo `109/0`, orchestrator-check **108/0/0** (§21–§29), tsc clean, vitest `87/87`,
+> playwright `25/25`; bash suites: atproto 7/7, skill-verify-judge 4/4, adapter 16/16,
+> firewall 2/2, persona-guard 4/4, disarm-report 4/4, cdr-pipeline 9/9, embed 6/6, judge 3/3.
+> Requires Ollama with `qwen2.5-coder:1.5b` + `:3b` + `all-minilm`.
+>
+> ### Remaining = operator queue (NOT code; do not re-implement)
+> - **D2** pre-release: re-record demo gifs against a v0.6 build; OpenSSF badge
+>   resubmission; sweep `forge→skills` in the **gitignored** `docs/pitch-opencode.md`
+>   (on-disk only — never committed).
+> - **D3 / Zone 6b** dogfood-harness reply misattribution (`tests/dogfood/test_full_arc.py`):
+>   add a `reset_chat()` helper + a `serial_attachments` marker. Pre-existing test-infra
+>   bug, deferred from v0.6.
+> - **Push** the 4 commits + cut `v0.6.0` when the maintainer is ready.
+>
+> ### The load-bearing findings this session (carry forward)
+> 1. **Verified-resource staging beats image-copy** for shared libs — consistent
+>    with how the whole perimeter stages policy files (refined SD-B1).
+> 2. **Allowlist persistence:** seed is re-staged + overwritten each launch, and the
+>    proxy bind-mount is a single file — so additions persist OUTSIDE the staged path
+>    and append IN-PLACE (never temp+rename, which swaps the inode), then SIGHUP.
+> 3. **Whole-skill judging dilutes** a buried instruction (3b reads it as "documentation")
+>    — judge per-paragraph instead (`skill-chunks.py`). The malicious chunk in isolation
+>    blocks deterministically.
+
+> ## ⟶ 2026-06-01 (continuation) — superseded by the completion entry above
 >
 > **The next session is implementation, against a harmonised plan:**
 > **[`docs/specs/v0.6/08-completion-plan.md`](specs/v0.6/08-completion-plan.md)** — read it first.

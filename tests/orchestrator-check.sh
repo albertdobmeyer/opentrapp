@@ -1335,6 +1335,34 @@ sys.exit(0 if ok else 1)
 PY
 
 # =============================================================================
+section "29. Judge as second opinion on skills auto-allow (v0.6 Item D1)"
+# =============================================================================
+# The rung-2 judge double-checks the scanner's auto-allow (VERIFIED) and can ONLY
+# tighten (VERIFIED -> QUARANTINED), never rescue a quarantine — so it can never
+# loosen a static block (ADR-0002). Opt-in (--judge); default behaviour unchanged.
+
+if [ -f "workloads/skills/tools/lib/skill-chunks.py" ]; then
+  pass "skill chunker present (per-paragraph judging, not whole-file dilution)"
+else
+  fail "workloads/skills/tools/lib/skill-chunks.py missing (Item D1)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "skill-verify exposes the opt-in --judge second opinion" || fail "skill-verify.sh is missing the --judge opt-in"
+import sys, pathlib
+t = pathlib.Path('workloads/skills/tools/skill-verify.sh').read_text()
+sys.exit(0 if ('--judge' in t and 'JUDGE_OPINION' in t) else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "the judge second opinion is tighten-only (VERIFIED -> QUARANTINED, never the reverse)" || fail "the judge block can set VERIFIED — it must only ever tighten (ADR-0002)"
+import sys, re, pathlib
+t = pathlib.Path('workloads/skills/tools/skill-verify.sh').read_text()
+# Isolate the judge-opinion block and assert it only ASSIGNS QUARANTINED.
+m = re.search(r'Rung-2 judge: a fail-safe SECOND OPINION.*?Generate trust manifest', t, re.S)
+ok = bool(m) and 'final_verdict="QUARANTINED"' in m.group(0) and 'final_verdict="VERIFIED"' not in m.group(0)
+sys.exit(0 if ok else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
