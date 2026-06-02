@@ -1,37 +1,48 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-01 (v0.6 completion — Items B/A/C/D implemented; feature work complete)
-**Current phase:** v0.6 feature work **complete** on `main`; the "AI makes AI safe" USP is real, not aspirational
-**Branch:** `main` — **4 v0.6 commits ahead of origin, NOT pushed** (committed per the maintainer's commit-only rule). Monorepo (ADR-0013). Next release is **v0.6.0** (current shipped: v0.5.0).
+**Last updated:** 2026-06-02 (**v0.6.0 RELEASED** — published, signed, all platforms; current shipped: v0.6.0)
+**Current phase:** v0.6 shipped; the "AI makes AI safe" USP is real, not aspirational
+**Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
 
-> ## ⟶ 2026-06-01 (completion) — READ THIS FIRST: v0.6 feature work is done (B/A/C/D)
+> ## ⟶ 2026-06-02 (RELEASED) — READ THIS FIRST: v0.6.0 is published
 >
-> The completion plan ([`docs/specs/v0.6/08-completion-plan.md`](specs/v0.6/08-completion-plan.md))
-> is fully implemented. All four items landed sequentially (parallelism was
-> dropped — the 7.2 GB box swap-storms with concurrent agents + Ollama). **Local
-> commits, not pushed** — push when the maintainer asks.
+> v0.6.0 is **live**: pushed, tagged, CI-built (4 platforms + SBOMs + cosign +
+> SLSA provenance), and **published** (auto-updater will prompt v0.5.0 users).
+> All four completion items (B/A/C/D) plus the release bump landed sequentially
+> (parallelism was dropped — the 7.2 GB box swap-storms with concurrent agents + Ollama).
 >
 > | Item | Commit | What |
 > |------|--------|------|
 > | **B** Sentinel staging | `cbd2b9f` | `sentinel/` as a verified `:ro` bundle resource (host bridge + shields); README Ollama note |
 > | **A** Allowlist approval | `665da53` | off-allowlist blocks → explained one-tap human decision; only-human-loosens (ADR-0016); `EgressApprovalsCard` |
 > | **C** Live atproto adapter | `96d99a4` | first live network adapter (Bluesky public AppView); un-park social (ADR-0017); validated live |
-> | **D1** Judge 2nd-opinion | *(this session, uncommitted at write time)* | rung-2 judge on the skills auto-allow — tighten-only (VERIFIED→QUARANTINED), opt-in `--judge` |
+> | **D1** Judge 2nd-opinion | `8450257` | rung-2 judge on the skills auto-allow — tighten-only (VERIFIED→QUARANTINED), opt-in `--judge` |
+> | release | `e624c2c` / `7ff6cae` | version bump + notes; **fix(ci): green the gate** — see the load-bearing finding below |
 >
-> ### Gate (full, green)
-> cargo `109/0`, orchestrator-check **108/0/0** (§21–§29), tsc clean, vitest `87/87`,
-> playwright `25/25`; bash suites: atproto 7/7, skill-verify-judge 4/4, adapter 16/16,
-> firewall 2/2, persona-guard 4/4, disarm-report 4/4, cdr-pipeline 9/9, embed 6/6, judge 3/3.
+> ### ⚠ Load-bearing finding — the local gate omitted two CI jobs
+> CI's `CI` workflow had been **red on `main` since before v0.6** because
+> `npm run lint` (eslint `--max-warnings 0`) and `tests/integration-test.sh` were
+> never in our local gate (we ran cargo/tsc/vitest/playwright/orchestrator-check only).
+> The first `v0.6.0` tag built on a red commit and produced no release. `7ff6cae`
+> fixed both (stale pre-ADR-0013 paths in the integration test; 36 accumulated lint
+> problems) and **added both jobs to the documented gate in `CLAUDE.md` §7**. Always
+> run `npm run lint` + `integration-test.sh` — a local green without them ≠ CI green.
+>
+> ### Gate (full, CI-equivalent, green at the released commit)
+> **lint 0/0**, cargo `109/0`, orchestrator-check **108/0/0** (§21–§29), tsc clean,
+> vitest `87/87`, playwright `25/25`, **integration-test 0 failures**; bash suites:
+> atproto 7/7, skill-verify-judge 4/4, adapter 16/16, firewall 2/2, persona-guard 4/4,
+> disarm-report 4/4, cdr-pipeline 9/9, embed 6/6, judge 3/3.
 > Requires Ollama with `qwen2.5-coder:1.5b` + `:3b` + `all-minilm`.
 >
 > ### Remaining = operator queue (NOT code; do not re-implement)
-> - **D2** pre-release: re-record demo gifs against a v0.6 build; OpenSSF badge
+> - **D2** pre-release: re-record demo gifs against the v0.6 build; OpenSSF badge
 >   resubmission; sweep `forge→skills` in the **gitignored** `docs/pitch-opencode.md`
 >   (on-disk only — never committed).
 > - **D3 / Zone 6b** dogfood-harness reply misattribution (`tests/dogfood/test_full_arc.py`):
 >   add a `reset_chat()` helper + a `serial_attachments` marker. Pre-existing test-infra
 >   bug, deferred from v0.6.
-> - **Push** the 4 commits + cut `v0.6.0` when the maintainer is ready.
+> - ~~Push + cut v0.6.0~~ **DONE** — published 2026-06-02 (`/releases/latest` → v0.6.0).
 >
 > ### The load-bearing findings this session (carry forward)
 > 1. **Verified-resource staging beats image-copy** for shared libs — consistent

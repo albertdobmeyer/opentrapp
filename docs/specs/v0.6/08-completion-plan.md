@@ -1,9 +1,10 @@
 # OpenTrApp v0.6 — Completion plan (spec C)
 
-> **Status:** ✅ **IMPLEMENTED 2026-06-01** — all four items landed as local commits
-> (B `cbd2b9f` · A `665da53` · C `96d99a4` · D1 this session), gate green, **not yet
-> pushed**. The remaining work is the operator queue (D2 pre-release, D3/Zone-6b
-> dogfood) — see [`docs/handoff.md`](../../handoff.md). Plan authored 2026-06-01.
+> **Status:** ✅ **RELEASED as v0.6.0 (2026-06-02)** — all four items shipped
+> (B `cbd2b9f` · A `665da53` · C `96d99a4` · D1 `8450257`) + release bump/CI-green
+> (`e624c2c`/`7ff6cae`); published GitHub release. The remaining work is the operator
+> queue (D2 pre-release, D3/Zone-6b dogfood) — see [`docs/handoff.md`](../../handoff.md).
+> Plan authored 2026-06-01.
 > **For:** the agent(s) finishing v0.6. Read **after** [`00-index.md`](00-index.md)
 > and [`07-implementation-roadmap.md`](07-implementation-roadmap.md).
 > **Scope:** harmonise + sequence everything remaining to ship **`v0.6.0`**, now

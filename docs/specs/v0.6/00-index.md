@@ -1,9 +1,9 @@
 # OpenTrApp v0.6 — Specification Index
 
-> **Status:** ✅ **v0.6 feature work IMPLEMENTED** (2026-06-01) — M0–M4 + rung-1 +
-> GUI Sentinel surfaces + Items B/A/C/D landed (local commits, not yet pushed). See
+> **Status:** ✅ **v0.6.0 RELEASED** (2026-06-02) — M0–M4 + rung-1 + GUI Sentinel
+> surfaces + Items B/A/C/D shipped; published GitHub release (`/releases/latest`). See
 > [`08-completion-plan.md`](08-completion-plan.md) + [`docs/handoff.md`](../../handoff.md).
-> Remaining = operator queue (pre-release, Zone 6b). Spec authored 2026-05-31.
+> Remaining = operator queue (demo gifs, OpenSSF badge, Zone 6b). Spec authored 2026-05-31.
 > **For:** the agent(s) implementing v0.6. Read this file first.
 > **Scope:** two pillars — a shared AI judgment layer (Sentinel) and a modular
 > distribution layer. No code was written while authoring these specs.
