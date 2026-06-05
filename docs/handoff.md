@@ -1,8 +1,51 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-02 (**v0.6.0 RELEASED** — published, signed, all platforms; current shipped: v0.6.0)
-**Current phase:** v0.6 shipped; the "AI makes AI safe" USP is real, not aspirational
+**Last updated:** 2026-06-05 (**OpenSSF Best Practices passing badge earned**; current shipped release: v0.6.0)
+**Current phase:** v0.6 shipped; the "AI makes AI safe" USP is real, not aspirational; third-party trust signals now landing (OpenSSF passing badge)
 **Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
+
+> ## ⟶ 2026-06-05 — OpenSSF Best Practices PASSING badge earned
+>
+> The project earned the **OpenSSF Best Practices passing badge** (bestpractices.dev
+> **project #12755**). The live badge is on the README badge row (`e016839`), links to
+> the project page, and reports `passing`.
+>
+> | What | Detail |
+> |------|--------|
+> | Badge | OpenSSF Best Practices **Passing** (#12755) — was *Lobster-TrApp* / 18% pre-rebrand |
+> | Answer catalog | `docs/openssf-badge-answers.md` — all 67 criteria + metadata, each verified against the repo, plain text, honest (63 Met / 4 N/A) |
+>
+> ### Load-bearing findings (carry forward)
+> - **Edit the entry, never re-apply.** The badge predated the rebrand (filed as
+>   *Lobster-TrApp* at lobster-trapp.com). A name/domain change edits #12755 in place;
+>   the **repository-URL field is what Scorecard's CII-Best-Practices keys on**. Re-applying
+>   would orphan progress.
+> - **Verification caught real drift** (now fixed): GitHub Discussions is OFF (so
+>   `discussion` is met via the issue tracker, not Discussions); CodeQL was NOT "zero" —
+>   the open code-scanning alerts were OpenSSF Scorecard posture checks surfaced as SARIF,
+>   not code vulns. Both corrected in `docs/openssf-best-practices-application.md`.
+> - **5 code-scanning alerts dismissed** (with explicit user authorization): #72/#73 CodeQL
+>   unused-variable false positives (the var is used in an inline `{e}` format string), and
+>   #77/#78/#79 devcontainer dependency-pin advisories (dev tooling). The 4 Scorecard-posture
+>   alerts remain open by design; #42 (CII-Best-Practices) clears once Scorecard re-runs.
+> - **Honesty stance for re-attestation:** do NOT press the form's "no cryptography" button.
+>   The software verifies update + image signatures and uses TLS, so crypto criteria are
+>   answered individually (Met via libraries; N/A only for pfs / password-storage / random).
+>   The answer catalog has zero em-dashes and is a 1:1 mirror of the questionnaire for next time.
+>
+> ### Also this session (production changes)
+> - **Landing page deployed** to `opentrapp.com`: the stale four-container copy was replaced
+>   with the committed five-container copy (committed long ago at `ab2ffb5`, never deployed).
+>   Verified live: HTTP 200, "five-container" ×5, "four-container" ×0.
+> - **Dependabot:** `tar` 0.4.45 → 0.4.46 (GHSA-3pv8-6f4r-ffg2); CI green; alerts #14/#15 closed (`1079fc3`).
+> - **Trackers reconciled** to v0.6.0 reality: `state.json` (lt-sec-001 / lt-brand-001 →
+>   completed, DNS-rebinding residual → resolved, Karen E2E rescoped to v0.6) and the gitignored
+>   `AGENT-TODO.md` (ZONE 2/4/5/6a/8 marked shipped; ZONE 1/3/6b still open).
+>
+> ### Follow-up
+> - **Automatic:** Scorecard `CII-Best-Practices` flips **0 → 5** on the next nightly run.
+> - **Operator queue (unchanged):** SignPath resubmission (now unblocked), demo gifs vs the
+>   v0.6 build, the Zone 6b dogfood-harness fix.
 
 > ## ⟶ 2026-06-02 (RELEASED) — READ THIS FIRST: v0.6.0 is published
 >
