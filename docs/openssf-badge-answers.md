@@ -24,6 +24,20 @@ OpenTrApp is a free and open-source desktop application, released under the MIT 
 
 The application builds and manages a five-container security perimeter around the agent. The agent's runtime, its tools, and its add-on skills are isolated from the user's files and from the rest of the system, and they have no direct path to the internet. All of the agent's network traffic passes through a controlled egress chain that applies both an application-layer and a network-layer policy, and the agent's API credentials are held in a separate proxy container so the agent cannot read them directly. The application also provides supplementary security tools, including a scanner that inspects third-party agent skills for known risky patterns and an optional local AI component that reviews ambiguous cases. OpenTrApp does not claim to make running an autonomous agent completely safe. Its goal is to raise the cost of a compromise through layered defenses, and it documents the remaining risks in a public threat model.
 
+### Programming languages
+TypeScript, Rust, Python, Shell, JavaScript
+
+### Description language
+English (en)
+
+### License
+MIT
+
+### CPE name (optional)
+Leave blank. The project has no assigned Common Platform Enumeration name.
+
+These General fields are auto-detected by the form and already populated, so they normally need no manual entry. They are listed here only for completeness.
+
 ## Basics (13 criteria; entry was at 7 of 13)
 
 Note: the form auto-detects several of these from the GitHub repository (for example the FLOSS license and HTTPS), so some already show green and need no action. All 13 are written out below so the catalog is complete. For each one, set the status as shown and paste the justification. Every fact below was verified against the repository.
