@@ -33,19 +33,26 @@
 >   answered individually (Met via libraries; N/A only for pfs / password-storage / random).
 >   The answer catalog has zero em-dashes and is a 1:1 mirror of the questionnaire for next time.
 >
-> ### Also this session (production changes)
+> ### Also this session
 > - **Landing page deployed** to `opentrapp.com`: the stale four-container copy was replaced
 >   with the committed five-container copy (committed long ago at `ab2ffb5`, never deployed).
 >   Verified live: HTTP 200, "five-container" ×5, "four-container" ×0.
 > - **Dependabot:** `tar` 0.4.45 → 0.4.46 (GHSA-3pv8-6f4r-ffg2); CI green; alerts #14/#15 closed (`1079fc3`).
 > - **Trackers reconciled** to v0.6.0 reality: `state.json` (lt-sec-001 / lt-brand-001 →
 >   completed, DNS-rebinding residual → resolved, Karen E2E rescoped to v0.6) and the gitignored
->   `AGENT-TODO.md` (ZONE 2/4/5/6a/8 marked shipped; ZONE 1/3/6b still open).
+>   `AGENT-TODO.md` (ZONE 2/4/5/6a/8 marked shipped; ZONE 1/3 still open).
+> - **Zone 6b dogfood reply-misattribution fixed** (`2ed32e8`): late or continuation bubbles bled
+>   into the next scenario and were recorded against the wrong prompt. Added `BotClient.reset_chat()`
+>   (drains in-flight bot messages until the chat is quiet; sends nothing, so no send-budget cost),
+>   called from `_attach_files`, plus a `serial_attachments` marker on A1/A5/B4. Verified statically
+>   (all files compile; `pytest --collect-only -m serial_attachments` → exactly a1/a5/b4, strict
+>   markers pass). One **live Telegram run** still needed to confirm the runtime drain (operator;
+>   the dogfood suite is cost-bearing and not in CI).
 >
 > ### Follow-up
 > - **Automatic:** Scorecard `CII-Best-Practices` flips **0 → 5** on the next nightly run.
-> - **Operator queue (unchanged):** SignPath resubmission (now unblocked), demo gifs vs the
->   v0.6 build, the Zone 6b dogfood-harness fix.
+> - **Operator queue:** SignPath resubmission (now unblocked), demo gifs vs the v0.6 build, and
+>   one live Telegram dogfood run to verify the Zone 6b fix above.
 
 > ## ⟶ 2026-06-02 (RELEASED) — READ THIS FIRST: v0.6.0 is published
 >
