@@ -117,6 +117,41 @@ class BotClient:
             latency_s=first_received_at - sent_at,
         )
 
+    async def reset_chat(self, *, quiet_ms: int = 2000, max_wait: float = 15.0) -> int:
+        """Drain any in-flight or late messages from the bot so the next
+        `send_and_wait` starts from a clean slate. Returns the count drained.
+
+        Waits until no message from the bot has arrived for `quiet_ms`, or until
+        `max_wait` seconds have elapsed, discarding everything received in the
+        meantime. Sends nothing, so it does not consume the send budget.
+
+        Why this exists: a multi-bubble reply, or the bot's reply to a just-sent
+        file upload, can keep arriving after a scenario's settle window has
+        closed. Without a drain, those late messages land in the *next*
+        scenario's listening window and get recorded against the wrong prompt.
+        Call this before a scenario that attaches files (see the dogfood
+        `serial_attachments` marker).
+        """
+        bot = await self._resolve_bot()
+        drained = 0
+        last_seen = time.monotonic()
+
+        @self.client.on(events.NewMessage(from_users=bot))
+        async def _drain(event):  # noqa: ARG001
+            nonlocal drained, last_seen
+            drained += 1
+            last_seen = time.monotonic()
+
+        try:
+            deadline = time.monotonic() + max_wait
+            while time.monotonic() < deadline:
+                await asyncio.sleep(quiet_ms / 1000)
+                if time.monotonic() - last_seen >= quiet_ms / 1000:
+                    break
+        finally:
+            self.client.remove_event_handler(_drain)
+        return drained
+
     async def send_many_collect(
         self,
         messages: list[str],

@@ -98,3 +98,25 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "dogfood_tier_c: Tier C — AssistantStatus state coverage")
     config.addinivalue_line("markers", "dogfood_tier_d: Tier D — termination paths")
     config.addinivalue_line("markers", "dogfood_full: full 27-scenario arc")
+    config.addinivalue_line(
+        "markers",
+        "serial_attachments: scenario uploads files; pinned to serial execution "
+        "so multi-bubble replies are not misattributed across scenarios",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Keep file-attaching scenarios from interleaving (ZONE 6b).
+
+    Within a single session loop the dogfood tests already run one at a time, so
+    the per-scenario `bot.reset_chat()` drain is the primary guard. Under
+    pytest-xdist, additionally pin every `serial_attachments` scenario to one
+    worker so a late multi-bubble reply cannot be misattributed across workers.
+    The xdist_group marker is only applied when xdist is loaded, so it does not
+    trip --strict-markers in the normal single-process run.
+    """
+    if not config.pluginmanager.hasplugin("xdist"):
+        return
+    for item in items:
+        if item.get_closest_marker("serial_attachments"):
+            item.add_marker(pytest.mark.xdist_group("serial_attachments"))

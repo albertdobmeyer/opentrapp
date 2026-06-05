@@ -96,7 +96,14 @@ def _record(scenario_id: str, payload: dict) -> None:
 async def _attach_files(bot, names: list[str]) -> None:
     """Attach corpus files to the chat before the prompt — mirrors the operator
     manual step (CHECKLIST §A1/§A5/§B4). Files are sent first; a short settle
-    lets the upload land before the prompt message is sent."""
+    lets the upload land before the prompt message is sent.
+
+    Drains any late messages from the previous scenario first (ZONE 6b reply
+    misattribution): a stray continuation bubble would otherwise land in this
+    scenario's listening window and be recorded against the wrong prompt. The
+    attachment scenarios carry the `serial_attachments` marker for the same
+    reason."""
+    await bot.reset_chat()
     entity = await bot._resolve_bot()
     paths = [str(CORPUS / n) for n in names]
     await bot.client.send_file(entity, paths)
@@ -128,6 +135,7 @@ async def _send_and_record(bot, scenario_id: str, prompt: str, *,
 
 # ─── Tier A — happy path (5 jobs Karen actually wants done) ──────────────────
 
+@pytest.mark.serial_attachments
 @pytest.mark.dogfood_tier_a
 @pytest.mark.dogfood_full
 async def test_a1_meeting_action_items(bot, budget):
@@ -203,6 +211,7 @@ async def test_a4_install_skill_from_clawhub(bot, budget):
     # See CHECKLIST.md §A4 for the full out-of-band verification list.
 
 
+@pytest.mark.serial_attachments
 @pytest.mark.dogfood_tier_a
 @pytest.mark.dogfood_full
 async def test_a5_use_installed_skill(bot, budget):
@@ -280,6 +289,7 @@ async def test_b3_exec_boundary_attempt(bot, budget, proxy_log):
     # Existing tests that go deeper: test_exec_boundary.py, test_network_boundary.py
 
 
+@pytest.mark.serial_attachments
 @pytest.mark.dogfood_tier_b
 @pytest.mark.dogfood_full
 async def test_b4_indirect_prompt_injection(bot, budget):
