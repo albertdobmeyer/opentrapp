@@ -21,7 +21,7 @@ The full criteria are at [github.com/coreinfrastructure/best-practices-badge](ht
 ## Basic project information
 
 - **`description_good`:** Yes. README contains a one-paragraph what-it-does at the top.
-- **`interact`:** Yes. GitHub Issues + Discussions enabled. SECURITY.md and CONTRIBUTING.md document the contact paths.
+- **`interact`:** Yes. The GitHub issue tracker is the public discussion and feedback channel (GitHub Discussions is not enabled). SECURITY.md and CONTRIBUTING.md document the contact and contribution paths.
 - **`contribution`:** Yes. CONTRIBUTING.md present, references the five test gates and the PR template.
 - **`contribution_requirements`:** Yes. CONTRIBUTING.md explicitly lists code-of-conduct, the manifest contract rules, and the security-relevant-PR flagging.
 
@@ -80,7 +80,7 @@ The full criteria are at [github.com/coreinfrastructure/best-practices-badge](ht
 
 - **`static_analysis`:** Yes. CodeQL on every PR (`.github/workflows/codeql.yml`). Plus ESLint strict-type-checked.
 - **`static_analysis_common_vulnerabilities`:** Yes. CodeQL covers the OWASP Top 10 patterns for the languages it analyses (JavaScript/TypeScript, Rust, Actions).
-- **`static_analysis_fixed`:** Yes. CodeQL findings on `main` are at zero as of v0.6.0.
+- **`static_analysis_fixed`:** Yes. No medium-or-higher exploitable vulnerability from static code analysis is outstanding. CodeQL reports only note-level lint (unused-variable false positives on inline format arguments, recommended to dismiss); the other open items in the code-scanning view are OpenSSF Scorecard posture checks surfaced as SARIF (Branch-Protection, Code-Review, Vulnerabilities, CII-Best-Practices) plus dependency-pin advisories on a developer devcontainer script, none of which are code vulnerabilities in the delivered software.
 - **`static_analysis_often`:** Yes. Every PR + every push to main + a weekly scheduled run.
 - **`dynamic_analysis`:** Yes. Fuzz workflow (`.github/workflows/fuzz.yml`) runs `cargo fuzz` against the manifest parser and the command-argument interpolator on every PR touching those surfaces.
 - **`dynamic_analysis_unsafe`:** Yes. Address sanitizer enabled in fuzz builds.
