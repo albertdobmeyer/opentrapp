@@ -7,12 +7,8 @@
 [![CI](https://github.com/albertdobmeyer/opentrapp/actions/workflows/ci.yml/badge.svg)](https://github.com/albertdobmeyer/opentrapp/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/albertdobmeyer/opentrapp/actions/workflows/codeql.yml/badge.svg)](https://github.com/albertdobmeyer/opentrapp/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/albertdobmeyer/opentrapp/badge)](https://scorecard.dev/viewer/?uri=github.com/albertdobmeyer/opentrapp)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12755/badge)](https://www.bestpractices.dev/projects/12755)
 [![License: MIT](https://img.shields.io/badge/License-MIT-009966.svg)](LICENSE)
-<!-- OpenSSF Best Practices: registered as project #12755 (https://www.bestpractices.dev/en/projects/12755),
-     currently in progress (~18%). The entry predates the rebrand — edit it in place at
-     https://www.bestpractices.dev/en/projects/12755/edit (do NOT re-add). Once it reaches Passing,
-     add the live badge here:
-     [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12755/badge)](https://www.bestpractices.dev/projects/12755) -->
 
 A desktop application that runs an autonomous CLI agent inside a five-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT. Ships pre-wired for [OpenClaw](https://www.getopenclaw.ai); the perimeter is designed to extend to other CLI agents.
 
