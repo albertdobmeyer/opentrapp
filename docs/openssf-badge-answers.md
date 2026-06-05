@@ -334,7 +334,7 @@ Evidence: https://github.com/albertdobmeyer/opentrapp/blob/main/.gitignore
 
 ## Analysis (8 criteria; entry was at 0 of 8)
 
-Note on the open code-scanning items: the repository's Security tab currently shows six open alerts, but they are not exploitable code vulnerabilities. Four are OpenSSF Scorecard repository-posture checks surfaced as SARIF (Branch-Protection, Code-Review, Vulnerabilities, and the CII-Best-Practices badge itself), three are dependency-pinning advisories for a developer devcontainer script (workloads/skills/.devcontainer/setup.sh), and two are note-severity unused-variable warnings from CodeQL. To make the Security tab match the attestation below, it is worth clearing the two unused-variable warnings and pinning or dismissing the three devcontainer advisories.
+Note on the open code-scanning items: the remaining open alerts in the Security tab are OpenSSF Scorecard repository-posture checks surfaced as SARIF (Branch-Protection, Code-Review, Vulnerabilities, and the CII-Best-Practices badge itself, which clears once this badge is earned). They are not exploitable code vulnerabilities. The two CodeQL unused-variable warnings (false positives, since the variable is used in an inline format string) and the three dependency-pin advisories on a developer devcontainer script have been dismissed.
 
 ### static_analysis: a static analysis tool is applied
 Status: Met
@@ -348,7 +348,7 @@ Evidence: https://github.com/albertdobmeyer/opentrapp/blob/main/.github/workflow
 
 ### static_analysis_fixed: medium and higher findings are remediated
 Status: Met
-Justification: No exploitable vulnerability identified by static code analysis is outstanding. The CodeQL code analysis reports only two note-severity unused-variable warnings, which are below medium severity and are not security relevant. The other open items shown in the code-scanning interface are OpenSSF Scorecard repository-posture checks and dependency-pinning advisories for a developer devcontainer script, none of which are exploitable vulnerabilities in the delivered software.
+Justification: No exploitable vulnerability identified by static code analysis is outstanding. The two note-severity CodeQL unused-variable warnings were false positives, since the variable is used in an inline format string, and have been dismissed. The three dependency-pin advisories on a developer devcontainer script have also been dismissed as developer tooling. The remaining open items in the code-scanning interface are OpenSSF Scorecard repository-posture checks surfaced as SARIF, none of which are exploitable vulnerabilities in the delivered software.
 Evidence: https://github.com/albertdobmeyer/opentrapp/security/code-scanning
 
 ### static_analysis_often: static analysis runs often
