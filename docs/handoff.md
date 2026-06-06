@@ -20,7 +20,7 @@
 > | **0** measurement harness | ✅ `d858827` — `make profile-memory` (per-container RSS + host RAM/swap + image sizes) |
 > | **1** on-demand skills/social | ✅ `3ba9c4e`, **CI-green** — `on_demand` flag + `boot_services()`; up()/shell_up() skip; bootstrap shell_services fix; execute.rs start-if-needed + 300 s keep-warm; orchestrator-check §30 (114/0). Resting perimeter **5→3 containers**. |
 > | **2** agent image prune | ⛔ PAUSED — needs an image rebuild + `verify.sh`; the box can't build; agent image is security-critical (validate-before-commit). |
-> | **3** idle auto-pause + waker | ⛔ PAUSED — large Rust feature; needs cargo build cycles the box can't run. Design is in the plan (host-side getUpdates *peek* waker reusing `commands/telegram.rs`; Dormant state; idle via `requests.jsonl` timestamps on the 30 s watchdog; ADR + threat-model row). |
+> | **3** idle auto-pause + waker | 🔄 IN PROGRESS via CI round-trips (box can't compile locally). **Slice A ✅** `54596f0` (idle signal `read_egress_log_last_activity_ms` + dormant marker helpers). **Slice B ✅** `db95371` (`AssistantStatus::Dormant` + marker-override in evaluate + dormant-aware tray) — both **CI-green**. Remaining: **C** auto-pause trigger (idle detection on the 30 s watchdog → `auto_pause_to_dormant` via `perimeter_stop`, hard-gated off until the waker exists); **D** the host-side getUpdates *peek* waker (`idle.rs`, reusing `commands/telegram.rs`) + resume-exactly-once; **E** settings + `closeToTray` wiring + Dormant hero card + ADR + threat-model row, then flip default-on. |
 >
 > **Why paused (user decision 2026-06-06):** Phases 2+3 need build/compile cycles this 7.2 GB
 > box can't run (swap-storms; `earlyoom` armed). **Resume when the box has RAM headroom (close
