@@ -13,7 +13,7 @@
         dogfood-tier-a dogfood-tier-b dogfood-tier-c dogfood-tier-d dogfood-full \
         dogfood-fresh-sessions dogfood-restore-sessions \
         audit-rust audit-npm audit-deny audit-all \
-        perimeter-up perimeter-down perimeter-status
+        perimeter-up perimeter-down perimeter-status profile-memory
 
 help:
 	@echo "OpenTrApp common targets:"
@@ -46,6 +46,7 @@ help:
 	@echo "    perimeter-up       podman compose up -d"
 	@echo "    perimeter-down     podman compose down"
 	@echo "    perimeter-status   four-container health snapshot"
+	@echo "    profile-memory     per-container RSS + host RAM/swap + image sizes"
 
 # ── Test gates ───────────────────────────────────────────────────────────────
 
@@ -162,3 +163,7 @@ perimeter-status:
 	@echo "── perimeter health snapshot ──"
 	@podman ps --filter "name=vault-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null \
 		|| echo "(no containers; run 'make perimeter-up')"
+
+profile-memory:
+	@echo "→ bash tests/memory-profile.sh (per-container RSS; bring the perimeter up first)"
+	@bash tests/memory-profile.sh
