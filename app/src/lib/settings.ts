@@ -30,6 +30,14 @@ export interface AppSettings {
   theme: "dark";
   minimizeToTray: boolean;
   closeToTray: boolean;
+  /** Let the assistant sleep to save memory after an idle period, waking on the
+   * next Telegram message. Default on — it's what keeps the footprint near zero
+   * on small machines. Requires "Keep it running in the background". */
+  idleAutoPause: boolean;
+  /** Minutes of inactivity before the assistant sleeps. Must comfortably exceed
+   * the assistant's own polling cadence so a quiet-but-live assistant isn't
+   * mistaken for idle. */
+  idleTimeoutMinutes: number;
   /** Use-case ids the user has favourited on the Discover screen. */
   favoriteUseCaseIds: string[];
   /** Alert ids dismissed in the current Tauri-store generation. Cleared on app reinstall. */
@@ -56,6 +64,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   theme: "dark",
   minimizeToTray: false,
   closeToTray: true,
+  idleAutoPause: true,
+  idleTimeoutMinutes: 12,
   favoriteUseCaseIds: [],
   dismissedAlerts: {},
   telegramBotUrl: null,

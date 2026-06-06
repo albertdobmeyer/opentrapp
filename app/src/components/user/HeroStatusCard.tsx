@@ -94,6 +94,12 @@ const COPY: Record<HeroState, Copy> = {
     ringTint: "border-neutral-500/40 border-neutral-500/60",
     dotTint: "bg-neutral-500",
   },
+  dormant: {
+    title: "Your assistant is sleeping to save memory",
+    subline: "It wakes up the moment you message it on Telegram.",
+    ringTint: "border-primary-500/30 border-primary-500/50",
+    dotTint: "bg-primary-500",
+  },
 };
 
 // ─── Recovery copy taxonomy ───────────────────────────────────────────────
@@ -435,6 +441,28 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
             <Play size={18} />
             {pauseLoading ? "Resuming…" : "Resume"}
           </button>
+        )}
+
+        {state === "dormant" && (
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={handleOpenTelegram}
+              className="btn btn-lg btn-primary"
+            >
+              <MessageCircle size={18} />
+              Open Telegram
+            </button>
+            <button
+              type="button"
+              onClick={handleResume}
+              className="btn btn-lg btn-ghost"
+              disabled={pauseLoading}
+            >
+              <Play size={18} />
+              {pauseLoading ? "Waking…" : "Wake now"}
+            </button>
+          </div>
         )}
       </div>
     </div>

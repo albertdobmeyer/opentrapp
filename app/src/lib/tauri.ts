@@ -271,7 +271,8 @@ export type AssistantStatus =
   | "ok"
   | "error_perimeter"
   | "error_key"
-  | "paused_by_user";
+  | "paused_by_user"
+  | "dormant";
 
 export type AlertSeverity = "danger" | "warning" | "info";
 

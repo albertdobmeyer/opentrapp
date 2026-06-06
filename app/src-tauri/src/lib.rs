@@ -45,8 +45,9 @@ use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Manager, WindowEvent,
 };
+use tauri_plugin_store::StoreExt;
 
 use lifecycle::{
     bring_perimeter_down_sync, clear_runguard,
@@ -139,6 +140,18 @@ fn show_main_window(app: &tauri::AppHandle) {
         let _ = window.unminimize();
         let _ = window.set_focus();
     }
+}
+
+/// Whether closing the window should hide to tray (keep the app + the idle
+/// waker alive) rather than quit. Reads `closeToTray` from the frontend
+/// `settings.json` store; defaults to true to match `DEFAULT_SETTINGS`.
+fn close_to_tray_enabled(handle: &tauri::AppHandle) -> bool {
+    handle
+        .store("settings.json")
+        .ok()
+        .and_then(|s| s.get("app_settings"))
+        .and_then(|v| v.get("closeToTray").and_then(|b| b.as_bool()))
+        .unwrap_or(true)
 }
 
 // The Tauri desktop-app entry point. Gated out when the `fuzzing` feature
@@ -244,6 +257,18 @@ pub fn run() {
             commands::egress::list_egress_approvals,
             commands::egress::apply_allowlist_decision,
         ])
+        // Close-to-tray: when enabled (default), the window's X hides instead of
+        // exiting, so the app — and the idle wake-on-message waker — survive a
+        // window close. Quitting is still explicit via the tray's Quit item.
+        // (ADR-0018: the waker is a host-process task; exiting would kill it.)
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                if close_to_tray_enabled(window.app_handle()) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(move |_app_handle, event| {

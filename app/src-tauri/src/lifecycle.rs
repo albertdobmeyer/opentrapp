@@ -17,6 +17,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_store::StoreExt;
 
 // ─── Constants ────────────────────────────────────────────────────────
 
@@ -600,18 +601,43 @@ pub fn spawn_watchdog(handle: AppHandle, interval: Duration) {
             }
             update_tray_for_state(&handle, &status.bootstrap, &status.tenant, is_dormant_persisted());
 
-            // Idle auto-pause (no-op until enabled in slice E).
+            // Idle auto-pause: sleep to dormant after the configured idle window
+            // (setting-driven, default on). The waker resumes on the next message.
             maybe_auto_pause_idle(&handle, &status);
         }
     });
 }
 
 // ── Idle auto-pause (Phase 3) ─────────────────────────────────────────
-// HARD-GATED OFF until the host-side Telegram waker (slice D) lands — never
-// auto-pause while the bot has no way to wake itself. Slice E replaces the
-// const with a user setting and flips the default on.
-const IDLE_AUTO_PAUSE_ENABLED: bool = false;
-const IDLE_TIMEOUT_MS: u64 = 12 * 60 * 1000;
+// Setting-driven (Slice E): the host-side Telegram waker (Slice D) is in, so
+// auto-pause is safe to enable. Read from the frontend `settings.json` store;
+// defaults to ON so a fresh install sleeps when idle without opting in.
+
+/// Idle window used when `idleTimeoutMinutes` is unset.
+const IDLE_TIMEOUT_MS_DEFAULT: u64 = 12 * 60 * 1000;
+
+/// Read `(idleAutoPause, idle_timeout_ms)` from the frontend's `settings.json`
+/// (key `app_settings`). Missing store/keys → `(true, default)`, matching the
+/// frontend `DEFAULT_SETTINGS` (default-on for small machines).
+fn read_idle_settings(handle: &AppHandle) -> (bool, u64) {
+    let blob = handle
+        .store("settings.json")
+        .ok()
+        .and_then(|s| s.get("app_settings"));
+    let Some(blob) = blob else {
+        return (true, IDLE_TIMEOUT_MS_DEFAULT);
+    };
+    let enabled = blob
+        .get("idleAutoPause")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
+    let minutes = blob
+        .get("idleTimeoutMinutes")
+        .and_then(|v| v.as_u64().or_else(|| v.as_f64().map(|f| f as u64)))
+        .unwrap_or(IDLE_TIMEOUT_MS_DEFAULT / 60_000);
+    let timeout_ms = minutes.max(1).saturating_mul(60_000);
+    (enabled, timeout_ms)
+}
 
 /// Auto-pause the perimeter to save memory (idle → dormant). Writes the dormant
 /// marker, then stops all containers (volumes preserved, so the agent's
@@ -626,16 +652,17 @@ fn auto_pause_to_dormant(data_dir: &Path) {
 /// log has been quiet past the threshold, drop to dormant. The activity signal
 /// is the mtime of the proxy request log; `None` (no signal) never auto-pauses.
 fn maybe_auto_pause_idle(handle: &AppHandle, status: &PerimeterStatus) {
-    if !IDLE_AUTO_PAUSE_ENABLED
-        || !matches!(status.tenant, TenantState::Running)
-        || is_dormant_persisted()
-    {
+    if !matches!(status.tenant, TenantState::Running) || is_dormant_persisted() {
+        return;
+    }
+    let (enabled, timeout_ms) = read_idle_settings(handle);
+    if !enabled {
         return;
     }
     let Some(idle_ms) = crate::orchestrator::podman::read_egress_log_last_activity_ms() else {
         return;
     };
-    if idle_ms < IDLE_TIMEOUT_MS {
+    if idle_ms < timeout_ms {
         return;
     }
     if let Some(state) = handle.try_state::<crate::orchestrator::state::AppState>() {

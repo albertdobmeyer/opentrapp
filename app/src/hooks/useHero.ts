@@ -29,7 +29,8 @@ export type HeroState =
   | "recovering"
   | "error_perimeter"
   | "error_key"
-  | "paused_by_user";
+  | "paused_by_user"
+  | "dormant";
 
 export interface Hero {
   state: HeroState;
@@ -128,5 +129,7 @@ function derive(
       return "not_setup";
     case "paused_by_user":
       return "paused_by_user";
+    case "dormant":
+      return "dormant";
   }
 }

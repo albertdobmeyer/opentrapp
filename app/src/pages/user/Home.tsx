@@ -120,5 +120,7 @@ function securityFromHero(state: HeroState): SecurityCell {
       return { value: "Not set up", subline: "Run setup to begin.", tone: "neutral" };
     case "paused_by_user":
       return { value: "Stopped", subline: "Protected setup is stopped on purpose.", tone: "neutral" };
+    case "dormant":
+      return { value: "Sleeping", subline: "Resting to save memory. Wakes on your next message.", tone: "neutral" };
   }
 }

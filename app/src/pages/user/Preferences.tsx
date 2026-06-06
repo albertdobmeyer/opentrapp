@@ -388,6 +388,17 @@ function StartupSection() {
     });
   }
 
+  function toggleIdleAutoPause() {
+    const next = !settings.idleAutoPause;
+    void update({ idleAutoPause: next });
+    addToast({
+      type: "success",
+      title: next
+        ? "It'll sleep to save memory when idle"
+        : "It'll stay awake in the background",
+    });
+  }
+
   return (
     <div className="card-raised">
       <SectionHeader icon={Power} title="Startup" />
@@ -400,6 +411,11 @@ function StartupSection() {
         label="Keep it running in the background"
         checked={settings.closeToTray}
         onChange={toggleCloseToTray}
+      />
+      <ToggleRow
+        label="Let it sleep to save memory when idle (wakes on your next message)"
+        checked={settings.idleAutoPause}
+        onChange={toggleIdleAutoPause}
       />
     </div>
   );
