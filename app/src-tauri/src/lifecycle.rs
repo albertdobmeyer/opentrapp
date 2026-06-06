@@ -226,12 +226,10 @@ pub fn clear_paused_marker() {
 // host-side waker resumes it on the next Telegram message. Wired by the
 // watchdog + waker in a later Phase 3 slice.
 
-#[allow(dead_code)]
 fn dormant_marker_path() -> PathBuf {
     runguard_dir().join("dormant")
 }
 
-#[allow(dead_code)]
 pub fn is_dormant_persisted() -> bool {
     dormant_marker_path().exists()
 }
@@ -602,7 +600,7 @@ pub fn spawn_watchdog(handle: AppHandle, interval: Duration) {
             if state_changed {
                 let _ = handle.emit("perimeter-state-changed", &status);
             }
-            update_tray_for_state(&handle, &status.bootstrap, &status.tenant);
+            update_tray_for_state(&handle, &status.bootstrap, &status.tenant, is_dormant_persisted());
         }
     });
 }
@@ -633,9 +631,22 @@ fn tray_label_for(bootstrap: &BootstrapState, tenant: &TenantState) -> &'static 
     }
 }
 
-fn update_tray_for_state(handle: &AppHandle, bootstrap: &BootstrapState, tenant: &TenantState) {
-    let label = tray_label_for(bootstrap, tenant);
-    let icon_bytes = tray_icon_bytes(bootstrap, tenant);
+fn update_tray_for_state(
+    handle: &AppHandle,
+    bootstrap: &BootstrapState,
+    tenant: &TenantState,
+    dormant: bool,
+) {
+    let label = if dormant {
+        "Assistant — sleeping to save memory"
+    } else {
+        tray_label_for(bootstrap, tenant)
+    };
+    let icon_bytes = if dormant {
+        TRAY_AMBER
+    } else {
+        tray_icon_bytes(bootstrap, tenant)
+    };
     if let Some(tray) = handle.tray_by_id("main-tray") {
         let _ = tray.set_tooltip(Some(label));
         if let Ok(image) = tauri::image::Image::from_bytes(icon_bytes) {

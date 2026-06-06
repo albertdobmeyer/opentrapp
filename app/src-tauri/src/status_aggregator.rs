@@ -56,6 +56,10 @@ pub enum AssistantStatus {
     Ok,
     /// User-initiated stop; persists via `~/.opentrapp/paused`.
     PausedByUser,
+    /// Auto-paused after an idle period to save memory (`~/.opentrapp/dormant`);
+    /// a host-side waker resumes the perimeter on the next Telegram message.
+    /// Distinct from PausedByUser — the app paused it, and it self-wakes.
+    Dormant,
     /// Agent expected up but absent; auto-restart hasn't recovered.
     ErrorPerimeter,
     /// Containers healthy but Anthropic rejected the key.
@@ -203,6 +207,10 @@ async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> Assist
         .unwrap_or((BootstrapState::Installing, TenantState::Absent));
 
     let paused = matches!(tenant, TenantState::Paused);
+    // Dormant is a marker-driven override: when auto-paused the whole perimeter
+    // is stopped, so the container-derived (bootstrap, tenant) reads as a failure
+    // rather than the intentional sleep. The marker is the source of truth.
+    let dormant = crate::lifecycle::is_dormant_persisted();
 
     // 2. Read .env for key presence + Anthropic key value.
     let env_path = vault_env_path(handle);
@@ -216,8 +224,13 @@ async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> Assist
         None
     };
 
-    // 4. Derive aggregated status. Pause is already encoded in TenantState::Paused.
-    let status = derive_status(&bootstrap, &tenant, has_anthropic, key_valid);
+    // 4. Derive aggregated status. Pause is encoded in TenantState::Paused;
+    //    dormant (auto-pause) overrides everything via its marker.
+    let status = if dormant {
+        AssistantStatus::Dormant
+    } else {
+        derive_status(&bootstrap, &tenant, has_anthropic, key_valid)
+    };
 
     // 5. Compose the alerts list. Suppressed entirely when paused — the
     //    user knows their assistant is off; nothing to alarm about.
@@ -226,7 +239,7 @@ async fn evaluate(handle: &AppHandle, auth_cache: &mut AuthProbeCache) -> Assist
         .and_then(|s| s.migration_credential_warning.read().ok().map(|g| *g))
         .unwrap_or(false);
 
-    let alerts = if paused {
+    let alerts = if paused || dormant {
         Vec::new()
     } else {
         build_alerts(&bootstrap, &tenant, has_anthropic, has_telegram, key_valid, migration_warn)
