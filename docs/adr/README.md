@@ -40,6 +40,9 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0013](0013-monorepo-consolidation.md) | Accepted — landed 2026-05-30 | Monorepo consolidation: collapse the three submodules into `workloads/` + `infra/` (no independent lifecycle; submodule tax for unused benefit) |
 | [0014](0014-monorepo-modular-distribution.md) | Proposed — 2026-05-31 | Monorepo dev-home + modular distribution + `openagent-*` naming (install one shield standalone, or the GUI with a profile; extends 0013, does not revert it) |
 | [0015](0015-local-ai-judgment-layer.md) | Accepted — M1 shipped | Local-AI judgment layer (Sentinel): escalation ladder rung 0–3, model-tiering principle, lib-first design, acceptable-on-host rationale |
+| [0016](0016-host-mediated-allowlist-loosening.md) | Accepted — v0.6 Item A shipped | Host-mediated allowlist loosening (read+recommend via the judge; the human tap is the sole writer) |
+| [0017](0017-unpark-social-live-adapter.md) | Accepted — v0.6 Item C shipped | Un-park the social shield behind a live protocol adapter (supersedes ADR-0004) |
+| [0018](0018-idle-auto-pause-host-waker.md) | Accepted — design (Phase 3 Slice D) | Idle auto-pause and the host-side wake-on-message waker (peek-only getUpdates; ~0 resting RAM) |
 
 ## Future ADRs
 

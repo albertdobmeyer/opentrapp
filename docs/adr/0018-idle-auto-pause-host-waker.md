@@ -1,0 +1,156 @@
+# ADR-0018 — Idle auto-pause and the host-side wake-on-message waker
+
+**Status:** Accepted — design (Phase 3 Slice D of the memory-optimization initiative); backend pause path (Slices A–C) landed and CI-green behind `IDLE_AUTO_PAUSE_ENABLED=false`; the waker is the activation step
+**Companion plan:** memory-optimization plan (`~/.claude/plans/glimmering-meandering-babbage.md`), Phase 3
+**Cross-references:** [ADR-0009](0009-five-container-perimeter.md) · [ADR-0011](0011-zero-trust-self-sufficient-bootstrap.md) · [ADR-0001](0001-proxy-side-api-key-injection.md) · [threat-model.md](../threat-model.md) T1
+
+---
+
+## Context
+
+OpenTrApp's resting footprint is dominated by two long-lived containers:
+`vault-agent` (~600 MB, the Node/OpenClaw runtime) and `vault-proxy` (~150 MB,
+mitmproxy). These stay resident for as long as the perimeter is up, even when the
+user has not spoken to the bot in hours. On a small laptop (the 7.2 GB reference
+machine) that resting cost is the difference between "a silent background process"
+and "swap-storms the box." Phase 1 already moved the two idle shields off the boot
+set (5→3 resting containers), but the agent and proxy are the real weight, and they
+cannot simply be made on-demand: the agent *is* the thing the user talks to.
+
+The lever that actually releases that RAM is **idle auto-pause**: when the agent has
+been idle for N minutes, stop the whole perimeter (resident RAM → ~0), and bring it
+back the instant the user sends another Telegram message. The backend pause path is
+already in place and CI-green, hard-gated off:
+
+- **Idle signal** — `podman::read_egress_log_last_activity_ms()` (mtime of the
+  proxy's `requests.jsonl`; the agent polls Telegram *through* the proxy, so every
+  poll is a logged request). `None` = no signal = never auto-pause.
+- **Dormant markers** — `~/.opentrapp/dormant`, a top-level state override distinct
+  from `paused` (`lifecycle::{write,clear,is}_dormant_*`).
+- **Dormant display** — `AssistantStatus::Dormant`, surfaced by a marker-override in
+  `status_aggregator::evaluate` and a dormant-aware tray ("sleeping to save memory").
+- **Auto-pause trigger** — `lifecycle::auto_pause_to_dormant` (write marker +
+  `podman::perimeter_stop`, which preserves volumes so the agent's persisted
+  getUpdates offset survives) on the existing 30 s watchdog, gated by
+  `const IDLE_AUTO_PAUSE_ENABLED = false`.
+
+The piece that makes activation *safe* is the missing one: **once the perimeter is
+stopped, nothing is polling Telegram, so nothing can notice the next message.** The
+agent was the poller, and it is now stopped. A host-side **waker** must take over
+that single responsibility while dormant, and hand it back cleanly on wake.
+
+This adds one genuinely new runtime behavior — the host process making outbound
+Telegram calls on its own, outside the wizard flow — so it warrants its own ADR and
+a threat-model row rather than a silent merge.
+
+## Decision
+
+A host-side getUpdates **peek** waker (`app/src-tauri/src/idle.rs`), spawned only
+while dormant, that detects the arrival of the next message and resumes the
+perimeter — without ever consuming, advancing, or reading the message.
+
+1. **Reuse the existing host→Telegram channel, do not open a new one.** The waker
+   calls the same `getUpdates` endpoint, with the same bot token, in the same
+   outbound-only direction as the wizard activation handoff
+   (`commands/telegram.rs::telegram_poll_for_start`). The token is read host-side
+   from the app `.env` (`TELEGRAM_BOT_TOKEN`) via the existing `vault_env_path`,
+   with a small value-getter alongside the current presence-parser in
+   `status_aggregator`. Like the activation handoff, this is a **direct**
+   host→`api.telegram.org` call — the proxy is stopped while dormant, so there is
+   nothing to route through. This is the same network surface category that already
+   shipped and was reviewed in the wizard; the waker is a new *caller*, not a new
+   *surface*.
+
+2. **Peek only — never acknowledge, never advance, never read content.** The waker
+   long-polls `getUpdates` with `offset = -1` (the most recent update only) and
+   `timeout ≈ 30`, and **never** calls it with `update_id + 1`. Reading does not
+   consume: Telegram only confirms (drops) an update when a later request names a
+   higher offset, and it queues unconfirmed bot updates for ~24 h. The waker
+   inspects only whether *any* update is present (its `update_id`); it never parses
+   the message body. It never calls `telegram_advance_offset`. The result is that
+   the agent's queue is untouched: when the agent comes back up it consumes from its
+   own persisted offset exactly as if the waker had never run.
+
+3. **One getUpdates consumer at all times (the 409 invariant).** Telegram permits a
+   single getUpdates consumer per bot and returns HTTP 409 on a second. While
+   dormant, `vault-agent` is stopped and therefore not polling, so the waker is the
+   sole consumer — no conflict. The dangerous window is wake: there must never be a
+   moment where both the waker and a resuming agent poll. So resume is strictly
+   ordered: **cancel the waker and await its teardown *first*, then resume the
+   perimeter.** A `CancellationToken` (or `Notify` + an awaited `JoinHandle`) makes
+   "the waker has fully stopped polling" an observable event the resume path waits
+   on before it brings the agent up. If the waker itself ever sees a 409 it backs
+   off rather than hot-looping (it implies a consumer race / an in-flight resume,
+   which cancellation is about to resolve).
+
+4. **Resume = exactly once, by construction.** On a detected arrival the waker
+   signals the lifecycle layer, which: cancels+awaits the waker (per 3), clears the
+   dormant marker, and resumes the perimeter via the existing resume path (reuse
+   `commands/lifecycle.rs` resume / `podman` bring-up — do **not** fork a second
+   resume implementation). `vault-agent` starts, polls from its persisted offset,
+   and consumes the queued message exactly once. The waker advanced nothing, so the
+   message is neither lost nor double-processed. Cold start is a few seconds; this is
+   the documented latency cost of the RAM win.
+
+5. **Dormant is a runtime-only state; app launch is always awake.** On startup the
+   app clears any stale `~/.opentrapp/dormant` marker (e.g. left by a crash while
+   dormant) and follows the normal boot path, so a crashed waker self-heals on the
+   next launch rather than stranding the user in a dormant state with nothing
+   polling. Opening the app means the assistant is awake.
+
+6. **closeToTray is a hard prerequisite (lands with Slice E).** The waker lives in
+   the host process; if closing the window exits the app, the waker dies and a
+   dormant assistant can never wake. The existing-but-unhooked `closeToTray` setting
+   must be wired (a Tauri `on_window_event` close handler that hides instead of
+   exits) before idle auto-pause is enabled by default.
+
+7. **Ships behind a setting, default decided at activation.** Slice E replaces
+   `const IDLE_AUTO_PAUSE_ENABLED` with an `idleAutoPause` user setting (plus
+   `idleTimeoutMinutes`, default chosen to exceed OpenClaw's getUpdates long-poll
+   cadence so a normally-polling agent is never mistaken for idle). The waker code
+   from this ADR is inert until that setting turns it on.
+
+## Consequences
+
+- **One new documented behavior, recorded in the threat model.** While dormant, the
+  host process makes outbound getUpdates calls to `api.telegram.org`. Same endpoint,
+  token, and direction as the already-shipped activation handoff; **no inbound
+  surface, no new listener, metadata only** (presence of an `update_id`, never the
+  message body), and the offset is never advanced. The single new T1 row records
+  exactly this delta.
+- **Two invariants carry the safety and are pinned by tests where feasible.**
+  (a) *Peek-no-advance*: the waker must never call the offset-advancing path —
+  testable by construction (it has no edge to `telegram_advance_offset`) and by a
+  unit test asserting the resume sequence does not advance. (b) *Cancel-before-resume
+  ordering*: testable with a fake waker that records whether teardown completed
+  before the resume call fired.
+- **Failure modes degrade safe.** Network down → the waker backs off and retries; the
+  perimeter stays dormant and the next successful poll wakes it (no message is lost —
+  Telegram holds it). App killed while dormant → next launch clears the marker and
+  boots awake (consequence 5). A 409 → back off; cancellation resolves it.
+- **Latency, stated honestly.** The first message after sleep pays a few-seconds cold
+  start while the perimeter comes back up. This is the explicit trade for ~0 resting
+  RAM and is surfaced in the Dormant UI copy ("wakes on your next message").
+- **No container-side change.** The agent keeps managing its own Telegram offset; the
+  proxy is unchanged. The waker is entirely host-side and reuses existing primitives.
+
+## Alternatives considered
+
+- **Keep a minimal poller alive (stop only the agent, keep the proxy + a tiny
+  watcher).** Rejected for Slice D — the proxy is part of the ~150 MB we want to
+  release, and a partial stop complicates the single-consumer model (the agent polls
+  *through* the proxy; the waker polls direct). Full `perimeter_stop` is the cleanest
+  ~0-RAM state. A lighter "doze" tier could be revisited later as an optimization.
+- **Telegram webhook instead of long-poll.** Rejected — a webhook requires an
+  inbound, publicly reachable endpoint on the host (a real new network surface, plus
+  NAT/tunnel setup). Long-poll is outbound-only and reuses the channel that already
+  exists; it adds no listener.
+- **Advance the offset in the waker and re-inject the message into the agent on
+  wake.** Rejected — it forces the host to parse and hold message *content* (a real
+  information-exposure delta) and introduces a hand-off that can drop or duplicate
+  the message. Peek-only + agent-consumes-from-its-own-offset exposes nothing and is
+  exactly-once for free.
+- **Poll on a fixed short timer instead of a long-poll loop.** Rejected — short
+  fixed-interval polling is both higher latency (up to the interval) and more
+  request volume than a 30 s long-poll, which blocks server-side and returns the
+  instant a message lands.
