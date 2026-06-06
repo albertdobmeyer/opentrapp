@@ -1,8 +1,78 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-06 (**memory optimization Phase 0+1 shipped**; current shipped release: v0.6.0)
+**Last updated:** 2026-06-06 (**memory opt: Phase 0+1 shipped + Phase 3 backend A→B→C landed**; current shipped release: v0.6.0)
 **Current phase:** v0.6 shipped; reducing resting footprint so end users can run on small laptops
 **Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
+
+> ## ⟶ NEXT SESSION — READ THIS FIRST: build the Telegram waker (Phase 3 Slice D), then E
+>
+> **Mission:** finish idle auto-pause so OpenTrApp's resting RAM drops to ~0 when the agent is
+> idle, and the Telegram bot wakes itself on the next message. The whole backend pause path is
+> already in and CI-green but **hard-gated OFF** — Slice D (the waker) makes it safe to turn on.
+>
+> ### Working constraints (non-negotiable, learned this session)
+> - **The 7.2 GB dev box CANNOT compile/build locally** — `cargo build`/`podman build` swap-storm
+>   it (148 MB free / 4.8 GB swap during the work; `earlyoom` armed). **Verify Rust via CI
+>   round-trips:** push, then `gh run list --workflow CI` → check the `Rust (check + test)` job
+>   (~5 min). Before each push, parse-check cheaply with `rustfmt --edition 2021 --check <file>`
+>   (grep for real `error:`/`expected`/`unclosed`; ignore formatting diffs — `cargo fmt` is NOT a
+>   CI gate). Read every type you touch so each slice compiles first try.
+> - Don't bring the perimeter up casually — it swap-storms the box (see the 2026-06-06 entry).
+>
+> ### What's landed (reuse, do NOT rebuild) — backend pause path A→B→C, all CI-green
+> - **Idle signal:** `podman::read_egress_log_last_activity_ms()` — ms since the proxy last logged
+>   a request (mtime of `requests.jsonl`); `None` = no signal = never auto-pause.
+> - **Dormant markers** (`app/src-tauri/src/lifecycle.rs`): `write_dormant_marker`,
+>   `clear_dormant_marker` (still `#[allow(dead_code)]` — the waker's resume path uses it),
+>   `is_dormant_persisted`. Marker = `~/.opentrapp/dormant`, distinct from `paused`.
+> - **Dormant display:** `AssistantStatus::Dormant` + a marker-override in `status_aggregator::evaluate`
+>   + a dormant-aware tray ("Assistant — sleeping to save memory", amber).
+> - **Auto-pause trigger:** `lifecycle::auto_pause_to_dormant(data_dir)` (= `write_dormant_marker` +
+>   `podman::perimeter_stop`, volumes preserved so the agent's getUpdates offset survives) +
+>   `maybe_auto_pause_idle` on the 30 s watchdog. **HARD-GATED: `const IDLE_AUTO_PAUSE_ENABLED =
+>   false`** in `lifecycle.rs` — flip this (→ a setting) in Slice E once D works.
+> - **The waker's primitives already exist:** `app/src-tauri/src/commands/telegram.rs` —
+>   `telegram_delete_webhook`, `telegram_poll_for_start` (getUpdates long-poll),
+>   `telegram_send_message`, `telegram_advance_offset`. This is the EXISTING, wizard-reviewed
+>   host→Telegram channel, so the waker is **not** a new host network surface. Bot token is in the
+>   app `.env`.
+>
+> ### Slice D — the waker (`app/src-tauri/src/idle.rs`, new)
+> 1. When `auto_pause_to_dormant` fires, also spawn the waker: a host-side `getUpdates` long-poll
+>    with a cancellation handle (tokio `CancellationToken` / `Notify` / `AbortHandle`).
+> 2. **PEEK ONLY** — call getUpdates with the agent's last offset and **never advance it** (never
+>    ACK). Detect only that a message ARRIVED (`update_id`); never read content (the agent does
+>    that after wake). Telegram allows ONE getUpdates consumer per bot (409 on concurrent), so
+>    while dormant only the waker polls.
+> 3. On arrival → `resume_from_dormant`: **cancel the waker and AWAIT its teardown FIRST** (so
+>    there's never two consumers), then `clear_dormant_marker()` + resume the perimeter (reuse the
+>    `resume_perimeter` path in `commands/lifecycle.rs` / `podman::shell_up` + agent up). The agent
+>    reconnects, consumes the server-queued message from its persisted offset → **exactly once**
+>    (Telegram queues bot updates ~24 h). Cold start ≈ a few seconds.
+> 4. **Ship with the ADR + threat-model row (REQUIRED — this is the security-boundary change):**
+>    new `docs/adr/0018-idle-auto-pause-host-waker.md` (current max ADR is 0017) + a
+>    `docs/threat-model.md` row recording the one delta: a host-side getUpdates *peek* while
+>    dormant (metadata/`update_id` only, never content, peek-only never advances offset, reuses the
+>    wizard channel). Do NOT push the waker blind — it warrants review.
+>
+> ### Slice E — activate it
+> - Replace `const IDLE_AUTO_PAUSE_ENABLED` with a backend-read user setting (`idleAutoPause` +
+>   `idleTimeoutMinutes`; settings live in `app/src/lib/settings.ts` via tauri-plugin-store).
+>   Recommend default **ON** once the waker works, with cold-start latency documented.
+> - **Wire `closeToTray`** (setting exists in `settings.ts` but is UNHOOKED — closing the window
+>   exits the app today, which would kill the waker): add a Tauri `on_window_event` close handler in
+>   `app/src-tauri/src/lib.rs` → hide instead of exit when `closeToTray`.
+> - Frontend: a Dormant hero state in `HeroStatusCard.tsx` ("sleeping to save memory — wakes on your
+>   next message"); add `"dormant"` to the frontend status type if it's a strict union.
+>
+> ### Verify (operator, needs RAM headroom)
+> `make profile-memory` with the perimeter up → let it idle → confirm Dormant + perimeter RAM ≈ 0 →
+> send a Telegram message → perimeter resumes + reply arrives **exactly once** → measure cold-start.
+> Plus the usual CI gate (cargo check+test, tsc, vitest, lint, orchestrator-check, integration).
+>
+> **Full design:** `~/.claude/plans/glimmering-meandering-babbage.md` (Phase 3). **Also paused:**
+> Phase 2 (agent image conservative prune — needs an image rebuild + `verify.sh`; security-critical,
+> validate-before-commit; task #33).
 
 > ## ⟶ 2026-06-06 — Memory optimization (run on small laptops): Phase 0+1 shipped, 2+3 paused
 >
