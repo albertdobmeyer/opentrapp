@@ -236,6 +236,10 @@ services:
     # Keep alive so the orchestrator can exec commands into it.
     command: ["bash", "-c", "echo 'vault-skills ready' && sleep infinity"]
     restart: unless-stopped
+    # On-demand (Phase 1): a profiled service is NOT started by a plain
+    # `podman compose up`; it starts only when its profile is activated. Mirrors
+    # the perimeter.yml `on_demand: true` flag the packaged orchestrator honors.
+    profiles: ["on-demand"]
 
   # ─── THE MONITORING STATION ─────────────────────────────────────
   # Feed scanner & injection pattern matcher. Processes untrusted
@@ -272,6 +276,9 @@ services:
     # Social is a task runner like forge. Idles between scans.
     command: ["bash", "-c", "echo 'vault-social ready' && sleep infinity"]
     restart: unless-stopped
+    # On-demand (Phase 1): parked workload, profiled so it never starts on a
+    # plain `podman compose up`. Mirrors perimeter.yml `on_demand: true`.
+    profiles: ["on-demand"]
 
 # ─── NETWORK ISOLATION ──────────────────────────────────────────
 # Each component gets its own internal network with the proxy.

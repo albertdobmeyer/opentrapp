@@ -1363,6 +1363,63 @@ sys.exit(0 if ok else 1)
 PY
 
 # =============================================================================
+section "30. On-demand shields — skills/social not booted (memory Phase 1)"
+# =============================================================================
+# vault-skills/vault-social are task runners, not daemons. They carry
+# on_demand:true in the signed spec (and a compose profile in the dev mirror) so
+# the orchestrator skips them at boot and the command layer starts them lazily —
+# a lighter resting perimeter. ADR-0009 topology is unchanged.
+
+python3 - <<'PY' 2>/dev/null && pass "perimeter.yml marks only the shields on_demand" || fail "perimeter.yml on_demand flags wrong (skills/social true; core false)"
+import sys, yaml, pathlib
+svc = yaml.safe_load(pathlib.Path('app/src-tauri/resources/perimeter.yml').read_text())['services']
+ok = (svc['vault-skills'].get('on_demand') is True
+      and svc['vault-social'].get('on_demand') is True
+      and not svc['vault-agent'].get('on_demand', False)
+      and not svc['vault-proxy'].get('on_demand', False)
+      and not svc['vault-egress'].get('on_demand', False))
+sys.exit(0 if ok else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "compose.yml profiles the shields (dev mirror of on_demand)" || fail "compose.yml must profile vault-skills/social and not the core"
+import sys, yaml, pathlib
+s = yaml.safe_load(pathlib.Path('compose.yml').read_text())['services']
+ok = (bool(s['vault-skills'].get('profiles')) and bool(s['vault-social'].get('profiles'))
+      and not s['vault-agent'].get('profiles')
+      and not s['vault-proxy'].get('profiles')
+      and not s['vault-egress'].get('profiles'))
+sys.exit(0 if ok else 1)
+PY
+
+if grep -q "pub on_demand" app/src-tauri/src/orchestrator/perimeter.rs \
+   && grep -q "fn boot_services" app/src-tauri/src/orchestrator/perimeter.rs; then
+  pass "perimeter.rs has the on_demand field + boot_services() filter"
+else
+  fail "perimeter.rs missing on_demand field or boot_services()"
+fi
+
+if grep -q "spec.boot_services()" app/src-tauri/src/orchestrator/podman.rs; then
+  pass "podman.rs up()/shell_up() boot via boot_services() (on-demand skipped)"
+else
+  fail "podman.rs still boots the full start_order() (on-demand not skipped)"
+fi
+
+python3 - <<'PY' 2>/dev/null && pass "bootstrap shell_services() no longer requires the on-demand shields" || fail "bootstrap shell_services() still lists vault-skills/social (verify would fail)"
+import sys, re, pathlib
+t = pathlib.Path('app/src-tauri/src/bootstrap/mod.rs').read_text()
+m = re.search(r'fn shell_services\(\).*?\n}', t, re.S)
+ok = bool(m) and 'vault-skills' not in m.group(0) and 'vault-social' not in m.group(0)
+sys.exit(0 if ok else 1)
+PY
+
+if grep -q "on_demand_service_for" app/src-tauri/src/commands/execute.rs \
+   && grep -q "service_up" app/src-tauri/src/commands/execute.rs; then
+  pass "execute.rs starts an on-demand shield before running its command"
+else
+  fail "execute.rs missing the generic on-demand start-if-needed step"
+fi
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

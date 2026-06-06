@@ -25,24 +25,14 @@ use crate::orchestrator::podman;
 
 const TOTAL_STEPS: u8 = 7;
 
-/// The security shell to verify — everything except the agent tenant. The
-/// containment core (`vault-egress` + `vault-proxy`, per ADR-0009) is always
-/// present; the optional workload containers (`vault-skills`, `vault-social`)
-/// are included only when this install's profile bundled them (modular
-/// distribution — determined by which manifests `build.rs` staged). When the
-/// manifests dir is absent (dev / unstaged), assume the full set so dev runs
-/// are unaffected.
+/// The security shell to verify after `shell_up` — the containment core
+/// (`vault-egress` + `vault-proxy`, per ADR-0009). The workload shields
+/// (`vault-skills`, `vault-social`) are on-demand (perimeter.yml `on_demand:
+/// true`): `shell_up` no longer boots them and they start lazily on the first
+/// command, so they must NOT be required for shell verification — requiring a
+/// container that is intentionally not running would fail every first-run.
 fn shell_services() -> Vec<&'static str> {
-    let mut services = vec!["vault-egress", "vault-proxy"];
-    let manifests = podman::resource_dir().join("manifests");
-    let unstaged = !manifests.exists();
-    if unstaged || manifests.join("skills").exists() {
-        services.push("vault-skills");
-    }
-    if unstaged || manifests.join("social").exists() {
-        services.push("vault-social");
-    }
-    services
+    vec!["vault-egress", "vault-proxy"]
 }
 
 // ─── Public entry point ───────────────────────────────────────────────

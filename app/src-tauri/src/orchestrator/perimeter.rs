@@ -73,6 +73,14 @@ pub struct Service {
     pub tty: bool,
     #[serde(default = "default_restart")]
     pub restart: String,
+    /// Default false. When true, the orchestrator does NOT start this service at
+    /// boot (`boot_services` / `up` / `shell_up` skip it); it is started on
+    /// demand by the command layer and stopped after an idle grace. Only the
+    /// task-runner shields (vault-skills / vault-social) opt in — they are not
+    /// daemons, just idle until a command needs them, so booting them wastes a
+    /// container in the resting perimeter.
+    #[serde(default)]
+    pub on_demand: bool,
 }
 
 /// How an image is sourced — drives the verification strategy before run.
@@ -247,6 +255,17 @@ impl PerimeterSpec {
         }
         ordered
     }
+
+    /// Services to start at boot, in dependency order: `start_order()` minus the
+    /// `on_demand` services. `up`/`shell_up` iterate this so on-demand shields
+    /// stay absent from the resting perimeter and are started lazily by the
+    /// command layer instead.
+    pub fn boot_services(&self) -> Vec<String> {
+        self.start_order()
+            .into_iter()
+            .filter(|name| !self.services[name].on_demand)
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -328,6 +347,30 @@ mod tests {
         assert!(pos("vault-egress") < pos("vault-proxy"), "egress before proxy");
         assert!(pos("vault-proxy") < pos("vault-agent"), "proxy before agent");
         assert_eq!(order.len(), 5);
+    }
+
+    #[test]
+    fn shields_are_on_demand_others_are_not() {
+        let spec = load().unwrap();
+        for svc in ["vault-skills", "vault-social"] {
+            assert!(spec.services[svc].on_demand, "{svc} must be on_demand");
+        }
+        for svc in ["vault-agent", "vault-proxy", "vault-egress"] {
+            assert!(!spec.services[svc].on_demand, "{svc} must NOT be on_demand");
+        }
+    }
+
+    #[test]
+    fn boot_services_excludes_on_demand_shields() {
+        let spec = load().unwrap();
+        let boot = spec.boot_services();
+        assert_eq!(
+            boot,
+            vec!["vault-egress", "vault-proxy", "vault-agent"],
+            "boot set is the three always-on services in dependency order"
+        );
+        assert!(!boot.contains(&"vault-skills".to_string()));
+        assert!(!boot.contains(&"vault-social".to_string()));
     }
 
     #[test]

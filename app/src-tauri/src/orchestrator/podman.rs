@@ -351,7 +351,7 @@ pub fn rm_service(service_name: &str) -> Result<(), OrchestratorError> {
 /// dependencies before starting dependents.
 pub fn up(spec: &PerimeterSpec, ctx: &RunContext) -> Result<(), OrchestratorError> {
     ensure_networks(spec)?;
-    for service_name in spec.start_order() {
+    for service_name in spec.boot_services() {
         let svc = &spec.services[&service_name];
 
         // Wait for any health-gated dependency to actually be healthy.
@@ -829,7 +829,7 @@ pub fn shell_up(data_dir: &Path) -> Result<(), OrchestratorError> {
     let verifier = make_verifier(&rd);
     let ctx = RunContext { resource_dir: &rd, env: &env, verifier: verifier.as_ref() };
     ensure_networks(&spec)?;
-    for service_name in spec.start_order() {
+    for service_name in spec.boot_services() {
         if service_name == "vault-agent" {
             continue;
         }
@@ -860,8 +860,9 @@ pub fn perimeter_down(_data_dir: &Path) -> Result<(), OrchestratorError> {
 pub fn perimeter_stop(_data_dir: &Path) -> Result<(), OrchestratorError> {
     let spec = load_spec()?;
     for service_name in spec.services.keys() {
+        // `--ignore`: an on-demand shield may not be running; absence is not an error.
         podman(
-            &["stop".into(), "--time".into(), "10".into(), service_name.clone()],
+            &["stop".into(), "--ignore".into(), "--time".into(), "10".into(), service_name.clone()],
             Duration::from_secs(20),
         )?;
     }
@@ -896,6 +897,12 @@ pub fn service_up(
         )));
     }
     Ok(())
+}
+
+/// Stop and remove one on-demand service (after its idle grace). Idempotent —
+/// a no-op if the container is already gone (`rm --ignore`).
+pub fn service_down(service_name: &str) -> Result<(), OrchestratorError> {
+    rm_service(service_name)
 }
 
 /// Verify + acquire every image the perimeter needs. With a bundled signed

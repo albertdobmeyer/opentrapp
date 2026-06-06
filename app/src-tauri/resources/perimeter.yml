@@ -148,6 +148,9 @@ services:
       - { name: REQUESTS_CA_BUNDLE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
       - { name: SSL_CERT_FILE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
     restart: unless-stopped
+    # On-demand (Phase 1): not a daemon — started lazily by the command layer
+    # and stopped after an idle grace, so it stays out of the resting perimeter.
+    on_demand: true
 
   # ─── vault-social — social-content analysis (parked) ────────────
   vault-social:
@@ -171,6 +174,9 @@ services:
       - { name: REQUESTS_CA_BUNDLE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
       - { name: SSL_CERT_FILE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
     restart: unless-stopped
+    # On-demand (Phase 1): parked workload, never started until a social command
+    # runs (enable-feeds is deferred). See vault-skills note above.
+    on_demand: true
 
 # ─── networks ────────────────────────────────────────────────────
 networks:
