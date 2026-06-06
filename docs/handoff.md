@@ -1,8 +1,33 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-05 (**OpenSSF Best Practices passing badge earned**; current shipped release: v0.6.0)
-**Current phase:** v0.6 shipped; the "AI makes AI safe" USP is real, not aspirational; third-party trust signals now landing (OpenSSF passing badge)
+**Last updated:** 2026-06-06 (**memory optimization Phase 0+1 shipped**; current shipped release: v0.6.0)
+**Current phase:** v0.6 shipped; reducing resting footprint so end users can run on small laptops
 **Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
+
+> ## ⟶ 2026-06-06 — Memory optimization (run on small laptops): Phase 0+1 shipped, 2+3 paused
+>
+> A live profiling attempt showed the 5-container perimeter takes the 7.2 GB dev box to
+> ~142 MB free / 3.8 GB swap (trips the `CONSTITUTION.md` swap>500 MB guardrail). Plan
+> (`~/.claude/plans/glimmering-meandering-babbage.md`, 4 phases) to cut the resting footprint.
+>
+> **Honest reframe:** the resident RAM is dominated by **vault-agent (~600 MB Node/OpenClaw) +
+> vault-proxy (~150 MB mitmproxy)**; vault-skills/vault-social are idle `sleep infinity` bash
+> (~5–20 MB each, **not** "1 GB"). So **idle auto-pause is the only big RAM lever**; on-demand
+> shields are hygiene; image-slim is disk not RAM; **measure first**.
+>
+> | Phase | Status |
+> |------|--------|
+> | **0** measurement harness | ✅ `d858827` — `make profile-memory` (per-container RSS + host RAM/swap + image sizes) |
+> | **1** on-demand skills/social | ✅ `3ba9c4e`, **CI-green** — `on_demand` flag + `boot_services()`; up()/shell_up() skip; bootstrap shell_services fix; execute.rs start-if-needed + 300 s keep-warm; orchestrator-check §30 (114/0). Resting perimeter **5→3 containers**. |
+> | **2** agent image prune | ⛔ PAUSED — needs an image rebuild + `verify.sh`; the box can't build; agent image is security-critical (validate-before-commit). |
+> | **3** idle auto-pause + waker | ⛔ PAUSED — large Rust feature; needs cargo build cycles the box can't run. Design is in the plan (host-side getUpdates *peek* waker reusing `commands/telegram.rs`; Dormant state; idle via `requests.jsonl` timestamps on the 30 s watchdog; ADR + threat-model row). |
+>
+> **Why paused (user decision 2026-06-06):** Phases 2+3 need build/compile cycles this 7.2 GB
+> box can't run (swap-storms; `earlyoom` armed). **Resume when the box has RAM headroom (close
+> the dev env, or a machine with more RAM), or iterate Phase 3 via CI round-trips.** Phase 1
+> follow-ups (in its commit): component-workflow on-demand auto-start; real in-container
+> `podman exec` execution (framing B — today commands run host-side, so on-demand mainly readies
+> the dev/compose path).
 
 > ## ⟶ 2026-06-05 — OpenSSF Best Practices PASSING badge earned
 >
