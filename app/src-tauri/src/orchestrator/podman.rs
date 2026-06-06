@@ -786,6 +786,41 @@ pub(crate) fn read_egress_log() -> String {
     std::fs::read_to_string(Path::new(&mountpoint).join("requests.jsonl")).unwrap_or_default()
 }
 
+/// Milliseconds since the proxy last logged an agent request, from the mtime of
+/// `requests.jsonl` in the `vault-proxy-logs` volume. The proxy appends on every
+/// egress (including OpenClaw's Telegram long-poll), so a stale mtime means the
+/// agent is idle. `None` when the volume/file is absent or unreadable — the
+/// caller MUST treat that as "no signal, do not auto-pause". The idle signal for
+/// auto-pause-to-dormant (Phase 3). NOTE: depends on the proxy log persisting to
+/// its volume (ZONE 3); if the proxy falls back to in-container /tmp this returns
+/// None and idle detection is conservatively disabled.
+#[allow(dead_code)] // wired by the watchdog in a later Phase 3 slice
+pub(crate) fn read_egress_log_last_activity_ms() -> Option<u64> {
+    let out = podman_probe(
+        &[
+            "volume".into(),
+            "inspect".into(),
+            "vault-proxy-logs".into(),
+            "--format".into(),
+            "{{.Mountpoint}}".into(),
+        ],
+        Duration::from_secs(10),
+    )
+    .ok()?;
+    if !ok(&out) {
+        return None;
+    }
+    let mountpoint = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if mountpoint.is_empty() {
+        return None;
+    }
+    let meta = std::fs::metadata(Path::new(&mountpoint).join("requests.jsonl")).ok()?;
+    let elapsed = std::time::SystemTime::now()
+        .duration_since(meta.modified().ok()?)
+        .ok()?;
+    Some(elapsed.as_millis() as u64)
+}
+
 /// Signal `vault-proxy` to reload its allowlist (SIGHUP → the addon's
 /// `_reload_allowlist`, which does an in-memory atomic swap). No-op when the
 /// proxy isn't running. The proxy reads the live allowlist file the host app

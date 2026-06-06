@@ -220,6 +220,36 @@ pub fn clear_paused_marker() {
     let _ = std::fs::remove_file(paused_marker_path());
 }
 
+// ── Dormant marker (Phase 3 idle auto-pause) ──────────────────────────
+// Distinct from `paused` (user-initiated): `dormant` means the watchdog
+// auto-paused the perimeter to save memory after an idle period, and a
+// host-side waker resumes it on the next Telegram message. Wired by the
+// watchdog + waker in a later Phase 3 slice.
+
+#[allow(dead_code)]
+fn dormant_marker_path() -> PathBuf {
+    runguard_dir().join("dormant")
+}
+
+#[allow(dead_code)]
+pub fn is_dormant_persisted() -> bool {
+    dormant_marker_path().exists()
+}
+
+#[allow(dead_code)]
+pub fn write_dormant_marker() -> std::io::Result<()> {
+    let path = dormant_marker_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(&path, "1")
+}
+
+#[allow(dead_code)]
+pub fn clear_dormant_marker() {
+    let _ = std::fs::remove_file(dormant_marker_path());
+}
+
 fn activated_marker_path() -> PathBuf {
     runguard_dir().join("activated")
 }
