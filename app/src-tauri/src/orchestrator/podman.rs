@@ -794,7 +794,6 @@ pub(crate) fn read_egress_log() -> String {
 /// auto-pause-to-dormant (Phase 3). NOTE: depends on the proxy log persisting to
 /// its volume (ZONE 3); if the proxy falls back to in-container /tmp this returns
 /// None and idle detection is conservatively disabled.
-#[allow(dead_code)] // wired by the watchdog in a later Phase 3 slice
 pub(crate) fn read_egress_log_last_activity_ms() -> Option<u64> {
     let out = podman_probe(
         &[

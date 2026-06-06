@@ -234,7 +234,6 @@ pub fn is_dormant_persisted() -> bool {
     dormant_marker_path().exists()
 }
 
-#[allow(dead_code)]
 pub fn write_dormant_marker() -> std::io::Result<()> {
     let path = dormant_marker_path();
     if let Some(parent) = path.parent() {
@@ -601,8 +600,53 @@ pub fn spawn_watchdog(handle: AppHandle, interval: Duration) {
                 let _ = handle.emit("perimeter-state-changed", &status);
             }
             update_tray_for_state(&handle, &status.bootstrap, &status.tenant, is_dormant_persisted());
+
+            // Idle auto-pause (no-op until enabled in slice E).
+            maybe_auto_pause_idle(&handle, &status);
         }
     });
+}
+
+// ── Idle auto-pause (Phase 3) ─────────────────────────────────────────
+// HARD-GATED OFF until the host-side Telegram waker (slice D) lands — never
+// auto-pause while the bot has no way to wake itself. Slice E replaces the
+// const with a user setting and flips the default on.
+const IDLE_AUTO_PAUSE_ENABLED: bool = false;
+const IDLE_TIMEOUT_MS: u64 = 12 * 60 * 1000;
+
+/// Auto-pause the perimeter to save memory (idle → dormant). Writes the dormant
+/// marker, then stops all containers (volumes preserved, so the agent's
+/// getUpdates offset survives for an exactly-once resume). The waker resumes on
+/// the next Telegram message.
+fn auto_pause_to_dormant(data_dir: &Path) {
+    let _ = write_dormant_marker();
+    let _ = crate::orchestrator::podman::perimeter_stop(data_dir);
+}
+
+/// Watchdog hook: if idle auto-pause is enabled, the agent is up, and the proxy
+/// log has been quiet past the threshold, drop to dormant. The activity signal
+/// is the mtime of the proxy request log; `None` (no signal) never auto-pauses.
+fn maybe_auto_pause_idle(handle: &AppHandle, status: &PerimeterStatus) {
+    if !IDLE_AUTO_PAUSE_ENABLED
+        || !matches!(status.tenant, TenantState::Running)
+        || is_dormant_persisted()
+    {
+        return;
+    }
+    let Some(idle_ms) = crate::orchestrator::podman::read_egress_log_last_activity_ms() else {
+        return;
+    };
+    if idle_ms < IDLE_TIMEOUT_MS {
+        return;
+    }
+    if let Some(state) = handle.try_state::<crate::orchestrator::state::AppState>() {
+        let dir = state
+            .runtime_data_dir
+            .read()
+            .map(|g| g.clone())
+            .unwrap_or_default();
+        auto_pause_to_dormant(&dir);
+    }
 }
 
 // Tray icons embedded at compile time — amber/green/red circle PNGs.
