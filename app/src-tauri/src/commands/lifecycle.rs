@@ -158,6 +158,13 @@ pub async fn resume_perimeter(
         .map(|g| g.clone())
         .map_err(|e| format!("runtime data dir lock poisoned: {e}"))?;
 
+    // If the perimeter was dormant (idle auto-pause), stop the host-side waker
+    // and await its teardown BEFORE bringing the perimeter up — otherwise the
+    // waker's getUpdates poll would overlap the agent's, tripping Telegram's
+    // single-consumer 409 (ADR-0018). Safe no-op when no waker is running.
+    crate::idle::stop_waker(state.inner()).await;
+    crate::lifecycle::clear_dormant_marker();
+
     // Clear the flag first so a slow start still shows "starting/recovering"
     // rather than staying stuck on "paused".
     store.set_paused(false);

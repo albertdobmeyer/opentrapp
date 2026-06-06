@@ -242,7 +242,6 @@ pub fn write_dormant_marker() -> std::io::Result<()> {
     std::fs::write(&path, "1")
 }
 
-#[allow(dead_code)]
 pub fn clear_dormant_marker() {
     let _ = std::fs::remove_file(dormant_marker_path());
 }
@@ -645,7 +644,14 @@ fn maybe_auto_pause_idle(handle: &AppHandle, status: &PerimeterStatus) {
             .read()
             .map(|g| g.clone())
             .unwrap_or_default();
+        // Never sleep without a way to wake: the waker needs the bot token. If
+        // it's absent, stay running rather than strand the perimeter dormant.
+        if crate::idle::read_telegram_token(&dir).is_none() {
+            return;
+        }
         auto_pause_to_dormant(&dir);
+        // Spawn the host-side waker that resumes on the next Telegram message.
+        crate::idle::spawn_waker(handle.clone(), dir);
     }
 }
 

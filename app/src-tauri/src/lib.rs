@@ -1,5 +1,6 @@
 mod bootstrap;
 mod commands;
+mod idle;
 mod lifecycle;
 mod orchestrator;
 mod status_aggregator;
@@ -159,6 +160,11 @@ pub fn run() {
     // RunGuard: reap orphan containers from any prior SIGKILL'd session
     // BEFORE we bring the perimeter up. Reads/writes ~/.opentrapp/runguard.pid.
     establish_runguard(&data_dir);
+
+    // Dormant (idle auto-pause) is a runtime-only state: opening the app means
+    // the assistant is awake. Clear any stale dormant marker left by a crash
+    // while dormant so a previous sleep can't strand the perimeter (ADR-0018).
+    lifecycle::clear_dormant_marker();
 
     // Pass-4 lifecycle ownership (P11): the perimeter is bound to the app's
     // lifetime. App start → perimeter up. Graceful exit (window quit, tray Quit,

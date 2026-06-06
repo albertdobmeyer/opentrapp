@@ -18,6 +18,11 @@ pub struct AppState {
     /// stops the container. Re-arming aborts the previous handle so bursts of
     /// commands keep the container warm. See `commands/execute.rs`.
     pub idle_stops: Mutex<HashMap<String, tokio::task::AbortHandle>>,
+    /// The host-side wake-on-message waker, present only while the perimeter is
+    /// dormant (idle auto-pause). Holds its cancellation signal + task handle so
+    /// an external resume can stop and await it before bringing the perimeter
+    /// back up. See `crate::idle` and ADR-0018.
+    pub waker: Mutex<Option<crate::idle::IdleWaker>>,
 }
 
 impl AppState {
@@ -28,6 +33,7 @@ impl AppState {
             component_states: Mutex::new(HashMap::new()),
             active_streams: Mutex::new(HashMap::new()),
             idle_stops: Mutex::new(HashMap::new()),
+            waker: Mutex::new(None),
         }
     }
 }

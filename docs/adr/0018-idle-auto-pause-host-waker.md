@@ -62,14 +62,17 @@ perimeter — without ever consuming, advancing, or reading the message.
    *surface*.
 
 2. **Peek only — never acknowledge, never advance, never read content.** The waker
-   long-polls `getUpdates` with `offset = -1` (the most recent update only) and
-   `timeout ≈ 30`, and **never** calls it with `update_id + 1`. Reading does not
-   consume: Telegram only confirms (drops) an update when a later request names a
-   higher offset, and it queues unconfirmed bot updates for ~24 h. The waker
-   inspects only whether *any* update is present (its `update_id`); it never parses
-   the message body. It never calls `telegram_advance_offset`. The result is that
-   the agent's queue is untouched: when the agent comes back up it consumes from its
-   own persisted offset exactly as if the waker had never run.
+   long-polls `getUpdates` with **no `offset` parameter at all** (which returns every
+   currently-unconfirmed update without confirming any) and `timeout ≈ 30`. It
+   **never** passes `update_id + 1`, and it **deliberately avoids a negative offset**
+   (`offset = -1`): the Telegram Bot API specifies that a negative offset causes "all
+   previous updates [to] be forgotten," which would drop earlier queued messages and
+   break exactly-once. Confirmation (dropping) only happens when a later request names
+   a higher offset, and Telegram queues unconfirmed bot updates for ~24 h. The waker
+   inspects only whether *any* update is present (a non-empty `result`); it never
+   parses the message body and never calls `telegram_advance_offset`. The agent's
+   queue is therefore untouched: when the agent comes back up it consumes from its own
+   persisted offset exactly as if the waker had never run.
 
 3. **One getUpdates consumer at all times (the 409 invariant).** Telegram permits a
    single getUpdates consumer per bot and returns HTTP 409 on a second. While
