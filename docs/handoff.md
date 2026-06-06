@@ -1,55 +1,49 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-06 (**memory opt: Phase 0+1 shipped + Phase 3 backend A→B→C + waker D landed**; current shipped release: v0.6.0)
+**Last updated:** 2026-06-06 (**memory opt: Phase 0+1 shipped + Phase 3 COMPLETE (A→B→C+D+E), idle auto-pause default ON**; current shipped release: v0.6.0)
 **Current phase:** v0.6 shipped; reducing resting footprint so end users can run on small laptops
 **Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
 
-> ## ⟶ NEXT SESSION — READ THIS FIRST: activate idle auto-pause (Phase 3 Slice E)
+> ## ⟶ NEXT SESSION — READ THIS FIRST: Phase 3 is DONE; what's left is an operator live-verify + Phase 2
 >
-> **Mission:** finish idle auto-pause so OpenTrApp's resting RAM drops to ~0 when the agent is
-> idle, and the Telegram bot wakes itself on the next message. The whole backend pause path
-> **plus the waker (Slice D)** is now in and CI-green, but **hard-gated OFF**. Slice E flips the
-> gate on and adds the UX so the feature is actually reachable + safe to default-on.
+> **Phase 3 (idle auto-pause + wake-on-message) is code-complete and CI-green, default ON.** When the
+> agent is idle past the configured window the watchdog sleeps the whole perimeter to dormant (resting
+> RAM → ~0) and a host-side Telegram **peek** waker resumes it on the next message, exactly once. The
+> whole thing is shipped behind the `idleAutoPause` setting (default on). All five slices landed via
+> CI round-trips (the 7.2 GB box can't compile locally):
 >
-> ### ✅ Slice D — the waker — LANDED + CI-green (commit `0708471`)
-> `app/src-tauri/src/idle.rs` is the host-side getUpdates **peek** waker. Reuse it, don't rebuild:
-> - `spawn_waker(app, data_dir)` — spawned by `lifecycle::maybe_auto_pause_idle` right after
->   `auto_pause_to_dormant` (gated path). No-ops with a log if no bot token.
-> - `stop_waker(&AppState)` — cancels + awaits teardown; **already wired into
->   `commands::lifecycle::resume_perimeter`** (cancel-before-resume + clears the dormant marker
->   before `perimeter_up`), so the manual-resume path is safe.
-> - Peek-only is enforced + unit-tested: `peek_query()` sends NO `offset` (test asserts it);
->   never `update_id+1`, never a negative offset; reads only an `update_id`, never content.
-> - Token read host-side from `<data_dir>/.env`; `AppState.waker: Mutex<Option<IdleWaker>>` holds it.
-> - App launch clears any stale `~/.opentrapp/dormant` marker (`lib.rs`) → crash-while-dormant
->   boots awake. ADR-0018 + the T6 threat-model row are committed (`dcb28c3`).
+> | Slice | Commit | What |
+> |------|--------|------|
+> | A | `54596f0` | idle signal (`read_egress_log_last_activity_ms`, requests.jsonl mtime) + dormant markers |
+> | B | `db95371` | `AssistantStatus::Dormant` + marker-override in `evaluate` + dormant-aware tray |
+> | C | `fc35a52` | watchdog idle hook → `auto_pause_to_dormant` (was hard-gated) |
+> | ADR | `dcb28c3` | ADR-0018 + T6 threat-model row (host getUpdates peek while dormant) |
+> | D | `0708471` | `idle.rs` peek waker (no `offset` ever; never advances) + `stop_waker` wired into `resume_perimeter` (cancel-before-resume) + dormant-cleared-on-launch + unit tests |
+> | E | `0d5aef8` | flip the gate → `idleAutoPause`/`idleTimeoutMinutes` settings (default on), wire `closeToTray` (`on_window_event` hide-not-exit), Dormant hero + Home tile + Preferences toggle |
 >
-> ### ⟶ Slice E — activate it (the remaining work)
-> 1. **Flip the gate.** Replace `const IDLE_AUTO_PAUSE_ENABLED` / `IDLE_TIMEOUT_MS` in
->    `lifecycle.rs` with backend-read settings (`idleAutoPause` bool + `idleTimeoutMinutes`,
->    in `app/src/lib/settings.ts` via `tauri-plugin-store`). Recommend default **ON**; the
->    timeout default must exceed OpenClaw's getUpdates long-poll cadence (confirm from a live
->    `requests.jsonl`) so a normally-polling agent is never mis-read as idle.
-> 2. **Wire `closeToTray` (hard prerequisite).** The setting exists in `settings.ts` but is
->    UNHOOKED — closing the window exits the app today, which would kill the waker. Add a Tauri
->    `on_window_event` close handler in `app/src-tauri/src/lib.rs` → hide instead of exit when
->    `closeToTray`.
-> 3. **Dormant hero card** in `HeroStatusCard.tsx` ("sleeping to save memory — wakes on your next
->    message"); add `"dormant"` to the frontend status union if it's strict. (`AssistantStatus::Dormant`
->    already flows from the backend via `status_aggregator`.)
-> 4. **Operator verify** (needs RAM headroom — the dev box can't): `make profile-memory` with the
->    perimeter up → idle → confirm Dormant + RAM ≈ 0 → send a Telegram message → resumes + reply
->    arrives **exactly once** → measure cold-start.
+> ### ⟶ The ONE thing left for Phase 3: operator live-verify (needs RAM headroom — this box can't)
+> Everything is verified by CI + local frontend checks (eslint/tsc), but the end-to-end RAM win has
+> NOT been observed on real hardware. On a machine that can run the perimeter without swap-storming:
+> `make profile-memory` with the perimeter up → leave it idle ~12 min → confirm the hero shows
+> **Dormant** + `podman ps` empty + RAM ≈ 0 → send a Telegram message → perimeter resumes and the
+> reply arrives **exactly once** (no double-process, no lost message) → note cold-start latency.
+> Also sanity-check that closing the window now hides to tray (assistant keeps running) and that the
+> Preferences "Let it sleep…" toggle turns it off. If anything is off, the design is in ADR-0018.
+>
+> ### Then: Phase 2 (the only remaining memory phase) — PAUSED
+> Conservative `vault-agent` image prune (disk/download win, ~0 RAM) — needs an image rebuild +
+> `verify.sh`; the box can't build it; the agent image is security-critical (validate-before-commit
+> per `workloads/agent/CLAUDE.md`). Task #33.
 >
 > ### Working constraint (unchanged): the 7.2 GB box can't compile — verify Rust via CI round-trips
-> push, then `gh run watch <id> --exit-status` on the `Rust (check + test)` job (~5 min); parse-check
-> cheaply first with `rustfmt --edition 2021 --check <file>`. The whole D path above was built this way.
+> push, then `gh run watch <CI-run-id> --exit-status` on the `Rust (check + test)` job (~5 min; note
+> a push triggers several workflows — pick the one whose `workflowName` is `CI`, not Scorecard/CodeQL).
+> Parse-check cheaply first with `rustfmt --edition 2021 --check <file>`. Frontend gates (eslint
+> `--max-warnings 0`, `tsc --noEmit`) CAN run locally and are worth doing before each push.
 >
-> **Full design:** `docs/adr/0018-idle-auto-pause-host-waker.md` + `~/.claude/plans/glimmering-meandering-babbage.md`
-> (Phase 3). **Also paused:** Phase 2 (agent image conservative prune — needs an image rebuild +
-> `verify.sh`; security-critical, validate-before-commit; task #33).
+> **Full design:** `docs/adr/0018-idle-auto-pause-host-waker.md` + `~/.claude/plans/glimmering-meandering-babbage.md` (Phase 3).
 
-> ## ⟶ 2026-06-06 — Memory optimization (run on small laptops): Phase 0+1 shipped, 2+3 paused
+> ## ⟶ 2026-06-06 — Memory optimization (run on small laptops): Phase 0+1+3 done, Phase 2 paused
 >
 > A live profiling attempt showed the 5-container perimeter takes the 7.2 GB dev box to
 > ~142 MB free / 3.8 GB swap (trips the `CONSTITUTION.md` swap>500 MB guardrail). Plan
@@ -65,14 +59,14 @@
 > | **0** measurement harness | ✅ `d858827` — `make profile-memory` (per-container RSS + host RAM/swap + image sizes) |
 > | **1** on-demand skills/social | ✅ `3ba9c4e`, **CI-green** — `on_demand` flag + `boot_services()`; up()/shell_up() skip; bootstrap shell_services fix; execute.rs start-if-needed + 300 s keep-warm; orchestrator-check §30 (114/0). Resting perimeter **5→3 containers**. |
 > | **2** agent image prune | ⛔ PAUSED — needs an image rebuild + `verify.sh`; the box can't build; agent image is security-critical (validate-before-commit). |
-> | **3** idle auto-pause + waker | 🔄 IN PROGRESS via CI round-trips (box can't compile locally). **Backend pause path A→B→C + waker D landed + CI-green.** A `54596f0` (idle signal `read_egress_log_last_activity_ms` via requests.jsonl mtime + dormant marker helpers); B `db95371` (`AssistantStatus::Dormant` + marker-override in `evaluate` + dormant-aware tray); C `fc35a52` (watchdog idle hook → `auto_pause_to_dormant` via `perimeter_stop`, **hard-gated `const IDLE_AUTO_PAUSE_ENABLED=false`**); **D `0708471`** the host-side getUpdates *peek* waker (`idle.rs`) + `stop_waker` wired into `resume_perimeter` (cancel-before-resume) + dormant-cleared-on-launch + unit tests pinning peek-no-advance; ADR-0018 + T6 threat-model row `dcb28c3`. **Remaining: E** — flip the const → `idleAutoPause`/`idleTimeoutMinutes` settings, wire the unhooked `closeToTray` (`on_window_event` in `lib.rs`), Dormant hero card in `HeroStatusCard.tsx`, then operator-verify the end-to-end RAM win. |
+> | **3** idle auto-pause + waker | ✅ CODE-COMPLETE + CI-green, **default ON** (all via CI round-trips; box can't compile locally). A `54596f0` (idle signal + dormant markers); B `db95371` (`AssistantStatus::Dormant` + tray); C `fc35a52` (watchdog idle hook); ADR `dcb28c3` (ADR-0018 + T6 row); D `0708471` (`idle.rs` peek waker — no `offset` ever + `stop_waker` cancel-before-resume + dormant-cleared-on-launch + unit tests); E `0d5aef8` (gate → `idleAutoPause`/`idleTimeoutMinutes` settings, `closeToTray` wired via `on_window_event`, Dormant hero + Home tile + Preferences toggle). **Remaining: a one-off operator live-verify on a machine with RAM headroom** (idle → Dormant + RAM≈0 → message resumes exactly once + cold-start) — this box swap-storms the perimeter. |
 >
-> **Why paused (user decision 2026-06-06):** Phases 2+3 need build/compile cycles this 7.2 GB
-> box can't run (swap-storms; `earlyoom` armed). **Resume when the box has RAM headroom (close
-> the dev env, or a machine with more RAM), or iterate Phase 3 via CI round-trips.** Phase 1
-> follow-ups (in its commit): component-workflow on-demand auto-start; real in-container
-> `podman exec` execution (framing B — today commands run host-side, so on-demand mainly readies
-> the dev/compose path).
+> **Update:** Phase 3 was completed via CI round-trips (A–E above; idle auto-pause default ON). Only
+> **Phase 2 stays paused** — it needs a real `vault-agent` image rebuild + `verify.sh` this 7.2 GB box
+> can't run (swap-storms; `earlyoom` armed) and which is security-critical (validate-before-commit).
+> **Resume Phase 2 on a machine with RAM headroom.** Phase 1 follow-ups (in its commit):
+> component-workflow on-demand auto-start; real in-container `podman exec` execution (framing B —
+> today commands run host-side, so on-demand mainly readies the dev/compose path).
 
 > ## ⟶ 2026-06-05 — OpenSSF Best Practices PASSING badge earned
 >
