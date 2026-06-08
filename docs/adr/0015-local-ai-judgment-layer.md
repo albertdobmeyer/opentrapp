@@ -97,8 +97,12 @@ wrong answer is indistinguishable from a right one.
 
 Therefore:
 
-- The **parser** runs on `qwen2.5-coder:1.5b` (`CDR_MODEL`). Parser failures are
-  already caught and fixed; spending model size there buys little.
+- The **parser** defaults to `qwen2.5-coder:3b` (`CDR_MODEL`) as of 2026-06-08
+  (revised — see note). Parser failures are schema-detectable and retry-recoverable,
+  so the smaller 1.5b also works and remains a supported lean override; the default
+  was raised to 3b for higher first-pass rebuild fidelity (the 1.5b drifts more) and
+  so a full install shares **one** coder model with the judge instead of carrying
+  both 1.5b and 3b.
 - The **judge** runs on `qwen2.5-coder:3b` (`SENTINEL_MODEL`). This is the smallest
   local model with adequate gray-zone precision, as established by M1 testing: the
   1.5b over-blocked a benign `curl` documentation example; the 3b allowed it 5/5
@@ -106,8 +110,19 @@ Therefore:
   size on the judge buys precision that cannot be obtained any other way.
 
 Both are env-overridable. A larger machine can point the judge at a 7b/14b for
-greater precision; a smaller machine can drop the judge to 1.5b and accept
-over-blocking (flagged content surfaces for review rather than auto-allowing).
+greater precision; a smaller machine can drop **either** to 1.5b — the parser's
+failure mode is caught by schema validation, and a 1.5b judge over-blocks (flagged
+content surfaces for review rather than auto-allowing). The CDR rebuild can also be
+pointed at a model you already run (Ollama-native or OpenAI-compatible) via
+`config/cdr.conf`, so 3b is a default, not a forced download.
+
+**Revision (2026-06-08):** the parser default moved from 1.5b → 3b at the owner's
+request, prioritising rebuild fidelity and a single shared coder model over the
+small per-run RAM saving. This partially adopts the "single model for both" option
+the original draft rejected (below); the rejection's logic still holds (1.5b is
+*sufficient* for the parser because its failures are recoverable), so 1.5b stays a
+first-class, documented override for memory-constrained machines. The trade is
+honest: 3b uses ~2.5 GB resident per CDR run vs ~0.8 GB for 1.5b.
 
 ### 4. Lib-first (D4 — resolved)
 
@@ -208,11 +223,15 @@ shared library, no product name.
 - **Cloud-only judgment (always call the agent's API).** Too expensive and too slow
   to call on every ambiguous static hit; introduces a privacy risk for every rung-0
   flag. Rejected; cloud is rung-3, scoped, and consented.
-- **Single model for both parser and judge.** Using 3b everywhere wastes model size
-  on a role (parser) where its failure mode is already caught by schema validation.
-  Using 1.5b everywhere under-powers the judge, which over-blocked the benign gray
-  zone in M1 testing. The tiered split is the measured finding; a single model was
-  rejected.
+- **Single model for both parser and judge.** Originally rejected: using 1.5b
+  everywhere under-powers the judge (it over-blocked the benign gray zone in M1
+  testing), and the tiered split was the measured finding. **Partially adopted
+  2026-06-08:** the parser default was raised to 3b (matching the judge) for rebuild
+  fidelity and one shared model. The original rejection's core point still stands —
+  1.5b is *sufficient* for the parser because its failures are schema-caught — so
+  1.5b remains a documented override; what changed is the default's weighting toward
+  fidelity over a small RAM saving. The judge is still never dropped below 3b by
+  default (its mis-verdicts are not recoverable).
 - **Per-concern judgment layers.** Each concern (skills, containment, social) could
   embed its own model and prompts. Rejected: three separate model lifecycles, three
   prompt codebases to keep injection-hardened, three times the RAM cost at rung 2.

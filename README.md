@@ -87,10 +87,12 @@ offline pattern matching — no model, no network**, and `vault-skills` is
 **on-demand** (it isn't started with the perimeter and costs ~0 RAM at rest).
 If you only ever *scan* skills, you download and run nothing extra. Only the
 optional CDR *rebuild* (stage 4) needs an LLM, and it doesn't have to be a
-dedicated download: point it at a **small local model (~1 GB, `qwen2.5-coder:1.5b`)
-or at a model you already run** — any Ollama-native *or* OpenAI-compatible
-endpoint (your agent's model, LM Studio, vLLM, a managed API) via
-[`workloads/skills/config/cdr.conf`](workloads/skills/config/cdr.conf). The
+dedicated download: by default it uses **`qwen2.5-coder:3b` (~1.9 GB) — the same
+model the on-device safety judge uses, so a full install carries one coder model,
+not two**. Want it lighter, or to avoid a download entirely? Point it at the
+smaller `qwen2.5-coder:1.5b` or at a model you already run — any Ollama-native
+*or* OpenAI-compatible endpoint (your agent's model, LM Studio, vLLM, a managed
+API) via [`workloads/skills/config/cdr.conf`](workloads/skills/config/cdr.conf). The
 rebuild is model-backed and best-effort, not bit-identical across runs; what it
 guarantees is that the original file is never delivered and every rebuild is
 re-scanned and signed before reaching the agent.
