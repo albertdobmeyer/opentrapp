@@ -47,8 +47,13 @@ and the Content Disarm & Reconstruction (CDR) pipeline. The agent in
 `vault-agent` cannot reach it directly; it can only read the **certified
 output** that forge delivers via a one-way shared volume.
 
-The pipeline runs five independent defences before any skill reaches the
-agent:
+The pipeline runs five defence layers before any skill reaches the agent.
+They are layers, not five fully-independent detectors: layers 1, 2, and the
+post-install re-scan share the same pattern catalogue (layer 2's injection
+patterns are a specialised subset of layer 1's), so they catch overlapping
+things. The genuinely distinct mechanisms are three — a pattern blocklist, a
+default-deny line classifier, and the parse-and-rebuild (CDR) — backed by
+signing and fail-closed quarantine:
 
 ### 1. Static scanner — 87 patterns, MITRE ATT&CK-mapped
 

@@ -140,7 +140,7 @@ User clicks "Browse Skills" in GUI
 | **Local Ollama (default)** | Fully offline, no API cost, maximum air-gap | Requires RAM, less capable than frontier models | Default -- privacy-first, offline-first |
 | Claude/OpenAI API (fallback) | Most capable reconstruction | Costs money, needs network | Power users who want best fidelity |
 
-**Default: Ollama.** The CDR system uses a local Ollama model by default for maximum air-gap. Users who prefer higher fidelity can opt into API-based reconstruction via `config/cdr.conf`. The model choice is an implementation detail -- the architecture works with any LLM backend.
+**Default: a small local Ollama model (`qwen2.5-coder:1.5b`, ~1 GB).** Configurable in `config/cdr.conf`. The CDR intent step (`cdr-intent.sh`) speaks **two protocols** — Ollama-native (`/api/generate`) and OpenAI-compatible (`/v1/chat/completions`) — selected by `CDR_API_FORMAT`. So you are not forced to download a dedicated model: point CDR at a model you already run (your agent's model, LM Studio, vLLM, a managed API, or a remote Ollama) via `CDR_ENDPOINT` + optional `CDR_API_KEY`. This makes the earlier "works with any LLM backend" claim concretely true for the CDR path as of 2026-06-08. (Scope: the CDR/scan path. Skill *creation* — `create-draft.sh` — is still Ollama-only; making it protocol-agnostic is a follow-up.)
 
 **Critical architectural boundary:** The isolated LLM that reads untrusted content MUST be a separate instance from the vault agent. It runs on the host side, not inside the vault container. The vault agent never sees downloaded content.
 

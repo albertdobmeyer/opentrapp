@@ -17,9 +17,15 @@ CDR_CONF="$REPO_ROOT/config/cdr.conf"
 if [[ -f "$CDR_CONF" ]]; then
   source "$CDR_CONF"
 fi
-CDR_MODEL="${CDR_MODEL:-qwen2.5-coder:7b}"
+# Default to the SMALL model — never silently fall back to a 4.7GB 7b when the
+# config isn't sourced. 1.5b is the shipped default and is sufficient.
+CDR_MODEL="${CDR_MODEL:-qwen2.5-coder:1.5b}"
 CDR_ENDPOINT="${CDR_ENDPOINT:-http://localhost:11434/api/generate}"
 CDR_TIMEOUT="${CDR_TIMEOUT:-120}"
+# Backend protocol: "ollama" (native /api/generate) or "openai" (any
+# OpenAI-compatible /v1/chat/completions endpoint — bring your own model).
+CDR_API_FORMAT="${CDR_API_FORMAT:-ollama}"
+CDR_API_KEY="${CDR_API_KEY:-}"
 
 INPUT_FILE="${1:-}"
 if [[ -z "$INPUT_FILE" || ! -f "$INPUT_FILE" ]]; then
@@ -38,19 +44,30 @@ CACHED_INTENT="${INPUT_FILE%.json}.intent.json"
 # Extract Ollama host from endpoint for reachability check
 CDR_HOST=$(echo "$CDR_ENDPOINT" | sed -E 's|(https?://[^/]+).*|\1|')
 
-# Check Ollama is reachable
-if ! curl -sf --max-time 5 "${CDR_HOST}/api/tags" > /dev/null 2>&1; then
+# Check the model endpoint is reachable. The probe path is protocol-specific:
+# ollama exposes /api/tags; an OpenAI-compatible server exposes /v1/models.
+if [[ "$CDR_API_FORMAT" == "openai" ]]; then
+  PROBE_URL="${CDR_HOST}/v1/models"
+else
+  PROBE_URL="${CDR_HOST}/api/tags"
+fi
+PROBE_AUTH=()
+[[ -n "$CDR_API_KEY" ]] && PROBE_AUTH=(-H "Authorization: Bearer ${CDR_API_KEY}")
+if ! curl -sf --max-time 5 "${PROBE_AUTH[@]}" "$PROBE_URL" > /dev/null 2>&1; then
   # Fallback: use cached intent if available
   if [[ -f "$CACHED_INTENT" ]]; then
-    echo "Warning: Ollama unreachable at ${CDR_HOST} — using cached intent" >&2
+    echo "Warning: model endpoint unreachable at ${CDR_HOST} — using cached intent" >&2
     cat "$CACHED_INTENT"
     exit 0
   fi
-  echo "Error: Ollama is not reachable at ${CDR_HOST}" >&2
+  echo "Error: the CDR model endpoint is not reachable at ${CDR_HOST} (format: ${CDR_API_FORMAT})" >&2
   echo "" >&2
   echo "To fix this, either:" >&2
-  echo "  1. Start Ollama:  ollama serve" >&2
-  echo "  2. Set a remote endpoint in config/cdr.conf:  CDR_ENDPOINT=http://host:11434/api/generate" >&2
+  echo "  1. Start a local model server (e.g. ollama serve), OR" >&2
+  echo "  2. Point CDR at a model you already run — set in config/cdr.conf:" >&2
+  echo "       CDR_API_FORMAT=openai" >&2
+  echo "       CDR_ENDPOINT=http://your-host:port/v1/chat/completions" >&2
+  echo "       CDR_API_KEY=...   (if the endpoint needs a token)" >&2
   echo "  3. Re-run after a previous successful extraction (cached intent will be used)" >&2
   exit 1
 fi
@@ -90,9 +107,11 @@ IMPORTANT — your previous attempt was rejected. Fix these problems and output 
 $REPAIR_HINT"
 fi
 
-# Build request using Python to handle escaping correctly
+# Build request using Python to handle escaping correctly. The request format and
+# response parsing branch on CDR_API_FORMAT so CDR can talk to either an Ollama
+# native endpoint or any OpenAI-compatible server (bring your own model).
 RESPONSE=$("$PY" -c "
-import json, sys, subprocess
+import json, sys
 
 # Read filtered JSON
 with open(sys.argv[1]) as f:
@@ -102,36 +121,68 @@ system_prompt = sys.argv[2]
 model = sys.argv[3]
 endpoint = sys.argv[4]
 timeout = int(sys.argv[5])
+api_format = sys.argv[6]
+api_key = sys.argv[7]
 
-# Build Ollama request
-request = {
-    'model': model,
-    'system': system_prompt,
-    'prompt': json.dumps(filtered, indent=2),
-    'format': 'json',
-    'stream': False
-}
+user_content = json.dumps(filtered, indent=2)
 
-# Call Ollama via subprocess curl for proper timeout handling
+if api_format == 'openai':
+    # OpenAI-compatible /v1/chat/completions — reuse a model you already run.
+    request = {
+        'model': model,
+        'messages': [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_content},
+        ],
+        'response_format': {'type': 'json_object'},
+        'stream': False,
+    }
+else:
+    # Ollama native /api/generate.
+    request = {
+        'model': model,
+        'system': system_prompt,
+        'prompt': user_content,
+        'format': 'json',
+        'stream': False,
+    }
+
 import urllib.request
-req = urllib.request.Request(
-    endpoint,
-    data=json.dumps(request).encode(),
-    headers={'Content-Type': 'application/json'}
-)
+headers = {'Content-Type': 'application/json'}
+if api_key:
+    headers['Authorization'] = 'Bearer ' + api_key
+req = urllib.request.Request(endpoint, data=json.dumps(request).encode(), headers=headers)
 try:
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         result = json.loads(resp.read())
 except Exception as e:
-    print(f'Error: Ollama request failed: {e}', file=sys.stderr)
+    print(f'Error: model request failed: {e}', file=sys.stderr)
     sys.exit(1)
 
-# Extract response text
-text = result.get('response', '')
+# Extract response text per protocol.
+if api_format == 'openai':
+    try:
+        text = result['choices'][0]['message']['content']
+    except (KeyError, IndexError, TypeError):
+        print('Error: OpenAI-compatible response missing choices[0].message.content', file=sys.stderr)
+        sys.exit(1)
+else:
+    text = result.get('response', '')
+
+# Some servers wrap JSON in a markdown fence despite instructions — strip it.
+text = text.strip()
+if text.startswith('\`\`\`'):
+    nl = text.find('\n')
+    if nl != -1:
+        text = text[nl + 1:]
+    if text.rstrip().endswith('\`\`\`'):
+        text = text.rstrip()[:-3]
+    text = text.strip()
+
 try:
     intent = json.loads(text)
 except json.JSONDecodeError:
-    print(f'Error: Ollama returned invalid JSON response', file=sys.stderr)
+    print(f'Error: model returned invalid JSON response', file=sys.stderr)
     print(f'Raw response: {text[:500]}', file=sys.stderr)
     sys.exit(1)
 
@@ -141,7 +192,7 @@ if 'error' in intent:
 
 json.dump(intent, sys.stdout, indent=2)
 print()
-" "$INPUT_FILE" "$SYSTEM_PROMPT" "$CDR_MODEL" "$CDR_ENDPOINT" "$CDR_TIMEOUT") || {
+" "$INPUT_FILE" "$SYSTEM_PROMPT" "$CDR_MODEL" "$CDR_ENDPOINT" "$CDR_TIMEOUT" "$CDR_API_FORMAT" "$CDR_API_KEY") || {
   echo "Error: Intent extraction failed" >&2
   exit 1
 }

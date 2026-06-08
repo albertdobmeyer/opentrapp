@@ -53,8 +53,12 @@ The most novel piece of the project is the supply-chain defence in
 [`workloads/skills/`](workloads/skills/). The ClawHavoc study (2026-Q1) found
 **11.9 % of published ClawHub skills were malicious** (341 of 2,857) — the
 gap container hardening doesn't close, because a malicious skill loaded by
-the agent runs *as part of* the agent's reasoning. `vault-skills` runs five
-independent defences against that before any skill reaches the agent:
+the agent runs *as part of* the agent's reasoning. `vault-skills` runs a
+layered defence — five stages, though not five fully-independent detectors:
+stages 1, 2, and the post-install re-scan share the same pattern catalogue
+(stage 2 is a specialised subset of stage 1). The genuinely distinct
+mechanisms are three — a pattern blocklist, a default-deny line classifier,
+and the parse-and-rebuild (CDR):
 
 1. **87-pattern static scanner**, MITRE ATT&CK-mapped, calibrated to skills
    observed in real attacks (the ClawHavoc campaign + the `moltbook-ay`
@@ -77,6 +81,19 @@ The scanner, the injection patterns, the line verifier, and CDR are all
 markdown-based skill format ships, not on anything OpenClaw-specific. Adapting
 forge to a different agent's skill registry is a connector question, not a
 redesign.
+
+**On cost (so there are no surprises).** Stages 1–3 and the re-scan are **pure
+offline pattern matching — no model, no network**, and `vault-skills` is
+**on-demand** (it isn't started with the perimeter and costs ~0 RAM at rest).
+If you only ever *scan* skills, you download and run nothing extra. Only the
+optional CDR *rebuild* (stage 4) needs an LLM, and it doesn't have to be a
+dedicated download: point it at a **small local model (~1 GB, `qwen2.5-coder:1.5b`)
+or at a model you already run** — any Ollama-native *or* OpenAI-compatible
+endpoint (your agent's model, LM Studio, vLLM, a managed API) via
+[`workloads/skills/config/cdr.conf`](workloads/skills/config/cdr.conf). The
+rebuild is model-backed and best-effort, not bit-identical across runs; what it
+guarantees is that the original file is never delivered and every rebuild is
+re-scanned and signed before reaching the agent.
 
 **Full narrative + the pitch to other CLI-agent maintainers:**
 [`docs/skills-spotlight.md`](docs/skills-spotlight.md).
