@@ -97,3 +97,25 @@ was also fixed to use the configured endpoint host instead of a hardcoded
   against a real server (Ollama's own OpenAI-compat endpoint), demonstrating a user
   could point at their own model.
 - `make self-test` unaffected (patterns.sh untouched); `make scan` unaffected (no model).
+
+## Postscript — 3b default tested and REVERTED (2026-06-08)
+
+The CDR default was briefly raised 1.5b → 3b (commit `5855684`) on the assumption that
+a larger model gives higher rebuild fidelity. A **live A/B on a real opencode skill
+(`open-hax/opencode-skills` `break-edit-loop`), same session, same machine**, refuted it:
+
+| Model | Full CDR pipeline (with retry-repair) | Result |
+|------|----------------------------------------|--------|
+| `qwen2.5-coder:1.5b` | PASS all 8 stages, post-verify clean, delivered | reliable (also every CDR run earlier this session) |
+| `qwen2.5-coder:3b` | **FAIL post-verification lint, 2/2 runs** (21 / 24 lines) | regressed |
+
+3b's rebuilds failed the pipeline's own lint gate — the larger model elaborates/
+restructures the `SKILL.md` in ways that violate the template/lint constraints the
+reconstructor enforces, where the smaller 1.5b stays closer to the template. So 3b is
+**less reliable here, not more faithful.** Reverted to 1.5b (commit `48f1d7b`).
+
+**Lesson:** for this CDR reconstructor, model "capability" is not the bottleneck —
+template adherence is, and the small model adheres better. Don't raise the CDR default
+without a live pass-rate A/B. 3b remains available as an explicit override for anyone who
+wants to experiment; the judge (ADR-0015) still uses 3b (a different role where its
+precision matters and its output isn't lint-gated).

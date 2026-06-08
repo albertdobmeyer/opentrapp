@@ -100,8 +100,10 @@
 > - **Docs corrected** (ADR-0003 determinism; "five independent"→layered; CDR cost stated; "any LLM
 >   backend" now true+precise) across README, `docs/skills-spotlight.md`, `workloads/skills/...`, and the
 >   pitch. Spec: `workloads/skills/docs/specs/2026-06-08-cdr-byo-model-backend.md`. Scanner untouched
->   (self-test 10/10). **Follow-up if wanted:** quantify CDR false-positive rate; consider a 3b default
->   for higher rebuild fidelity (memory tradeoff).
+>   (self-test 10/10). **3b CDR default tested + REVERTED** (`5855684`→`48f1d7b`): a live A/B on a real
+>   opencode skill showed `qwen2.5-coder:3b` FAILS CDR post-verify lint 2/2 (its rebuilds break the
+>   template/lint constraints) where `1.5b` passes — bigger ≠ more faithful for this reconstructor. Kept
+>   1.5b (also the lean choice). **Remaining follow-up:** quantify the CDR false-positive rate.
 >
 > ## ⟶ 2026-06-08 — opencode pitch readiness (compatibility proven) + memory Phase 2 shipped
 >
