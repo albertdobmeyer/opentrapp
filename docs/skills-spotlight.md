@@ -1,8 +1,12 @@
 # openagent-skills — the supply-chain defence
 
+![The scanner blocks a malicious opencode SKILL.md — credential exfil + an AMOS-style C2 download + prompt injection — before it reaches the agent](assets/demo-skill-caught.gif)
+
 > Audience: someone evaluating OpenTrApp's security claims, or any CLI-agent
 > maintainer (e.g. the opencode team) wondering whether the skill-loading
-> attack surface has a real answer. For the architecture context, see
+> attack surface has a real answer. The demo above is a real run of the scanner
+> on a malicious skill in **opencode's own `SKILL.md` format** — the defence is
+> agent-agnostic, not OpenClaw-specific. For the architecture context, see
 > [`docs/perimeter-explained.md`](perimeter-explained.md). For the full
 > threat model, see [`docs/threat-model.md`](threat-model.md). The
 > implementation lives at [`workloads/skills/`](../workloads/skills/) and runs

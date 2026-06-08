@@ -47,6 +47,8 @@ Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled b
 
 ## Skill scanner & Content Disarm & Reconstruction
 
+![A malicious skill caught: the scanner blocks an opencode SKILL.md hiding credential exfil and an AMOS-style C2 download, before it reaches the agent](docs/assets/demo-skill-caught.gif)
+
 The most novel piece of the project is the supply-chain defence in
 [`workloads/skills/`](workloads/skills/). The ClawHavoc study (2026-Q1) found
 **11.9 % of published ClawHub skills were malicious** (341 of 2,857) — the
