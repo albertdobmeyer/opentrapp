@@ -18,6 +18,22 @@ RUN apk --no-cache add git
 # (PR #30367: preserve proxy env vars in Telegram global dispatcher)
 RUN npm install -g openclaw@2026.2.26 --ignore-scripts
 
+# Slim the installed modules: delete ONLY files Node and the TS transpiler never
+# read at runtime — TypeScript type DECLARATIONS (*.d.ts), sourcemaps (*.map), and
+# flow types (*.flow) — plus the compile-time @types and bun-types packages.
+# Validated the hard way (live bot smoke) that two seemingly-inert types are
+# actually RUNTIME assets for OpenClaw and MUST be kept:
+#   - *.ts  — OpenClaw loads its extensions (including telegram!) as TS source.
+#   - *.md  — OpenClaw reads markdown workspace templates (e.g. docs/.../AGENTS.md)
+#             when handling a message; deleting them breaks the LLM reply path.
+# The dist bundle also statically imports every provider/channel, so no package is
+# removed either. Cuts node_modules ~606MB -> ~406MB (~33%). Validated: all 136
+# extensions load, gateway clean, AND the bot returns a real LLM reply.
+# See docs/specs/2026-06-06-image-conservative-prune.md.
+RUN cd /usr/local/lib/node_modules/openclaw \
+    && find . -type f \( -iname '*.d.ts' -o -iname '*.map' -o -iname '*.flow' \) -delete \
+    && rm -rf node_modules/@types node_modules/bun-types
+
 # --- Production stage ---
 # node 22.22.1-alpine — pinned 2026-03-23 (OpenClaw requires Node >=22.12.0)
 FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00
