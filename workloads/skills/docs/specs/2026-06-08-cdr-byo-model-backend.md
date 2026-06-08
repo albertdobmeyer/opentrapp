@@ -26,18 +26,12 @@ The offline scanner already is that (no model, on-demand). The CDR path is the o
 heavy part, and it should (a) default small, (b) let users reuse a model they
 already run instead of forcing a second download.
 
-## Change 1 — pin the model to a sane default (kill the 7b footgun)
+## Change 1 — pin the small model (leanness)
 
-`tools/lib/cdr-intent.sh`: change the fallback default from `qwen2.5-coder:7b`
-(~4.7 GB) to match `cdr.conf`. No one should land on the 4.7 GB model by accident.
-
-> **Superseded 2026-06-08:** the default was first set to `1.5b` (the smallest that
-> works — parser failures are schema-detectable + retry-recoverable per ADR-0015),
-> then **raised to `qwen2.5-coder:3b`** at the owner's request for higher rebuild
-> fidelity and to share one coder model with the Sentinel judge (ADR-0015 revised
-> accordingly). `1.5b` remains a documented lean override. Both fallback defaults
-> (`cdr-intent.sh`, `create-draft.sh`) and `cdr.conf` now ship `3b`. The trade:
-> ~2.5 GB resident per CDR run vs ~0.8 GB for 1.5b; scanning still needs no model.
+`tools/lib/cdr-intent.sh`: change the fallback default from `qwen2.5-coder:7b` to
+`qwen2.5-coder:1.5b`, matching `cdr.conf`. The 1.5b is sufficient for intent
+extraction (parser failures are schema-detectable and retry-recoverable per
+ADR-0015). No one should land on the 4.7 GB model by accident.
 
 ## Change 2 — BYO-model: OpenAI-compatible request path
 

@@ -18,7 +18,7 @@ CDR_CONF="$REPO_ROOT/config/cdr.conf"
 if [[ -f "$CDR_CONF" ]]; then
   source "$CDR_CONF"
 fi
-CDR_MODEL="${CDR_MODEL:-qwen2.5-coder:3b}"
+CDR_MODEL="${CDR_MODEL:-qwen2.5-coder:1.5b}"
 CDR_ENDPOINT="${CDR_ENDPOINT:-http://localhost:11434/api/generate}"
 CDR_TIMEOUT="${CDR_TIMEOUT:-120}"
 # Backend protocol (shared with CDR): "ollama" (/api/generate) or "openai"

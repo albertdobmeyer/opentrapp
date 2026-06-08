@@ -100,9 +100,8 @@
 > - **Docs corrected** (ADR-0003 determinism; "five independent"→layered; CDR cost stated; "any LLM
 >   backend" now true+precise) across README, `docs/skills-spotlight.md`, `workloads/skills/...`, and the
 >   pitch. Spec: `workloads/skills/docs/specs/2026-06-08-cdr-byo-model-backend.md`. Scanner untouched
->   (self-test 10/10). **CDR default raised 1.5b → 3b** for rebuild fidelity (shares one coder model
->   with the Sentinel judge; ADR-0015 revised; 1.5b stays a documented lean override; ~2.5GB resident
->   per CDR run vs ~0.8GB). **Remaining follow-up:** quantify the CDR false-positive rate.
+>   (self-test 10/10). **Follow-up if wanted:** quantify CDR false-positive rate; consider a 3b default
+>   for higher rebuild fidelity (memory tradeoff).
 >
 > ## ⟶ 2026-06-08 — opencode pitch readiness (compatibility proven) + memory Phase 2 shipped
 >
