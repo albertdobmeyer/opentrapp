@@ -1,48 +1,88 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-06 (**memory opt: Phase 0+1 shipped + Phase 3 COMPLETE (A→B→C+D+E), idle auto-pause default ON**; current shipped release: v0.6.0)
-**Current phase:** v0.6 shipped; reducing resting footprint so end users can run on small laptops
+**Last updated:** 2026-06-08 (**memory opt COMPLETE (Phase 0–3); opencode pitch readiness — compatibility PROVEN**; current shipped release: v0.6.0)
+**Current phase:** v0.6 shipped; footprint reduced (memory Phase 0–3 done); now de-risking the opencode skills-pointer pitch
 **Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
 
-> ## ⟶ NEXT SESSION — READ THIS FIRST: Phase 3 is DONE; what's left is an operator live-verify + Phase 2
+> ## ⟶ NEXT SESSION — READ THIS FIRST: opencode pitch is technically ready; what's left is human/recording
 >
-> **Phase 3 (idle auto-pause + wake-on-message) is code-complete and CI-green, default ON.** When the
-> agent is idle past the configured window the watchdog sleeps the whole perimeter to dormant (resting
-> RAM → ~0) and a host-side Telegram **peek** waker resumes it on the next message, exactly once. The
-> whole thing is shipped behind the `idleAutoPause` setting (default on). All five slices landed via
-> CI round-trips (the 7.2 GB box can't compile locally):
+> The active frontier is the **opencode skills-pointer pitch** (`docs/pitch-opencode.md`, gitignored —
+> do NOT commit it). Mission (MISSION.md): get opencode to add a "recommended for security-conscious
+> users" pointer to **openagent-skills** (the skill scanner + CDR). This session de-risked everything
+> technical; what remains is human/recording work only.
 >
-> | Slice | Commit | What |
-> |------|--------|------|
-> | A | `54596f0` | idle signal (`read_egress_log_last_activity_ms`, requests.jsonl mtime) + dormant markers |
-> | B | `db95371` | `AssistantStatus::Dormant` + marker-override in `evaluate` + dormant-aware tray |
-> | C | `fc35a52` | watchdog idle hook → `auto_pause_to_dormant` (was hard-gated) |
-> | ADR | `dcb28c3` | ADR-0018 + T6 threat-model row (host getUpdates peek while dormant) |
-> | D | `0708471` | `idle.rs` peek waker (no `offset` ever; never advances) + `stop_waker` wired into `resume_perimeter` (cancel-before-resume) + dormant-cleared-on-launch + unit tests |
-> | E | `0d5aef8` | flip the gate → `idleAutoPause`/`idleTimeoutMinutes` settings (default on), wire `closeToTray` (`on_window_event` hide-not-exit), Dormant hero + Home tile + Preferences toggle |
+> ### ✅ Done this session (2026-06-08) — the pitch's technical blockers
+> - **opencode scouted.** They ALREADY ship runtime isolation + proxy-side credential injection
+>   (Docker's `sbx run opencode` agent sandbox) + a capability permission system (`ctx.ask()`,
+>   doom-loop detection). So the whole-perimeter / "containerization layer" pitch is a NON-STARTER
+>   (we'd be displacing Docker's official sandbox). The unmet gap is **skill-content vetting before
+>   load** — and opencode HAS skills (`skills/` dir, `SKILL.md`, the `opencode-agent-skills` plugin).
+>   That gap is the entire wedge. Pitch is scoped to it.
+> - **Citations verified** (safe to quote): Koi/Yomtov 341/2,857 = 11.9% (koi.ai, Hacker News, SC
+>   Media); Snyk 3,984 skills 13.4% critical + 36% prompt-injection (snyk.io ToxicSkills); 42,447-skill
+>   study 26.1% ≥1 vuln (arXiv 2602.06547).
+> - **opencode-skills compatibility PROVEN** (task #36) — the "works with their CLI" proof:
+>   pulled real opencode skills (`open-hax/opencode-skills`, Anthropic Agent-Skills format, NO
+>   `clawdbot` metadata) → both scan **Clean**; a ClawHavoc-style malicious opencode skill (prompt
+>   injection in `SKILL.md` + bundled `setup.sh` w/ cred-exfil + AMOS `curl|sh`) → **BLOCKED (1 crit +
+>   3 high)**; and the full **CDR 8-stage round-trip** rebuilt a real opencode skill clean-room +
+>   post-verified Clean (via `qwen2.5-coder:1.5b`). HONEST caveat recorded: the 1.5b reconstruction
+>   introduced minor semantic drift (invented a `stop-editing` command) — fidelity cost of the
+>   fail-closed rebuild; a 3b/7b model reduces it at a memory cost. Forge scanner CLI:
+>   `bash workloads/skills/tools/skill-scan.sh <skill-dir>`; CDR `tools/skill-cdr.sh <SKILL.md>`.
+> - **OpenSSF passing badge** (#12755) live on README — third-party credibility signal.
 >
-> ### ⟶ The ONE thing left for Phase 3: operator live-verify (needs RAM headroom — this box can't)
-> Everything is verified by CI + local frontend checks (eslint/tsc), but the end-to-end RAM win has
-> NOT been observed on real hardware. On a machine that can run the perimeter without swap-storming:
-> `make profile-memory` with the perimeter up → leave it idle ~12 min → confirm the hero shows
-> **Dormant** + `podman ps` empty + RAM ≈ 0 → send a Telegram message → perimeter resumes and the
-> reply arrives **exactly once** (no double-process, no lost message) → note cold-start latency.
-> Also sanity-check that closing the window now hides to tray (assistant keeps running) and that the
-> Preferences "Let it sleep…" toggle turns it off. If anything is off, the design is in ADR-0018.
+> ### ⟶ Remaining before send — HUMAN/HARDWARE only, no engineering left
+> - 🟡 Record demo gifs against the v0.6.0 tag (current ones predate the release) + a "malicious skill
+>   caught" gif (the exact scan output above scripts it).
+> - 🟡 Pick a named recipient (~30 min GitHub-blame/LinkedIn) — beats `maintainers@`.
+> - 🟡 Karen v0.6 first-run E2E — the "never dead-ends" credibility floor; needs the `xdotool`/`wmctrl`/
+>   `imagemagick` prereqs (state.json `karen-e2e-v06`).
+> - The pre-send checklist + scouting notes live at the bottom of `docs/pitch-opencode.md`.
 >
-> ### Then: Phase 2 (the only remaining memory phase) — PAUSED
-> Conservative `vault-agent` image prune (disk/download win, ~0 RAM) — needs an image rebuild +
-> `verify.sh`; the box can't build it; the agent image is security-critical (validate-before-commit
-> per `workloads/agent/CLAUDE.md`). Task #33.
+> ### Memory optimization — COMPLETE (Phase 0–3), one operator verify pending
+> All four phases shipped: Phase 0 (measurement harness), Phase 1 (on-demand shields, resting 5→3),
+> Phase 2 (`4ced564` — agent image **754→590 MB** via a safe `*.d.ts`/`*.map`/`*.flow` + `@types`
+> node_modules strip; validated by a LIVE BOT SMOKE — the pruned agent returned a real LLM reply
+> "PONG"; LESSON: OpenClaw treats `*.ts` extensions AND `*.md` workspace templates as RUNTIME assets,
+> both caught the hard way; see `workloads/agent/docs/specs/2026-06-06-image-conservative-prune.md`),
+> Phase 3 (`54596f0`·`db95371`·`fc35a52`·`dcb28c3`·`0708471`·`0d5aef8` — idle auto-pause + Telegram
+> peek waker, default ON; ADR-0018). **One thing pending (task #35): operator live-verify Phase 3 on a
+> machine with RAM headroom** (idle → Dormant + RAM≈0 → message resumes exactly once + cold-start) —
+> this 7.2 GB box swap-storms the perimeter.
 >
-> ### Working constraint (unchanged): the 7.2 GB box can't compile — verify Rust via CI round-trips
-> push, then `gh run watch <CI-run-id> --exit-status` on the `Rust (check + test)` job (~5 min; note
-> a push triggers several workflows — pick the one whose `workflowName` is `CI`, not Scorecard/CodeQL).
-> Parse-check cheaply first with `rustfmt --edition 2021 --check <file>`. Frontend gates (eslint
-> `--max-warnings 0`, `tsc --noEmit`) CAN run locally and are worth doing before each push.
->
-> **Full design:** `docs/adr/0018-idle-auto-pause-host-waker.md` + `~/.claude/plans/glimmering-meandering-babbage.md` (Phase 3).
+> ### Working constraint (unchanged): the 7.2 GB box can't compile Rust — verify via CI round-trips
+> push, then `gh run watch <CI-run-id> --exit-status` on the `Rust (check + test)` job (~5 min; a push
+> triggers several workflows — pick `workflowName == CI`, not Scorecard/CodeQL). Parse-check cheaply
+> first with `rustfmt --edition 2021 --check <file>`. Frontend gates (eslint `--max-warnings 0`,
+> `tsc --noEmit`) CAN run locally. NOTE: the box CAN run a single `podman build` + a 2-container bot
+> smoke when Brave/Slack are closed (~3 GB free) — that's how Phase 2 was validated; the FULL
+> 5-container perimeter still swap-storms.
 
+> ## ⟶ 2026-06-08 — opencode pitch readiness (compatibility proven) + memory Phase 2 shipped
+>
+> **Goal:** de-risk the opencode skills-pointer pitch enough to send. Outcome: all *technical*
+> blockers cleared; only human/recording items remain (see the NEXT SESSION block above for the
+> full breakdown).
+>
+> - **Scouted opencode.** It already has runtime isolation + proxy-side credential injection
+>   (Docker `sbx run opencode`) and a capability permission system. → the whole-perimeter pitch is
+>   a non-starter; the wedge is **skill-content vetting before load**, which they lack. opencode HAS
+>   skills (`SKILL.md`), so openagent-skills applies directly. Pitch (`docs/pitch-opencode.md`,
+>   gitignored) reframed around this.
+> - **Verified all 3 supply-chain citations** (11.9% Koi/Yomtov, 13.4% Snyk, 26.1% arXiv 2602.06547).
+> - **Proved openagent-skills works on REAL opencode skills** (task #36): clean skills scan Clean; a
+>   malicious opencode-format skill is BLOCKED (cred-exfil + AMOS C2 + prompt injection, across both
+>   `SKILL.md` and a bundled script); full **CDR 8-stage round-trip** rebuilds a real opencode skill
+>   clean-room + post-verifies Clean (qwen2.5-coder:1.5b; minor semantic-drift caveat recorded).
+> - **Memory Phase 2 shipped** (`4ced564`): vault-agent image **754→590 MB** via a safe node_modules
+>   strip (`*.d.ts`/`*.map`/`*.flow` + `@types`; NO `*.ts`/`*.md`/package removed). Validated by a
+>   live bot smoke (pruned agent replied "PONG"). Two file types are RUNTIME assets for OpenClaw and
+>   must stay: `*.ts` (extensions incl. telegram) and `*.md` (workspace templates like AGENTS.md) —
+>   both caught the hard way (the `.md` one only by the live smoke). This box CAN do a single
+>   `podman build` + 2-container bot smoke with Brave/Slack closed (~3 GB free); the full 5-container
+>   perimeter still swap-storms.
+>
 > ## ⟶ 2026-06-06 — Memory optimization (run on small laptops): Phase 0+1+3 done, Phase 2 paused
 >
 > A live profiling attempt showed the 5-container perimeter takes the 7.2 GB dev box to
