@@ -60,9 +60,15 @@ user's own agent model, LM Studio, vLLM, a managed API, or even Ollama's own
     is identical — only the transport/format differs.
 
 This is **bring-your-own-endpoint that now spans both protocols**, so a user can
-reuse a model they already run rather than download a dedicated one. Scope: the CDR
-intent step (`cdr-intent.sh`). Skill *creation* (`create-draft.sh`) is a separate
-Anvil-role path and stays Ollama-only for now (noted, not in scope).
+reuse a model they already run rather than download a dedicated one.
+
+**Both model-using paths are covered (update 2026-06-08):** the same two-protocol
+treatment was applied to skill creation (`create-draft.sh`) — it shares
+`CDR_API_FORMAT`/`CDR_ENDPOINT`/`CDR_API_KEY`, branches its request the same way
+(no `response_format`, since it emits markdown not JSON), and its reachability probe
+was also fixed to use the configured endpoint host instead of a hardcoded
+`localhost`. Validated end-to-end: both paths generate a valid, Clean-scanning
+`SKILL.md` via Ollama and via Ollama's OpenAI-compatible `/v1/chat/completions`.
 
 ## Change 3 — honest docs
 

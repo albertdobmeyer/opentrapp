@@ -21,6 +21,10 @@ fi
 CDR_MODEL="${CDR_MODEL:-qwen2.5-coder:1.5b}"
 CDR_ENDPOINT="${CDR_ENDPOINT:-http://localhost:11434/api/generate}"
 CDR_TIMEOUT="${CDR_TIMEOUT:-120}"
+# Backend protocol (shared with CDR): "ollama" (/api/generate) or "openai"
+# (/v1/chat/completions). Lets skill creation reuse a model you already run.
+CDR_API_FORMAT="${CDR_API_FORMAT:-ollama}"
+CDR_API_KEY="${CDR_API_KEY:-}"
 
 INPUT_FILE="${1:-}"
 OUTPUT_PATH="${2:-}"
@@ -31,10 +35,20 @@ if [[ -z "$INPUT_FILE" || ! -f "$INPUT_FILE" || -z "$OUTPUT_PATH" ]]; then
   exit 1
 fi
 
-# Check Ollama is reachable
-if ! curl -sf --max-time 5 "http://localhost:11434/api/tags" > /dev/null 2>&1; then
-  echo "Error: Ollama is not running at localhost:11434" >&2
-  echo "Start it with: ollama serve" >&2
+# Check the model endpoint is reachable. Use the configured endpoint's host
+# (not a hardcoded localhost) and a protocol-appropriate probe path.
+CDR_HOST=$(echo "$CDR_ENDPOINT" | sed -E 's|(https?://[^/]+).*|\1|')
+if [[ "$CDR_API_FORMAT" == "openai" ]]; then
+  PROBE_URL="${CDR_HOST}/v1/models"
+else
+  PROBE_URL="${CDR_HOST}/api/tags"
+fi
+PROBE_AUTH=()
+[[ -n "$CDR_API_KEY" ]] && PROBE_AUTH=(-H "Authorization: Bearer ${CDR_API_KEY}")
+if ! curl -sf --max-time 5 "${PROBE_AUTH[@]}" "$PROBE_URL" > /dev/null 2>&1; then
+  echo "Error: the model endpoint is not reachable at ${CDR_HOST} (format: ${CDR_API_FORMAT})" >&2
+  echo "Start a local model server (ollama serve), or point config/cdr.conf at a" >&2
+  echo "model you already run (CDR_API_FORMAT=openai, CDR_ENDPOINT=.../v1/chat/completions)." >&2
   exit 1
 fi
 
@@ -98,31 +112,51 @@ if error_feedback:
 else:
     user_prompt = json.dumps(user_input, indent=2)
 
-# Build Ollama request
-request = {
-    'model': model,
-    'system': system_prompt,
-    'prompt': user_prompt,
-    'stream': False
-}
+# Build the request per protocol. Output is markdown (a SKILL.md), so the
+# OpenAI branch does NOT request json mode.
+api_format = sys.argv[7] if len(sys.argv) > 7 else 'ollama'
+api_key = sys.argv[8] if len(sys.argv) > 8 else ''
 
-req = urllib.request.Request(
-    endpoint,
-    data=json.dumps(request).encode(),
-    headers={'Content-Type': 'application/json'}
-)
+if api_format == 'openai':
+    request = {
+        'model': model,
+        'messages': [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_prompt},
+        ],
+        'stream': False,
+    }
+else:
+    request = {
+        'model': model,
+        'system': system_prompt,
+        'prompt': user_prompt,
+        'stream': False,
+    }
+
+headers = {'Content-Type': 'application/json'}
+if api_key:
+    headers['Authorization'] = 'Bearer ' + api_key
+req = urllib.request.Request(endpoint, data=json.dumps(request).encode(), headers=headers)
 
 try:
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         result = json.loads(resp.read())
 except Exception as e:
-    print(f'Error: Ollama request failed: {e}', file=sys.stderr)
+    print(f'Error: model request failed: {e}', file=sys.stderr)
     sys.exit(1)
 
-# Extract response text
-text = result.get('response', '')
+# Extract response text per protocol
+if api_format == 'openai':
+    try:
+        text = result['choices'][0]['message']['content']
+    except (KeyError, IndexError, TypeError):
+        print('Error: OpenAI-compatible response missing choices[0].message.content', file=sys.stderr)
+        sys.exit(1)
+else:
+    text = result.get('response', '')
 if not text.strip():
-    print('Error: Ollama returned empty response', file=sys.stderr)
+    print('Error: model returned empty response', file=sys.stderr)
     sys.exit(1)
 
 # Strip markdown fences if the LLM wrapped the output
@@ -135,7 +169,7 @@ if text.endswith('\`\`\`'):
     text = text[:-3].strip()
 
 print(text)
-" "$INPUT_FILE" "$SYSTEM_PROMPT" "$CDR_MODEL" "$CDR_ENDPOINT" "$CDR_TIMEOUT" "$ERROR_FEEDBACK") || {
+" "$INPUT_FILE" "$SYSTEM_PROMPT" "$CDR_MODEL" "$CDR_ENDPOINT" "$CDR_TIMEOUT" "$ERROR_FEEDBACK" "$CDR_API_FORMAT" "$CDR_API_KEY") || {
   echo "Error: Draft generation failed" >&2
   exit 1
 }
