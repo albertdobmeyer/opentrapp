@@ -1,6 +1,6 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-08 (**memory opt COMPLETE (Phase 0–3); opencode pitch readiness — compatibility PROVEN**; current shipped release: v0.6.0)
+**Last updated:** 2026-06-08 (**memory opt COMPLETE (Phase 0–3); opencode pitch tech-ready (gifs+recipient done); skill scanner audited → BYO-model + honest docs**; current shipped release: v0.6.0)
 **Current phase:** v0.6 shipped; footprint reduced (memory Phase 0–3 done); now de-risking the opencode skills-pointer pitch
 **Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
 
@@ -31,14 +31,33 @@
 >   fail-closed rebuild; a 3b/7b model reduces it at a memory cost. Forge scanner CLI:
 >   `bash workloads/skills/tools/skill-scan.sh <skill-dir>`; CDR `tools/skill-cdr.sh <SKILL.md>`.
 > - **OpenSSF passing badge** (#12755) live on README — third-party credibility signal.
+> - **Demo gifs DONE:** "malicious skill caught" gif (`docs/assets/demo-skill-caught.gif`, real scan of
+>   a malicious opencode `SKILL.md`, `b3e6f68`) + wizard/tour re-recorded vs v0.6 (`236100c`, via
+>   `scripts/demo-gif.sh`). All embedded in README/spotlight/pitch.
+> - **Recipient researched** (saved in the gitignored pitch notes): canonical repo `anomalyco/opencode`
+>   (171k★; `sst/opencode` redirects there; `opencode-ai/opencode` is ARCHIVED). First-touch **Adam
+>   (@adamdotdev / `adamdotdevin`)**, decision-maker **Dax Raad (@thdxr)**. Channel = a HUMAN one (X DM /
+>   email), NOT the security path — opencode's `SECURITY.md` auto-bans AI-generated security reports, so
+>   the pitch must open "this is a recommendation, not a security report" and read unmistakably human.
+> - **Skill scanner self-audited (honesty pass) + made leaner** (`026422c`, `5619c09`): a workflow
+>   audit found real overclaims; fixed them honestly (the opencode audience reads code, and their culture
+>   punishes AI-slop overclaiming). (a) **Pinned the CDR model to 1.5b** — killed a `cdr-intent.sh`
+>   footgun that defaulted to 7b/4.7GB when `cdr.conf` wasn't sourced. (b) **BYO-model**: both model
+>   scripts (`cdr-intent.sh`, `create-draft.sh`) now speak Ollama-native AND OpenAI-compatible
+>   (`CDR_API_FORMAT` in `cdr.conf`) — a user can reuse a model they already run; **no mandatory heavy
+>   download**. Validated both protocols live (rebuild + create produce Clean SKILL.md). (c) **Honest
+>   docs**: fixed ADR-0003's false "deterministic per input" claim; "five INDEPENDENT defences" → honest
+>   layered framing (3 distinct mechanisms; stages 1/2/5 share the pattern set); stated CDR cost plainly
+>   (scan-only = offline/on-demand/~0 RAM); made "any LLM backend" true+precise. Scanner self-test 10/10
+>   (patterns untouched). **The pitch draft now reads honest-and-precise, which is STRONGER for opencode.**
 >
-> ### ⟶ Remaining before send — HUMAN/HARDWARE only, no engineering left
-> - 🟡 Record demo gifs against the v0.6.0 tag (current ones predate the release) + a "malicious skill
->   caught" gif (the exact scan output above scripts it).
-> - 🟡 Pick a named recipient (~30 min GitHub-blame/LinkedIn) — beats `maintainers@`.
-> - 🟡 Karen v0.6 first-run E2E — the "never dead-ends" credibility floor; needs the `xdotool`/`wmctrl`/
->   `imagemagick` prereqs (state.json `karen-e2e-v06`).
-> - The pre-send checklist + scouting notes live at the bottom of `docs/pitch-opencode.md`.
+> ### ⟶ Remaining before send — just the human send + one optional credibility check
+> - 🟢 **All pre-send prep is DONE** (citations, badge, scouting, compatibility proof, gifs, recipient,
+>   honest+lean materials). **The only step left is a human: final read-through of `docs/pitch-opencode.md`
+>   + send to Adam** (X DM / email; lead "not a security report").
+> - 🟡 Karen v0.6 first-run E2E — a general credibility check (the "never dead-ends" floor), NOT a pitch
+>   blocker; needs `xdotool`/`wmctrl`/`imagemagick` prereqs (state.json `karen-e2e-v06`).
+> - The full pre-send checklist + scouting + recipient notes live at the bottom of `docs/pitch-opencode.md`.
 >
 > ### Memory optimization — COMPLETE (Phase 0–3), one operator verify pending
 > All four phases shipped: Phase 0 (measurement harness), Phase 1 (on-demand shields, resting 5→3),
@@ -59,6 +78,31 @@
 > smoke when Brave/Slack are closed (~3 GB free) — that's how Phase 2 was validated; the FULL
 > 5-container perimeter still swap-storms.
 
+> ## ⟶ 2026-06-08 — skill scanner: honest self-audit → leaner (BYO-model) + corrected docs
+>
+> Prompted by "is our scanner truly as novel/effective as I think, and how heavy is the parser model?"
+> Ran a 4-agent adversarial workflow audit, then acted on it. Commits `026422c` + `5619c09`.
+>
+> - **Honest verdict (carry forward):** the scanner is a competent **offline regex blocklist** (87
+>   patterns, 16 injection) — real and deterministic, like `npm audit` for skills. CDR (quarantine →
+>   LLM intent-extract → rebuild) is a genuine property (original never delivered) and **first-to-apply
+>   CDR to skills**, but NOT conceptually novel (email CDR ~2010). "Five INDEPENDENT defences" was an
+>   overclaim (stages 1/2/5 share the pattern set → ~3 distinct mechanisms). It does NOT catch
+>   polymorphic/text-natural injection or trivial obfuscation (admitted in threat-model).
+> - **Leanness (the key answer):** the **scanner needs NO model** (pure offline grep) and `vault-skills`
+>   is **on-demand** → scan-only = ~0 resting RAM, no download. Only the **opt-in CDR rebuild** needs an
+>   LLM. Parser default is `qwen2.5-coder:1.5b` (~1 GB) — fixed a footgun where `cdr-intent.sh` silently
+>   defaulted to 7b (4.7 GB).
+> - **BYO-model shipped:** both `cdr-intent.sh` and `create-draft.sh` now speak Ollama-native AND
+>   OpenAI-compatible (`CDR_API_FORMAT`/`CDR_ENDPOINT`/`CDR_API_KEY` in `config/cdr.conf`). A user points
+>   CDR/creation at a model they ALREADY run (agent model, LM Studio, vLLM, managed API, remote Ollama) —
+>   no forced download. Validated both protocols live (against Ollama's own `/v1/chat/completions`).
+> - **Docs corrected** (ADR-0003 determinism; "five independent"→layered; CDR cost stated; "any LLM
+>   backend" now true+precise) across README, `docs/skills-spotlight.md`, `workloads/skills/...`, and the
+>   pitch. Spec: `workloads/skills/docs/specs/2026-06-08-cdr-byo-model-backend.md`. Scanner untouched
+>   (self-test 10/10). **Follow-up if wanted:** quantify CDR false-positive rate; consider a 3b default
+>   for higher rebuild fidelity (memory tradeoff).
+>
 > ## ⟶ 2026-06-08 — opencode pitch readiness (compatibility proven) + memory Phase 2 shipped
 >
 > **Goal:** de-risk the opencode skills-pointer pitch enough to send. Outcome: all *technical*
