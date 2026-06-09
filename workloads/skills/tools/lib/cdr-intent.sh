@@ -38,6 +38,17 @@ fi
 # describe-with-repair loop that fixes the ZONE-4a non-determinism).
 REPAIR_HINT="${2:-}"
 
+# ── Test seam — never set in production ─────────────────────────────────────
+# When CDR_INTENT_STUB is set, the model call is replaced by that script (called
+# with the same args: <filtered.json> [repair_hint]). This exists ONLY so the CDR
+# pipeline's retry/repair control flow can be tested deterministically without a
+# live model; it is never set inside the vault-skills container. It does NOT
+# bypass any security gate — whatever intent it returns is still reconstructed,
+# scanned, and zero-trust verified downstream before anything is delivered.
+if [[ -n "${CDR_INTENT_STUB:-}" ]]; then
+  exec bash "$CDR_INTENT_STUB" "$@"
+fi
+
 # Derive cached intent path from input file
 CACHED_INTENT="${INPUT_FILE%.json}.intent.json"
 

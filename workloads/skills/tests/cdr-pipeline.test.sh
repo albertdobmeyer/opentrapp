@@ -112,6 +112,41 @@ else
   skip "Full CDR pipeline (Ollama not running)"
 fi
 
+# ── Test 10: post-verify failure RETRIES and recovers (deterministic, no model) ──
+# Uses the CDR_INTENT_STUB seam to return a schema-valid intent that contains a
+# TODO placeholder on the first pass (fails lint at post-verify) and a clean
+# intent on the repair pass — proving stage-7 failures now retry instead of
+# terminally quarantining. No Ollama needed.
+cat > "$TMPDIR/stub-recover.sh" <<'STUB'
+#!/usr/bin/env bash
+# $1 = filtered.json (ignored), $2 = repair_hint. Placeholder first, clean on repair.
+if [[ -z "${2:-}" ]]; then
+  printf '%s' '{"name":"retry-recovery-fixture","purpose":"Fixture skill for the CDR retry-recovery regression test.","use_cases":["regression testing the retry path"],"commands":[{"cmd":"echo ok","context":"example"}],"tips":["TODO: this placeholder token must trip the linter on the first pass."]}'
+else
+  printf '%s' '{"name":"retry-recovery-fixture","purpose":"Fixture skill for the CDR retry-recovery regression test.","use_cases":["regression testing the retry path"],"commands":[{"cmd":"echo ok","context":"example"}],"tips":["A finished tip with no placeholder tokens at all."]}'
+fi
+STUB
+RECOVER_OUT=$(CDR_INTENT_STUB="$TMPDIR/stub-recover.sh" bash "$REPO_ROOT/tools/skill-cdr.sh" "$FIXTURES/clean-skill.md" 2>&1) || true
+rm -rf "$REPO_ROOT/skills/retry-recovery-fixture"
+if echo "$RECOVER_OUT" | grep -qiE "retry.*lint" && echo "$RECOVER_OUT" | grep -q "CDR complete"; then
+  pass "Post-verify lint failure retries and recovers (not terminally quarantined)"
+else
+  fail "Retry-recovery did not retry+deliver (got: $(echo "$RECOVER_OUT" | grep -iE 'retry|QUARANTINE|complete|FAIL' | tr '\n' ' ' | head -c 200))"
+fi
+
+# ── Test 11: persistent post-verify failure QUARANTINES (fail-closed, not delivered) ──
+cat > "$TMPDIR/stub-always.sh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s' '{"name":"always-bad-fixture","purpose":"Fixture that always emits a placeholder for the quarantine test.","use_cases":["regression"],"commands":[{"cmd":"echo ok","context":"x"}],"tips":["TODO: this placeholder is always present so the skill must quarantine."]}'
+STUB
+ALWAYS_OUT=$(CDR_INTENT_STUB="$TMPDIR/stub-always.sh" bash "$REPO_ROOT/tools/skill-cdr.sh" "$FIXTURES/clean-skill.md" 2>&1) || true
+if echo "$ALWAYS_OUT" | grep -qi "QUARANTINE" && [[ ! -d "$REPO_ROOT/skills/always-bad-fixture" ]]; then
+  pass "Persistent post-verify failure quarantines (fail-closed, not delivered)"
+else
+  fail "Persistent failure not quarantined or was delivered"
+fi
+rm -rf "$REPO_ROOT/skills/always-bad-fixture"
+
 # ── Test 9: Quarantine cleaned up after CDR ──
 if find "$REPO_ROOT/quarantine" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | grep -q .; then
   fail "Quarantine directory not cleaned up"
