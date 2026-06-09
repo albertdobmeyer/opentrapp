@@ -21,9 +21,10 @@
 //!   paths call `stop_waker`, which cancels and awaits teardown before bringing
 //!   the perimeter up.
 //!
-//! This module is inert until idle auto-pause is enabled (currently hard-gated
-//! `IDLE_AUTO_PAUSE_ENABLED = false` in `lifecycle.rs`; Slice E turns it into a
-//! user setting).
+//! The waker is spawned by `lifecycle::auto_pause_to_dormant` when the watchdog
+//! drops the perimeter to dormant. Idle auto-pause is a user setting
+//! (`idleAutoPause` in the frontend store), default ON since Slice E; see
+//! `lifecycle::read_idle_settings` / `maybe_auto_pause_idle`.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
