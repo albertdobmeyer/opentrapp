@@ -90,7 +90,9 @@
 > passing" — a malicious skill is still REJECTED at prefilter. Validated: 1.5b PASS (regression), **3b
 > now PASS** (was 0/2), self-test 10/10, cdr-pipeline.test.sh 9/9. This also retires much of the
 > ZONE-4a false-quarantine class. Spec: `workloads/skills/docs/specs/2026-06-08-cdr-postverify-in-retry-loop.md`.
-> Open follow-up: a deterministic (model-free) regression test for the retry-recovery path.
+> **Regression tests added** (`1cf8e7e`): `cdr-pipeline.test.sh` now 11/11 with two model-free tests —
+> retry-then-recover, and persistent-failure→quarantine — via a minimal env-gated `CDR_INTENT_STUB`
+> seam in `cdr-intent.sh` (test-only, never set in the container, doesn't bypass scan/verify).
 >
 > ## ⟶ 2026-06-08 — skill scanner: honest self-audit → leaner (BYO-model) + corrected docs
 >
