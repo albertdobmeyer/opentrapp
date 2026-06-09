@@ -158,12 +158,31 @@ WS1 (1a measure ──gates──▶ 1b fix ──▶ 1c reframe doc) ─┘  (a
 WS2 (egress de-Node) ── independent, low priority, opportunistic
 ```
 
-## Hardware reality (stated, per §11 — unverifiable ≠ done)
+## Hardware reality — this laptop is the benchmark, not the blocker
 
-This dev laptop (7.2 GB, 2017 APU) **cannot** run the full perimeter without swap-storming,
-so WS0-0a/0c and WS1-1a's live runs are **hardware-gated**, not skippable-by-assertion.
-The path: a machine with RAM headroom (or a CI job that stands the perimeter up). Until
-then those items are **unverified, not done**, and WS3 stays blocked.
+**Reframe (2026-06-09, operator direction):** the 7.2 GB / 2017-APU dev laptop is not "too
+small to test on" — it is the **pass/fail oracle**. If the perimeter runs smoothly *here*,
+it runs anywhere. So the optimization target is concrete and the CONSTITUTION guardrail
+becomes the success metric: **the resting perimeter runs on this box with swap < 500 MB.**
+
+Most of this roadmap is doable here with memory discipline. The resting perimeter is
+~0.4–0.5 GB (**measured**: idle agent 197 MB + proxy ~150 + egress ~50), which fits on this
+box once the co-tenants are closed — the earlier swap-storm was Cursor (~1.4 GB) + Brave +
+Claude, **not** the perimeter. Linux test protocol:
+
+1. Close Cursor + Brave; `ollama stop` any loaded model. Verify `free -h` shows **> 3 GB
+   free** and swap reclaiming.
+2. Bring the resting perimeter up **incrementally** (egress → proxy → agent), running
+   `make profile-memory` after each, so a surprise is caught at one container, not five.
+3. **Continuous swap-watch**; tear down immediately if swap crosses 500 MB.
+4. Measure the real resting footprint (confirm the ~0.4–0.5 GB estimate), then run WS0-0a
+   (idle ~12 min → dormant) and WS1-1a (proxy-only RSS — the lightest, do it first).
+
+The **fallback** for genuinely heavier runs (full five-container under sustained
+active-agent load; the long-soak proxy-growth curve) is a capable machine —
+`docs/perimeter-test-handoff.md` is the self-contained runbook. But the default is: **do it
+here, and let this box's limits be the benchmark.** Until a given item is verified (here or
+on capable hardware), it is **unverified, not done**, and WS3 stays blocked.
 
 ## Done-when (whole roadmap)
 
