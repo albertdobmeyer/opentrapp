@@ -144,7 +144,7 @@ RECON_DIR="$QUARANTINE_DIR/reconstructed"
 mkdir -p "$RECON_DIR"
 CDR_MAX_RETRIES="${CDR_MAX_RETRIES:-3}"
 
-echo -e "${BOLD}[4-6/8] Describe → Validate → Regenerate${RESET}"
+echo -e "${BOLD}[4-7/8] Describe → Validate → Regenerate → Verify${RESET}"
 cdr_ok=false
 repair_hint=""
 last_issue=""
@@ -176,9 +176,36 @@ for attempt in $(seq 1 "$CDR_MAX_RETRIES"); do
     continue
   fi
 
+  # Stage 7 (post-verify) is now INSIDE the retry loop: a marginal but CLEAN
+  # reconstruction earns a repair attempt instead of a terminal quarantine
+  # (the ZONE-4a false-quarantine class). SECURITY: skill-scan + skill-verify
+  # still gate DELIVERY (stage 8), and every retry re-derives intent from the
+  # SAME already-prefiltered (stage-3, malice-stripped) JSON — so a malicious
+  # skill is always either dropped or quarantined, never "retried into passing".
+  if ! pv_lint=$(bash "$SCRIPT_DIR/skill-lint.sh" "$RECON_DIR" 2>&1); then
+    last_issue="reconstruction failed lint: $(echo "$pv_lint" | grep -iE 'FAIL' | tr '\n' ' ' | head -c 250)"
+    repair_hint="$last_issue. Do not include TODO/FIXME/XXX placeholder tokens; write finished content only."
+    echo -e "  ${YELLOW}retry${RESET} — reconstruction failed lint on attempt $attempt, repairing"
+    continue
+  fi
+  pv_scan=$(bash "$SCRIPT_DIR/skill-scan.sh" --json "$RECON_DIR" 2>/dev/null) || true
+  pv_blocked=$("$PY" -c "import sys,json; print(json.load(sys.stdin).get('blocked',1))" <<< "$pv_scan" 2>/dev/null) || pv_blocked=1
+  if [[ "$pv_blocked" != "0" ]]; then
+    last_issue="reconstruction tripped the security scanner"
+    repair_hint="$last_issue — regenerate without content resembling shell exfiltration, remote downloads, or credential access"
+    echo -e "  ${YELLOW}retry${RESET} — reconstruction had scanner findings on attempt $attempt, repairing"
+    continue
+  fi
+  if ! pv_verify=$(bash "$SCRIPT_DIR/skill-verify.sh" "$RECON_DIR" 2>&1); then
+    last_issue="reconstruction failed zero-trust verification: $(echo "$pv_verify" | grep -iE 'SUSPICIOUS|MALICIOUS|unrecogni' | tr '\n' ' ' | head -c 250)"
+    repair_hint="$last_issue"
+    echo -e "  ${YELLOW}retry${RESET} — reconstruction failed zero-trust verify on attempt $attempt, repairing"
+    continue
+  fi
+
   cdr_ok=true
   RECON_LINES=$(wc -l < "$RECON_DIR/SKILL.md")
-  echo -e "  ${GREEN}PASS${RESET} — described, validated, and rebuilt ($RECON_LINES lines)${hint_note}"
+  echo -e "  ${GREEN}PASS${RESET} — described, validated, rebuilt + verified ($RECON_LINES lines)${hint_note}"
   break
 done
 
@@ -193,29 +220,10 @@ if [[ "$cdr_ok" != "true" ]]; then
   exit 1
 fi
 
-# ── Stage 7: Post-Verify ──
+# ── Stage 7: Post-Verify (performed inside the describe→regenerate loop above) ──
+# Reaching here means lint + scan + verify already passed on the reconstruction
+# within the retry budget; a failure would have retried or quarantined above.
 echo -e "${BOLD}[7/8] Post-Verification${RESET}"
-
-# Lint
-if ! bash "$SCRIPT_DIR/skill-lint.sh" "$RECON_DIR" > /dev/null 2>&1; then
-  echo -e "  ${RED}FAIL — reconstruction failed lint${RESET}"
-  exit 1
-fi
-
-# Scan
-SCAN_RESULT=$(bash "$SCRIPT_DIR/skill-scan.sh" --json "$RECON_DIR" 2>/dev/null) || true
-SCAN_BLOCKED=$("$PY" -c "import sys,json; print(json.load(sys.stdin).get('blocked',1))" <<< "$SCAN_RESULT" 2>/dev/null) || SCAN_BLOCKED=1
-if [[ "$SCAN_BLOCKED" != "0" ]]; then
-  echo -e "  ${RED}FAIL — reconstruction has scanner findings${RESET}"
-  exit 1
-fi
-
-# Verify
-if ! bash "$SCRIPT_DIR/skill-verify.sh" "$RECON_DIR" > /dev/null 2>&1; then
-  echo -e "  ${RED}FAIL — reconstruction failed zero-trust verification${RESET}"
-  exit 1
-fi
-
 echo -e "  ${GREEN}PASS${RESET} — lint + scan + verify all clean"
 
 # ── Stage 8: Deliver + Cleanup ──
