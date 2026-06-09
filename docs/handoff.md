@@ -78,6 +78,20 @@
 > smoke when Brave/Slack are closed (~3 GB free) — that's how Phase 2 was validated; the FULL
 > 5-container perimeter still swap-storms.
 
+> ## ⟶ 2026-06-08 — CDR robustness: post-verify moved into the retry-repair loop (`7de296c`)
+>
+> Fixed a real structural defect (the reconstructor↔lint coupling). The CDR retry loop covered stages
+> 4–6 only; **stage 7 (post-verify: lint/scan/verify) was TERMINAL** — a clean reconstruction that
+> marginally failed (e.g. a `TODO` token tripping lint — deterministically confirmed the ONLY lint-FAIL
+> path for reconstructed output) was quarantined with no repair attempt. That's why 3b failed 2/2 where
+> 1.5b passed. Fix: lint→scan→verify now run INSIDE the loop; a failure becomes a repair hint + retry,
+> quarantine only after the budget. **Security preserved** (verified): malice is stripped at stage 3
+> prefilter before the loop, and scan+verify still gate delivery, so nothing can be "retried into
+> passing" — a malicious skill is still REJECTED at prefilter. Validated: 1.5b PASS (regression), **3b
+> now PASS** (was 0/2), self-test 10/10, cdr-pipeline.test.sh 9/9. This also retires much of the
+> ZONE-4a false-quarantine class. Spec: `workloads/skills/docs/specs/2026-06-08-cdr-postverify-in-retry-loop.md`.
+> Open follow-up: a deterministic (model-free) regression test for the retry-recovery path.
+>
 > ## ⟶ 2026-06-08 — skill scanner: honest self-audit → leaner (BYO-model) + corrected docs
 >
 > Prompted by "is our scanner truly as novel/effective as I think, and how heavy is the parser model?"
