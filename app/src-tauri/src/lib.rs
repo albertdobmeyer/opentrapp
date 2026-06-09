@@ -252,6 +252,8 @@ pub fn run() {
             commands::telegram::telegram_advance_offset,
             commands::credentials::validate_anthropic_key,
             commands::credentials::commit_activation,
+            commands::credentials::save_credentials,
+            commands::credentials::read_runtime_env,
             commands::sentinel::get_sentinel_activity,
             commands::sentinel::sentinel_judge,
             commands::egress::list_egress_approvals,

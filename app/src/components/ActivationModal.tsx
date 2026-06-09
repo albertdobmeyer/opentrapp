@@ -9,16 +9,16 @@ import { classifyError } from "@/lib/errors";
 import {
   commitActivation,
   deriveTelegramBotUrl,
-  readConfig,
+  readRuntimeEnv,
+  saveCredentials,
   telegramAdvanceOffset,
   telegramDeleteWebhook,
   telegramPollForStart,
   telegramSendMessage,
   validateAnthropicKey,
-  writeConfig,
   type TelegramUpdate,
 } from "@/lib/tauri";
-import { isAnthropicKeyLike, isTelegramTokenLike, upsertEnvVar } from "@/lib/wizardUtils";
+import { isAnthropicKeyLike, isTelegramTokenLike } from "@/lib/wizardUtils";
 
 // ─── How-to step content ──────────────────────────────────────────────────
 
@@ -208,7 +208,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
   useEffect(() => {
     if (!reCredential) return;
     let cancelled = false;
-    void readConfig("agent", ".env")
+    void readRuntimeEnv()
       .then((content) => {
         if (cancelled) return;
         for (const line of content.split("\n")) {
@@ -263,12 +263,7 @@ function useActivationFlow({ onClose, reCredential }: { onClose: () => void; reC
       } catch { /* non-fatal */ }
     }
     try {
-      let envContent = "";
-      try { envContent = await readConfig("agent", ".env"); }
-      catch { envContent = "# OpenTrApp agent configuration\n"; }
-      envContent = upsertEnvVar(envContent, "ANTHROPIC_API_KEY", anthropicKey);
-      envContent = upsertEnvVar(envContent, "TELEGRAM_BOT_TOKEN", telegram.telegramToken);
-      await writeConfig("agent", ".env", envContent);
+      await saveCredentials(anthropicKey, telegram.telegramToken);
     } catch (error) {
       setCommitError("Couldn't save your keys: " + classifyError(error).userMessage);
       setStep("telegram");

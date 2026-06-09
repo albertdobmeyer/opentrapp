@@ -3,14 +3,13 @@ import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode, type 
 
 import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
-import { readConfig, writeConfig } from "@/lib/tauri";
+import { saveCredentials, readRuntimeEnv } from "@/lib/tauri";
 import {
   identifyPastedKey,
   isAnthropicKeyLike,
   isTelegramTokenLike,
   maskKey,
   parseEnvKeys,
-  upsertEnvVar,
 } from "@/lib/wizardUtils";
 
 import HowToModal, { type HowToStep } from "./HowToModal";
@@ -89,7 +88,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
   // Load existing keys from .env if available — pre-populate as masked.
   useEffect(() => {
     let cancelled = false;
-    readConfig("agent", ".env")
+    readRuntimeEnv()
       .then((content) => {
          
         if (cancelled) return;
@@ -347,19 +346,12 @@ async function runContinue(args: RunContinueArgs): Promise<void> {
 }
 
 async function persistKeys({ anthropicKey, telegramToken }: { anthropicKey: string; telegramToken: string }): Promise<void> {
-  // If user didn't touch the inputs but has existing masked values, nothing
-  // to save — keep the .env as is.
+  // If the user didn't touch the inputs (existing masked values stay), there's
+  // nothing to save. Otherwise write the (non-empty) keys to the RUNTIME .env
+  // (~/.opentrapp/.env) where the bootstrap and perimeter read them. The backend
+  // upserts, preserving any existing vars. This replaces the old
+  // writeConfig("agent",".env") path, which targeted the component directory and
+  // failed on a packaged first-run (read-only bundle) — the wizard dead-end.
   if (!anthropicKey && !telegramToken) return;
-
-  let content = "";
-  try {
-    content = await readConfig("agent", ".env");
-  } catch {
-    content = "# OpenTrApp agent configuration\n";
-  }
-
-  if (anthropicKey) content = upsertEnvVar(content, "ANTHROPIC_API_KEY", anthropicKey);
-  if (telegramToken) content = upsertEnvVar(content, "TELEGRAM_BOT_TOKEN", telegramToken);
-
-  await writeConfig("agent", ".env", content);
+  await saveCredentials(anthropicKey, telegramToken);
 }

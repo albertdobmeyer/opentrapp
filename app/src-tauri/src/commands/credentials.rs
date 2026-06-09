@@ -8,6 +8,7 @@
 //! validated and written to .env. Restarts vault-proxy to pick up new keys,
 //! brings vault-agent up, and writes the activated + credentials-ok markers.
 
+use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager as _};
 use serde::Serialize;
@@ -145,6 +146,98 @@ fn now_unix_ms() -> u64 {
         .unwrap_or(0)
 }
 
+// ─── Runtime credentials (.env in the data dir) ───────────────────────────
+//
+// The wizard previously wrote the keys via `write_config("agent", ".env")` —
+// the generic component-config editor, which resolves into the *component*
+// directory. On a packaged AppImage first-run that directory is the read-only
+// bundle (the writable staged copy is only created later, inside the
+// credentials-gated bootstrap), so the write failed and the wizard dead-ended.
+// The runtime `.env` actually lives in the data dir (`~/.opentrapp/.env`) —
+// where the bootstrap (`bootstrap::run_bootstrap` step_write_env) and the
+// perimeter read it. These commands write/read it there directly, so first-run
+// works on packaged builds, not just dev source trees.
+
+fn runtime_env_path(handle: &AppHandle) -> std::path::PathBuf {
+    let root = handle
+        .try_state::<AppState>()
+        .and_then(|s| s.runtime_data_dir.read().ok().map(|r| r.clone()))
+        .unwrap_or_else(podman::runtime_data_dir);
+    root.join(".env")
+}
+
+/// Replace an existing `KEY=...` line in a `.env` body, or append it. Preserves
+/// every other line (other vars, comments). Pure — unit-tested below. Mirrors
+/// the frontend `upsertEnvVar`.
+fn upsert_env_var(content: &str, key: &str, value: &str) -> String {
+    let prefix = format!("{key}=");
+    let mut replaced = false;
+    let mut out: Vec<String> = content
+        .lines()
+        .map(|line| {
+            if line.trim_start().starts_with(&prefix) {
+                replaced = true;
+                format!("{key}={value}")
+            } else {
+                line.to_string()
+            }
+        })
+        .collect();
+    if !replaced {
+        out.push(format!("{key}={value}"));
+    }
+    let mut s = out.join("\n");
+    s.push('\n');
+    s
+}
+
+/// Upsert the (non-empty) keys into the `.env` at `env_path`, preserving other
+/// content; creates the parent dir and tightens the file to 0600. Testable with
+/// a temp path.
+fn write_credentials_at(env_path: &Path, anthropic_key: &str, telegram_token: &str) -> std::io::Result<()> {
+    let mut content =
+        std::fs::read_to_string(env_path).unwrap_or_else(|_| "# OpenTrApp configuration\n".to_string());
+    if !anthropic_key.is_empty() {
+        content = upsert_env_var(&content, "ANTHROPIC_API_KEY", anthropic_key);
+    }
+    if !telegram_token.is_empty() {
+        content = upsert_env_var(&content, "TELEGRAM_BOT_TOKEN", telegram_token);
+    }
+    if let Some(parent) = env_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    std::fs::write(env_path, content)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(env_path, std::fs::Permissions::from_mode(0o600));
+    }
+    Ok(())
+}
+
+/// Write the agent credentials to the runtime `.env` (`~/.opentrapp/.env`).
+/// Only non-empty keys are upserted; existing vars are preserved. Replaces the
+/// wizard's old `write_config("agent",".env")` path that failed on packaged
+/// first-run.
+#[tauri::command]
+pub fn save_credentials(
+    handle: AppHandle,
+    anthropic_key: String,
+    telegram_token: String,
+) -> Result<(), String> {
+    let env_path = runtime_env_path(&handle);
+    write_credentials_at(&env_path, anthropic_key.trim(), telegram_token.trim())
+        .map_err(|e| format!("Couldn't write your keys to the configuration: {e}"))
+}
+
+/// Read the runtime `.env` body so the wizard can pre-populate masked existing
+/// keys. Returns an empty string when the file doesn't exist yet (first-run).
+#[tauri::command]
+pub fn read_runtime_env(handle: AppHandle) -> Result<String, String> {
+    let env_path = runtime_env_path(&handle);
+    Ok(std::fs::read_to_string(&env_path).unwrap_or_default())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -159,5 +252,48 @@ mod tests {
     async fn whitespace_key_returns_auth_failure() {
         let result = validate_anthropic_key("   ".to_string()).await;
         assert!(matches!(result, Ok(ValidationOutcome::AuthFailure)));
+    }
+
+    #[test]
+    fn upsert_replaces_existing_preserves_others_and_appends_new() {
+        let c = "# header\nANTHROPIC_API_KEY=old\nOPENAI_API_KEY=keep\n";
+        let c = upsert_env_var(c, "ANTHROPIC_API_KEY", "new");
+        assert!(c.contains("ANTHROPIC_API_KEY=new"));
+        assert!(!c.contains("old"));
+        assert!(c.contains("OPENAI_API_KEY=keep"));
+        assert!(c.contains("# header"));
+        // appends a key that isn't present
+        let c = upsert_env_var(&c, "TELEGRAM_BOT_TOKEN", "123:abc");
+        assert!(c.contains("TELEGRAM_BOT_TOKEN=123:abc"));
+        assert!(c.ends_with('\n'));
+    }
+
+    #[test]
+    fn write_credentials_creates_upserts_and_preserves() {
+        let dir = std::env::temp_dir().join(format!("oc-cred-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let env_path = dir.join(".env");
+
+        // First write into a non-existent path: creates dir + file with both keys.
+        write_credentials_at(&env_path, "sk-ant-aaa", "999:tok").unwrap();
+        let content = std::fs::read_to_string(&env_path).unwrap();
+        assert!(content.contains("ANTHROPIC_API_KEY=sk-ant-aaa"));
+        assert!(content.contains("TELEGRAM_BOT_TOKEN=999:tok"));
+
+        // Second write with an empty telegram token: replaces anthropic, keeps telegram.
+        write_credentials_at(&env_path, "sk-ant-bbb", "").unwrap();
+        let content = std::fs::read_to_string(&env_path).unwrap();
+        assert!(content.contains("ANTHROPIC_API_KEY=sk-ant-bbb"));
+        assert!(!content.contains("sk-ant-aaa"));
+        assert!(content.contains("TELEGRAM_BOT_TOKEN=999:tok"));
+
+        // 0600 on unix.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&env_path).unwrap().permissions().mode() & 0o777;
+            assert_eq!(mode, 0o600);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

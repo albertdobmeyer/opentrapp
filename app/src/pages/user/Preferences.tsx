@@ -18,16 +18,13 @@ import {
   ensureNotificationPermission,
   setAutostartEnabled,
 } from "@/lib/osIntegration";
-import { readConfig, restartPerimeter, writeConfig } from "@/lib/tauri";
+import { readRuntimeEnv, restartPerimeter, saveCredentials } from "@/lib/tauri";
 import {
   isAnthropicKeyLike,
   isTelegramTokenLike,
   maskKey,
   parseEnvKeys,
-  upsertEnvVar,
 } from "@/lib/wizardUtils";
-
-const VAULT_ENV = { component: "agent", path: ".env" } as const;
 
 const APP_VERSION = "0.3.0";
 
@@ -73,7 +70,7 @@ function KeysSection() {
 
   async function refresh() {
     try {
-      const env = await readConfig(VAULT_ENV.component, VAULT_ENV.path);
+      const env = await readRuntimeEnv();
       const { anthropicKey, telegramToken } = parseEnvKeys(env);
       setAnthropicMask(anthropicKey ? maskKey(anthropicKey) : null);
       setTelegramMask(telegramToken ? maskKey(telegramToken) : null);
@@ -102,15 +99,10 @@ function KeysSection() {
 
     setSaving(true);
     try {
-      let content = "";
-      try {
-        content = await readConfig(VAULT_ENV.component, VAULT_ENV.path);
-      } catch {
-        content = "# OpenTrApp agent configuration\n";
-      }
-      const envKey = which === "anthropic" ? "ANTHROPIC_API_KEY" : "TELEGRAM_BOT_TOKEN";
-      content = upsertEnvVar(content, envKey, trimmed);
-      await writeConfig(VAULT_ENV.component, VAULT_ENV.path, content);
+      await saveCredentials(
+        which === "anthropic" ? trimmed : "",
+        which === "telegram" ? trimmed : "",
+      );
 
       // Key write succeeded — drop edit UI immediately so the user sees
       // their masked value while the restart runs.

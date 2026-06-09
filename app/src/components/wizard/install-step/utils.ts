@@ -1,4 +1,4 @@
-import { deriveTelegramBotUrl, readConfig } from "@/lib/tauri";
+import { deriveTelegramBotUrl, readRuntimeEnv } from "@/lib/tauri";
 import { parseEnvKeys } from "@/lib/wizardUtils";
 
 export type SubStepId = "check" | "download" | "build" | "safety";
@@ -94,7 +94,7 @@ export async function prefetchTelegramUrl(
   update: (patch: SettingsPatch) => Promise<void>,
 ): Promise<void> {
   try {
-    const envContent = await readConfig("agent", ".env").catch(() => "");
+    const envContent = await readRuntimeEnv().catch(() => "");
     const { telegramToken } = parseEnvKeys(envContent);
     if (!telegramToken) {
       await update({ telegramBotUrl: null, telegramBotUsername: null });

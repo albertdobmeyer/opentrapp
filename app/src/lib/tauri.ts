@@ -452,11 +452,30 @@ export async function telegramAdvanceOffset(
  * Finalises activation: force-recreates vault-proxy (picks up new .env keys),
  * brings vault-agent up, and writes the activated + credentials-ok marker files.
  *
- * The frontend must write both keys to `.env` via `writeConfig` BEFORE
- * calling this — the commit is transactional from the user's perspective.
+ * The frontend must write both keys via `saveCredentials` BEFORE calling this —
+ * the commit is transactional from the user's perspective.
  */
 export async function commitActivation(): Promise<void> {
   return invoke("commit_activation");
+}
+
+/**
+ * Write the agent credentials to the runtime `.env` (`~/.opentrapp/.env`) —
+ * where the bootstrap and the perimeter read them. Only non-empty keys are
+ * upserted; existing vars are preserved. Use this (NOT `writeConfig`) for the
+ * keys: `writeConfig` targets the component directory, which is read-only on a
+ * packaged first-run.
+ */
+export async function saveCredentials(
+  anthropicKey: string,
+  telegramToken: string,
+): Promise<void> {
+  return invoke("save_credentials", { anthropicKey, telegramToken });
+}
+
+/** Read the runtime `.env` body (`~/.opentrapp/.env`); "" if it doesn't exist yet. */
+export async function readRuntimeEnv(): Promise<string> {
+  return invoke<string>("read_runtime_env");
 }
 
 // ── Sentinel bridge (the GUI's consumer of the shared judgment lib) ───────
