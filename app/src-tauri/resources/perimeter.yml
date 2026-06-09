@@ -71,6 +71,22 @@ services:
       - connection_strategy=lazy
       - --scripts
       - /opt/vault/vault-proxy.py
+    # ZONE 3 fix. The upstream mitmproxy image runs its entrypoint as root, then
+    # demotes to the non-root `mitmproxy` user (gosu) before running the command.
+    # The named log volume is created root-owned, so the demoted process can't
+    # write requests.jsonl and silently falls back to ephemeral /tmp — which
+    # disabled the idle-auto-pause activity signal (read_egress_log returns None).
+    # The ':U' chown-on-mount below does NOT fix this image: ':U' chowns to the
+    # image's *declared* user (root/0), but the runtime uid is derived later by
+    # the entrypoint, so the dir lands at 0 while the process runs as ~1000.
+    # This shim chowns the log dir to the mitmproxy user while still root, THEN
+    # hands off to the upstream entrypoint (docker-entrypoint.sh, on PATH) with
+    # the original command. Runner-agnostic (raw podman + compose).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'chown -R mitmproxy:mitmproxy /var/log/vault-proxy 2>/dev/null || true; exec docker-entrypoint.sh "$@"'
+      - sh
     no_new_privileges: false
     cap_drop_all: true
     seccomp: vault-proxy-seccomp.json

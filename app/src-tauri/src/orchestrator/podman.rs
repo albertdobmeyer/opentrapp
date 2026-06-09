@@ -229,6 +229,14 @@ pub fn container_run_args(
         a.push("-t".into());
     }
 
+    if let Some(ep) = &svc.entrypoint {
+        // Podman `--entrypoint` accepts a JSON array for a multi-element
+        // entrypoint. vault-proxy uses this to chown its log volume as root
+        // before the upstream image's gosu privilege-drop (the ZONE 3 fix).
+        a.push("--entrypoint".into());
+        a.push(serde_json::to_string(ep).unwrap_or_else(|_| "[]".into()));
+    }
+
     a.push(resolved_image.to_string());
     if let Some(cmd) = &svc.command {
         a.extend(cmd.iter().cloned());
@@ -1290,5 +1298,35 @@ mod tests {
         }
         assert!(found_logs_mount_with_chown, "vault-proxy-logs mount not found in args");
         assert!(found_proxy_ca_without_chown, "proxy-ca mount not found in args");
+    }
+
+    #[test]
+    fn vault_proxy_entrypoint_chowns_log_dir_then_execs_upstream() {
+        // The real Zone 3 fix: vault-proxy overrides the entrypoint to chown the
+        // log dir as root before the upstream image's gosu privilege-drop. Assert
+        // `--entrypoint` is emitted, before the image, as a JSON array containing
+        // the chown of /var/log/vault-proxy and the hand-off to docker-entrypoint.sh.
+        let spec = perimeter::load().unwrap();
+        let env = BTreeMap::from([("ANTHROPIC_API_KEY".into(), "sk".into())]);
+        let res = Path::new("/run/opentrapp/perimeter");
+        let img = "mitm@sha256:x";
+        let args =
+            container_run_args("vault-proxy", &spec.services["vault-proxy"], img, &ctx_with(&env, &res))
+                .unwrap();
+
+        let ep_idx = args.iter().position(|a| a == "--entrypoint")
+            .expect("vault-proxy must emit --entrypoint (Zone 3 chown shim)");
+        let ep_json = &args[ep_idx + 1];
+        assert!(ep_json.contains("chown") && ep_json.contains("/var/log/vault-proxy"),
+            "entrypoint must chown the log dir, got: {ep_json}");
+        assert!(ep_json.contains("docker-entrypoint.sh"),
+            "entrypoint must hand off to the upstream entrypoint, got: {ep_json}");
+        // It must be a valid JSON array (podman --entrypoint array form).
+        let parsed: Vec<String> = serde_json::from_str(ep_json)
+            .expect("--entrypoint must be a JSON array");
+        assert_eq!(parsed.first().map(|s| s.as_str()), Some("/bin/sh"));
+        // --entrypoint must come BEFORE the image (it's a run flag, not a command).
+        let img_idx = args.iter().position(|a| a == img).expect("image in args");
+        assert!(ep_idx < img_idx, "--entrypoint must precede the image");
     }
 }

@@ -80,27 +80,38 @@ class VaultProxy:
         logger = logging.getLogger("vault-proxy")
         logger.setLevel(logging.INFO)
 
-        # Structured JSON log to /var/log/vault-proxy/requests.jsonl if writable.
-        # Falls back to /tmp/vault-proxy-requests.jsonl when the named volume is
-        # owned by root and mitmproxy has demoted itself to a non-root user
-        # (common on first run with a fresh `vault-proxy-logs` volume). The
-        # fallback keeps the perimeter functional; the operator should chown the
-        # named volume to the mitmproxy user for persistent logs.
+        # Structured JSON log to /var/log/vault-proxy/requests.jsonl on the named
+        # `vault-proxy-logs` volume. The container entrypoint chowns this dir to
+        # the mitmproxy user before privilege-drop (the ZONE 3 fix), so the write
+        # should always succeed. If it ever fails we fall back to ephemeral /tmp
+        # to keep the perimeter functional — but we make that LOUD, because a
+        # silent fallback here is exactly what hid ZONE 3 for weeks: the host-side
+        # idle-auto-pause signal reads the *volume*, so a /tmp fallback silently
+        # disables idle detection (read_egress_log_last_activity_ms → None).
         log_path = LOG_DIR / "requests.jsonl"
         try:
             LOG_DIR.mkdir(parents=True, exist_ok=True)
             handler = logging.FileHandler(log_path)
-        except (PermissionError, OSError):
+        except (PermissionError, OSError) as exc:
             fallback_path = Path("/tmp/vault-proxy-requests.jsonl")
             handler = logging.FileHandler(fallback_path)
-            # Use stderr so the warning isn't lost — the logger we're configuring
-            # isn't fully wired up yet.
+            # Scream on BOTH stderr and stdout (podman logs) — this must never be
+            # missed again. The logger we're configuring isn't wired up yet.
             import sys as _sys
-            print(
-                f"[vault-proxy] WARN: {log_path} not writable; "
-                f"falling back to {fallback_path} (logs will not persist across restarts)",
-                file=_sys.stderr,
+            banner = (
+                "\n"
+                "============================================================\n"
+                "  [vault-proxy] ZONE-3 ALERT: egress log is NOT persisting\n"
+                f"  {log_path} not writable ({type(exc).__name__}: {exc}).\n"
+                f"  Falling back to {fallback_path} (EPHEMERAL — lost on restart).\n"
+                "  Host-side idle auto-pause is DISABLED while this persists\n"
+                "  (read_egress_log sees no volume file → returns None).\n"
+                "  The container entrypoint should have chowned the log dir to\n"
+                "  the mitmproxy user — check the entrypoint shim / volume perms.\n"
+                "============================================================\n"
             )
+            print(banner, file=_sys.stderr, flush=True)
+            print(banner, file=_sys.stdout, flush=True)
         handler.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(handler)
 

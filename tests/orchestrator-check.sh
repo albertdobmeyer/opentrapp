@@ -663,10 +663,12 @@ section "12. Proxy log volume persistence (Zone 3)"
 # vault-proxy.py writes requests.jsonl to /var/log/vault-proxy as a non-root
 # user (mitmproxy). The named volume defaults to container-root ownership on
 # rootless podman, so the addon silently falls back to in-container /tmp.
-# The fix is podman's ':U' suffix on the mount, which chowns the volume to
-# the container's user namespace mapping at mount time. Pin this in BOTH the
-# shipped perimeter.yml mount declaration (via a chown flag) AND the dev
-# compose.yml (via the ':U' syntax) so the bug can't quietly come back.
+# ':U' chown-on-mount does NOT fix this image (it chowns to the image's declared
+# user = root, not the runtime-derived mitmproxy uid; podman-compose 1.0.6 also
+# drops ':U'). The real fix is an entrypoint shim that chowns the log dir to the
+# mitmproxy user as root, then hands off to the upstream entrypoint. Pin BOTH the
+# entrypoint shim AND the (belt-and-suspenders) ':U'/chown flag in perimeter.yml
+# and compose.yml so the bug can't quietly come back.
 
 python3 - <<'PY' 2>/dev/null && pass "perimeter.yml vault-proxy-logs mount declares chown-on-mount" || fail "perimeter.yml vault-proxy-logs mount is missing 'chown: true' — non-root mitmproxy can't write the log volume (Zone 3 fix)"
 import sys, yaml
@@ -690,6 +692,26 @@ for v in vols:
         if not (v.endswith(':U') or ':U,' in v or ':U:' in v):
             sys.exit(1)
 sys.exit(0 if hit else 1)
+PY
+
+# The real Zone 3 fix: the vault-proxy entrypoint must run a root-stage chown of
+# the log dir before the image drops privileges. Assert the shim in BOTH files.
+python3 - <<'PY' 2>/dev/null && pass "perimeter.yml vault-proxy entrypoint chowns the log dir (Zone 3 real fix)" || fail "perimeter.yml vault-proxy is missing the entrypoint chown shim for /var/log/vault-proxy — ':U' alone does not fix this image (Zone 3)"
+import sys, yaml
+with open('app/src-tauri/resources/perimeter.yml') as f:
+    spec = yaml.safe_load(f)
+ep = spec['services'].get('vault-proxy', {}).get('entrypoint', []) or []
+joined = ' '.join(ep)
+sys.exit(0 if ('chown' in joined and '/var/log/vault-proxy' in joined) else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "compose.yml vault-proxy entrypoint chowns the log dir (Zone 3 real fix)" || fail "compose.yml vault-proxy is missing the entrypoint chown shim for /var/log/vault-proxy (Zone 3)"
+import sys, yaml
+with open('compose.yml') as f:
+    c = yaml.safe_load(f)
+ep = c['services'].get('vault-proxy', {}).get('entrypoint', []) or []
+joined = ' '.join(ep) if isinstance(ep, list) else str(ep)
+sys.exit(0 if ('chown' in joined and '/var/log/vault-proxy' in joined) else 1)
 PY
 
 # =============================================================================

@@ -81,15 +81,36 @@ services:
   # enforces the L3 (kernel-level) policy. See ADR-0009 for the split rationale.
   vault-proxy:
     image: docker.io/mitmproxy/mitmproxy@sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1
-    command: >
-      mitmdump
-        --listen-host 0.0.0.0
-        --listen-port 8080
-        --mode upstream:http://vault-egress:8888
-        --set block_global=false
-        --set block_private=false
-        --set connection_strategy=lazy
-        --scripts /opt/vault/vault-proxy.py
+    # ZONE 3 fix — root-stage chown of the log volume before the upstream image's
+    # gosu privilege-drop, then hand off to the upstream entrypoint. The named
+    # vault-proxy-logs volume is created root-owned; the demoted (non-root)
+    # mitmproxy process otherwise can't write requests.jsonl and silently falls
+    # back to ephemeral /tmp, which disables idle auto-pause. The ':U' below does
+    # NOT fix this image (it chowns to the image's declared user = root, not the
+    # runtime mitmproxy uid set later by the entrypoint), and podman-compose 1.0.6
+    # drops ':U' entirely. This shim is the runner-agnostic fix. Command is a list
+    # (not a folded scalar) so it reaches the shim as separate "$@" args.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'chown -R mitmproxy:mitmproxy /var/log/vault-proxy 2>/dev/null || true; exec docker-entrypoint.sh "$@"'
+      - sh
+    command:
+      - mitmdump
+      - --listen-host
+      - 0.0.0.0
+      - --listen-port
+      - "8080"
+      - --mode
+      - upstream:http://vault-egress:8888
+      - --set
+      - block_global=false
+      - --set
+      - block_private=false
+      - --set
+      - connection_strategy=lazy
+      - --scripts
+      - /opt/vault/vault-proxy.py
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
     security_opt:

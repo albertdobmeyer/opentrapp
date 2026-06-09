@@ -32,6 +32,12 @@ pub struct Service {
     pub image: ImageRef,
     #[serde(default)]
     pub command: Option<Vec<String>>,
+    /// Optional `--entrypoint` override (emitted as a JSON array). Used by
+    /// vault-proxy to run a root-stage chown of the log volume before the
+    /// upstream image drops privileges (the ZONE 3 fix). `None` ⇒ the image's
+    /// default entrypoint.
+    #[serde(default)]
+    pub entrypoint: Option<Vec<String>>,
     #[serde(default)]
     pub read_only: bool,
     /// Default true: containment wants `--security-opt no-new-privileges`.
