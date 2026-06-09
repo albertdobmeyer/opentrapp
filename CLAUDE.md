@@ -190,3 +190,13 @@ When contributing:
 - Workload code lives under `workloads/<name>/`; infra container code lives under `infra/<name>/`
 - Do not change the manifest schema without updating all three alignment layers (`schemas/component.schema.json`, `manifest.rs`, `types.ts`)
 - Do not commit `node_modules/`, `target/`, `app/src-tauri/gen/`, or `.env` (covered by `.gitignore`)
+
+## 11. Verification discipline (non-negotiable)
+
+A claim is verified at the end that **consumes** the output, not the end that produces it. Building, compiling, writing a file, or starting a process is the cheap, misleading end; the real test is the consumer.
+
+- **Verify at the consumption end.** "Done" means the thing that consumes the output is confirmed correct — the perimeter actually reads the credentials, the agent receives the message exactly once, the resumed boundary actually blocks egress. A green at the producing end (it built, the process is up, the workflow ran) is necessary, never sufficient. Examples that bit us: keys "saved" to a file the perimeter never reads (the v0.6 first-run dead-end); a local "green" that skipped the CI gate jobs in §7.
+- **Verification gates dependent work — never run them in parallel.** Do not sequence a dependent step (publish, a narrative, the next feature) alongside the verification it rests on. The dependent step starts only after its gate is green. Asserting the dependent step is ready while its gate is unverified is the failure mode to avoid.
+- **Gate the claim, not the workstream.** Don't hold a finished, shippable thing hostage to an unfinished optimization — instead, scope what you *assert* to what's verified. A release can ship before an optimization lands; its copy just may not claim the unverified property. Block the claim, release the work.
+- **Unverifiable ≠ verified.** When the consuming end cannot be exercised here (e.g., this hardware cannot run the full perimeter — it swap-storms), the claim is **unverified, not done**. Say so explicitly; route the check to capable hardware or CI rather than asserting it.
+- **For security boundaries, "running" ≠ "correct."** A perimeter that is rebuilt or resumed (e.g. after idle auto-pause) must pass the **same** boundary self-tests as a fresh cold start before it is reported healthy — network isolation holds, credentials inject, the allowlist is loaded, the proxy CA is unchanged, the L3 egress filter is active. Any failure holds **fail-closed** and alerts. A boundary that is "alive but subtly wrong" is worse than a visible failure, because the breach is silent.
