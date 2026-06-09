@@ -1,8 +1,32 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-08 (**memory opt COMPLETE (Phase 0–3); opencode pitch SEND-READY (only the human send remains); skill scanner audited → BYO-model + honest docs + CDR hardened (post-verify retry + regression tests)**; current shipped release: v0.6.0)
+**Last updated:** 2026-06-08 (**Karen v0.6 E2E caught + FIXED a shipped high-severity first-run dead-end (wizard couldn't save creds on packaged builds) — commit 80e4dfa, CI all-green**; memory opt COMPLETE (Phase 0–3); opencode pitch SEND-READY (only the human send remains); skill scanner audited → BYO-model + honest docs + CDR hardened (post-verify retry + regression tests); current shipped release: v0.6.0)
 **Current phase:** v0.6 shipped; footprint reduced (memory Phase 0–3 done); opencode skills-pointer pitch de-risked end-to-end and ready to send
 **Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
+
+> ## ⟶ Fixed this session (2026-06-08, session 3): packaged first-run credential dead-end
+>
+> The Karen v0.6 E2E reproduced a **shipped high-severity bug**: on a packaged AppImage,
+> entering the API key + bot token and clicking **Continue** on the wizard's Connect step
+> returned a "setting could not be saved" toast — no way forward, first-run dead-ended.
+>
+> **Root cause:** the wizard wrote keys via `writeConfig("agent",".env")` — the generic
+> *component-config* editor, which resolves into the agent **component directory**. On a
+> packaged first-run that directory is the **read-only AppImage bundle** (the writable staged
+> copy is only created later, inside the credentials-gated bootstrap → chicken-and-egg). The
+> write failed; the error was also mislabeled "settings". Dev source trees are writable, so it
+> never reproduced in dev — packaged-only.
+>
+> **Fix (commit `80e4dfa`):** two dedicated Tauri commands `save_credentials` / `read_runtime_env`
+> write+read the **runtime** `.env` (`~/.opentrapp/.env`) directly — where `bootstrap::step_write_env`
+> and the perimeter actually read it — upsert + preserve other vars + `0600`. Converted **all four**
+> runtime-`.env` credential sites off the component-dir path (`ConnectStep`, `ActivationModal`,
+> `Preferences` key-rotation, `install-step` prefetch) to kill the whole bug class. Validated:
+> tsc 0, eslint clean, vitest 87, orchestrator-check 114/0/0 (§5 confirms both new Rust commands
+> have frontend wrappers), integration-test 24/0, and **CI all-green** including `Rust (check + test)`
+> (compiles + 2 new unit tests `upsert_*`/`write_credentials_at`) and all 4 platform builds.
+> **Remaining:** the packaged first-run *re-grade* needs a new tagged `v0.6.x` build (`build-images`
+> is tag-only) — the code fix is done + CI-green.
 
 > ## ⟶ NEXT SESSION — READ THIS FIRST: opencode pitch is technically ready; what's left is human/recording
 >
