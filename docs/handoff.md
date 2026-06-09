@@ -1,7 +1,7 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-08 (**memory opt COMPLETE (Phase 0–3); opencode pitch tech-ready (gifs+recipient done); skill scanner audited → BYO-model + honest docs**; current shipped release: v0.6.0)
-**Current phase:** v0.6 shipped; footprint reduced (memory Phase 0–3 done); now de-risking the opencode skills-pointer pitch
+**Last updated:** 2026-06-08 (**memory opt COMPLETE (Phase 0–3); opencode pitch SEND-READY (only the human send remains); skill scanner audited → BYO-model + honest docs + CDR hardened (post-verify retry + regression tests)**; current shipped release: v0.6.0)
+**Current phase:** v0.6 shipped; footprint reduced (memory Phase 0–3 done); opencode skills-pointer pitch de-risked end-to-end and ready to send
 **Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
 
 > ## ⟶ NEXT SESSION — READ THIS FIRST: opencode pitch is technically ready; what's left is human/recording
@@ -50,6 +50,14 @@
 >   layered framing (3 distinct mechanisms; stages 1/2/5 share the pattern set); stated CDR cost plainly
 >   (scan-only = offline/on-demand/~0 RAM); made "any LLM backend" true+precise. Scanner self-test 10/10
 >   (patterns untouched). **The pitch draft now reads honest-and-precise, which is STRONGER for opencode.**
+> - **CDR pipeline hardened** (`fae7f3a`→`7de296c`→`1cf8e7e`): (a) tried a 3b CDR default for fidelity,
+>   but a live A/B showed 3b FAILS post-verify lint 2/2 where 1.5b passes — **REVERTED**, kept 1.5b
+>   (ADR-0015's 1.5b-parser/3b-judge split was right). (b) Fixed the real defect: stage-7 post-verify
+>   (lint/scan/verify) was TERMINAL; now it runs INSIDE the retry-repair loop, so a marginal-but-clean
+>   reconstruction self-heals instead of false-quarantining (retires much of the ZONE-4a class).
+>   Security preserved (malice stripped at the stage-3 prefilter; scan/verify still gate delivery;
+>   confirmed a malicious skill is still rejected). 3b now passes. (c) Added **deterministic, model-free
+>   regression tests** (`cdr-pipeline.test.sh` 11/11) via an env-gated `CDR_INTENT_STUB` test seam.
 >
 > ### ⟶ Remaining before send — just the human send + one optional credibility check
 > - 🟢 **All pre-send prep is DONE** (citations, badge, scouting, compatibility proof, gifs, recipient,
