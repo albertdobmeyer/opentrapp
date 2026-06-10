@@ -212,6 +212,10 @@ class VaultProxy:
     def _log_event(self, event: dict):
         """Write structured JSON log entry."""
         event["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+        # Epoch milliseconds, so the host orchestrator's idle-signal reader can
+        # parse activity time without a date library. Consumed by
+        # podman.rs::read_egress_log_last_activity_ms (Phase 3 idle auto-pause).
+        event["ts_ms"] = int(time.time() * 1000)
         self.logger.info(json.dumps(event, default=str))
 
     @staticmethod

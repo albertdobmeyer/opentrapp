@@ -794,38 +794,72 @@ pub(crate) fn read_egress_log() -> String {
     std::fs::read_to_string(Path::new(&mountpoint).join("requests.jsonl")).unwrap_or_default()
 }
 
-/// Milliseconds since the proxy last logged an agent request, from the mtime of
-/// `requests.jsonl` in the `vault-proxy-logs` volume. The proxy appends on every
-/// egress (including OpenClaw's Telegram long-poll), so a stale mtime means the
-/// agent is idle. `None` when the volume/file is absent or unreadable — the
-/// caller MUST treat that as "no signal, do not auto-pause". The idle signal for
-/// auto-pause-to-dormant (Phase 3). NOTE: depends on the proxy log persisting to
-/// its volume (ZONE 3); if the proxy falls back to in-container /tmp this returns
-/// None and idle detection is conservatively disabled.
+/// Telegram bot keep-alive endpoints the agent hits *continuously* even when
+/// idle (OpenClaw long-polls `getUpdates` every ~10-20s forever, plus periodic
+/// `getMe`/`getWebhookInfo`). These must NOT count as activity — otherwise the
+/// idle timer never goes stale and auto-pause never fires (verified live
+/// 2026-06-09: the old mtime-based signal sat at ~15s indefinitely). Setters,
+/// deleters, `sendMessage` replies, Anthropic calls, and tool fetches are all
+/// real activity and are deliberately NOT listed here.
+fn is_keepalive_poll(url: &str) -> bool {
+    const POLL_MARKERS: &[&str] = &[
+        "/getUpdates",
+        "/getMe",
+        "/getWebhookInfo",
+        "/getMyCommands",
+    ];
+    POLL_MARKERS.iter().any(|m| url.contains(m))
+}
+
+/// Parse the egress log content and return ms since the agent's last *real-
+/// activity* request (newest non-keep-alive request), or `None` if the log holds
+/// no real-activity request. Pure (no I/O) so it can be unit-tested. `now_ms` is
+/// the current epoch-ms.
+fn last_activity_ms_from_log(content: &str, now_ms: u64) -> Option<u64> {
+    for line in content.lines().rev() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let v: serde_json::Value = match serde_json::from_str(line) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let url = v.get("url").and_then(|u| u.as_str()).unwrap_or("");
+        if url.is_empty() || is_keepalive_poll(url) {
+            continue;
+        }
+        // Newest real-activity request. Skip entries without ts_ms (pre-fix log
+        // lines) and keep scanning for an older one that has it.
+        match v.get("ts_ms").and_then(|t| t.as_u64()) {
+            Some(ts) => return Some(now_ms.saturating_sub(ts)),
+            None => continue,
+        }
+    }
+    None
+}
+
+/// Milliseconds since the agent's last *real-activity* egress, parsed from
+/// `requests.jsonl` in the `vault-proxy-logs` volume. The idle signal for
+/// auto-pause-to-dormant (Phase 3).
+///
+/// CRITICAL: this must NOT count the agent's own Telegram keep-alive polling.
+/// OpenClaw long-polls `getUpdates` (+ periodic `getMe`/`getWebhookInfo`) every
+/// ~10-20s forever, even when completely idle, so "time since *any* egress" never
+/// goes stale and auto-pause would never fire. We measure idle from the most
+/// recent request that is NOT a keep-alive endpoint (a real LLM call, a tool
+/// fetch, or a `sendMessage` reply — all of which only happen on a real turn).
+///
+/// `None` when the volume/file is absent or the log holds no real-activity
+/// request (e.g. fresh perimeter, started but never interacted with) — the caller
+/// MUST treat that as "no signal, do not auto-pause" (fail-safe). Depends on the
+/// proxy log persisting to its volume (the ZONE 3 entrypoint-chown fix).
 pub(crate) fn read_egress_log_last_activity_ms() -> Option<u64> {
-    let out = podman_probe(
-        &[
-            "volume".into(),
-            "inspect".into(),
-            "vault-proxy-logs".into(),
-            "--format".into(),
-            "{{.Mountpoint}}".into(),
-        ],
-        Duration::from_secs(10),
-    )
-    .ok()?;
-    if !ok(&out) {
-        return None;
-    }
-    let mountpoint = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    if mountpoint.is_empty() {
-        return None;
-    }
-    let meta = std::fs::metadata(Path::new(&mountpoint).join("requests.jsonl")).ok()?;
-    let elapsed = std::time::SystemTime::now()
-        .duration_since(meta.modified().ok()?)
-        .ok()?;
-    Some(elapsed.as_millis() as u64)
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as u64)
+        .unwrap_or(0);
+    last_activity_ms_from_log(&read_egress_log(), now_ms)
 }
 
 /// Signal `vault-proxy` to reload its allowlist (SIGHUP → the addon's
@@ -1328,5 +1362,32 @@ mod tests {
         // --entrypoint must come BEFORE the image (it's a run flag, not a command).
         let img_idx = args.iter().position(|a| a == img).expect("image in args");
         assert!(ep_idx < img_idx, "--entrypoint must precede the image");
+    }
+
+    #[test]
+    fn idle_signal_ignores_telegram_keepalive_polls() {
+        let now = 1_000_000u64;
+
+        // Only keep-alive polls (getUpdates/getMe) → no real activity → None.
+        // The whole bug: this must NOT report the agent as recently active.
+        let polls = "{\"url\":\"https://api.telegram.org/botX/getUpdates\",\"ts_ms\":999000}\n\
+                     {\"url\":\"https://api.telegram.org/botX/getMe\",\"ts_ms\":999500}";
+        assert_eq!(last_activity_ms_from_log(polls, now), None);
+
+        // A real Anthropic call at ts=700000, then NEWER keep-alive polls → idle
+        // is measured from the Anthropic call (300_000ms ago), not the polls.
+        let mixed = "{\"url\":\"https://api.anthropic.com/v1/messages\",\"ts_ms\":700000}\n\
+                     {\"url\":\"https://api.telegram.org/botX/getUpdates\",\"ts_ms\":999000}\n\
+                     {\"url\":\"https://api.telegram.org/botX/getUpdates\",\"ts_ms\":999900}";
+        assert_eq!(last_activity_ms_from_log(mixed, now), Some(300_000));
+
+        // A sendMessage reply (responding to a user) IS real activity.
+        let reply = "{\"url\":\"https://api.telegram.org/botX/sendMessage\",\"ts_ms\":950000}\n\
+                     {\"url\":\"https://api.telegram.org/botX/getUpdates\",\"ts_ms\":999000}";
+        assert_eq!(last_activity_ms_from_log(reply, now), Some(50_000));
+
+        // Empty / unparseable → None (fail-safe: no signal).
+        assert_eq!(last_activity_ms_from_log("", now), None);
+        assert_eq!(last_activity_ms_from_log("not json\n{bad", now), None);
     }
 }
