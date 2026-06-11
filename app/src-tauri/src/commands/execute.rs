@@ -79,13 +79,28 @@ pub async fn run_command(
         let _ = tokio::task::spawn_blocking(move || podman::service_up(&data_dir, &svc, false)).await;
     }
 
-    let result = runner::run_command(
-        &manifest_cmd,
-        &PathBuf::from(&component_dir),
-        &args,
-        manifest_cmd.timeout_seconds,
-    )
-    .await;
+    // Containerized execution (CLAUDE.md §9 — "no untrusted content on the host;
+    // all skill scanning happens inside containers"). On-demand workload shields
+    // (vault-skills/vault-social) run their commands INSIDE their now-started
+    // container via `podman exec`, where the Makefile + tools live (WORKDIR /app)
+    // and untrusted downloaded content never touches the host. Other components
+    // fall back to host bash in the component dir (orchestrator-level commands).
+    // If the on-demand start above failed, the exec fails cleanly → "unavailable".
+    let result = match &on_demand {
+        Some(svc) => {
+            runner::run_command_in_container(svc, &manifest_cmd, &args, manifest_cmd.timeout_seconds)
+                .await
+        }
+        None => {
+            runner::run_command(
+                &manifest_cmd,
+                &PathBuf::from(&component_dir),
+                &args,
+                manifest_cmd.timeout_seconds,
+            )
+            .await
+        }
+    };
 
     if let Some(svc) = on_demand {
         arm_idle_stop(state.inner(), svc);

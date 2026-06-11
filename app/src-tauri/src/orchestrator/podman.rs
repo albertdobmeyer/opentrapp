@@ -252,7 +252,7 @@ pub fn container_run_args(
 /// g_assertion_message_cmpint`. We strip them so child processes use system
 /// libs. (Confirmed: system conmon works with a clean env, fails with the
 /// AppImage LD_LIBRARY_PATH.)
-const APPIMAGE_LIB_ENV: &[&str] = &[
+pub(crate) const APPIMAGE_LIB_ENV: &[&str] = &[
     "LD_LIBRARY_PATH",
     "LD_PRELOAD",
     "GTK_PATH",
