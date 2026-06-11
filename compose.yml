@@ -255,7 +255,7 @@ services:
     # Forge is a task runner, not a daemon. It starts, runs a scan/CDR
     # pipeline when triggered, and can idle between tasks.
     # Keep alive so the orchestrator can exec commands into it.
-    command: ["bash", "-c", "echo 'vault-skills ready' && sleep infinity"]
+    command: ["bash", "-c", "echo 'vault-skills ready' && trap 'exit 0' TERM INT; sleep infinity & wait"]
     restart: unless-stopped
     # On-demand (Phase 1): a profiled service is NOT started by a plain
     # `podman compose up`; it starts only when its profile is activated. Mirrors
@@ -295,7 +295,7 @@ services:
       - REQUESTS_CA_BUNDLE=/opt/proxy-ca/mitmproxy-ca-cert.pem
       - SSL_CERT_FILE=/opt/proxy-ca/mitmproxy-ca-cert.pem
     # Social is a task runner like forge. Idles between scans.
-    command: ["bash", "-c", "echo 'vault-social ready' && sleep infinity"]
+    command: ["bash", "-c", "echo 'vault-social ready' && trap 'exit 0' TERM INT; sleep infinity & wait"]
     restart: unless-stopped
     # On-demand (Phase 1): parked workload, profiled so it never starts on a
     # plain `podman compose up`. Mirrors perimeter.yml `on_demand: true`.

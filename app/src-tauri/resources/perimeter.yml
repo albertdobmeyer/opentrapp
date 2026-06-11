@@ -148,7 +148,7 @@ services:
     mem_limit: 1g
     pids_limit: 128
     networks: [skills-net]
-    command: ["bash", "-c", "echo 'vault-skills ready' && sleep infinity"]
+    command: ["bash", "-c", "echo 'vault-skills ready' && trap 'exit 0' TERM INT; sleep infinity & wait"]
     volumes:
       - { source: skills-deliveries, target: /app/exports, kind: named }
       - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
@@ -176,7 +176,7 @@ services:
     mem_limit: 512m
     pids_limit: 64
     networks: [social-net]
-    command: ["bash", "-c", "echo 'vault-social ready' && sleep infinity"]
+    command: ["bash", "-c", "echo 'vault-social ready' && trap 'exit 0' TERM INT; sleep infinity & wait"]
     volumes:
       - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
       # Shared Sentinel lib — semantic-firewall.sh + persona-guard.sh resolve

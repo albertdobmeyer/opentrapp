@@ -1442,6 +1442,34 @@ else
 fi
 
 # =============================================================================
+section "31. Clean SIGTERM shutdown for skills/social (no SIGKILL hang)"
+# =============================================================================
+# vault-skills/vault-social are `sleep infinity` task runners. As PID 1, a bare
+# `sleep` (or even `exec sleep`) IGNORES SIGTERM — the kernel only delivers
+# unhandled signals to PID 1 if a handler is installed — so `podman stop` hangs
+# the full 10s grace then SIGKILLs (exit 137). That makes idle auto-pause's
+# teardown slow + unclean (verified live 2026-06-10). The fix is a shell SIGTERM
+# trap so the gear exits 0 immediately. Assert the trap is present (and the
+# broken `exec sleep`/bare-`sleep`-without-trap form is gone) in BOTH files.
+python3 - <<'PY' 2>/dev/null && pass "perimeter.yml skills/social trap SIGTERM (clean shutdown, no 10s SIGKILL hang)" || fail "perimeter.yml skills/social command lacks a SIGTERM trap — podman stop will hang 10s then SIGKILL (§10.3)"
+import sys, yaml, pathlib
+svc = yaml.safe_load(pathlib.Path('app/src-tauri/resources/perimeter.yml').read_text())['services']
+def ok(s):
+    c = ' '.join(s.get('command') or [])
+    return 'sleep infinity' in c and 'trap ' in c and 'TERM' in c
+sys.exit(0 if ok(svc['vault-skills']) and ok(svc['vault-social']) else 1)
+PY
+
+python3 - <<'PY' 2>/dev/null && pass "compose.yml skills/social trap SIGTERM (dev mirror)" || fail "compose.yml skills/social command lacks a SIGTERM trap (§10.3)"
+import sys, yaml, pathlib
+svc = yaml.safe_load(pathlib.Path('compose.yml').read_text())['services']
+def ok(s):
+    c = ' '.join(s.get('command') or [])
+    return 'sleep infinity' in c and 'trap ' in c and 'TERM' in c
+sys.exit(0 if ok(svc['vault-skills']) and ok(svc['vault-social']) else 1)
+PY
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 

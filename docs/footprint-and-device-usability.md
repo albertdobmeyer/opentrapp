@@ -321,4 +321,3 @@ Open items from §8 unchanged: (a) does idle auto-pause actually fire in product
 teardown; (d) **capture a real `podman stats` per-container reading** (§10.2) next time the
 full perimeter is up. Full session log lives in the laptop's `~/state.json`
 (`disk-reclaim-and-cda-consolidation-2026-06-10`) and its `known_issues`.
-</content>
