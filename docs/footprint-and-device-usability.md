@@ -238,7 +238,10 @@ while idle.
 - **Dev-disk hygiene (not user-facing).** The Rust `target/` build cache is ~29 GB and old
   `podman images` total ~5.6 GB (largely reclaimable dupes incl. pre-rebrand tags). This
   affects contributors, not users, but is worth a periodic `cargo clean` / `podman image
-  prune`.
+  prune`. **Acted on 2026-06-10 — and root-caused — see §10.1.**
+- **Unclean container teardown (NEW 2026-06-10).** Two gears ignore `SIGTERM` on stop and
+  are SIGKILL'd after the 10 s grace window — a precondition for *clean* idle auto-pause
+  (§7 Phase 3). See §10.3.
 
 ---
 
@@ -254,4 +257,68 @@ The genuine caveats are narrow and known: the container-runtime prerequisite on
 macOS/Windows (kept cheap by choosing podman over Docker Desktop), mitmproxy's long-run
 memory growth, and the still-unverified question of whether idle auto-pause fires in the
 field — which, if confirmed, is precisely what makes even 8 GB machines comfortable.
+
+---
+
+## 10. 2026-06-10 update — resource-recon session handoff
+
+*A follow-up resource pass on the same primary dev laptop (7.2 GB box) on 2026-06-10. Three
+results feed back into the sections above. Methodology tags from §1 still apply.*
+
+### 10.1 Dev-disk hygiene — done, with a root cause (updates §8)
+
+The §8 watch-item (Rust `target/` ~29 GB, `podman images` ~5.6 GB) was acted on [measured]:
+
+- `cargo clean` on `app/src-tauri` reclaimed **36 GiB** — the cache had grown past the 29 GB
+  figure in §8.
+- `podman image prune` took the image store **221 → 10 images** (~3.7 GB freed), keeping
+  only the v0.6.0 vault images pinned by the (then-running) containers.
+- **Root cause of part of the `target/` bloat:** `target/debug` carried *duplicate* static
+  libs left by the `lobster-trapp → opentrapp` rename — both `libopentrapp_lib.a` **and** the
+  stale `liblobster_trapp_lib.a` (~1 GB each, ×2 across `deps/` + root). A clean rebuild
+  regenerates only the current crate name; the stale pair is dead weight. **Watch-item:** if
+  any build target still references the old `lobster_trapp` crate name, the dupes will
+  regenerate — grep the workspace for `lobster_trapp` if `target/` re-bloats.
+- Periodic contributor hygiene (perimeter stopped): `cd app/src-tauri && cargo clean` then
+  `podman image prune -af`.
+
+### 10.2 Live observation: full 5-container perimeter ran idle without a swap-storm (nuances §1/§2)
+
+§1/§2 carry the honest caveat that this box "cannot run the full five-container perimeter
+without swap-storming," so a clean live measurement was never taken. On 2026-06-10 the
+**full five-container perimeter was observed up ~2 h, healthy, with swap essentially at zero**
+(used swap ≈ 352 KiB), the agent idle in its Telegram long-poll with **zero LLM traffic**.
+Stopping all five freed ≈ **400 MB** RSS by `free` delta.
+
+**Honesty caveat (CLAUDE.md §11):** this is a `free`-delta observation, **not** a clean
+per-container `podman stats` read — the ~400 MB likely *undercounts* (page cache muddies the
+delta), and the box had light co-tenants at the time (no heavy Cursor/Brave/AI load). It does
+**not** overturn the §1 caveat; it *corroborates §5* — the swap-storm is co-tenant-driven, not
+perimeter-driven. **Still missing:** a real `podman stats` per-container capture while the
+full perimeter is live. Do this next time it's up.
+
+### 10.3 NEW — SIGTERM graceful-shutdown bug in vault-social / vault-skills
+
+On `podman stop`, **`vault-social` and `vault-skills` ignore `SIGTERM` and hang the full
+10 s grace window, then die by `SIGKILL` (exit 137)**; `vault-agent`, `vault-egress`, and
+`vault-proxy` all exit cleanly (0). [measured 2026-06-10]
+
+- **Likely cause:** PID-1 signal-forwarding — a shell-form entrypoint that doesn't `exec` the
+  real process, so `SIGTERM` never reaches it. **Fix:** `exec` the final command in those two
+  gears' entrypoints (`workloads/social/`, `workloads/skills/`), or add a tini/init shim.
+- **Why it matters for this mission:** §7 Phase-3 **idle auto-pause** is the headline lever
+  for small machines. A 10 s SIGKILL hang in two gears makes every pause **slow and unclean**
+  — the opposite of the "silent background process" goal. This is a precondition for the
+  auto-pause story to be clean.
+- **Boundary note (CLAUDE.md §11):** a perimeter that pauses unclean must still pass the same
+  boundary self-tests on resume; verify resume-correctness after fixing teardown.
+
+### Handoff — where to continue
+
+Open items from §8 unchanged: (a) does idle auto-pause actually fire in production
+(`mem-phase3-operator-verify`); (b) mitmproxy long-run memory growth. Added this session:
+(c) **fix social/skills SIGTERM handling** (§10.3) before relying on auto-pause for a clean
+teardown; (d) **capture a real `podman stats` per-container reading** (§10.2) next time the
+full perimeter is up. Full session log lives in the laptop's `~/state.json`
+(`disk-reclaim-and-cda-consolidation-2026-06-10`) and its `known_issues`.
 </content>
