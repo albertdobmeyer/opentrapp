@@ -157,3 +157,22 @@ perimeter — without ever consuming, advancing, or reading the message.
   fixed-interval polling is both higher latency (up to the interval) and more
   request volume than a 30 s long-poll, which blocks server-side and returns the
   instant a message lands.
+
+---
+
+## Addendum (2026-06-11) — waker survival is now structural (lazy-window leanness)
+
+Consequence 6 originally made `closeToTray` a hard prerequisite: "if closing the
+window exits the app, the waker dies." The lean background-process work (plan
+*Lean background-process architecture*, Phase A) changes the window-close mechanism
+from **hide** to **destroy**, so the ~222 MB `WebKitWebProcess` is freed at rest
+instead of staying resident. The waker's survival no longer depends on hiding a
+window — it is now **structural**: closing the dashboard destroys the window, and
+`RunEvent::ExitRequested` is vetoed via `api.prevent_exit()` (unless an explicit
+Quit set `AppState.quitting`), so the tray-only daemon — watchdog, idle waker, and
+perimeter — lives on with zero windows. `closeToTray` is retained but redefined:
+`true` (default) → close keeps the daemon; `false` → close == quit (sets the flag).
+The waker prerequisite holds for the default, now via `prevent_exit` rather than
+`window.hide()`. Implemented in `lib.rs` (`open_dashboard`/`request_quit`,
+`ExitRequested` veto), `orchestrator/state.rs` (`quitting: AtomicBool`),
+`lifecycle.rs` (signal handlers set the flag), `tauri.conf.json` (`windows: []`).

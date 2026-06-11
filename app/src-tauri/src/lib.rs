@@ -41,11 +41,12 @@ pub mod fuzz_api {
 
 use orchestrator::state::AppState;
 use std::path::PathBuf;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WindowEvent,
+    Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_store::StoreExt;
 
@@ -115,8 +116,8 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
-            "open" => show_main_window(app),
-            "quit" => app.exit(0),
+            "open" => open_dashboard(app),
+            "quit" => request_quit(app),
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
@@ -126,7 +127,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                 ..
             } = event
             {
-                show_main_window(tray.app_handle());
+                open_dashboard(tray.app_handle());
             }
         })
         .build(app)?;
@@ -134,12 +135,38 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     Ok(())
 }
 
-fn show_main_window(app: &tauri::AppHandle) {
+/// Open the dashboard: focus it if it already exists, otherwise BUILD it on
+/// demand. The webview is a transient resource — it does not exist while the app
+/// runs tray-only at rest (the ~222 MB WebKitWebProcess is freed on close). The
+/// label MUST be "main" — `capabilities/default.json` binds all IPC/plugin
+/// permissions to `windows:["main"]`.
+fn open_dashboard(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
         let _ = window.unminimize();
+        let _ = window.show();
         let _ = window.set_focus();
+        return;
     }
+    if let Err(e) = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+        .title("OpenTrApp")
+        .inner_size(1280.0, 800.0)
+        .min_inner_size(800.0, 600.0)
+        .resizable(true)
+        .build()
+    {
+        eprintln!("[lib] failed to build dashboard window: {e}");
+    }
+}
+
+/// Set the explicit-quit flag, then exit. The `RunEvent::ExitRequested` handler
+/// only allows the process (and the perimeter teardown) to terminate when this
+/// flag is set — otherwise it `prevent_exit()`s so closing the dashboard leaves
+/// the lean tray-only daemon running.
+fn request_quit(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<AppState>() {
+        state.quitting.store(true, Ordering::SeqCst);
+    }
+    app.exit(0);
 }
 
 /// Whether closing the window should hide to tray (keep the app + the idle
@@ -191,7 +218,7 @@ pub fn run() {
         // Single-instance guard: second launch focuses the main window and exits.
         // Must be registered first per tauri-plugin-single-instance docs.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            show_main_window(app);
+            open_dashboard(app);
         }))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
@@ -208,6 +235,11 @@ pub fn run() {
         .manage(app_state)
         .setup(move |app| {
             setup_tray(app)?;
+            // Open the dashboard on launch (first-run wizard + normal UX). The
+            // window is destroyed on close — leaving the lean tray-only daemon —
+            // and rebuilt on demand from the tray. (windows:[] in tauri.conf.json
+            // means we own window creation here, not at config-time.)
+            open_dashboard(app.handle());
             // Install Unix signal handlers (SIGTERM, SIGINT → graceful exit).
             install_signal_handlers(app.handle().clone());
             // Spawn the perimeter-state watchdog.
@@ -259,28 +291,46 @@ pub fn run() {
             commands::egress::list_egress_approvals,
             commands::egress::apply_allowlist_decision,
         ])
-        // Close-to-tray: when enabled (default), the window's X hides instead of
-        // exiting, so the app — and the idle wake-on-message waker — survive a
-        // window close. Quitting is still explicit via the tray's Quit item.
-        // (ADR-0018: the waker is a host-process task; exiting would kill it.)
+        // On window close: let the window DESTROY (frees the ~222 MB
+        // WebKitWebProcess — the old `hide()` kept it resident, which was the
+        // heaviness + the SIGBUS-under-memory-pressure source). Whether the
+        // *daemon* survives is decided in `RunEvent::ExitRequested` below:
+        // closeToTray=true (default) keeps the tray daemon + idle waker alive via
+        // `prevent_exit`; closeToTray=false means close==quit, so set the flag
+        // here. (ADR-0018: the waker survives structurally now, not via hide.)
         .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                if close_to_tray_enabled(window.app_handle()) {
-                    api.prevent_close();
-                    let _ = window.hide();
+            if let WindowEvent::CloseRequested { .. } = event {
+                if !close_to_tray_enabled(window.app_handle()) {
+                    if let Some(state) = window.app_handle().try_state::<AppState>() {
+                        state.quitting.store(true, Ordering::SeqCst);
+                    }
                 }
+                // Do NOT prevent_close — the window is allowed to destroy.
             }
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(move |_app_handle, event| {
-            // RunEvent::Exit fires once when the app is about to terminate
-            // (after all windows are gone). Tear the perimeter down here so
-            // app-close ⇒ perimeter-down (P11). Synchronous, with per-call
-            // timeouts enforced inside the orchestrator.
-            if let tauri::RunEvent::Exit = &event {
+        .run(move |app_handle, event| match &event {
+            // Fires when the last window closes OR on an explicit exit request.
+            // Unless an explicit Quit set the flag, veto the exit so the lean
+            // tray-only daemon (watchdog + idle waker + perimeter) lives on with
+            // zero windows. The tray icon holds the event loop open.
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                let quitting = app_handle
+                    .try_state::<AppState>()
+                    .map(|s| s.quitting.load(Ordering::SeqCst))
+                    .unwrap_or(false);
+                if !quitting {
+                    api.prevent_exit();
+                }
+            }
+            // Only reached on an explicit, un-vetoed Quit (tray Quit / SIGTERM /
+            // SIGINT, which set the flag). Tear the perimeter down (P11):
+            // app-quit ⇒ perimeter-down. Synchronous, timeouts in the orchestrator.
+            tauri::RunEvent::Exit => {
                 bring_perimeter_down_sync(&perimeter_root_exit);
                 clear_runguard();
             }
+            _ => {}
         });
 }

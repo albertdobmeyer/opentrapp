@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::AtomicBool;
 use std::sync::{Mutex, RwLock};
 
 use super::discovery::DiscoveredComponent;
@@ -23,6 +24,12 @@ pub struct AppState {
     /// an external resume can stop and await it before bringing the perimeter
     /// back up. See `crate::idle` and ADR-0018.
     pub waker: Mutex<Option<crate::idle::IdleWaker>>,
+    /// Set to `true` by an EXPLICIT quit (tray Quit, SIGTERM/SIGINT) before
+    /// `exit(0)`. The `RunEvent::ExitRequested` handler reads it: when `false`
+    /// it `prevent_exit()`s so the daemon survives the dashboard window being
+    /// closed/destroyed (the lean tray-only resting state). Only an explicit
+    /// quit lets `RunEvent::Exit` fire and tear the perimeter down. See lib.rs.
+    pub quitting: AtomicBool,
 }
 
 impl AppState {
@@ -34,6 +41,7 @@ impl AppState {
             active_streams: Mutex::new(HashMap::new()),
             idle_stops: Mutex::new(HashMap::new()),
             waker: Mutex::new(None),
+            quitting: AtomicBool::new(false),
         }
     }
 }

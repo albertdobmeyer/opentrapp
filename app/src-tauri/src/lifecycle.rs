@@ -762,6 +762,14 @@ pub fn install_signal_handlers(handle: AppHandle) {
             _ = sigint.recv()  => "SIGINT",
         };
         eprintln!("[lifecycle] received {signame} — initiating graceful exit");
+        // Mark this as an EXPLICIT quit so lib.rs's `RunEvent::ExitRequested` veto
+        // lets the app actually exit (and tear the perimeter down). Without it,
+        // `prevent_exit` would keep the daemon alive and the signal would no-op.
+        if let Some(state) = handle.try_state::<crate::orchestrator::state::AppState>() {
+            state
+                .quitting
+                .store(true, std::sync::atomic::Ordering::SeqCst);
+        }
         handle.exit(0);
     });
 }
