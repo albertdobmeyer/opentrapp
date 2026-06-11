@@ -7,12 +7,16 @@
 # Holds NOT: API keys, application code, persistent state
 # Attack surface: nftables ruleset + tinyproxy HTTP CONNECT proxy + DoH resolver
 #
-# Built from the same node:22-alpine digest the rest of the perimeter pins.
-# Reusing this digest avoids adding a new image to the supply-chain audit;
-# the unused Node runtime is dead weight in the image (~50 MB) but the
-# attack-surface tradeoff favours fewer pinned digests over slimmer images.
+# Node-less alpine base (#3 / WS2, 2026-06-11). vault-egress runs only C tools
+# (nftables, tinyproxy, unbound) + a shell entrypoint — it never used Node. This
+# is the ONE container with NET_ADMIN + public-internet attachment, so removing the
+# unused Node/JS runtime is the highest-leverage attack-surface cut in the whole
+# perimeter (no interpreter for an attacker to leverage post-compromise) and drops
+# ~50 MB. Tradeoff: adds one pinned base digest (alpine) to the supply-chain audit
+# — accepted in favour of the smaller attack surface + image. alpine 3.21 matches
+# the alpine line node:22-alpine is built on (musl/apk ABI unchanged).
 
-FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00
+FROM alpine:3.21@sha256:48b0309ca019d89d40f670aa1bc06e426dc0931948452e8491e3d65087abc07d
 
 # TODO(supply-chain): pin package versions explicitly once the supply-chain
 # audit workflow runs against this image. The unpinned `apk add` here matches
