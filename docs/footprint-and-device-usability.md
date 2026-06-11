@@ -18,10 +18,11 @@ Short answers up front, the evidence after.
 
 ## TL;DR
 
-- **The dominant cost is OpenClaw, not us.** At rest, ~73–77% of the perimeter's RAM is
-  the Node 22 runtime plus the OpenClaw agent — an unavoidable cost of running *that
-  agent at all*. Our security architecture adds ~23–27% (an always-on egress proxy plus a
-  lean network-filter container). Our orchestrator app itself is small.
+- **The dominant cost is OpenClaw, not us.** At rest [measured 2026-06-09], **~85%** of the
+  perimeter's 421 MB is the Node 22 runtime plus the OpenClaw agent (356 MB) — an unavoidable
+  cost of running *that agent at all*. Our security infra adds **~15%** (proxy 54 MB + egress
+  10.6 MB) — *smaller* than first estimated, though the split shifts under active load and
+  over long sessions (§2). Our orchestrator app itself is small.
 - **Our orchestrator app is light.** Tauri (Rust + the OS webview, no bundled Chromium)
   sits around ~150 MB resident, most of which is the shared OS webview, not our code. It
   runs no AI in-process and has no busy-polling loops.
@@ -50,11 +51,11 @@ These numbers come from three sources, labelled throughout:
   `~/.claude/plans/glimmering-meandering-babbage.md`, kept where no clean live number
   exists.
 
-**The honest caveat:** the primary dev laptop (7.2 GB RAM) *cannot run the full
-five-container perimeter without swap-storming*, so a clean per-container measurement of
-the whole live perimeter has never been taken on it. The figures below combine a live
-single-container measurement, image sizes on disk, and external grounding for the runtimes
-involved. Where a number is an estimate, it says so.
+**The honest caveat (since resolved — see §10.2):** the dev laptop swap-storms the full
+perimeter *only* when heavy co-tenants (Cursor/Brave/AI session) are also resident. With them
+closed, the resting perimeter was measured cleanly via `podman stats` on 2026-06-09, so the
+per-container RAM figures below are now **measured**, not estimated. Image sizes are on-disk
+reads; the few remaining estimates are labelled where they stand.
 
 ---
 
@@ -79,25 +80,32 @@ shields are on-demand and absent at rest):
 
 | Container | Runtime | Image (disk) | Resting RAM | Attribution |
 |---|---|---|---|---|
-| **vault-agent** | Node 22 + OpenClaw | 689 MB published / 590 MB slimmed | **197 MB [measured, idle]** · ~600 MB [estimate, under load] | **OpenClaw-intrinsic** |
-| **vault-proxy** | mitmproxy (Python) | 250 MB | ~150 MB [estimate] | **Our security infra** |
-| **vault-egress** | nftables/resolver (+ unused Node) | 176 MB | ~30–80 MB [estimate] | **Our security infra** |
+| **vault-agent** | Node 22 + OpenClaw | 689 MB published / 590 MB slimmed | **356 MB [measured, connected idle]** · ~1.35 GB startup spike (~90 s) [measured] | **OpenClaw-intrinsic** |
+| **vault-proxy** | mitmproxy (Python) | 250 MB | **54 MB [measured, fresh]** | **Our security infra** |
+| **vault-egress** | nftables/resolver (+ unused Node) | 176 MB | **10.6 MB [measured]** | **Our security infra** |
 | *vault-skills* | Python + bash (idle) | 234 MB | ~0 at rest (on-demand) | Our security infra |
 | *vault-social* | Python + bash (idle) | 154 MB | ~0 (parked) | Our security infra |
 
-A useful reality check: the one **live** agent-container measurement is **197 MB** while
-idle (just the gateway long-polling Telegram) — well under the ~600 MB planning estimate.
-The ~600 MB figure is the working set under active reasoning; the resting figure is much
-lower. So the resting perimeter is plausibly **~0.4–0.5 GB** (agent idle + proxy + egress),
-climbing toward **~0.8–1.0 GB** only when the agent is actively working.
+The resting perimeter was **measured at ≈ 421 MB** (egress 10.6 + proxy 54 + agent 356,
+`podman stats`, 2026-06-09) — well under the ~600 MB the planning docs feared for the agent
+alone. The agent's connected-idle RSS is 356 MB (just the gateway long-polling Telegram);
+the ~600 MB figure is the working set under active reasoning. The one number to respect is
+the **~1.35 GB startup spike** (~90 s, Node loading 136 extensions): that transient, not the
+resting state, is what stresses a memory-tight box (see §10.2).
 
 ### The headline split (resting RAM)
 
-| Bucket | RAM | Share |
+| Bucket | RAM (measured, resting idle) | Share |
 |---|---|---|
-| **OpenClaw-intrinsic** (vault-agent: Node + agent) | ~400–600 MB | **~73–77%** |
-| **Our security infra** (proxy + egress) | ~180–230 MB | ~23–27% |
+| **OpenClaw-intrinsic** (vault-agent: Node + agent) | 356 MB | **~85%** |
+| **Our security infra** (proxy 54 + egress 10.6) | ~65 MB | ~15% |
 | **Orchestration** (per-container podman/conmon/networking) | tens of MB | small |
+
+The freshly-measured proxy (54 MB, not the earlier ~150 MB estimate) makes *our* share
+**smaller** than first thought at rest — ~15%, not ~25%. **But this split is non-stationary**:
+under active reasoning the agent rises toward ~600 MB (pushing OpenClaw's share up), and
+mitmproxy is known to grow over a long session (pending the WS1-1a measurement) — at which
+point *our* share rises instead. The single resting snapshot is a floor, not the whole story.
 
 External grounding corroborates every line: a working Node LLM client is a few hundred MB
 ([nodejs.org](https://nodejs.org/learn/diagnostics/memory/understanding-and-tuning-memory)),
@@ -146,7 +154,7 @@ Two things, in order of weight:
    which is exactly what idle auto-pause does.
 2. **Our security architecture (a deliberate choice).** The L7/L3 egress split
    ([ADR-0009](adr/0009-five-container-perimeter.md)) means an always-on mitmproxy
-   (~150 MB) plus a lean egress container (~30–80 MB). This is the price of
+   (54 MB measured, fresh) plus a lean egress container (10.6 MB measured). This is the price of
    defense-in-depth — the proxy injects credentials and enforces the domain allowlist; the
    egress container enforces a kernel-level destination filter and pinned DNS. It is a
    design decision, not an accident, and it is the part we could most plausibly tune (e.g.
@@ -233,7 +241,7 @@ while idle.
 - **mitmproxy memory growth (watch-item).** mitmproxy is known to grow over long sessions
   as it retains flows — one report saw ~50 MB climb to ~550 MB in ~10 minutes of heavy
   traffic ([mitmproxy#4456](https://github.com/mitmproxy/mitmproxy/issues/4456)). Our
-  ~150 MB resting figure is a freshly-started instance. For a "silent background process"
+  **54 MB measured** figure is a freshly-started instance. For a "silent background process"
   goal, the proxy's long-run growth deserves a periodic-recycle or a flow-retention cap.
 - **Dev-disk hygiene (not user-facing).** The Rust `target/` build cache is ~29 GB and old
   `podman images` total ~5.6 GB (largely reclaimable dupes incl. pre-rebrand tags). This
@@ -294,8 +302,16 @@ Stopping all five freed ≈ **400 MB** RSS by `free` delta.
 per-container `podman stats` read — the ~400 MB likely *undercounts* (page cache muddies the
 delta), and the box had light co-tenants at the time (no heavy Cursor/Brave/AI load). It does
 **not** overturn the §1 caveat; it *corroborates §5* — the swap-storm is co-tenant-driven, not
-perimeter-driven. **Still missing:** a real `podman stats` per-container capture while the
-full perimeter is live. Do this next time it's up.
+perimeter-driven.
+
+**Captured 2026-06-09 [measured] — the clean `podman stats` per-container read that was
+missing.** With co-tenants freed, the resting perimeter was brought up incrementally and
+read with `podman stats --no-stream`: **vault-egress 10.6 MB, vault-proxy 54 MB,
+vault-agent 356 MB (settled, idle) → resting total ≈ 421 MB**, with **no swap-storm** (swap
+grew +15 MB across the whole run, free RAM held > 1.1 GB). The agent **spikes to ~1.35 GB
+for ~90 s during startup** (Node loading 136 extensions) before GC-ing to 356 MB — that
+transient spike, not the resting state, is the real peak-memory event. skills/social are
+on-demand (~0 at rest). These measured numbers supersede the §2 estimates (corrected below).
 
 ### 10.3 NEW — SIGTERM graceful-shutdown bug in vault-social / vault-skills
 
