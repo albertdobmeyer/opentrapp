@@ -23,9 +23,12 @@ Short answers up front, the evidence after.
   cost of running *that agent at all*. Our security infra adds **~15%** (proxy 54 MB + egress
   10.6 MB) — *smaller* than first estimated, though the split shifts under active load and
   over long sessions (§2). Our orchestrator app itself is small.
-- **Our orchestrator app is light.** Tauri (Rust + the OS webview, no bundled Chromium)
-  sits around ~150 MB resident, most of which is the shared OS webview, not our code. It
-  runs no AI in-process and has no busy-polling loops.
+- **Our orchestrator app's GUI is actually the heaviest part** [corrected, measured 2026-06-11].
+  The Tauri WebKitGTK webview is **~442 MB resident** with the dashboard open (WebProcess 222 MB
+  + GTK main 156 MB + network 47 MB) — *more than the whole perimeter*, and the SIGBUS trigger.
+  It runs no AI in-process and has no busy-polling loops, but WebKitGTK is not light. Phase A
+  (destroy the webview on close → tray-only daemon) frees the 222 MB WebProcess at rest; Phase B
+  (headless daemon) targets ~30–60 MB. See §3/§10.
 - **The dev-laptop swap-storm is an artifact, not the typical experience.** It happened on
   a 7.2 GB, 2017 budget APU running Cursor + Brave + a Claude Code session *and* the full
   perimeter at once. The perimeter's own contribution is ~0.4–1.0 GB; the co-tenants were
@@ -136,10 +139,17 @@ light:
 - **Light frontend** [measured]: 536 KB of TS/TSX, React + a router + an icon set, no
   charting/editor heavyweights.
 
-**Estimate: the app's own resident RAM is ~150 MB**, the large majority being the shared OS
-webview rather than our Rust code (~30–60 MB). Against a perimeter of several hundred MB to
-~1 GB, the orchestrator is **at most ~15–20% of the total**, and the part *beyond* the
-unavoidable OS webview is under 10%. **Our app is not the heavy part.**
+**CORRECTION [measured 2026-06-11]: the ~150 MB estimate above was WRONG — the GUI is the
+single heaviest part of OpenTrApp.** A live per-process read (dashboard open, no perimeter)
+showed **~442 MB RSS**: `WebKitWebProcess` 222 MB (the renderer) + main/GTK process 156 MB +
+`WebKitNetworkProcess` 47 MB + AppImage wrapper 17 MB. That is *more than the whole perimeter*
+(~421 MB), and it is what triggered the `WebKitNetworkProcess` SIGBUS under the agent's 1.35 GB
+startup spike. WebKitGTK is far from "light." **Phase A** (destroy the webview on window-close →
+lean tray-only daemon, commit `dcd5a29`) frees the 222 MB `WebProcess` at rest, dropping the
+app's resting footprint to ~220 MB (GTK main + network process); **Phase B** (a webview-less
+headless daemon) targets ~30–60 MB. So "our app is not the heavy part" was an estimation error —
+the GUI webview is in fact the #1 resident-RAM consumer, which is exactly why the leanness work
+matters. The §2/§5 perimeter conclusions are unaffected (those numbers were measured).
 
 ---
 
