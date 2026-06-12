@@ -67,7 +67,9 @@
 >    one remaining step, plus wiring the daemon to run it on (re)start, fail-closed (#45). **This is THE gate.**
 > 2. **Idle auto-pause + wake verified in production** (WS0-0a, task #35) — the headline feature firing and
 >    waking *exactly once* under a real agent (the box could never run this end-to-end).
-> 3. **Code signing** — unsigned installers undercut "security tool" trust (the SignPath blocker, §454 below).
+> 3. **Code signing** — **CI now scaffolded** (decision 2026-06-12: scaffold *both* Windows + macOS).
+>    macOS notarization is live-inert; Windows SignPath is a ready-to-activate template. Remaining is human
+>    procurement only — see the signing decision in "RUN THIS NEXT — resubmit SignPath" below.
 > 4. **Daemon-split defer verified + promoted** — run `docs/b4b-hardware-test-plan.md` (7 tests); if it
 >    passes, flip `OPENTRAPP_DAEMON_DEFER` opt-in → default to actually deliver the lean background process.
 >
@@ -565,6 +567,23 @@
 ## RUN THIS NEXT — close the security gap, then resubmit SignPath
 
 The maintainer applied to **SignPath Foundation** for free Windows code-signing under the old **Lobster-TrApp** branding + the old website. SignPath is on hold. The maintainer wants to **resubmit fresh** under the **OpenTrApp** brand + `opentrapp.com` — **after** the open security issues are documented and the regressions are tested. Order matters: a clean security posture is what makes the resubmission credible.
+
+> ### ⟶ Signing decision (2026-06-12) — scaffold both Windows + macOS now
+>
+> **Decision:** rather than wait on the SignPath resubmission, **pre-build the CI integration for both
+> platforms** (commit `66750fc`), so the moment certs/approval land, activation is a few-line change — not
+> new engineering. This de-risks the resubmission and removes signing from the critical path.
+> - **macOS — wired LIVE + inert.** `tauri-action` `APPLE_*` env passthrough signs + notarizes the
+>   `.app`/`.dmg` automatically when the six secrets are present, skips when absent. No behavior change to
+>   current releases. *Activate by:* enrolling in the Apple Developer Program and adding the `APPLE_*` secrets.
+> - **Windows — ready-to-activate SignPath template** (commented in `ci.yml`, inline checklist). Deliberately
+>   NOT live: the org/project/policy slugs come from the (fresh, pending) SignPath OSS account, and every
+>   `uses:` must be SHA-pinned (OpenSSF Scorecard). *Activate by:* SHA-pinning the SignPath action, filling
+>   the slugs, adding `SIGNPATH_*` secrets, uncommenting. This supersedes the CI-integration steps in the
+>   old plan `~/.claude/plans/ethereal-wiggling-rocket.md` — they are now pre-written in the workflow.
+> - **Order still holds:** the security work (A1–A4 below) → green gates → resubmit SignPath under OpenTrApp
+>   + rerun OpenSSF badge. The scaffold doesn't change that order; it just means the *CI half is already done*.
+> - Full required-secrets tables: [`docs/code-signing-policy.md`](code-signing-policy.md).
 
 ### The security work blocking SignPath
 
