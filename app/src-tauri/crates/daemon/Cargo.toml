@@ -17,3 +17,6 @@ path = "src/main.rs"
 
 [dependencies]
 opentrapp-core = { path = "../core" }
+# The async runtime + signal handling for the supervision loop. NOT tauri/webkit
+# — the WebKit-free CI gate still holds.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "time", "sync"] }
