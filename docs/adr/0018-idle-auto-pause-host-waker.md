@@ -176,3 +176,41 @@ The waker prerequisite holds for the default, now via `prevent_exit` rather than
 `window.hide()`. Implemented in `lib.rs` (`open_dashboard`/`request_quit`,
 `ExitRequested` veto), `orchestrator/state.rs` (`quitting: AtomicBool`),
 `lifecycle.rs` (signal handlers set the flag), `tauri.conf.json` (`windows: []`).
+
+---
+
+## Addendum (2026-06-12) — the resumed boundary must equal the cold boundary
+
+Idle auto-pause introduces a new lifecycle event this ADR did not originally treat
+as security-relevant: **resume**. A perimeter that wakes from dormant (or a user
+pause, or a daemon restart) and is "alive but subtly wrong" — network isolation not
+re-applied, the L3 egress filter not reloaded, the proxy CA silently swapped — is
+*worse* than a visible failure, because the breach is silent (CLAUDE.md §11). The
+contract is now explicit: **a resumed boundary must pass the SAME boundary
+self-test as a cold start, fail-closed.**
+
+- **The check.** [`tests/boundary-selftest.sh`](../../tests/boundary-selftest.sh)
+  (six checks: network isolation, L7 allowlist, vendor-credential injection, L3
+  egress filter, proxy-CA pinning, no host-side untrusted content) is embedded in
+  the daemon (`opentrapp_core::selftest`, via `include_str!`), staged to
+  `~/.opentrapp/boundary/` at runtime, and run after every (re)start in
+  `supervisor::run` (cold), `resume_now` (dormant/user-pause wake), and `restart_now`.
+- **Fail-closed.** Verdict from the script's exit code: `Pass` (0) clears any alert;
+  `Fail` (1 / killed / unknown) → **stop the perimeter** + raise the `boundary-failed`
+  marker (a half-built boundary serves no traffic); `CannotAssess` (2) → raise the
+  alert but leave the perimeter up (could-not-measure ≠ failed). The marker is the
+  viewer's signal to surface a security alert.
+- **Opt-in until hardware-verified (§11).** The wiring ships **inert by default**,
+  gated on `OPENTRAPP_SELFTEST_ON_RESUME=1`, mirroring `OPENTRAPP_DAEMON_DEFER`
+  (ADR-0019). The boundary assertions can't run on the dev box (it swap-storms
+  running the full perimeter), so until they pass on capable hardware the default
+  behavior is unchanged — *unverifiable ≠ verified*. Promote to default once the
+  script passes cold + on every resume path on real hardware (road-to-recommendable
+  §1A/§1B, task #45).
+- **Operator escape hatch.** `opentrapp-daemon --boundary-selftest` runs the live
+  check once and reports the verdict (exit 0/1/2) *without* tearing the perimeter
+  down — for verifying a cold or resumed boundary by hand.
+
+Implemented in `crates/core/src/selftest.rs`, `crates/core/src/supervisor.rs`
+(`verify_boundary_fail_closed` + the three call sites), `crates/core/src/markers.rs`
+(`BOUNDARY_FAILED`), and `crates/daemon/src/main.rs` (`--boundary-selftest`).

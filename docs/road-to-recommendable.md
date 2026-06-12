@@ -65,7 +65,13 @@ script as 1A — re-run `make boundary-selftest` after each resume path:
   restart) → re-run **1A** → still passes.
 - [ ] **Fail-closed:** if any boundary check fails on resume, the perimeter holds
   closed and alerts (does NOT serve traffic through a half-built boundary).
-- [ ] Fold the contract into [ADR-0018](adr/0018-idle-auto-pause-host-waker.md) (WS4, task #45).
+- [x] **Daemon wiring landed (opt-in, CI-green)** — `opentrapp_core::selftest`
+  embeds the script; the supervisor runs it after every (re)start
+  (`verify_boundary_fail_closed`: Fail→stop+`boundary-failed` marker, CannotAssess→
+  alert, Pass→clear), gated on `OPENTRAPP_SELFTEST_ON_RESUME=1` (default OFF, §11).
+  `opentrapp-daemon --boundary-selftest` runs it once on demand. Contract folded
+  into [ADR-0018](adr/0018-idle-auto-pause-host-waker.md) addendum (WS4, task #45).
+  **Remaining:** enable + verify green on hardware, then promote to default.
 
 ### 1C · Idle auto-pause + wake verified in PRODUCTION 🖥️ ⬜ (WS0-0a, task #35)
 

@@ -114,6 +114,7 @@ async fn resume_now(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
         return; // already awake
     }
     perimeter_up(data_dir.clone()).await;
+    verify_boundary_fail_closed(data_dir).await;
     eprintln!("[supervisor] resumed");
 }
 
@@ -125,7 +126,51 @@ async fn restart_now(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
     crate::markers::clear(data_dir, crate::markers::DORMANT);
     perimeter_down(data_dir.clone()).await;
     perimeter_up(data_dir.clone()).await;
+    verify_boundary_fail_closed(data_dir).await;
     eprintln!("[supervisor] restarted");
+}
+
+/// After a (re)start, prove the boundary holds — a resumed boundary that is
+/// "alive but subtly wrong" must not serve traffic (road-to-recommendable §1B,
+/// CLAUDE.md §11). **Opt-in**: inert unless `OPENTRAPP_SELFTEST_ON_RESUME=1`, so
+/// shipping behavior is unchanged until the script is hardware-verified (§11,
+/// mirrors `OPENTRAPP_DAEMON_DEFER`).
+///
+/// Fail-closed on the script's verdict: `Fail` → stop the perimeter + raise the
+/// `BOUNDARY_FAILED` alert (a half-built boundary serves nothing); `CannotAssess`
+/// → alert but leave it up (couldn't measure ≠ failed); `Pass` → clear the alert.
+async fn verify_boundary_fail_closed(data_dir: &PathBuf) {
+    if !crate::selftest::on_resume_enabled() {
+        return;
+    }
+    let d = data_dir.clone();
+    let (verdict, output) = tokio::task::spawn_blocking(move || crate::selftest::run_blocking(&d))
+        .await
+        .unwrap_or((
+            crate::selftest::Verdict::Fail,
+            "boundary self-test task panicked".to_string(),
+        ));
+    match verdict {
+        crate::selftest::Verdict::Pass => {
+            crate::markers::clear(data_dir, crate::markers::BOUNDARY_FAILED);
+            eprintln!("[supervisor] boundary self-test PASS");
+        }
+        crate::selftest::Verdict::CannotAssess => {
+            let _ = crate::markers::set(data_dir, crate::markers::BOUNDARY_FAILED, "cannot-assess");
+            eprintln!("[supervisor] boundary self-test could NOT assess — alerting, leaving up\n{output}");
+        }
+        crate::selftest::Verdict::Fail => {
+            let _ =
+                crate::markers::set(data_dir, crate::markers::BOUNDARY_FAILED, "boundary-failed");
+            eprintln!(
+                "[supervisor] boundary self-test FAILED — holding the perimeter closed (fail-closed)\n{output}"
+            );
+            let d = data_dir.clone();
+            let _ =
+                tokio::task::spawn_blocking(move || crate::orchestrator::podman::perimeter_stop(&d))
+                    .await;
+        }
+    }
 }
 
 /// Own the perimeter until `shutdown` fires (or a Shutdown control request).
@@ -136,6 +181,7 @@ async fn restart_now(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
 /// ADR-0018). On shutdown, cancels the waker and brings the perimeter down.
 pub async fn run(data_dir: PathBuf, threshold_ms: u64, shutdown: Arc<Notify>) {
     perimeter_up(data_dir.clone()).await;
+    verify_boundary_fail_closed(&data_dir).await;
 
     let mut waker: Option<IdleWaker> = None;
 

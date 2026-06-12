@@ -32,6 +32,9 @@ async fn main() -> ExitCode {
     if args.iter().any(|a| a == "--selftest") {
         return selftest();
     }
+    if args.iter().any(|a| a == "--boundary-selftest") {
+        return boundary_selftest();
+    }
     if args.iter().any(|a| a == "--status") {
         return print_status();
     }
@@ -136,7 +139,33 @@ fn print_help() {
     println!("               queue a control request for the running daemon");
     println!("  --status     print durable perimeter state + runguard owner");
     println!("  --selftest   exercise the marker contract end-to-end, exit 0/1");
+    println!("  --boundary-selftest");
+    println!("               run the live boundary self-test now (exit 0 hold / 1 fail / 2 can't assess)");
     println!("  --help       this message");
+}
+
+/// Run the boundary self-test once against the live perimeter and exit with its
+/// verdict (road-to-recommendable §1A, task #45). Unlike the always-on resume
+/// check this is on-demand and does NOT tear the perimeter down — it just
+/// reports, so an operator can verify a cold or resumed boundary by hand.
+fn boundary_selftest() -> ExitCode {
+    let data_dir = markers::default_data_dir();
+    let (verdict, output) = opentrapp_core::selftest::run_blocking(&data_dir);
+    print!("{output}");
+    match verdict {
+        opentrapp_core::selftest::Verdict::Pass => {
+            println!("opentrapp-daemon: boundary self-test PASS");
+            ExitCode::SUCCESS
+        }
+        opentrapp_core::selftest::Verdict::CannotAssess => {
+            eprintln!("opentrapp-daemon: boundary self-test could not assess");
+            ExitCode::from(2)
+        }
+        opentrapp_core::selftest::Verdict::Fail => {
+            eprintln!("opentrapp-daemon: boundary self-test FAILED");
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// Exercise the marker contract round-trip in a temp dir (no perimeter needed).
