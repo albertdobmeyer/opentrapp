@@ -1,7 +1,7 @@
 {
   "name": "opentrapp",
   "private": true,
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Containerization perimeter + skill scanner for autonomous CLI agents",
   "author": "Albert Dobmeyer",
   "license": "MIT",
