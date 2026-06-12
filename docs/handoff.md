@@ -1,8 +1,62 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-08 (**Karen v0.6 E2E caught + FIXED a shipped high-severity first-run dead-end (wizard couldn't save creds on packaged builds) — commit 80e4dfa, CI all-green**; memory opt COMPLETE (Phase 0–3); opencode pitch SEND-READY (only the human send remains); skill scanner audited → BYO-model + honest docs + CDR hardened (post-verify retry + regression tests); current shipped release: v0.6.0)
-**Current phase:** v0.6 shipped; footprint reduced (memory Phase 0–3 done); opencode skills-pointer pitch de-risked end-to-end and ready to send
-**Branch:** `main` — pushed + released (`v0.6.0` tag → published GitHub release, `/releases/latest`). Monorepo (ADR-0013).
+**Last updated:** 2026-06-12 (**Phase B — the headless daemon/viewer split — implemented end-to-end (B1–B4b), CI-green across all platforms; v0.7.2-rc1 cut + published (pre-release) + announced (Discussion #73); the daemon ships in every installer.** Phase A leanness gate-verified; Phase C generic per-component dashboard landed; PR board cleared (14 Dependabot closed-to-regenerate, #56 re-applied). Current shipped release: **v0.7.2-rc1** (pre-release; v0.7.0 is the last stable).)
+**Current phase:** Phase B daemon split done behind an opt-in; the frontier is **hardware verification of the defer** (the memory win it unlocks is unverified on capable hardware)
+**Branch:** `main` — pushed; `v0.7.2-rc1` tag → published pre-release. Monorepo (ADR-0013); `app/src-tauri` is now a Cargo workspace (`opentrapp-core` + `opentrapp-daemon`).
+
+> ## ⟶ NEXT SESSION — READ THIS FIRST: the road from "built" to "recommendable public security tool"
+>
+> Phase B (the headless daemon/viewer split, [ADR-0019](adr/0019-headless-daemon-gui-viewer-split.md)) is
+> implemented end-to-end and CI-green; v0.7.2-rc1 ships it. **The architecture is done.** What separates it
+> from a tool we can publicly recommend as an *official* security layer for open agent systems (OpenClaw
+> et al.) is **verification at the consumption end on real hardware** — which this dev box physically can't
+> do (it swap-storms running the full perimeter). The critical path runs through **capable hardware** (the
+> Windows box / a cloud VM). This is a §11 problem, not an architecture problem.
+>
+> ### What landed this session (2026-06-09 → 06-12)
+> - **Phase B daemon split — FULL (B1–B4b), CI-green on all platforms.** `opentrapp-core` (tauri-free) holds
+>   the orchestration core + marker contract; `opentrapp-daemon` owns the perimeter (runguard → up →
+>   idle-supervise + waker → teardown) + a durable control channel; it **ships as a sidecar in every
+>   installer** (verified inside the `.deb`: `usr/bin/opentrapp-daemon`, 5.8 MB, WebKit-free). The GUI can
+>   **defer** to it (viewer mode) behind opt-in `OPENTRAPP_DAEMON_DEFER=1` (default OFF → behaves exactly
+>   like before). CI asserts the daemon graph has no WebKit.
+> - **Phase A leanness gate-verified** live (close dashboard → ~211 MB freed, no leak) — footprint §10.4.
+> - **Phase C** generic per-component dashboard (dev mode) — the manifest-projection vision.
+> - **v0.7.2-rc1** cut + published (pre-release) + announced (Discussion #73 — **not yet pinned**; pinning
+>   is GitHub-UI-only, no API). PR board cleared (14 Dependabot closed-to-regenerate, #56 re-applied fresh).
+>
+> ### The road to public recommendation (prioritized — this is the real "what's left")
+> **Tier 1 — load-bearing (a security tool's claims must be *verified*, not asserted — §11):**
+> 1. **Boundary self-test on real hardware, cold-start AND resume** (WS0-0b, tasks #39/#40). Prove on a real
+>    perimeter: network isolation holds, credentials inject, the allowlist is loaded, the proxy CA is
+>    unchanged, the L3 egress filter is active — and that a *resumed*/idle-paused boundary passes the SAME
+>    tests as a cold start (fail-closed if not). **This is THE gate** for calling it a security tool.
+> 2. **Idle auto-pause + wake verified in production** (WS0-0a, task #35) — the headline feature firing and
+>    waking *exactly once* under a real agent (the box could never run this end-to-end).
+> 3. **Code signing** — unsigned installers undercut "security tool" trust (the SignPath blocker, §454 below).
+> 4. **Daemon-split defer verified + promoted** — run `docs/b4b-hardware-test-plan.md` (7 tests); if it
+>    passes, flip `OPENTRAPP_DAEMON_DEFER` opt-in → default to actually deliver the lean background process.
+>
+> **Tier 2 — hardening:** proxy RSS bounded over (load × time) so a days-long run can't leak (WS1, #41/#42);
+> an **adversarial / red-team pass** (can a compromised agent actually break out of the perimeter?); ideally
+> a **third-party security review** (the gold standard for "official security tool").
+>
+> **Tier 3 — trust polish:** cut a **stable** release (not an RC) once Tier 1 verifies; tighten the
+> reproducible-build + SBOM/cosign story; a front-and-center "what this protects against / what it doesn't"
+> residual-risk page (we already say it can't make running an agent *absolutely* safe — make that prominent).
+>
+> ### Read first
+> [ADR-0019](adr/0019-headless-daemon-gui-viewer-split.md) · [b4b-hardware-test-plan.md](b4b-hardware-test-plan.md)
+> · [footprint §10.4](footprint-and-device-usability.md) · `app/src-tauri/crates/{core,daemon}/` ·
+> [threat-model.md](threat-model.md) (the basis for the Tier-1 boundary tests).
+>
+> ### Secondary / standing
+> - **opencode pitch** (`docs/pitch-opencode.md`, gitignored — do NOT commit) is send-ready + refreshed
+>   2026-06-12; only the human send remains (see the older callout below). Scoped to the skills-scanner
+>   pointer, NOT the perimeter.
+> - **Dependabot** will re-open fresh PRs against current `main`; review as a batch — merge the patch bumps,
+>   eyeball the majors individually (lucide-react 0→1, eslint 9→10, actions/upload+download-artifact 4→7/8).
+> - **Pin Discussion #73** in the GitHub UI (`···` → Pin discussion — there's no API for it).
 
 > ## ⟶ Fixed this session (2026-06-08, session 3): packaged first-run credential dead-end
 >
