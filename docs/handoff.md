@@ -25,6 +25,18 @@
 > - **3C — `docs/what-this-protects.md` shipped** (commit `00505f6`). Plain-language T1–T6 distillation, the
 >   "does NOT" half given equal weight, linked front-and-center from README **Values** + top of **Limitations**.
 >   Checklist 3C ✅ — the one Tier-3 item that needed no hardware.
+> - **2A/2B — soak + red-team artifacts authored** (commit `03c2245`). `tests/proxy-memory-soak.sh`
+>   (`make proxy-soak`, RSS over load×time + leak verdict) and `tests/red-team-breakout.sh` (`make red-team`,
+>   R1–R7 breakout battery, CONTAINED/BREACH, fail-closed). Lint + exit-code paths verified; 🔶 unrun pending hardware.
+> - **#45 — daemon runs the boundary self-test on every (re)start, fail-closed (IMPLEMENTED + CI-green).**
+>   Landed in two CI-verified slices: `opentrapp_core::selftest` embeds the script (`include_str!`) + maps
+>   exit→Verdict (slice 1, `7cf0730`); `supervisor::verify_boundary_fail_closed` runs it after cold start /
+>   resume / restart — Fail→stop+`boundary-failed` marker, CannotAssess→alert, Pass→clear (slice 2, `c8d4afc`).
+>   **Opt-in `OPENTRAPP_SELFTEST_ON_RESUME` (default OFF, §11)** → shipping behavior byte-unchanged until
+>   hardware-verified. `opentrapp-daemon --boundary-selftest` = on-demand operator check. ADR-0018 addendum
+>   documents the resumed==cold contract. The script is *embedded*, so there is **no packaged-resource staging
+>   to get wrong** — the daemon is self-contained. **Remaining (hardware):** flip the opt-in on, run green
+>   cold + every resume path, then promote opt-in→default.
 >
 > ### Landed prior session (2026-06-09 → 06-12) — Phase B
 > - **Phase B daemon split — FULL (B1–B4b), CI-green on all platforms.** `opentrapp-core` (tauri-free) holds
@@ -58,28 +70,28 @@
 >
 > ### Next session — tackle every item we can (DUAL PATH — pick by where you're running)
 >
-> **▸ If on the DEV BOX (this machine — can't run the perimeter, CI compiles Rust):** keep authoring the
-> executable artifact for each hardware-gated item so the hardware run is one command, and land the
-> CI-verifiable code. In priority order:
-> 1. **#45 — wire the daemon to run `boundary-selftest.sh` on every (re)start, fail-closed** (Rust in
->    `opentrapp-core`/`daemon`; stage the script as a packaged resource so the daemon finds it; ADR-0018
->    addendum). Compiles via CI round-trips like Phase B. *This makes 1B structural, not manual.*
-> 2. **2A — author `tests/proxy-memory-soak.sh`** (sustained load × time RSS sampler for `vault-proxy`,
->    mirroring `memory-profile.sh`; emits a growth table). Authorable + lintable here; run on hardware.
-> 3. **2B — author the red-team breakout playbook/script** (`tests/red-team-breakout.sh` or a doc): the
->    hostile-skill + escape attempts from threat-model T1/T2/T4, each expected-contained. Authorable here.
-> 4. **1E — scaffold the signing CI** (SignPath config for Windows, macOS notarization workflow steps) so
->    only the cert/secret drop remains. Check `docs/code-signing-policy.md` for the existing blocker.
+> **▸ If on the DEV BOX (this machine — can't run the perimeter, CI compiles Rust):** the executable
+> artifacts are now all authored — the dev-box authoring backlog is nearly exhausted. What's left here:
+> 1. ✅ **#45 — daemon runs `boundary-selftest.sh` on every (re)start, fail-closed** — DONE, CI-green
+>    (slices `7cf0730` + `c8d4afc`), behind opt-in `OPENTRAPP_SELFTEST_ON_RESUME`. Script *embedded* in the
+>    daemon (no staging). Remaining is hardware-only (enable + verify).
+> 2. ✅ **2A `tests/proxy-memory-soak.sh`** + ✅ **2B `tests/red-team-breakout.sh`** — authored, lint-clean.
+> 3. ⬜ **#55 / 1E — scaffold the signing CI** (SignPath for Windows, macOS notarization steps) so only the
+>    cert/secret drop remains. The last dev-box code item. Read `docs/code-signing-policy.md` for the blocker.
+> 4. (Then the dev box is tapped out — everything else needs the perimeter.)
 >
-> **▸ If on CAPABLE HARDWARE (Windows box / cloud VM — can run the full perimeter):** execute, top-down:
-> 1. `make perimeter-up` → `make boundary-selftest --record-baseline` (cold) → must be all-PASS. **1A.**
-> 2. Re-run after each resume: user-pause→resume, idle-dormant→wake, daemon kill→restart. **1B.** Fail-closed
->    on any mismatch. Fold the contract into ADR-0018 (#45).
+> **▸ If on CAPABLE HARDWARE (Windows box / cloud VM — can run the full perimeter):** execute, top-down.
+> Every test below is now a single `make` target:
+> 1. `make perimeter-up` → `make boundary-selftest` (cold; first run pins the CA baseline) → all-PASS. **1A.**
+> 2. `export OPENTRAPP_SELFTEST_ON_RESUME=1` and run the daemon so it self-tests on (re)start; re-run
+>    `make boundary-selftest` after each resume: user-pause→resume, idle-dormant→wake, daemon kill→restart.
+>    Fail-closed on any mismatch. **1B** (#45 — then promote the opt-in to default).
 > 3. Leave a real agent idle past threshold → Dormant → Telegram message → wakes + replies **exactly once**;
->    measure cold-start latency. **1C** (#35), and assert boundary+exactly-once (#40).
+>    measure cold-start latency. **1C** (#35), assert boundary+exactly-once (#40).
 > 4. Run `docs/b4b-hardware-test-plan.md` (7 tests, record RSS) → if green, flip `OPENTRAPP_DAEMON_DEFER`
 >    opt-in→default + record resting RSS in footprint §10.4. **1D.**
-> 5. `tests/proxy-memory-soak.sh` over a multi-hour run → attribute growth, apply fix. **2A/2B (#41/#42).**
+> 5. `make proxy-soak --duration 360` → attribute growth, apply fix (**2A/2B**, #41/#42); `make red-team`
+>    cold + with a hostile skill loaded → all CONTAINED (**§2B**, #54).
 >
 > ### Read first
 > [ADR-0019](adr/0019-headless-daemon-gui-viewer-split.md) · [b4b-hardware-test-plan.md](b4b-hardware-test-plan.md)
