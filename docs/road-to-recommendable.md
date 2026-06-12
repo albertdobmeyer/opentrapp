@@ -95,18 +95,25 @@ The headline memory feature, end-to-end under a real agent.
   [`footprint-and-device-usability.md`](footprint-and-device-usability.md) §10.4.
 - [ ] Re-confirm 1A/1B still pass with the daemon (not the GUI) owning the perimeter.
 
-### 1E · Code signing 👤 ⬜
+### 1E · Code signing 👤 🔶
 
 Unsigned installers undercut "security tool" trust on first launch (SmartScreen /
-Gatekeeper warnings).
+Gatekeeper warnings). **CI scaffolded** (commit pending) — both paths are wired
+inert/secret-gated, so the only remaining work is human (provision certs + the
+SignPath OSS account); see [`code-signing-policy.md`](code-signing-policy.md).
 
-- [ ] **Windows:** sign the `.exe`/`.msi` (SignPath OSS, or an EV cert). Resolve
-  the prior SignPath blocker (see handoff §"RUN THIS NEXT").
-- [ ] **macOS:** sign + **notarize** the `.app`/`.dmg` (Apple Developer ID).
-- [ ] **Linux:** the AppImage `.sig`/`.pem` already ship (cosign/minisign) — document
-  how a user verifies them.
-- [ ] ✅ Already done: perimeter **container images** are cosign-signed +
-  digest-pinned; SBOMs ship per platform.
+- [ ] **macOS:** sign + **notarize** the `.app`/`.dmg` (Apple Developer ID). The
+  `tauri-action` env passthrough is **live and inert** — signs automatically once
+  the six `APPLE_*` secrets are provisioned, skips when absent. *Needs: Apple
+  Developer Program enrollment.*
+- [ ] **Windows:** sign the `.exe`/`.msi` (SignPath OSS). A **ready-to-activate
+  template** sits in `ci.yml` (commented, with an activation checklist) — uncomment
+  + SHA-pin + add `SIGNPATH_*` secrets once the OSS project is approved. *Needs:
+  SignPath OSS approval + SHA-pin.*
+- [x] **Linux:** the AppImage `.sig`/`.pem` already ship (cosign keyless) — README
+  documents `cosign verify-blob`.
+- [x] perimeter **container images** are cosign-signed + digest-pinned; SBOMs ship
+  per platform.
 
 ---
 

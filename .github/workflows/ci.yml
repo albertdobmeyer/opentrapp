@@ -448,6 +448,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # macOS code-signing + notarization (1E / road-to-recommendable §1E).
+          # tauri-action signs + notarizes the .app/.dmg automatically when these
+          # are present; when they are ABSENT (the default today) tauri skips
+          # signing entirely — so this passthrough is INERT until an Apple
+          # Developer ID is provisioned. No behavior change to current releases.
+          # Provision: Apple Developer Program → Developer ID Application cert
+          # (base64 → APPLE_CERTIFICATE), its password, the identity string, and
+          # an app-specific password (APPLE_PASSWORD) under APPLE_ID + APPLE_TEAM_ID.
+          # See docs/code-signing-policy.md "macOS".
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: app
           args: ${{ matrix.platform.args }}
@@ -497,6 +512,48 @@ jobs:
             -exec cp {} artefacts/ \; || true
           ls -la artefacts/
           echo "dir=artefacts" >> "$GITHUB_OUTPUT"
+
+      # ── Windows code-signing via SignPath (1E / road-to-recommendable §1E) ──
+      # READY-TO-ACTIVATE TEMPLATE — intentionally commented out so the live
+      # release pipeline is unchanged until SignPath is provisioned. It is NOT
+      # enabled because (a) the org/project/policy slugs come from the SignPath
+      # OSS account, and (b) every `uses:` in this repo must be SHA-pinned
+      # (OpenSSF Scorecard pinned-dependencies + code-signing-policy.md) and the
+      # action SHA must be filled by the maintainer. Placed here (after the
+      # artefacts are located, before cosign sign-blob) so the cosign .sig/.pem
+      # cover the SIGNED binary, and the signed .msi/.exe replace the unsigned
+      # ones tauri-action already uploaded to the draft release.
+      #
+      # ACTIVATION CHECKLIST (maintainer):
+      #   1. Get the OSS project approved at https://signpath.org and note the
+      #      organization id, project slug, and a signing-policy slug (e.g.
+      #      "release-signing").
+      #   2. Add repo secrets: SIGNPATH_API_TOKEN, SIGNPATH_ORGANIZATION_ID.
+      #      (Project/policy slugs can be plain `with:` values or vars.)
+      #   3. SHA-pin the action below (replace @vX with the 40-char commit SHA).
+      #   4. Uncomment the two steps; push a `v*` tag; confirm the .msi/.exe in
+      #      the release are Authenticode-signed (right-click → Digital Signatures).
+      #
+      # - name: Sign Windows artefacts (SignPath)
+      #   if: matrix.platform.slug == 'windows-x64' && startsWith(github.ref, 'refs/tags/v') && secrets.SIGNPATH_API_TOKEN != ''
+      #   uses: signpath/github-action-submit-signing-request@<PIN-40-CHAR-SHA>  # vX
+      #   with:
+      #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+      #     organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+      #     project-slug: opentrapp                 # from SignPath account
+      #     signing-policy-slug: release-signing     # from SignPath account
+      #     artifact-configuration-slug: initial      # from SignPath account
+      #     github-artifact-id: ''                    # or use a local path mode
+      #     wait-for-completion: true
+      #     output-artifact-directory: artefacts      # signed files overwrite artefacts/
+      # - name: Re-upload signed Windows artefacts to the release
+      #   if: matrix.platform.slug == 'windows-x64' && startsWith(github.ref, 'refs/tags/v') && secrets.SIGNPATH_API_TOKEN != ''
+      #   shell: bash
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: |
+      #     gh release upload "${{ github.ref_name }}" artefacts/*.msi artefacts/*.exe \
+      #       --repo "${{ github.repository }}" --clobber
 
       - name: Generate CycloneDX SBOM (syft)
         if: startsWith(github.ref, 'refs/tags/v')

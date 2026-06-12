@@ -13,6 +13,25 @@ Windows release artifacts produced by the CI pipeline:
 
 macOS and Linux artifacts are not signed through SignPath (macOS signing requires Apple Developer Program; Linux packages are self-verified by package managers).
 
+## macOS
+
+macOS artifacts (`.app` / `.dmg`) are signed with an **Apple Developer ID Application** certificate and **notarized** with Apple, so Gatekeeper accepts them without a first-launch warning. This is wired into the `build-and-release` job's `tauri-action` step, which signs + notarizes automatically when the Apple secrets are present and **skips signing when they are absent** — so the pipeline is unchanged until a Developer ID is provisioned.
+
+Required repository secrets (provision via Apple Developer Program → *Developer ID Application*):
+
+| Secret | What it is |
+|--------|------------|
+| `APPLE_CERTIFICATE` | base64 of the `.p12` Developer ID Application cert |
+| `APPLE_CERTIFICATE_PASSWORD` | password for that `.p12` |
+| `APPLE_SIGNING_IDENTITY` | the identity string, e.g. `Developer ID Application: NAME (TEAMID)` |
+| `APPLE_ID` | the Apple ID email used for notarization |
+| `APPLE_PASSWORD` | an app-specific password for that Apple ID |
+| `APPLE_TEAM_ID` | the 10-character Apple Team ID |
+
+## Windows (SignPath)
+
+The Windows Authenticode signing step is a **ready-to-activate template** in `.github/workflows/ci.yml` (commented out, immediately after *Locate built artefacts*). It is not live because the SignPath org/project/policy slugs come from the OSS account and every `uses:` in this repo must be SHA-pinned (OpenSSF Scorecard). Activation checklist is inline in the workflow. Required secrets once approved: `SIGNPATH_API_TOKEN`, `SIGNPATH_ORGANIZATION_ID`.
+
 ## When we sign
 
 Signing occurs only on tag pushes matching `refs/tags/v*` in the GitHub Actions CI pipeline (`.github/workflows/ci.yml`). Artifacts built from pull requests or branch pushes are never submitted for signing.
