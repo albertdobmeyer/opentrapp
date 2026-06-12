@@ -2,9 +2,13 @@ mod bootstrap;
 mod commands;
 mod idle;
 mod lifecycle;
-mod orchestrator;
 mod status_aggregator;
-mod util;
+
+// Phase B (ADR-0019): orchestrator + util now live in the tauri-free
+// `opentrapp-core` crate. Re-export them at the original crate paths so the
+// (unchanged) GUI call sites — `crate::orchestrator::…`, `crate::util::…`,
+// `State<'_, AppState>` — keep resolving.
+pub use opentrapp_core::{orchestrator, util};
 
 // Public surface used exclusively by the `cargo-fuzz` harnesses at
 // app/src-tauri/fuzz/. Enabled by the `fuzzing` cargo feature; absent

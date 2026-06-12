@@ -34,6 +34,7 @@ tauri-plugin-clipboard-manager = "2.3.2"
 tauri-plugin-autostart = "2.5.1"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+opentrapp-core = { path = "crates/core" }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -50,4 +51,4 @@ crate-type = ["lib", "cdylib", "staticlib"]
 # parser and command-argument interpolator. Enabled only by the fuzz
 # crate at app/src-tauri/fuzz/. Production builds have the feature off
 # and the internal modules remain private.
-fuzzing = []
+fuzzing = ["opentrapp-core/fuzzing"]

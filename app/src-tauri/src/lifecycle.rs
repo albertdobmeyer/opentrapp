@@ -21,7 +21,12 @@ use tauri_plugin_store::StoreExt;
 
 // ─── Constants ────────────────────────────────────────────────────────
 
-pub const REDACTED: &str = "<REDACTED>";
+// Secret redaction (`redact_secrets` + `REDACTED`) moved to
+// `opentrapp_core::util::secrets` in Phase B (ADR-0019), so the orchestrator
+// that produces the logs can redact them without depending on the GUI crate.
+// Re-exported here so existing `crate::lifecycle::{redact_secrets,REDACTED}`
+// call sites (commands/credentials.rs, lib.rs::fuzz_api) keep resolving.
+pub use opentrapp_core::util::secrets::{redact_secrets, REDACTED};
 
 /// The 5 compose *services* that constitute the perimeter. Container names
 /// are project-prefixed at runtime (e.g. `opentrapp_vault-proxy_1`); we
@@ -289,36 +294,6 @@ pub fn clear_credentials_ok_marker() {
     let _ = std::fs::remove_file(credentials_ok_marker_path());
 }
 
-// ─── Secret redaction (defensive) ─────────────────────────────────────
-
-/// Redact known token-bearing environment variables from a stderr blob
-/// before it's logged. `podman compose` echoes the full container-creation
-/// command on failure, including `TELEGRAM_BOT_TOKEN=...` in cleartext —
-/// which would leak into our log if surfaced verbatim. Mirrors the
-/// vault-proxy redaction pattern from Finding #1 (project_decisions.md).
-pub fn redact_secrets(s: &str) -> String {
-    const SENSITIVE_VARS: &[&str] = &[
-        "TELEGRAM_BOT_TOKEN",
-        "ANTHROPIC_API_KEY",
-        "OPENAI_API_KEY",
-    ];
-    let mut out = s.to_string();
-    for var in SENSITIVE_VARS {
-        let needle = format!("{var}=");
-        let mut search_from = 0;
-        while let Some(rel) = out[search_from..].find(&needle) {
-            let pos = search_from + rel;
-            let after = pos + needle.len();
-            let end = out[after..]
-                .find(|c: char| c.is_whitespace() || c == '"' || c == '\'')
-                .map(|n| after + n)
-                .unwrap_or(out.len());
-            out.replace_range(after..end, REDACTED);
-            search_from = after + REDACTED.len();
-        }
-    }
-    out
-}
 
 // ─── Perimeter teardown ───────────────────────────────────────────────
 
@@ -786,29 +761,8 @@ pub fn install_signal_handlers(_handle: AppHandle) {
 mod tests {
     use super::*;
 
-    #[test]
-    fn redacts_telegram_bot_token() {
-        let input = "podman run -e TELEGRAM_BOT_TOKEN=12345:abcdef -e FOO=bar ...";
-        let out = redact_secrets(input);
-        assert!(!out.contains("12345:abcdef"));
-        assert!(out.contains("TELEGRAM_BOT_TOKEN=<REDACTED>"));
-        assert!(out.contains("FOO=bar"));
-    }
-
-    #[test]
-    fn redacts_multiple_occurrences_without_looping() {
-        let input = "ANTHROPIC_API_KEY=sk-ant-aaa OPENAI_API_KEY=sk-bbb";
-        let out = redact_secrets(input);
-        assert!(!out.contains("sk-ant-aaa"));
-        assert!(!out.contains("sk-bbb"));
-        assert!(out.matches(REDACTED).count() == 2);
-    }
-
-    #[test]
-    fn passes_through_unrelated_text() {
-        let input = "exit 137: SIGKILL received";
-        assert_eq!(redact_secrets(input), input);
-    }
+    // redact_secrets tests moved with the function to
+    // opentrapp_core::util::secrets (Phase B, ADR-0019).
 
     #[test]
     fn perimeter_status_serializes_to_snake_case() {

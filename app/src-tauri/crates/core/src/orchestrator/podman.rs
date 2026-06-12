@@ -24,7 +24,7 @@ use super::error::OrchestratorError;
 use super::perimeter::{
     DependencyCondition, EnvKind, ImageRef, ImageSource, MountKind, PerimeterSpec, Service,
 };
-use crate::lifecycle::redact_secrets;
+use crate::util::secrets::redact_secrets;
 
 /// Compose-project-style prefix for networks + labels. Single perimeter per host.
 pub const PROJECT: &str = "opentrapp";
