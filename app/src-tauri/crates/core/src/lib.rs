@@ -20,5 +20,6 @@ pub mod idle;
 pub mod markers;
 pub mod orchestrator;
 pub mod runguard;
+pub mod selftest;
 pub mod supervisor;
 pub mod util;

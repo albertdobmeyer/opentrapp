@@ -20,6 +20,11 @@ pub const DORMANT: &str = "dormant";
 pub const ACTIVATED: &str = "activated";
 /// Credentials verified-good marker. Content: a unix-ms timestamp string.
 pub const CREDENTIALS_OK: &str = "credentials-ok";
+/// The boundary self-test FAILED after a (re)start — the perimeter was held
+/// closed fail-closed (road-to-recommendable §1B, ADR-0018, task #45). Content:
+/// a short reason string. The viewer surfaces this as a security alert; a clean
+/// (re)start clears it.
+pub const BOUNDARY_FAILED: &str = "boundary-failed";
 
 /// Resolve `~/.opentrapp` from `$HOME`, matching `lifecycle.rs` and
 /// `orchestrator::podman::runtime_data_dir` in the GUI crate.
