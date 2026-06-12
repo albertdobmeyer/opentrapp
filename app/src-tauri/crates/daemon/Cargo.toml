@@ -1,0 +1,19 @@
+# opentrapp-daemon — the headless perimeter daemon (Phase B, ADR-0019).
+#
+# Depends ONLY on opentrapp-core. It must never gain a tauri/wry/webkit
+# dependency — that is the entire point of the split (a ~30-60 MB resting daemon
+# with no webview linked). CI asserts `cargo tree -p opentrapp-daemon` is free of
+# tauri/wry/webkit.
+[package]
+name = "opentrapp-daemon"
+version = "0.7.1"
+edition = "2021"
+license = "MIT"
+description = "Headless perimeter daemon for OpenTrApp (no GUI deps)"
+
+[[bin]]
+name = "opentrapp-daemon"
+path = "src/main.rs"
+
+[dependencies]
+opentrapp-core = { path = "../core" }

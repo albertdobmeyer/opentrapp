@@ -1,3 +1,11 @@
+# This package is also the workspace root (kept here, NOT at the repo root, so
+# `target/` stays at app/src-tauri/target — CI and tauri-action assume that path).
+# Phase B (ADR-0019) adds two tauri-free members: the headless daemon + its core.
+# `fuzz/` is a workspace-of-its-own and is intentionally not a member.
+[workspace]
+members = ["crates/core", "crates/daemon"]
+resolver = "2"
+
 [package]
 name = "opentrapp"
 version = "0.7.1"

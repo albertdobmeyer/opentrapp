@@ -1,0 +1,14 @@
+# opentrapp-core — the tauri-free orchestration core (Phase B, ADR-0019).
+#
+# This crate MUST NOT depend on tauri / wry / webkit, directly or transitively.
+# It is the half of the application that the headless daemon links; pulling in a
+# GUI dependency here would defeat the entire daemon split (CI asserts the
+# daemon's dependency graph is WebKit-free).
+[package]
+name = "opentrapp-core"
+version = "0.7.1"
+edition = "2021"
+license = "MIT"
+description = "Headless orchestration core for OpenTrApp (perimeter state contract, no GUI deps)"
+
+[dependencies]
