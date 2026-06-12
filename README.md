@@ -29,7 +29,7 @@ Reasoning is delegated to the agent's vendor API (Anthropic's, for OpenClaw); on
 These are the principles that shape every design and product decision in this project. They are written down because the alternative — leaving them implicit — is how projects drift.
 
 - **Safety-first, safety-always.** The perimeter exists because autonomous agents are powerful and powerful tools fail in expensive ways. Every architectural choice is evaluated against its containment effect first; convenience second. Defaults err on the restrictive side and are documented when they do.
-- **Honest about residual risk.** The application can never claim to make running an autonomous agent absolutely safe. It raises the cost of compromise via defense-in-depth and is open about the gaps that remain. The [threat model](docs/threat-model.md) names them; the [whitepaper](docs/whitepaper.md) explains them.
+- **Honest about residual risk.** The application can never claim to make running an autonomous agent absolutely safe. It raises the cost of compromise via defense-in-depth and is open about the gaps that remain. [**What this protects against — and what it doesn't**](docs/what-this-protects.md) is the plain-language summary; the [threat model](docs/threat-model.md) names every gap; the [whitepaper](docs/whitepaper.md) explains them.
 - **Agent-agnostic, community-driven.** The perimeter is not coupled to any single CLI agent. The reference deployment is OpenClaw because OpenClaw exists today; the architecture is designed to extend to others. Contributions that broaden compatibility are welcomed.
 - **Transparency over marketing.** No tracking, no telemetry, no proprietary blobs. Every dependency, every container layer, every external request is documentable from the source tree. Reproducibility steps are in [`docs/reproduce.md`](docs/reproduce.md).
 - **Shared for the safety of the commons.** This project is MIT-licensed and developed in the open. Security research findings, hardening recipes, and threat-model deltas land in the repo where everyone running an autonomous CLI agent can benefit, not in private channels.
@@ -99,6 +99,8 @@ re-scanned and signed before reaching the agent.
 [`docs/skills-spotlight.md`](docs/skills-spotlight.md).
 
 ## Limitations
+
+> **Start here:** [**What this protects against — and what it doesn't**](docs/what-this-protects.md) is a two-minute, plain-language summary of where the walls are and where the doors are. The points below and the [threat model](docs/threat-model.md) are the detailed version.
 
 - This is experimental software. It is provided as-is, without warranty of any kind. The authors accept no responsibility for damage resulting from its use.
 - Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility. The full attacker-capability matrix and residual-risk enumeration are in [`docs/threat-model.md`](docs/threat-model.md); the differential against alternative containment strategies (Firejail, gVisor, VM-only isolation, scanner-only, etc.) is in [`docs/why-not-x.md`](docs/why-not-x.md).
