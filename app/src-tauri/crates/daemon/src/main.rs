@@ -18,6 +18,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
 
+use opentrapp_core::control::{self, ControlRequest};
 use opentrapp_core::{markers, runguard, supervisor};
 use tokio::sync::Notify;
 
@@ -34,7 +35,26 @@ async fn main() -> ExitCode {
     if args.iter().any(|a| a == "--status") {
         return print_status();
     }
+    // Control verbs: queue a request for the running daemon, then exit.
+    if let Some(req) = args.first().and_then(|a| ControlRequest::from_token(a)) {
+        return submit_control(req);
+    }
     run().await
+}
+
+/// Queue a control request into the running daemon's inbox + exit.
+fn submit_control(req: ControlRequest) -> ExitCode {
+    let data_dir = markers::default_data_dir();
+    match control::submit(&data_dir, req) {
+        Ok(()) => {
+            println!("opentrapp-daemon: queued '{}' for the running daemon", req.as_token());
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("opentrapp-daemon: failed to queue '{}': {e}", req.as_token());
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// Own + supervise the perimeter until a shutdown signal arrives.
@@ -112,6 +132,8 @@ fn print_status() -> ExitCode {
 fn print_help() {
     println!("opentrapp-daemon (Phase B / ADR-0019)");
     println!("  (no args)    own + supervise the perimeter until SIGTERM/SIGINT");
+    println!("  pause|resume|restart|shutdown");
+    println!("               queue a control request for the running daemon");
     println!("  --status     print durable perimeter state + runguard owner");
     println!("  --selftest   exercise the marker contract end-to-end, exit 0/1");
     println!("  --help       this message");
