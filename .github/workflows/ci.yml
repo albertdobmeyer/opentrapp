@@ -65,7 +65,10 @@ jobs:
       # is still in the binary, so this is the load-bearing gate for Phase B.
       - name: Daemon dependency graph is WebKit-free
         run: |
-          if cargo tree -p opentrapp-daemon -e normal | grep -iE 'tauri|wry|webkit'; then
+          # Strip the ` (path)` annotation first — otherwise the `src-tauri` in
+          # the crate's own path is a false positive. We match dependency NAMES,
+          # not filesystem paths.
+          if cargo tree -p opentrapp-daemon -e normal | sed -E 's/ \([^)]*\)//' | grep -iE 'tauri|wry|webkit'; then
             echo "::error::opentrapp-daemon pulled in tauri/wry/webkit — the Phase B daemon must stay headless"
             exit 1
           fi
