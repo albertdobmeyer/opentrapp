@@ -1,10 +1,35 @@
 # ADR-0019 — Headless daemon + on-demand GUI viewer split
 
-**Status:** Proposed — design (Phase B of the lean background-process initiative); Phase A
-(lazy/destroy-on-close webview, shipped in v0.7.1-rc2) is the prerequisite and the fallback if
-this split is deferred
+**Status:** Accepted — implemented behind an opt-in (`OPENTRAPP_DAEMON_DEFER=1`), CI-green; the
+defer behavior + memory win are **unverified pending capable hardware** (CI has no display/perimeter)
 **Companion plan:** lean background-process architecture (`~/.claude/plans/glimmering-meandering-babbage.md`), Phase B
 **Cross-references:** [ADR-0008](0008-tauri-desktop-shell.md) · [ADR-0009](0009-five-container-perimeter.md) · [ADR-0011](0011-zero-trust-self-sufficient-bootstrap.md) · [ADR-0018](0018-idle-auto-pause-host-waker.md) · [trifecta.md](../trifecta.md) · [CLAUDE.md §5 generic-backend, §11 verification](../../CLAUDE.md)
+
+---
+
+## Implementation status (2026-06-12)
+
+Landed in `app/src-tauri/crates/{core,daemon}` + GUI wiring, all CI-green:
+
+- **B1** — Cargo workspace rooted at `app/src-tauri`; `opentrapp-core` (tauri-free) with the
+  durable marker contract; `opentrapp-daemon` binary; CI gate asserting the daemon's dependency
+  graph is WebKit-free (verification #1).
+- **B2** — the orchestration core (`orchestrator/`, `util/`, the idle waker) migrated into
+  `opentrapp-core`; the GUI re-exports it, so the daemon links the real perimeter logic.
+- **B3** — `core::runguard` + `core::supervisor`; the daemon *owns* the perimeter (RunGuard →
+  bring-up → idle-supervise + arm waker → SIGTERM teardown).
+- **B4a** — `core::control`: a durable file-inbox (`pause`/`resume`/`restart`/`shutdown`,
+  ADR-0019 transport option (a)); the supervisor drains + acts each tick.
+- **B4b** — the daemon ships as a tauri `externalBin` sidecar in every installer (per-platform
+  build/stage in CI); the GUI's `daemon_link::ensure_daemon` launches it **detached** and the GUI
+  becomes a viewer (skips RunGuard/bring-up/idle-pause/teardown; routes mutating commands through
+  `core::control`). **Gated `OPENTRAPP_DAEMON_DEFER=1`, default OFF** — the mechanism ships inert,
+  so shipping behavior is unchanged until enabled. Any launch failure falls back to GUI self-owning.
+
+**Still unverified (§11 — route to capable hardware):** the daemon outliving the GUI, the detached
+spawn + sidecar path resolution across AppImage/.app/.deb/.msi, the ~30–60 MB resting RSS, and the
+boundary surviving a GUI/webview crash. The Unix-socket fast path over the control inbox is future
+work (the durable inbox is the source of truth either way).
 
 ---
 
