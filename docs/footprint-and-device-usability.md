@@ -145,9 +145,11 @@ showed **~442 MB RSS**: `WebKitWebProcess` 222 MB (the renderer) + main/GTK proc
 `WebKitNetworkProcess` 47 MB + AppImage wrapper 17 MB. That is *more than the whole perimeter*
 (~421 MB), and it is what triggered the `WebKitNetworkProcess` SIGBUS under the agent's 1.35 GB
 startup spike. WebKitGTK is far from "light." **Phase A** (destroy the webview on window-close →
-lean tray-only daemon, commit `dcd5a29`) frees the 222 MB `WebProcess` at rest, dropping the
-app's resting footprint to ~220 MB (GTK main + network process); **Phase B** (a webview-less
-headless daemon) targets ~30–60 MB. So "our app is not the heavy part" was an estimation error —
+lean tray-only daemon, commit `dcd5a29`) frees the heavy `WebProcess` at rest, dropping the
+app's resting footprint to ~220 MB (GTK main + network process) — **now verified live on the
+v0.7.1-rc2 packaged build (see §10.4): close frees ~211 MB with no per-cycle leak**; **Phase B**
+(a webview-less headless daemon, [ADR-0019](adr/0019-headless-daemon-gui-viewer-split.md)) targets
+~30–60 MB. So "our app is not the heavy part" was an estimation error —
 the GUI webview is in fact the #1 resident-RAM consumer, which is exactly why the leanness work
 matters. The §2/§5 perimeter conclusions are unaffected (those numbers were measured).
 
@@ -339,9 +341,41 @@ On `podman stop`, **`vault-social` and `vault-skills` ignore `SIGTERM` and hang 
 - **Boundary note (CLAUDE.md §11):** a perimeter that pauses unclean must still pass the same
   boundary self-tests on resume; verify resume-correctness after fixing teardown.
 
+### 10.4 NEW — Phase A lazy-window gate test: PASS [measured 2026-06-11, v0.7.1-rc2]
+
+The make-or-break premise of Phase A — that *destroying* the webview on close actually frees
+its memory in wry 0.55.1, without leaking — was verified live on the **packaged rc2 AppImage**
+on the 7.2 GB reference laptop (GUI only; no perimeter, so this is runnable here). Per-process
+RSS read via `ps`/`/proc`; the window was driven over Xwayland (`GDK_BACKEND=x11`) so `wmctrl`
+could close it — the webview create/destroy behaviour is backend-independent.
+
+| State | `opentrapp` (GTK main) | `WebKitWebProcess` | `WebKitNetworkProcess` | total |
+|-------|------------------------|--------------------|------------------------|-------|
+| **Dashboard OPEN**  | 158 MB | **214 MB** | 49 MB | **≈ 431 MB** |
+| **Dashboard CLOSED** | 170 MB | **— (exited)** | 50 MB | **≈ 220 MB** |
+
+**Closing the dashboard frees ≈ 211 MB**, matching the predicted ~222 MB. Findings:
+
+- **Destroy works:** on every close the `WebKitWebProcess` (~214–222 MB) **exits**; re-open
+  spawns a **new** one (distinct PIDs across 5 cycles) — the webview is genuinely recreated, not
+  hidden.
+- **No per-cycle leak:** the surviving tray daemon settled at **~170 MB and stayed flat** across
+  cycles 2–5 (sub-MB jitter) — no monotonic growth.
+- **Daemon survives** close/reopen throughout; **SIGTERM quit** is clean (`received SIGTERM —
+  initiating graceful exit`, process exits, `runguard.pid` cleared, zero orphans — the §10.3
+  teardown fix holds).
+
+**Out of this gate's scope (needs a live perimeter — route to capable hardware / the rc2
+end-to-end run, CLAUDE.md §11):** "reproduce the agent 1.35 GB spike with the dashboard closed →
+no `WebKitNetworkProcess` SIGBUS," and "waker survives close → a Telegram message resumes exactly
+once." The draft-release image fetch 404s, so the box could not start the perimeter; the *memory*
+claims are verified, the *boundary-survival-under-spike* claim is not (yet).
+
 ### Handoff — where to continue
 
-Open items from §8 unchanged: (a) does idle auto-pause actually fire in production
+Phase A is now **gate-verified** (§10.4); Phase B (the webview-less daemon) is designed in
+[ADR-0019](adr/0019-headless-daemon-gui-viewer-split.md), implementation pending. Open items from
+§8 unchanged: (a) does idle auto-pause actually fire in production
 (`mem-phase3-operator-verify`); (b) mitmproxy long-run memory growth. Added this session:
 (c) **fix social/skills SIGTERM handling** (§10.3) before relying on auto-pause for a clean
 teardown; (d) **capture a real `podman stats` per-container reading** (§10.2) next time the

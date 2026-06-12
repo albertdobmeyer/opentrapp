@@ -21,9 +21,12 @@ fixes — a chain of issues that made the headline features either inert or frag
 - **The app was far heavier than we thought, and crashed under pressure.** A live measurement
   showed the **GUI is ~442 MB** (the WebKitGTK webview) — the single heaviest part of the app,
   *more than the whole perimeter*, and the cause of a `WebKitNetworkProcess` SIGBUS crash. This
-  RC makes the dashboard webview **transient**: it's destroyed on close (freeing ~222 MB),
-  leaving a lean tray-only background daemon (watchdog + idle waker + perimeter). The webview is
-  rebuilt on demand when you open the dashboard.
+  RC makes the dashboard webview **transient**: it's destroyed on close, leaving a lean tray-only
+  background daemon (watchdog + idle waker + perimeter), and rebuilt on demand when you re-open.
+  **Verified on this RC's Linux build:** dashboard OPEN ≈ 431 MB → CLOSED ≈ 220 MB, so closing
+  **frees ~211 MB**, the webview process fully exits and is recreated on re-open, with **no
+  per-cycle leak** over 5 open/close cycles and a clean SIGTERM teardown (see
+  `footprint-and-device-usability.md` §10.4).
 - **The skills scanner didn't actually run in its container.** Component commands ran on the
   *host*; the supply-chain scanner now runs **inside** the `vault-skills` container via
   `podman exec` (untrusted content never touches the host; available in packaged builds).
@@ -43,10 +46,14 @@ fixes — a chain of issues that made the headline features either inert or frag
 
 ## Known issues / caveats
 
-- This RC's per-process memory win (destroy-on-close) is what we ask you to confirm; if anything
-  feels off, the dashboard can be reopened from the tray at any time.
-- The headless-daemon split (Phase B) and the per-component GUI projection (Phase C) are the
-  next architectural steps, not in this RC.
+- The per-process memory win (destroy-on-close, ~211 MB freed, no leak) is **verified on Linux**
+  (§10.4). What this gate did *not* cover — because it needs a live perimeter — is **boundary
+  survival under load** (reproduce the agent's startup spike with the dashboard closed → no
+  webview SIGBUS) and **waker survival** (close the dashboard, send a Telegram message → it
+  resumes exactly once). Those are the two things we still ask you to confirm end-to-end on a
+  machine that can host the full perimeter.
+- The headless-daemon split (Phase B, designed in ADR-0019) and the per-component GUI projection
+  (Phase C, landed in dev mode) are the next architectural steps, not load-bearing in this RC.
 
 ## Full commit range
 
