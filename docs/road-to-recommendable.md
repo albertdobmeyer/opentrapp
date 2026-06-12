@@ -106,25 +106,34 @@ Gatekeeper warnings).
 
 ## TIER 2 — Hardening (makes the claim robust)
 
-### 2A · Proxy memory bounded over (load × time) 🖥️ ⬜ (WS1, tasks #41/#42)
+### 2A · Proxy memory bounded over (load × time) 🖥️ 🔶 (WS1, tasks #41/#42)
 
-A days-long security tool cannot leak.
+A days-long security tool cannot leak. **Sampler authored** —
+[`tests/proxy-memory-soak.sh`](../tests/proxy-memory-soak.sh) (`make proxy-soak`):
+samples `vault-proxy` RSS at a fixed interval over a set duration, optionally
+drives synthetic load through the proxy, and prints a growth attribution
+(baseline / peak / final / MB-per-hour slope / leak verdict). Lint + exit-code
+paths verified on the dev box; the soak itself is 🔶 **unrun pending hardware**.
 
-- [ ] Measure `vault-proxy` (mitmproxy) RSS over a sustained load × duration matrix
-  to attribute growth (steady vs leak).
+- [ ] Run `make proxy-soak --duration 360` (or leave a real agent driving load,
+  `--load off`) → attribute growth (steady vs leak).
 - [ ] Apply the measurement-selected fix (flow cap / periodic recycle / streaming);
   confirm RSS is bounded over a multi-hour run. Reframe the footprint doc.
 
-### 2B · Adversarial / red-team pass 🖥️ 👤 ⬜
+### 2B · Adversarial / red-team pass 🖥️ 👤 🔶
 
 Actually try to break out — the difference between "we built a boundary" and "the
-boundary holds."
+boundary holds." **Breakout battery authored** —
+[`tests/red-team-breakout.sh`](../tests/red-team-breakout.sh) (`make red-team`):
+drives R1 host-write, R2 cred-theft, R3 off-allowlist exfil, R4 direct-IP egress,
+R5 lateral movement, R6 escape surface, R7 DNS-rebind (manual note) — each must be
+**contained** (CONTAINED=pass, BREACH=fail). Lint + cannot-assess paths verified
+here; 🔶 **unrun pending hardware**.
 
-- [ ] Run a deliberately-hostile skill / agent inside the perimeter and attempt:
-  host filesystem access, credential theft, off-allowlist exfil, direct-IP egress,
-  DNS-rebinding, container escape. Each must be contained.
-- [ ] Document what was attempted and what held / didn't. Honest results either way.
-- [ ] File + fix anything that breaks out before recommending.
+- [ ] Run `make red-team` on a cold perimeter → all CONTAINED, zero BREACH.
+- [ ] Re-run with a deliberately-hostile skill / agent loaded (the 👤 part).
+- [ ] Complete the R7 DNS-rebinding pass manually (needs attacker-controlled DNS).
+- [ ] Document what was attempted and what held / didn't. File + fix any BREACH.
 
 ### 2C · Third-party security review 👤 ⬜
 

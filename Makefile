@@ -171,3 +171,11 @@ profile-memory:
 boundary-selftest:
 	@echo "→ bash tests/boundary-selftest.sh (boundary holds? bring the perimeter up first)"
 	@bash tests/boundary-selftest.sh
+
+proxy-soak:
+	@echo "→ bash tests/proxy-memory-soak.sh (vault-proxy RSS over load×time; perimeter up first)"
+	@bash tests/proxy-memory-soak.sh
+
+red-team:
+	@echo "→ bash tests/red-team-breakout.sh (adversarial breakout attempts; perimeter up first)"
+	@bash tests/red-team-breakout.sh
