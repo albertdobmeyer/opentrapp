@@ -1,5 +1,6 @@
 mod bootstrap;
 mod commands;
+mod daemon_link;
 mod idle;
 mod lifecycle;
 mod status_aggregator;
@@ -199,16 +200,32 @@ pub fn run() {
     bootstrap::migrate_from_lobster_trapp::migrate_if_legacy_install();
 
     let data_dir = runtime_data_dir();
-    let app_state = AppState::new(data_dir.clone());
 
-    // RunGuard: reap orphan containers from any prior SIGKILL'd session
-    // BEFORE we bring the perimeter up. Reads/writes ~/.opentrapp/runguard.pid.
-    establish_runguard(&data_dir);
+    // Phase B / B4b (ADR-0019): opt-in (OPENTRAPP_DAEMON_DEFER=1) — ensure a
+    // headless daemon owns the perimeter. If so, this GUI is a viewer and skips
+    // RunGuard / bring-up / idle auto-pause / teardown, routing mutating commands
+    // through the control channel. Default OFF → self-own exactly as before; any
+    // failure to launch the daemon also falls back to self-owning.
+    let daemon_owned = daemon_link::ensure_daemon(&data_dir);
+
+    let app_state = AppState::new(data_dir.clone());
+    app_state.daemon_owned.store(daemon_owned, Ordering::SeqCst);
+
+    // RunGuard: reap orphan containers from any prior SIGKILL'd session BEFORE we
+    // bring the perimeter up. When a daemon owns the perimeter, IT holds the
+    // guard — the GUI must not establish (or later clear) it.
+    if !daemon_owned {
+        establish_runguard(&data_dir);
+    }
 
     // Dormant (idle auto-pause) is a runtime-only state: opening the app means
     // the assistant is awake. Clear any stale dormant marker left by a crash
     // while dormant so a previous sleep can't strand the perimeter (ADR-0018).
-    lifecycle::clear_dormant_marker();
+    // When a daemon owns the perimeter (B4b), it owns the dormant lifecycle —
+    // the GUI must not clear it (that would desync the daemon's sleep state).
+    if !daemon_owned {
+        lifecycle::clear_dormant_marker();
+    }
 
     // Pass-4 lifecycle ownership (P11): the perimeter is bound to the app's
     // lifetime. App start → perimeter up. Graceful exit (window quit, tray Quit,
@@ -254,7 +271,11 @@ pub fn run() {
             // Spawn the bootstrap service. Idempotent 7-step pipeline that brings
             // the security shell up; then auto_activate decides whether to start
             // vault-agent based on activation + credentials markers.
-            bootstrap::spawn_bootstrap_on_launch(app.handle().clone(), perimeter_root_setup.clone());
+            // Bring the perimeter up only when the GUI owns it; when a daemon
+            // owns it (B4b), it has already done so.
+            if !daemon_owned {
+                bootstrap::spawn_bootstrap_on_launch(app.handle().clone(), perimeter_root_setup.clone());
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -332,8 +353,12 @@ pub fn run() {
             // SIGINT, which set the flag). Tear the perimeter down (P11):
             // app-quit ⇒ perimeter-down. Synchronous, timeouts in the orchestrator.
             tauri::RunEvent::Exit => {
-                bring_perimeter_down_sync(&perimeter_root_exit);
-                clear_runguard();
+                // The GUI tears down only what it owns. When a daemon owns the
+                // perimeter (B4b), leave it — and its RunGuard — running.
+                if !daemon_owned {
+                    bring_perimeter_down_sync(&perimeter_root_exit);
+                    clear_runguard();
+                }
             }
             _ => {}
         });

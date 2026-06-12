@@ -30,6 +30,13 @@ pub struct AppState {
     /// closed/destroyed (the lean tray-only resting state). Only an explicit
     /// quit lets `RunEvent::Exit` fire and tear the perimeter down. See lib.rs.
     pub quitting: AtomicBool,
+    /// `true` when a headless `opentrapp-daemon` owns the perimeter and this GUI
+    /// is acting as a viewer (Phase B / B4b, ADR-0019): the GUI then skips
+    /// establishing the RunGuard, bringing the perimeter up, idle auto-pause, and
+    /// teardown-on-exit, and routes perimeter-mutating commands through the
+    /// control channel. Default `false` (the GUI self-owns, exactly as before);
+    /// only set true when the opt-in defer actually launches/finds a daemon.
+    pub daemon_owned: AtomicBool,
 }
 
 impl AppState {
@@ -42,6 +49,7 @@ impl AppState {
             idle_stops: Mutex::new(HashMap::new()),
             waker: Mutex::new(None),
             quitting: AtomicBool::new(false),
+            daemon_owned: AtomicBool::new(false),
         }
     }
 }

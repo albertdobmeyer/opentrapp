@@ -79,18 +79,42 @@ async fn arm_pause(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
     *waker = crate::idle::spawn(data_dir.clone());
 }
 
-/// Wake from dormant. Stops the waker BEFORE bringing up (so the agent's poller
-/// never overlaps it — ADR-0018) and clears the marker so a racing waker no-ops.
+/// Explicit user pause: stop containers + set the PAUSED marker, with NO waker
+/// (stays paused until an explicit Resume — distinct from idle DORMANT, which
+/// auto-wakes on the next Telegram message). Routed from the GUI's
+/// `pause_perimeter` when a daemon owns the perimeter.
+async fn user_pause(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
+    if let Some(w) = waker.take() {
+        w.cancel();
+    }
+    if crate::markers::is_set(data_dir, crate::markers::PAUSED) {
+        return; // already paused
+    }
+    let _ = crate::markers::set_flag(data_dir, crate::markers::PAUSED);
+    let d = data_dir.clone();
+    let _ = tokio::task::spawn_blocking(move || {
+        crate::orchestrator::podman::perimeter_stop(&d)
+    })
+    .await;
+    eprintln!("[supervisor] paused (user)");
+}
+
+/// Wake from dormant OR user-pause. Stops the waker BEFORE bringing up (so the
+/// agent's poller never overlaps it — ADR-0018), clears both markers, and brings
+/// the perimeter up if it was asleep/paused.
 async fn resume_now(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
     if let Some(w) = waker.take() {
         w.cancel();
     }
-    if !crate::markers::is_set(data_dir, crate::markers::DORMANT) {
+    let was_down = crate::markers::is_set(data_dir, crate::markers::DORMANT)
+        || crate::markers::is_set(data_dir, crate::markers::PAUSED);
+    crate::markers::clear(data_dir, crate::markers::DORMANT);
+    crate::markers::clear(data_dir, crate::markers::PAUSED);
+    if !was_down {
         return; // already awake
     }
-    crate::markers::clear(data_dir, crate::markers::DORMANT);
     perimeter_up(data_dir.clone()).await;
-    eprintln!("[supervisor] resumed from dormant");
+    eprintln!("[supervisor] resumed");
 }
 
 /// Bring the perimeter down and back up (clears dormant + stops the waker).
@@ -126,7 +150,7 @@ pub async fn run(data_dir: PathBuf, threshold_ms: u64, shutdown: Arc<Notify>) {
         for req in crate::control::drain(&data_dir) {
             match req {
                 ControlRequest::Shutdown => stop = true,
-                ControlRequest::Pause => arm_pause(&data_dir, &mut waker).await,
+                ControlRequest::Pause => user_pause(&data_dir, &mut waker).await,
                 ControlRequest::Resume => resume_now(&data_dir, &mut waker).await,
                 ControlRequest::Restart => restart_now(&data_dir, &mut waker).await,
             }
@@ -136,10 +160,11 @@ pub async fn run(data_dir: PathBuf, threshold_ms: u64, shutdown: Arc<Notify>) {
             break;
         }
 
-        // 2. Idle auto-pause (only while awake).
+        // 2. Idle auto-pause (only while awake + not user-paused).
         let dormant = crate::markers::is_set(&data_dir, crate::markers::DORMANT);
-        if dormant {
-            continue; // asleep — the armed waker owns the resume path
+        let paused = crate::markers::is_set(&data_dir, crate::markers::PAUSED);
+        if dormant || paused {
+            continue; // asleep (waker owns resume) or user-paused (until Resume)
         }
         let have_token = crate::idle::read_telegram_token(&data_dir).is_some();
         let last = crate::orchestrator::podman::read_egress_log_last_activity_ms();

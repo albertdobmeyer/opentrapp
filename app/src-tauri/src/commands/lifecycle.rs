@@ -49,6 +49,16 @@ pub async fn restart_perimeter(state: State<'_, AppState>) -> Result<(), String>
         .map(|g| g.clone())
         .map_err(|e| format!("runtime data dir lock poisoned: {e}"))?;
 
+    // When a daemon owns the perimeter (B4b), route the restart through the
+    // control channel instead of touching podman directly.
+    if state.daemon_owned.load(std::sync::atomic::Ordering::SeqCst) {
+        return opentrapp_core::control::submit(
+            &root,
+            opentrapp_core::control::ControlRequest::Restart,
+        )
+        .map_err(|e| format!("failed to queue restart: {e}"));
+    }
+
     let result = tokio::task::spawn_blocking(move || {
         bring_perimeter_down_sync(&root);
         podman::perimeter_up(&root).is_ok()
@@ -86,6 +96,16 @@ pub async fn pause_perimeter(
         .read()
         .map(|g| g.clone())
         .map_err(|e| format!("runtime data dir lock poisoned: {e}"))?;
+
+    // When a daemon owns the perimeter (B4b), route the user pause through the
+    // control channel; the daemon sets the paused marker + stops containers.
+    if state.daemon_owned.load(std::sync::atomic::Ordering::SeqCst) {
+        return opentrapp_core::control::submit(
+            &root,
+            opentrapp_core::control::ControlRequest::Pause,
+        )
+        .map_err(|e| format!("failed to queue pause: {e}"));
+    }
 
     // Set the flag first so even if compose stop is slow the aggregator
     // already classifies the state correctly on the next tick.
@@ -157,6 +177,16 @@ pub async fn resume_perimeter(
         .read()
         .map(|g| g.clone())
         .map_err(|e| format!("runtime data dir lock poisoned: {e}"))?;
+
+    // When a daemon owns the perimeter (B4b), route the resume through the control
+    // channel; the daemon stops its waker + clears the markers + brings up.
+    if state.daemon_owned.load(std::sync::atomic::Ordering::SeqCst) {
+        return opentrapp_core::control::submit(
+            &root,
+            opentrapp_core::control::ControlRequest::Resume,
+        )
+        .map_err(|e| format!("failed to queue resume: {e}"));
+    }
 
     // If the perimeter was dormant (idle auto-pause), stop the host-side waker
     // and await its teardown BEFORE bringing the perimeter up — otherwise the

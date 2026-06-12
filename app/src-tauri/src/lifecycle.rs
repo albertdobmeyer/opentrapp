@@ -627,6 +627,15 @@ fn auto_pause_to_dormant(data_dir: &Path) {
 /// log has been quiet past the threshold, drop to dormant. The activity signal
 /// is the mtime of the proxy request log; `None` (no signal) never auto-pauses.
 fn maybe_auto_pause_idle(handle: &AppHandle, status: &PerimeterStatus) {
+    // When a daemon owns the perimeter (B4b), IT does idle auto-pause; the GUI
+    // viewer must not, or both would race to pause/arm the waker.
+    if handle
+        .try_state::<crate::orchestrator::state::AppState>()
+        .map(|s| s.daemon_owned.load(std::sync::atomic::Ordering::SeqCst))
+        .unwrap_or(false)
+    {
+        return;
+    }
     if !matches!(status.tenant, TenantState::Running) || is_dormant_persisted() {
         return;
     }
