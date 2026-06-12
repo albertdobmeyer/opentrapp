@@ -403,7 +403,7 @@ jobs:
       # the overlay digest before podman load. Keeps the AppImage ~90 MB.
       - name: Stage perimeter image artifacts (Linux release builds)
         if: matrix.platform.slug == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: perimeter-images
           path: perimeter-staging
