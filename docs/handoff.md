@@ -37,6 +37,16 @@
 >   documents the resumed==cold contract. The script is *embedded*, so there is **no packaged-resource staging
 >   to get wrong** — the daemon is self-contained. **Remaining (hardware):** flip the opt-in on, run green
 >   cold + every resume path, then promote opt-in→default.
+> - **1E — code-signing CI scaffolded** (commit `66750fc`). macOS: `tauri-action` `APPLE_*` env passthrough
+>   — **live + inert** (signs/notarizes when the 6 secrets are present, skips when absent). Windows: a
+>   **ready-to-activate SignPath template** (commented, inline activation checklist) — not live because slugs
+>   come from the OSS account + every `uses:` must be SHA-pinned (Scorecard). `ci.yml` YAML-validated; GitHub
+>   accepted the workflow. **Remaining = human only:** Apple Developer Program + `APPLE_*` secrets; SignPath
+>   OSS approval + SHA-pin + `SIGNPATH_*` secrets. See `code-signing-policy.md`.
+>
+> **The dev box is now tapped out** — every checklist item authorable without the perimeter is done + pushed.
+> Everything remaining needs the Windows box / a cloud VM (run the `make` targets, idle/defer tests) or an
+> external human (Apple/SignPath certs, third-party review). Resume on capable hardware per the runbook below.
 >
 > ### Landed prior session (2026-06-09 → 06-12) — Phase B
 > - **Phase B daemon split — FULL (B1–B4b), CI-green on all platforms.** `opentrapp-core` (tauri-free) holds
@@ -76,9 +86,8 @@
 >    (slices `7cf0730` + `c8d4afc`), behind opt-in `OPENTRAPP_SELFTEST_ON_RESUME`. Script *embedded* in the
 >    daemon (no staging). Remaining is hardware-only (enable + verify).
 > 2. ✅ **2A `tests/proxy-memory-soak.sh`** + ✅ **2B `tests/red-team-breakout.sh`** — authored, lint-clean.
-> 3. ⬜ **#55 / 1E — scaffold the signing CI** (SignPath for Windows, macOS notarization steps) so only the
->    cert/secret drop remains. The last dev-box code item. Read `docs/code-signing-policy.md` for the blocker.
-> 4. (Then the dev box is tapped out — everything else needs the perimeter.)
+> 3. ✅ **#55 / 1E — signing CI scaffolded** (`66750fc`): macOS live-inert, Windows ready-to-activate template.
+> 4. **Dev box is now tapped out** — everything else needs the perimeter or an external human.
 >
 > **▸ If on CAPABLE HARDWARE (Windows box / cloud VM — can run the full perimeter):** execute, top-down.
 > Every test below is now a single `make` target:
