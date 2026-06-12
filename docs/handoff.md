@@ -1,7 +1,7 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-12 (**Phase B — the headless daemon/viewer split — implemented end-to-end (B1–B4b), CI-green across all platforms; v0.7.2-rc1 cut + published (pre-release) + announced (Discussion #73); the daemon ships in every installer.** Phase A leanness gate-verified; Phase C generic per-component dashboard landed; PR board cleared (14 Dependabot closed-to-regenerate, #56 re-applied). Current shipped release: **v0.7.2-rc1** (pre-release; v0.7.0 is the last stable).)
-**Current phase:** Phase B daemon split done behind an opt-in; the frontier is **hardware verification of the defer** (the memory win it unlocks is unverified on capable hardware)
+**Last updated:** 2026-06-12 (**Now executing the road-to-recommendable checklist. This session: authored `tests/boundary-selftest.sh` (the 1A/1B boundary gate, fail-closed) and shipped the 3C residual-risk front-door page — both pushed (`77a9204`, `00505f6`).** Phase B (headless daemon/viewer split, B1–B4b) done + CI-green; v0.7.2-rc1 published (pre-release) + announced (Discussion #73); daemon ships in every installer. Current shipped release: **v0.7.2-rc1** (pre-release; v0.7.0 is last stable).)
+**Current phase:** Working [`road-to-recommendable.md`](road-to-recommendable.md) top-to-bottom. The gate is **Tier 1**, and its load-bearing items need **capable hardware** (the dev box swap-storms running the full perimeter). The strategy: author every executable artifact (scripts/playbooks) from the dev box so each hardware item is **one command**, then run them on the Windows box / a cloud VM.
 **Branch:** `main` — pushed; `v0.7.2-rc1` tag → published pre-release. Monorepo (ADR-0013); `app/src-tauri` is now a Cargo workspace (`opentrapp-core` + `opentrapp-daemon`).
 
 > ## ⟶ NEXT SESSION — READ THIS FIRST: the road from "built" to "recommendable public security tool"
@@ -13,7 +13,20 @@
 > do (it swap-storms running the full perimeter). The critical path runs through **capable hardware** (the
 > Windows box / a cloud VM). This is a §11 problem, not an architecture problem.
 >
-> ### What landed this session (2026-06-09 → 06-12)
+> ### Landed 2026-06-12 (this session) — first checklist execution
+> - **1A/1B — `tests/boundary-selftest.sh` authored** (`make boundary-selftest`, commit `77a9204`). Six
+>   boundary checks grounded in the live wiring — B1 network isolation, B2 L7 allowlist (403 / not-403),
+>   B3 vendor-credential injection, B4 L3 `vault_egress_drop_private` set, B5 proxy-CA fingerprint pinning,
+>   B6 read-only skill delivery. **Fail-closed**: exit 1 on any failure, exit **2 on "cannot assess"** (down /
+>   tool missing) — never a false green (§11). `bash -n` + all exit-code paths verified on the dev box; the
+>   boundary assertions themselves are **🔶 unrun pending hardware**. Doubles as the daemon's resume self-test
+>   (1B / #45). Also **fixed the checklist's credential grep**: `TELEGRAM_BOT_TOKEN` legitimately lives in
+>   the agent (compose:69) — only the Anthropic/OpenAI key is proxy-injected.
+> - **3C — `docs/what-this-protects.md` shipped** (commit `00505f6`). Plain-language T1–T6 distillation, the
+>   "does NOT" half given equal weight, linked front-and-center from README **Values** + top of **Limitations**.
+>   Checklist 3C ✅ — the one Tier-3 item that needed no hardware.
+>
+> ### Landed prior session (2026-06-09 → 06-12) — Phase B
 > - **Phase B daemon split — FULL (B1–B4b), CI-green on all platforms.** `opentrapp-core` (tauri-free) holds
 >   the orchestration core + marker contract; `opentrapp-daemon` owns the perimeter (runguard → up →
 >   idle-supervise + waker → teardown) + a durable control channel; it **ships as a sidecar in every
@@ -27,10 +40,9 @@
 >
 > ### The road to public recommendation (prioritized — this is the real "what's left")
 > **Tier 1 — load-bearing (a security tool's claims must be *verified*, not asserted — §11):**
-> 1. **Boundary self-test on real hardware, cold-start AND resume** (WS0-0b, tasks #39/#40). Prove on a real
->    perimeter: network isolation holds, credentials inject, the allowlist is loaded, the proxy CA is
->    unchanged, the L3 egress filter is active — and that a *resumed*/idle-paused boundary passes the SAME
->    tests as a cold start (fail-closed if not). **This is THE gate** for calling it a security tool.
+> 1. **Boundary self-test on real hardware, cold-start AND resume** (WS0-0b, tasks #39/#40). **Script now
+>    authored** (`make boundary-selftest`) — running it green on a cold perimeter + every resume path is the
+>    one remaining step, plus wiring the daemon to run it on (re)start, fail-closed (#45). **This is THE gate.**
 > 2. **Idle auto-pause + wake verified in production** (WS0-0a, task #35) — the headline feature firing and
 >    waking *exactly once* under a real agent (the box could never run this end-to-end).
 > 3. **Code signing** — unsigned installers undercut "security tool" trust (the SignPath blocker, §454 below).
@@ -42,8 +54,32 @@
 > a **third-party security review** (the gold standard for "official security tool").
 >
 > **Tier 3 — trust polish:** cut a **stable** release (not an RC) once Tier 1 verifies; tighten the
-> reproducible-build + SBOM/cosign story; a front-and-center "what this protects against / what it doesn't"
-> residual-risk page (we already say it can't make running an agent *absolutely* safe — make that prominent).
+> reproducible-build + SBOM/cosign story; **✅ residual-risk front-door page done** ([what-this-protects.md](what-this-protects.md)).
+>
+> ### Next session — tackle every item we can (DUAL PATH — pick by where you're running)
+>
+> **▸ If on the DEV BOX (this machine — can't run the perimeter, CI compiles Rust):** keep authoring the
+> executable artifact for each hardware-gated item so the hardware run is one command, and land the
+> CI-verifiable code. In priority order:
+> 1. **#45 — wire the daemon to run `boundary-selftest.sh` on every (re)start, fail-closed** (Rust in
+>    `opentrapp-core`/`daemon`; stage the script as a packaged resource so the daemon finds it; ADR-0018
+>    addendum). Compiles via CI round-trips like Phase B. *This makes 1B structural, not manual.*
+> 2. **2A — author `tests/proxy-memory-soak.sh`** (sustained load × time RSS sampler for `vault-proxy`,
+>    mirroring `memory-profile.sh`; emits a growth table). Authorable + lintable here; run on hardware.
+> 3. **2B — author the red-team breakout playbook/script** (`tests/red-team-breakout.sh` or a doc): the
+>    hostile-skill + escape attempts from threat-model T1/T2/T4, each expected-contained. Authorable here.
+> 4. **1E — scaffold the signing CI** (SignPath config for Windows, macOS notarization workflow steps) so
+>    only the cert/secret drop remains. Check `docs/code-signing-policy.md` for the existing blocker.
+>
+> **▸ If on CAPABLE HARDWARE (Windows box / cloud VM — can run the full perimeter):** execute, top-down:
+> 1. `make perimeter-up` → `make boundary-selftest --record-baseline` (cold) → must be all-PASS. **1A.**
+> 2. Re-run after each resume: user-pause→resume, idle-dormant→wake, daemon kill→restart. **1B.** Fail-closed
+>    on any mismatch. Fold the contract into ADR-0018 (#45).
+> 3. Leave a real agent idle past threshold → Dormant → Telegram message → wakes + replies **exactly once**;
+>    measure cold-start latency. **1C** (#35), and assert boundary+exactly-once (#40).
+> 4. Run `docs/b4b-hardware-test-plan.md` (7 tests, record RSS) → if green, flip `OPENTRAPP_DAEMON_DEFER`
+>    opt-in→default + record resting RSS in footprint §10.4. **1D.**
+> 5. `tests/proxy-memory-soak.sh` over a multi-hour run → attribute growth, apply fix. **2A/2B (#41/#42).**
 >
 > ### Read first
 > [ADR-0019](adr/0019-headless-daemon-gui-viewer-split.md) · [b4b-hardware-test-plan.md](b4b-hardware-test-plan.md)
