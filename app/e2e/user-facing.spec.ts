@@ -54,6 +54,9 @@ const BANNED_TERMS = [
   "Admin Key",
   "billing scope",
   "cost endpoint",
+  // Product name replaced by "the sandbox engine" in MissingRuntimeCard;
+  // banning prevents re-introduction into any user-visible surface.
+  "Podman Desktop",
 ];
 
 /** Get visible text from the page, ignoring script/style/meta content */
