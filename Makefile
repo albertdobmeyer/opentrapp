@@ -167,3 +167,7 @@ perimeter-status:
 profile-memory:
 	@echo "→ bash tests/memory-profile.sh (per-container RSS; bring the perimeter up first)"
 	@bash tests/memory-profile.sh
+
+boundary-selftest:
+	@echo "→ bash tests/boundary-selftest.sh (boundary holds? bring the perimeter up first)"
+	@bash tests/boundary-selftest.sh

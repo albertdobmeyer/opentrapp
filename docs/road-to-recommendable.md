@@ -21,41 +21,43 @@ and can overlap.
 
 ## TIER 1 — Load-bearing (cannot recommend without these)
 
-### 1A · Boundary self-test on a COLD-STARTED perimeter 🖥️ ⬜ (WS0-0b, task #39)
+### 1A · Boundary self-test on a COLD-STARTED perimeter 🖥️ 🔶 (WS0-0b, task #39)
 
-Bring the full perimeter up fresh on capable hardware, then prove each boundary
-holds. Each is a pass/fail; record the command + result.
+**Script authored** — [`tests/boundary-selftest.sh`](../tests/boundary-selftest.sh)
+(`make boundary-selftest`) encodes all six checks below, fail-closed (exit 1 on any
+boundary failure, exit 2 if it can't assess — "unverifiable ≠ verified"). It is
+syntax/lint-clean and its fail-closed paths are verified; the boundary assertions
+themselves are 🔶 **unrun pending capable hardware**. Bring the perimeter up fresh
+(`make perimeter-up`), then `make boundary-selftest` and record the output. Each
+box below maps to one check ID in the script.
 
-- [ ] **Network isolation — no direct egress.** From inside `vault-agent`, a
-  direct connection to the public internet (bypassing the proxy) must fail:
-  `podman exec vault-agent sh -c 'curl -sS --max-time 5 https://1.1.1.1 ; echo exit=$?'`
-  → must NOT succeed (timeout / no route). The agent network is `internal: true`.
-- [ ] **L7 allowlist enforced.** Through the proxy, an **off-allowlist** domain is
-  blocked while an on-allowlist one works. Off-allowlist request → `BLOCKED` in
-  `~/.opentrapp` proxy log / 403; on-allowlist (e.g. the agent's vendor API) → ok.
-- [ ] **Credential injection — the key never sits with the agent.** The API key /
-  bot token is injected by `vault-proxy`, not present in the agent:
-  `podman exec vault-agent env | grep -iE 'ANTHROPIC|TELEGRAM|API_KEY'` → empty.
-  (ADR-0001: proxy-side credential injection.)
-- [ ] **L3 egress filter active.** `vault-egress` nftables ruleset is loaded and
-  drops private/off-list destinations:
+- [ ] **(B1) Network isolation — no direct egress.** From inside `vault-agent`, a
+  proxy-bypassed connection to the public internet must fail (the agent network is
+  `internal: true` — no gateway). Script unsets `HTTP(S)_PROXY` and confirms no route.
+- [ ] **(B2) L7 allowlist enforced.** Through the proxy, an **off-allowlist** host
+  → 403 (`BLOCKED`); an on-allowlist host (e.g. the agent's vendor API) → not 403.
+- [ ] **(B3) Credential injection — the vendor key never sits with the agent.**
+  `podman exec vault-agent env | grep -iE '^(ANTHROPIC|OPENAI)_API_KEY='` → empty
+  (ADR-0001). **Note:** `TELEGRAM_BOT_TOKEN` *is* legitimately in the agent
+  (OpenClaw polls Telegram itself, compose:69) — only the **Anthropic/OpenAI** key
+  is proxy-injected, so the check asserts on that, not a blanket token grep.
+- [ ] **(B4) L3 egress filter active.** `vault-egress` nftables ruleset is loaded:
   `podman exec vault-egress nft list ruleset | grep -q vault_egress_drop_private`.
-  A direct IP egress (not via the pinned resolver) is dropped.
-- [ ] **Proxy CA unchanged / pinned.** The mitmproxy CA the agent trusts matches
-  the expected fingerprint (no silent CA swap). Record the fingerprint; it must be
-  stable across restarts.
-- [ ] **No untrusted content on the host.** Confirm skill scanning / downloads run
-  *inside* `vault-skills` (CLAUDE.md §9) — `run_command` for on-demand workloads
-  goes through `podman exec`, not host bash.
+- [ ] **(B5) Proxy CA unchanged / pinned.** The mitmproxy CA the agent trusts
+  matches the recorded fingerprint (no silent CA swap). Cold start pins the
+  baseline: `make boundary-selftest` once with `--record-baseline`; resumes compare.
+- [ ] **(B6) No untrusted content on the host.** Skill delivery is read-only into
+  the agent (compose `:ro`); untrusted scanning/downloads run *inside* `vault-skills`
+  (CLAUDE.md §9), via `podman exec`, not host bash.
 
-> Build this as a script (`tests/boundary-selftest.sh`) so it's repeatable and can
-> be the thing the daemon runs on every (re)start. Basis: `docs/threat-model.md` +
-> CLAUDE.md §9.
+> The script doubles as the thing the daemon runs on every (re)start (1B). Basis:
+> [`docs/threat-model.md`](threat-model.md) + CLAUDE.md §9.
 
-### 1B · The same self-test on a RESUMED perimeter 🖥️ ⬜ (WS0-0b/0c, tasks #39/#40)
+### 1B · The same self-test on a RESUMED perimeter 🖥️ 🔶 (WS0-0b/0c, tasks #39/#40)
 
 A boundary that is "alive but subtly wrong" after a resume is worse than a visible
-failure (CLAUDE.md §11). Prove the resumed boundary == the cold boundary.
+failure (CLAUDE.md §11). Prove the resumed boundary == the cold boundary. Same
+script as 1A — re-run `make boundary-selftest` after each resume path:
 
 - [ ] Pause → resume (user) and re-run **all of 1A** → every box still passes.
 - [ ] Idle-auto-pause → wake (dormant → resume) and re-run **all of 1A** → still passes.
@@ -150,11 +152,14 @@ The gold standard for "official security tool."
 - [ ] Confirm the SBOM + cosign-signed-image chain is verifiable end-to-end by a
   user (write the verification steps in the README).
 
-### 3C · Residual-risk transparency, front-and-center ⬜
+### 3C · Residual-risk transparency, front-and-center ✅
 
-- [ ] Surface a prominent "**what this protects against / what it does NOT**"
-  section (not buried) — we already state it can't make running an agent
-  *absolutely* safe; that honesty *is* the credibility for a defense-in-depth tool.
+- [x] Surface a prominent "**what this protects against / what it does NOT**"
+  page (not buried) — [`docs/what-this-protects.md`](what-this-protects.md): a
+  two-minute plain-language distillation of the threat model's T1–T6, with the
+  "does NOT" half given equal weight, plus how a user raises their own assurance
+  (disposable VM, dedicated Telegram, least shell level). Linked front-and-center
+  from the README **Values** line and as the first entry under README **Limitations**.
   Basis: [`docs/threat-model.md`](threat-model.md), [`docs/why-not-x.md`](why-not-x.md).
 
 ---
