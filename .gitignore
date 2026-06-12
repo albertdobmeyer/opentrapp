@@ -1,6 +1,10 @@
 # Dependencies
 node_modules/
 
+# Phase B (ADR-0019): the daemon sidecar is built + staged here by CI per
+# target triple (bundle.externalBin); never committed.
+app/src-tauri/binaries/
+
 # Local-only docs
 docs/code-signing-guide.md
 

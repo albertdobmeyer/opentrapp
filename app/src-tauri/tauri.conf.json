@@ -18,6 +18,7 @@
   "bundle": {
     "active": true,
     "category": "DeveloperTool",
+    "externalBin": ["binaries/opentrapp-daemon"],
     "resources": {
       "resources/perimeter": "perimeter"
     },

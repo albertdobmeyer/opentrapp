@@ -57,6 +57,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev
 
+      # tauri-codegen (via generate_context! during `cargo check` of the app
+      # crate) resolves bundle.externalBin for the host target, so the sidecar
+      # binary must already exist. Build the daemon (debug — only its presence
+      # matters here) and stage it before checking the workspace.
+      - name: Stage daemon sidecar (externalBin must exist at compile time)
+        run: |
+          TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
+          cargo build -p opentrapp-daemon
+          mkdir -p binaries
+          cp "target/debug/opentrapp-daemon" "binaries/opentrapp-daemon-${TRIPLE}"
+
       - run: cargo check --workspace
       - run: cargo test --workspace
 
@@ -402,6 +413,33 @@ jobs:
         run: |
           mkdir -p app/src-tauri/resources/perimeter/images
           cp perimeter-staging/image-digests.json app/src-tauri/resources/perimeter/images/
+
+      # Phase B (ADR-0019): build the headless daemon for this platform's target
+      # and stage it where `bundle.externalBin` expects it
+      # (binaries/opentrapp-daemon-<target-triple>[.exe]), so tauri bundles it as
+      # a sidecar the GUI can spawn. `-p opentrapp-daemon` builds only the daemon
+      # (core + tokio, no tauri), so this is cheap. MUST succeed on every platform
+      # or `tauri build` fails (externalBin requires the binary to be present).
+      - name: Build + stage the daemon sidecar
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARGS='${{ matrix.platform.args }}'
+          if [[ "$ARGS" == *--target* ]]; then
+            TRIPLE=$(echo "$ARGS" | sed -n 's/.*--target \([^ ]*\).*/\1/p')
+            cargo build --manifest-path app/src-tauri/Cargo.toml -p opentrapp-daemon --release --target "$TRIPLE"
+            SRC="app/src-tauri/target/$TRIPLE/release/opentrapp-daemon"
+          else
+            TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
+            cargo build --manifest-path app/src-tauri/Cargo.toml -p opentrapp-daemon --release
+            SRC="app/src-tauri/target/release/opentrapp-daemon"
+          fi
+          EXT=""
+          [[ "$RUNNER_OS" == "Windows" ]] && EXT=".exe"
+          mkdir -p app/src-tauri/binaries
+          cp "${SRC}${EXT}" "app/src-tauri/binaries/opentrapp-daemon-${TRIPLE}${EXT}"
+          echo "staged sidecar: opentrapp-daemon-${TRIPLE}${EXT}"
+          ls -la app/src-tauri/binaries/
 
       - name: Build and release
         id: tauri
