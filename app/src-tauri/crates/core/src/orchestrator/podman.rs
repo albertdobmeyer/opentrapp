@@ -773,7 +773,7 @@ fn is_running(service_name: &str) -> bool {
 /// string if the volume/file is absent (dev, fresh install, log not yet
 /// written) — the caller treats "no log" as "no pending approvals". Used by the
 /// allowlist-approval read path (v0.6 Item A).
-pub(crate) fn read_egress_log() -> String {
+pub fn read_egress_log() -> String {
     let out = match podman_probe(
         &[
             "volume".into(),
@@ -854,7 +854,7 @@ fn last_activity_ms_from_log(content: &str, now_ms: u64) -> Option<u64> {
 /// request (e.g. fresh perimeter, started but never interacted with) — the caller
 /// MUST treat that as "no signal, do not auto-pause" (fail-safe). Depends on the
 /// proxy log persisting to its volume (the ZONE 3 entrypoint-chown fix).
-pub(crate) fn read_egress_log_last_activity_ms() -> Option<u64> {
+pub fn read_egress_log_last_activity_ms() -> Option<u64> {
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
@@ -866,7 +866,7 @@ pub(crate) fn read_egress_log_last_activity_ms() -> Option<u64> {
 /// `_reload_allowlist`, which does an in-memory atomic swap). No-op when the
 /// proxy isn't running. The proxy reads the live allowlist file the host app
 /// just appended to; this makes the change take effect without a restart.
-pub(crate) fn reload_proxy_allowlist() -> Result<(), OrchestratorError> {
+pub fn reload_proxy_allowlist() -> Result<(), OrchestratorError> {
     if !is_running("vault-proxy") {
         return Ok(()); // nothing to reload; the merged file is read on next start
     }

@@ -1275,19 +1275,22 @@ PY
 
 python3 - <<'PY' 2>/dev/null && pass "exactly one allowlist writer (the append primitive is only called inside allowlist.rs)" || fail "the allowlist write primitive is called outside orchestrator/allowlist.rs (ADR-0002 invariant)"
 import sys, pathlib
-src = pathlib.Path('app/src-tauri/src')
-al = (src / 'orchestrator' / 'allowlist.rs').read_text()
+al = pathlib.Path('app/src-tauri/crates/core/src/orchestrator/allowlist.rs').read_text()
 # apply_always (the sole high-level writer) is DEFINED in allowlist.rs ...
 if 'pub fn apply_always' not in al:
     sys.exit(1)
 # ... and the low-level write primitive append_host_inplace() may only be CALLED
 # inside allowlist.rs. Other modules go through apply_always/record_denial (which
 # they may call) — they may READ the allowlist, but never append to it directly.
-for p in src.rglob('*.rs'):
-    if p.name == 'allowlist.rs':
-        continue
-    if 'append_host_inplace(' in p.read_text():
-        sys.stderr.write(f"raw allowlist write primitive called in {p}\n"); sys.exit(1)
+# Post Phase B (ADR-0019) the orchestrator lives in crates/core/; scan both trees.
+roots = [pathlib.Path('app/src-tauri/src'),
+         pathlib.Path('app/src-tauri/crates/core/src')]
+for root in roots:
+    for p in root.rglob('*.rs'):
+        if p.name == 'allowlist.rs':
+            continue
+        if 'append_host_inplace(' in p.read_text():
+            sys.stderr.write(f"raw allowlist write primitive called in {p}\n"); sys.exit(1)
 sys.exit(0)
 PY
 

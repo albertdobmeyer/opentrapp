@@ -19,13 +19,15 @@ pub use opentrapp_core::idle::{read_telegram_token, stop_waker};
 /// when no bot token is configured (core logs that case). Replaces and cancels
 /// any previously-stored waker.
 pub fn spawn_waker(app: AppHandle, data_dir: PathBuf) {
-    let Some(state) = app.try_state::<AppState>() else {
-        return;
-    };
-    if let Ok(mut guard) = state.waker.lock() {
-        if let Some(old) = guard.take() {
-            old.cancel();
+    // Nested `if let` (not `let-else`): `try_state` borrows `app`, and that
+    // borrow must live across the `.waker.lock()` guard — the if-let scrutinee
+    // extends it; a `let-else` would drop it at the end of the `let` statement.
+    if let Some(state) = app.try_state::<AppState>() {
+        if let Ok(mut guard) = state.waker.lock() {
+            if let Some(old) = guard.take() {
+                old.cancel();
+            }
+            *guard = idle::spawn(data_dir);
         }
-        *guard = idle::spawn(data_dir);
     }
 }
