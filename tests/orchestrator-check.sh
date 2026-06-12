@@ -1249,7 +1249,7 @@ section "27. Allowlist approval — human-mediated loosening (v0.6 Item A)"
 # statically: the agent can never widen its own allowlist; clear exfil never
 # reaches the judge; exactly one code path writes the allowlist (spec 08 §4).
 
-if [ -f "app/src-tauri/src/orchestrator/allowlist.rs" ] && [ -f "app/src-tauri/src/commands/egress.rs" ]; then
+if [ -f "app/src-tauri/crates/core/src/orchestrator/allowlist.rs" ] && [ -f "app/src-tauri/src/commands/egress.rs" ]; then
   pass "allowlist-approval modules present (orchestrator/allowlist.rs + commands/egress.rs)"
 else
   fail "allowlist-approval modules missing (orchestrator/allowlist.rs / commands/egress.rs)"
@@ -1265,7 +1265,7 @@ PY
 
 python3 - <<'PY' 2>/dev/null && pass "clear exfil never reaches the judge (only off-allowlist BLOCKED surfaces)" || fail "allowlist.rs parse does not gate on action==BLOCKED + the off-allowlist reason"
 import sys, pathlib
-t = pathlib.Path('app/src-tauri/src/orchestrator/allowlist.rs').read_text()
+t = pathlib.Path('app/src-tauri/crates/core/src/orchestrator/allowlist.rs').read_text()
 # The parser must gate on BOTH action=="BLOCKED" and reason=="domain not in
 # allowlist"; EXFIL_BLOCKED / rebinding fall through and never surface.
 ok = ('"BLOCKED"' in t and 'domain not in allowlist' in t
@@ -1293,7 +1293,7 @@ PY
 
 python3 - <<'PY' 2>/dev/null && pass "record_denial never writes the allowlist (a denial is not a loosening)" || fail "record_denial in allowlist.rs touches the allowlist path"
 import sys, re, pathlib
-t = pathlib.Path('app/src-tauri/src/orchestrator/allowlist.rs').read_text()
+t = pathlib.Path('app/src-tauri/crates/core/src/orchestrator/allowlist.rs').read_text()
 m = re.search(r'pub fn record_denial.*?\n\}', t, re.S)
 ok = bool(m) and 'live_allowlist_path' not in m.group(0) and 'denials_path' in m.group(0)
 sys.exit(0 if ok else 1)
@@ -1413,14 +1413,14 @@ ok = (bool(s['vault-skills'].get('profiles')) and bool(s['vault-social'].get('pr
 sys.exit(0 if ok else 1)
 PY
 
-if grep -q "pub on_demand" app/src-tauri/src/orchestrator/perimeter.rs \
-   && grep -q "fn boot_services" app/src-tauri/src/orchestrator/perimeter.rs; then
+if grep -q "pub on_demand" app/src-tauri/crates/core/src/orchestrator/perimeter.rs \
+   && grep -q "fn boot_services" app/src-tauri/crates/core/src/orchestrator/perimeter.rs; then
   pass "perimeter.rs has the on_demand field + boot_services() filter"
 else
   fail "perimeter.rs missing on_demand field or boot_services()"
 fi
 
-if grep -q "spec.boot_services()" app/src-tauri/src/orchestrator/podman.rs; then
+if grep -q "spec.boot_services()" app/src-tauri/crates/core/src/orchestrator/podman.rs; then
   pass "podman.rs up()/shell_up() boot via boot_services() (on-demand skipped)"
 else
   fail "podman.rs still boots the full start_order() (on-demand not skipped)"

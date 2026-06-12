@@ -4,8 +4,8 @@
 **Decision date:** 2026-05-20
 **Supersedes (partially):** the bootstrap half of [ADR-0006](0006-four-container-topology.md) — the *topology* rationale stands; the *delivery + orchestration* mechanism it implied (host `podman compose` over a source tree) is replaced.
 **Implemented by:**
-- `app/src-tauri/src/orchestrator/perimeter.rs` — the signed perimeter spec (`resources/perimeter.yml`, compile-time embedded)
-- `app/src-tauri/src/orchestrator/podman.rs` — native podman orchestrator + `BundleVerifier` + `fetch_perimeter_images`
+- `app/src-tauri/crates/core/src/orchestrator/perimeter.rs` — the signed perimeter spec (`resources/perimeter.yml`, compile-time embedded)
+- `app/src-tauri/crates/core/src/orchestrator/podman.rs` — native podman orchestrator + `BundleVerifier` + `fetch_perimeter_images`
 - `app/src-tauri/src/bootstrap/mod.rs` — the 7-step pipeline (prepare-bundle → fetch → verify+load → up)
 - `.github/workflows/ci.yml` — the `build-images` job (build, cosign-sign, push GHCR, export tarballs as release assets, emit signed `image-digests.json`)
 **Verified by:** clean-box E2E (2026-05-20) — full five-container perimeter up from an AppImage in a directory with no source clone, zero on-host build, every image digest-verified, a tampered tarball refused.

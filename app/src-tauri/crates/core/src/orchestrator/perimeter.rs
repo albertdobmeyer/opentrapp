@@ -16,7 +16,10 @@ use std::collections::BTreeMap;
 use serde::Deserialize;
 
 /// The embedded spec source. Single source of truth for the orchestrator.
-const PERIMETER_YML: &str = include_str!("../../resources/perimeter.yml");
+/// The resource lives in the GUI crate's `resources/` (it's bundled + signed
+/// there); after the Phase B move this file sits 2 levels deeper, hence the
+/// longer relative path (crates/core/src/orchestrator → app/src-tauri).
+const PERIMETER_YML: &str = include_str!("../../../../resources/perimeter.yml");
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct PerimeterSpec {

@@ -79,7 +79,7 @@ Each component self-describes via `component.yml`. The Tauri backend reads these
 The schema is implemented in three places that must stay in sync:
 
 - `schemas/component.schema.json` (source of truth)
-- `app/src-tauri/src/orchestrator/manifest.rs` (Rust serde structs)
+- `app/src-tauri/crates/core/src/orchestrator/manifest.rs` (Rust serde structs)
 - `app/src/lib/types.ts` (TypeScript types)
 
 Enum-value alignment is verified by [`tests/orchestrator-check.sh`](tests/orchestrator-check.sh) section 7. Cross-references (commands referenced from workflows, states referenced from `available_when`, orchestrator workflow steps referencing component commands) are also validated.
@@ -99,7 +99,7 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Purpose | File |
 |---------|------|
 | Manifest schema (source of truth) | [`schemas/component.schema.json`](schemas/component.schema.json) |
-| Rust manifest structs | [`app/src-tauri/src/orchestrator/manifest.rs`](app/src-tauri/src/orchestrator/manifest.rs) |
+| Rust manifest structs | [`app/src-tauri/crates/core/src/orchestrator/manifest.rs`](app/src-tauri/crates/core/src/orchestrator/manifest.rs) |
 | TypeScript types | [`app/src/lib/types.ts`](app/src/lib/types.ts) |
 | Tauri command handlers | [`app/src-tauri/src/commands/`](app/src-tauri/src/commands/) |
 | Tauri invoke wrappers | [`app/src/lib/tauri.ts`](app/src/lib/tauri.ts) |
@@ -107,7 +107,7 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Perimeter compose | [`compose.yml`](compose.yml) |
 | Orchestrator workflows | [`config/orchestrator-workflows.yml`](config/orchestrator-workflows.yml) |
 | Orchestration tests | [`tests/orchestrator-check.sh`](tests/orchestrator-check.sh) |
-| Rust orchestrator unit tests | [`app/src-tauri/src/orchestrator/tests.rs`](app/src-tauri/src/orchestrator/tests.rs) |
+| Rust orchestrator unit tests | [`app/src-tauri/crates/core/src/orchestrator/tests.rs`](app/src-tauri/crates/core/src/orchestrator/tests.rs) |
 | Architecture (this repository) | [`docs/trifecta.md`](docs/trifecta.md) |
 | Threat model | [`docs/threat-model.md`](docs/threat-model.md) |
 | Prior-art comparison | [`docs/why-not-x.md`](docs/why-not-x.md) |
@@ -167,7 +167,7 @@ exist as a historical reference; do not push to them.
 
 ## 9. Security considerations
 
-- **Command injection prevention** — `app/src-tauri/src/orchestrator/runner.rs` wraps all interpolated arguments in single quotes with shell escaping.
+- **Command injection prevention** — `app/src-tauri/crates/core/src/orchestrator/runner.rs` wraps all interpolated arguments in single quotes with shell escaping.
 - **Path traversal protection** — `app/src-tauri/src/commands/config.rs` validates that canonical paths stay within the component's directory.
 - **Regex in probes** — `app/src-tauri/src/commands/status.rs` uses the `regex` crate for `stdout_regex` rules; never shells out to grep.
 - **Stream deduplication** — `app/src-tauri/src/commands/stream.rs` kills any prior streaming process before starting a new one.

@@ -142,7 +142,7 @@ For a full live-perimeter dogfood (the loop the maintainer runs before each rele
 Before opening a non-trivial pull request, please read [`CLAUDE.md`](CLAUDE.md) end-to-end. The points most often missed by new contributors:
 
 - **Generic-backend constraint** — the Tauri backend reads manifests and executes what they declare; component-specific logic lives in the components, not in the backend.
-- **Manifest schema alignment** — the schema lives in three places (`schemas/component.schema.json`, `app/src-tauri/src/orchestrator/manifest.rs`, `app/src/lib/types.ts`) which change together.
+- **Manifest schema alignment** — the schema lives in three places (`schemas/component.schema.json`, `app/src-tauri/crates/core/src/orchestrator/manifest.rs`, `app/src/lib/types.ts`) which change together.
 - **Submodule discipline** — see above.
 - **The 28 reserved-term list** — see above.
 

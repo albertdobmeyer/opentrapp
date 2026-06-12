@@ -2,8 +2,8 @@
 
 **Status:** Accepted
 **Decision date:** 2026-04-15 (architecture v2 redesign)
-**Implemented by:** [`schemas/component.schema.json`](../../schemas/component.schema.json) (the contract); [`app/src-tauri/src/orchestrator/manifest.rs`](../../app/src-tauri/src/orchestrator/manifest.rs) (Rust serde); [`app/src/lib/types.ts`](../../app/src/lib/types.ts) (TypeScript types); per-component `component.yml` files
-**Verified by:** [`tests/orchestrator-check.sh`](../../tests/orchestrator-check.sh) §7 (manifest enum values match Rust serde expectations) and §6 (frontend-backend command parity); [`app/src-tauri/src/orchestrator/tests.rs`](../../app/src-tauri/src/orchestrator/tests.rs) (parser unit tests)
+**Implemented by:** [`schemas/component.schema.json`](../../schemas/component.schema.json) (the contract); [`app/src-tauri/crates/core/src/orchestrator/manifest.rs`](../../app/src-tauri/crates/core/src/orchestrator/manifest.rs) (Rust serde); [`app/src/lib/types.ts`](../../app/src/lib/types.ts) (TypeScript types); per-component `component.yml` files
+**Verified by:** [`tests/orchestrator-check.sh`](../../tests/orchestrator-check.sh) §7 (manifest enum values match Rust serde expectations) and §6 (frontend-backend command parity); [`app/src-tauri/crates/core/src/orchestrator/tests.rs`](../../app/src-tauri/crates/core/src/orchestrator/tests.rs) (parser unit tests)
 
 ---
 
@@ -25,7 +25,7 @@ The manifest contract has six sections, defined by [`schemas/component.schema.js
 
 1. **identity** — `id`, `name`, `version`, `role`, `icon`, `color`. The frontend uses these to render generic per-component UI.
 2. **status** — declared states (`running`, `stopped`, `error`, etc.) and the probe commands that distinguish them. The orchestrator runs the probes; the frontend renders the resulting state.
-3. **commands** — individual operations. Each command declares its argument schema, danger level, and output format. The orchestrator's runner ([`runner.rs`](../../app/src-tauri/src/orchestrator/runner.rs)) interpolates user-supplied arguments into the command line with shell-safe escaping; the frontend renders an argument form from the schema.
+3. **commands** — individual operations. Each command declares its argument schema, danger level, and output format. The orchestrator's runner ([`runner.rs`](../../app/src-tauri/crates/core/src/orchestrator/runner.rs)) interpolates user-supplied arguments into the command line with shell-safe escaping; the frontend renders an argument form from the schema.
 4. **configs** — editable configuration files with format metadata (JSON, YAML, JSON5, plain). The frontend renders a generic editor; the backend writes the file with path-traversal validation.
 5. **health** — lightweight probes for dashboard badges. Distinct from the `status` probes in cardinality (frequent, cheap) and intent (per-tile UI signal vs. per-component overall state).
 6. **workflows** — multi-step automated sequences (chains of commands presented as a single user action). Two flavours: *component workflows* declared inside a single `component.yml` (referencing only that component's commands), and *orchestrator workflows* declared in [`config/orchestrator-workflows.yml`](../../config/orchestrator-workflows.yml) (referencing component IDs plus command or workflow IDs across components).
@@ -33,7 +33,7 @@ The manifest contract has six sections, defined by [`schemas/component.schema.js
 The schema is implemented in three places that must stay in sync, and the alignment is verified mechanically:
 
 - [`schemas/component.schema.json`](../../schemas/component.schema.json) — the source of truth
-- [`app/src-tauri/src/orchestrator/manifest.rs`](../../app/src-tauri/src/orchestrator/manifest.rs) — the Rust serde structs
+- [`app/src-tauri/crates/core/src/orchestrator/manifest.rs`](../../app/src-tauri/crates/core/src/orchestrator/manifest.rs) — the Rust serde structs
 - [`app/src/lib/types.ts`](../../app/src/lib/types.ts) — the TypeScript types
 
 The orchestrator-check suite (§7 of [`tests/orchestrator-check.sh`](../../tests/orchestrator-check.sh)) verifies enum values agree across the three layers. The §6 check verifies that every Rust command handler has a matching frontend invoke wrapper. Cross-references — commands referenced from workflows, states referenced from `available_when`, orchestrator workflow steps referencing component commands — are validated as part of §9.
@@ -75,7 +75,7 @@ The orchestrator-check suite (§7 of [`tests/orchestrator-check.sh`](../../tests
 ## References
 
 - The schema itself: [`schemas/component.schema.json`](../../schemas/component.schema.json)
-- The Rust serde structs: [`app/src-tauri/src/orchestrator/manifest.rs`](../../app/src-tauri/src/orchestrator/manifest.rs)
+- The Rust serde structs: [`app/src-tauri/crates/core/src/orchestrator/manifest.rs`](../../app/src-tauri/crates/core/src/orchestrator/manifest.rs)
 - The TypeScript types: [`app/src/lib/types.ts`](../../app/src/lib/types.ts)
 - The validation suite: [`tests/orchestrator-check.sh`](../../tests/orchestrator-check.sh)
 - The contract documented for contributors: [`CLAUDE.md`](../../CLAUDE.md) §4 (manifest contract) and §5 (generic-backend constraint)

@@ -40,7 +40,7 @@ Please confirm the five gates are green locally before marking the pull request 
 If this change touches the manifest schema or any of its three implementations:
 
 - [ ] `schemas/component.schema.json` updated
-- [ ] `app/src-tauri/src/orchestrator/manifest.rs` updated
+- [ ] `app/src-tauri/crates/core/src/orchestrator/manifest.rs` updated
 - [ ] `app/src/lib/types.ts` updated
 - [ ] `tests/orchestrator-check.sh` still passes
 - [ ] n/a — this change does not touch the schema

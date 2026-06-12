@@ -50,7 +50,7 @@ These checks are intentionally not satisfied at present, with the rationale reco
 | Check | Rationale |
 |-------|-----------|
 | **Vulnerabilities** | The advisory database flags transitive Rust dependencies (primarily through `reqwest` and `tokio`) for which no upstream patched release is available at the time of writing. Dependabot's weekly cargo updates will close these as patches are published. The supply-chain workflow (`cargo audit`, `cargo deny`) makes the open advisories visible in CI. |
-| **Fuzzing** | A fuzzing harness over the manifest parser and the orchestrator's command interpolation is on the roadmap. Until then, the property tests in `app/src-tauri/src/orchestrator/tests.rs` exercise the same surfaces deterministically. |
+| **Fuzzing** | A fuzzing harness over the manifest parser and the orchestrator's command interpolation is on the roadmap. Until then, the property tests in `app/src-tauri/crates/core/src/orchestrator/tests.rs` exercise the same surfaces deterministically. |
 | **Packaging** | OpenTrApp is a desktop application distributed via GitHub Releases, not a published package. Scorecard's check looks for a recognised packaging workflow (npm publish, container registry push, etc.); the GitHub Release flow does not match its current heuristics. |
 | **Contributors** | The repository has a single maintaining organisation. The check reflects this accurately and is not a target for active improvement. |
 
