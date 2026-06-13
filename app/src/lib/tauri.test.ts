@@ -15,6 +15,25 @@ import {
   checkPrerequisites,
   initSubmodules,
   createConfigFromTemplate,
+  // security-critical + lifecycle wrappers
+  saveCredentials,
+  readRuntimeEnv,
+  validateAnthropicKey,
+  deriveTelegramBotUrl,
+  applyAllowlistDecision,
+  listEgressApprovals,
+  restartPerimeter,
+  pausePerimeter,
+  resumePerimeter,
+  getPerimeterState,
+  listWorkflows,
+  executeWorkflow,
+  telegramDeleteWebhook,
+  telegramPollForStart,
+  telegramSendMessage,
+  telegramAdvanceOffset,
+  getSentinelActivity,
+  sentinelJudge,
 } from "./tauri";
 
 const mockInvoke = vi.mocked(invoke);
@@ -162,5 +181,124 @@ describe("IPC contract: each function calls invoke with correct command and args
       configPath: ".env",
       templatePath: ".env.example",
     });
+  });
+});
+
+// The contract that matters most for a security tool: the wrappers that move
+// CREDENTIALS, control the EGRESS ALLOWLIST, and drive the PERIMETER lifecycle.
+// A wrong command name or arg shape here is a security/data-integrity failure
+// (the shipped v0.6 first-run dead-end was exactly this class — credentials sent
+// to the wrong IPC target). Pin each one.
+describe("IPC contract: security-critical + lifecycle commands", () => {
+  test("saveCredentials → save_credentials with both keys (NOT a config-dir write)", async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    await saveCredentials("sk-ant-xyz", "123:AAH");
+    expect(mockInvoke).toHaveBeenCalledWith("save_credentials", {
+      anthropicKey: "sk-ant-xyz",
+      telegramToken: "123:AAH",
+    });
+  });
+
+  test("readRuntimeEnv → read_runtime_env (no args)", async () => {
+    mockInvoke.mockResolvedValue("ANTHROPIC_API_KEY=x\n");
+    await readRuntimeEnv();
+    expect(mockInvoke).toHaveBeenCalledWith("read_runtime_env");
+  });
+
+  test("validateAnthropicKey → validate_anthropic_key with the key", async () => {
+    mockInvoke.mockResolvedValue({ ok: true });
+    await validateAnthropicKey("sk-ant-secret");
+    expect(mockInvoke).toHaveBeenCalledWith("validate_anthropic_key", { key: "sk-ant-secret" });
+  });
+
+  test("deriveTelegramBotUrl → derive_telegram_bot_url with the token", async () => {
+    mockInvoke.mockResolvedValue({ url: "u", username: "n" });
+    await deriveTelegramBotUrl("42:secret");
+    expect(mockInvoke).toHaveBeenCalledWith("derive_telegram_bot_url", { token: "42:secret" });
+  });
+
+  test("applyAllowlistDecision → apply_allowlist_decision with host + decision", async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    await applyAllowlistDecision("evil.example.com", "deny");
+    expect(mockInvoke).toHaveBeenCalledWith("apply_allowlist_decision", {
+      host: "evil.example.com",
+      decision: "deny",
+    });
+    await applyAllowlistDecision("api.anthropic.com", "always");
+    expect(mockInvoke).toHaveBeenLastCalledWith("apply_allowlist_decision", {
+      host: "api.anthropic.com",
+      decision: "always",
+    });
+  });
+
+  test("listEgressApprovals → list_egress_approvals (no args)", async () => {
+    mockInvoke.mockResolvedValue([]);
+    await listEgressApprovals();
+    expect(mockInvoke).toHaveBeenCalledWith("list_egress_approvals");
+  });
+
+  test("perimeter lifecycle → restart/pause/resume/get_perimeter_state", async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    await restartPerimeter();
+    expect(mockInvoke).toHaveBeenCalledWith("restart_perimeter");
+    await pausePerimeter();
+    expect(mockInvoke).toHaveBeenCalledWith("pause_perimeter");
+    await resumePerimeter();
+    expect(mockInvoke).toHaveBeenCalledWith("resume_perimeter");
+    mockInvoke.mockResolvedValue({ state: "ok" });
+    await getPerimeterState();
+    expect(mockInvoke).toHaveBeenCalledWith("get_perimeter_state");
+  });
+
+  test("listWorkflows → list_workflows with componentId", async () => {
+    mockInvoke.mockResolvedValue([]);
+    await listWorkflows("agent");
+    expect(mockInvoke).toHaveBeenCalledWith("list_workflows", { componentId: "agent" });
+  });
+
+  test("executeWorkflow → execute_workflow with componentId, workflowId, inputs (default {})", async () => {
+    mockInvoke.mockResolvedValue({ status: "completed" });
+    await executeWorkflow("agent", "full-verify");
+    expect(mockInvoke).toHaveBeenCalledWith("execute_workflow", {
+      componentId: "agent",
+      workflowId: "full-verify",
+      inputs: {},
+    });
+    await executeWorkflow("skills", "scan", { url: "https://x" });
+    expect(mockInvoke).toHaveBeenLastCalledWith("execute_workflow", {
+      componentId: "skills",
+      workflowId: "scan",
+      inputs: { url: "https://x" },
+    });
+  });
+
+  test("telegram waker channel → delete_webhook / poll_for_start / send / advance_offset", async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    await telegramDeleteWebhook("tok");
+    expect(mockInvoke).toHaveBeenCalledWith("telegram_delete_webhook", { token: "tok" });
+    await telegramPollForStart("tok", 7, 30);
+    expect(mockInvoke).toHaveBeenCalledWith("telegram_poll_for_start", {
+      token: "tok",
+      offset: 7,
+      timeoutSecs: 30,
+    });
+    await telegramSendMessage("tok", 99, "hello");
+    expect(mockInvoke).toHaveBeenCalledWith("telegram_send_message", {
+      token: "tok",
+      chatId: 99,
+      text: "hello",
+    });
+    await telegramAdvanceOffset("tok", 12);
+    expect(mockInvoke).toHaveBeenCalledWith("telegram_advance_offset", { token: "tok", updateId: 12 });
+  });
+
+  test("sentinel → get_sentinel_activity / sentinel_judge", async () => {
+    mockInvoke.mockResolvedValue({});
+    await getSentinelActivity();
+    expect(mockInvoke).toHaveBeenCalledWith("get_sentinel_activity");
+    const request = { host: "x", reason: "y" };
+    mockInvoke.mockResolvedValue({ verdict: "allow" });
+    await sentinelJudge(request);
+    expect(mockInvoke).toHaveBeenCalledWith("sentinel_judge", { request });
   });
 });
