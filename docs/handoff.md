@@ -597,12 +597,12 @@ The maintainer applied to **SignPath Foundation** for free Windows code-signing 
 >   + rerun OpenSSF badge. The scaffold doesn't change that order; it just means the *CI half is already done*.
 > - Full required-secrets tables: [`docs/code-signing-policy.md`](code-signing-policy.md).
 >
-> #### ⟶ SignPath application READY TO SUBMIT 2026-06-13 — maintainer must click submit
-> The fresh SignPath Foundation application (OpenTrApp brand) is **fully prepared but NOT yet submitted.**
-> Submitting is a manual step on signpath.org in the maintainer's browser/account — no agent can do it.
-> **ACTION (maintainer):** open the SignPath form, paste the values below, tick the two required checkboxes,
-> click submit; then update this note to "submitted 2026-06-13, pending review" and watch for SignPath's
-> email to `albertkdobmeyer@gmail.com`.
+> #### ⟶ SignPath application SUBMITTED 2026-06-13 — pending review
+> The fresh SignPath Foundation application (OpenTrApp brand) was **submitted by the maintainer on
+> 2026-06-13 and is now awaiting SignPath's review.** Next action is SignPath's — watch for their email to
+> `albertkdobmeyer@gmail.com`. The submitted values are in [`signpath-application.md`](signpath-application.md).
+> **On approval:** activate the Windows SignPath template in `ci.yml` (SHA-pin the action + fill
+> org/project/policy slugs + add `SIGNPATH_*` secrets + uncomment) — the CI integration is already written.
 > - **Site deployed + verified LIVE** before submitting (the Download/Privacy URLs only count once live).
 >   `scp`'d `index.html` + `privacy.html` to the VPS; runbook §4 all-green (both SHA-synced, nginx active,
 >   home + privacy HTTP 200) and independently re-confirmed over Cloudflare: new SignPath line present, old

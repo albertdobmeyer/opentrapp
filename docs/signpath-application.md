@@ -7,8 +7,9 @@ application. The supporting site is already live and verified
 boxes, click submit.** See [`code-signing-policy.md`](code-signing-policy.md) for
 the signing policy SignPath requires.
 
-> Status: **ready to submit** (not yet submitted as of 2026-06-13). After you
-> click submit, note the date in [`handoff.md`](handoff.md) → "SignPath application".
+> Status: **SUBMITTED 2026-06-13 — pending SignPath review.** Next action is
+> SignPath's; watch for their email. On approval, activate the `ci.yml` SignPath
+> template (see "After approval" below).
 
 ---
 
