@@ -597,25 +597,29 @@ The maintainer applied to **SignPath Foundation** for free Windows code-signing 
 >   + rerun OpenSSF badge. The scaffold doesn't change that order; it just means the *CI half is already done*.
 > - Full required-secrets tables: [`docs/code-signing-policy.md`](code-signing-policy.md).
 >
-> #### ⟶ Application prep (2026-06-13) — form drafted, site made submission-ready
-> The maintainer started the fresh SignPath Foundation application form. Done this session:
-> - **Form answers drafted** (in chat — not committed). Project name `opentrapp`; repo + homepage URLs;
->   one-sentence tagline + a version-agnostic description paragraph; **Maintainer Type = Individual**,
->   **Build System = GitHub Actions**; reputation = lead with security signals (OpenSSF Best Practices #12755,
->   Scorecard, CodeQL, SBOM + cosign + SLSA, public threat model/whitepaper) since the repo is young (1★).
-> - **Download URL** = `https://www.opentrapp.com/#download`. SignPath requires that page to mention SignPath.
->   It did — but the old line *"Windows installer signed by SignPath Foundation"* was **false today** and
->   contradicted the "no certs yet" paragraph above it. Reworded to the honest program relationship (commit
->   `77d4da0`): *"free Windows code signing provided by the SignPath Foundation's open-source program —
->   rollout in progress"* + link to the policy. **If their reviewer demands unconditional present-tense, drop
->   "rollout in progress" once the first signed release ships.**
-> - **Privacy Policy URL** = `https://www.opentrapp.com/privacy.html` — new `docs/privacy.html` (plain
->   "collects no data" policy; footer-linked). Not strictly required (no data collected) but populates the field.
-> - **Deploy runbook** updated to track `privacy.html` as a third deployed asset (`a7d0f1b`).
-> - **⚠️ STILL MANUAL (maintainer):** (1) the site changes are in git but **NOT live** — `scp docs/index.html
->   docs/privacy.html root@hetzner:/var/www/opentrapp.com/html/` then verify per `deploying-the-landing-page.md`
->   §4 (home grep `code signing for OpenTrApp is provided by`; privacy grep `collects no personal data`, both
->   HTTP 200). (2) **Then** submit the form. The Download/Privacy URLs only satisfy the reviewer once deployed.
+> #### ⟶ SignPath application SUBMITTED 2026-06-13 — pending review
+> The fresh SignPath Foundation application (OpenTrApp brand) was **submitted and is now awaiting review.**
+> Next action is SignPath's, not ours — watch for their email to `albertkdobmeyer@gmail.com`.
+> - **Site deployed + verified LIVE** before submitting (the Download/Privacy URLs only count once live).
+>   `scp`'d `index.html` + `privacy.html` to the VPS; runbook §4 all-green (both SHA-synced, nginx active,
+>   home + privacy HTTP 200) and independently re-confirmed over Cloudflare: new SignPath line present, old
+>   false line gone, footer Privacy link present, `/privacy.html` serving the real page.
+> - **Values submitted:** Project `opentrapp`; repo `github.com/albertdobmeyer/opentrapp`; homepage
+>   `https://www.opentrapp.com`; **Download URL** `https://www.opentrapp.com/#download`; **Privacy URL**
+>   `https://www.opentrapp.com/privacy.html`; Maintainer Type **Individual**; Build System **GitHub Actions**;
+>   reputation led with security signals (OpenSSF Best Practices #12755, Scorecard, CodeQL, SBOM+cosign+SLSA,
+>   public threat model/whitepaper) since the repo is young (1★). Full tagline/description/reputation text is
+>   in the 2026-06-13 chat transcript.
+> - **Honest-wording flag:** the download page says *"free Windows code signing provided by the SignPath
+>   Foundation's open-source program — rollout in progress"* (`77d4da0`). It is NOT signed yet. **If the
+>   reviewer asks for unconditional present-tense, drop "rollout in progress" once the first signed release
+>   ships** — do not claim signed before it is.
+> - **When approved:** activate the Windows SignPath template in `ci.yml` (SHA-pin the action + fill
+>   org/project/policy slugs + add `SIGNPATH_*` secrets + uncomment) — the CI integration is already written.
+> - The security follow-ups (A1–A4 below) remain open and may be read by the reviewer; they were NOT gating
+>   the submission (maintainer chose to submit now with the CI scaffold + live site ready).
+> - Artifacts: download-page note + `docs/privacy.html` (`77d4da0`); deploy runbook tracks `privacy.html`
+>   (`a7d0f1b`); `docs/code-signing-policy.md` (macOS + Windows secrets tables).
 
 ### The security work blocking SignPath
 
