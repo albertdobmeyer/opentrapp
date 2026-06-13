@@ -650,28 +650,23 @@ this dogfooded the new PR-based workflow (WS-C).**
 - **PR #74** (esbuild dev bump) — being rebased by Dependabot onto fixed main (lockfile conflict
   with #75's react-router bump), then merge when green.
 
-### ⚠️ MAINTAINER ACTION — branch protection (WS-B)
-Apply the safe settings (NO required approvals — they'd block your own solo merges). Run:
-```bash
-gh api -X PUT repos/albertdobmeyer/opentrapp/branches/main/protection \
-  -H "Accept: application/vnd.github+json" \
-  -f 'required_status_checks[strict]=true' \
-  -f 'required_status_checks[contexts][]=Rust (check + test)' \
-  -f 'required_status_checks[contexts][]=Frontend (tsc + vitest)' \
-  -f 'required_status_checks[contexts][]=Orchestration (42 checks)' \
-  -f 'required_status_checks[contexts][]=Integration tests (cross-module contracts)' \
-  -f 'required_status_checks[contexts][]=Playwright smoke tests' \
-  -F 'enforce_admins=true' \
-  -F 'required_pull_request_reviews[dismiss_stale_reviews]=true' \
-  -F 'required_pull_request_reviews[require_code_owner_reviews]=true' \
-  -F 'required_pull_request_reviews[required_approving_review_count]=0' \
-  -F 'required_linear_history=true' \
-  -F 'required_conversation_resolution=true' \
-  -F 'restrictions=null' \
-  -F 'allow_force_pushes=false' -F 'allow_deletions=false'
-```
-Set `required_approving_review_count=1` **only if you add a second maintainer** (which also lifts
-the `Code-Review` + `Contributors` checks — the single highest-leverage real-world step).
+### ✅ Branch protection — APPLIED 2026-06-13 (WS-B)
+`main` is now protected: **enforce_admins=true** (applies to admins too), **require a PR** with
+**0 required approvals** (solo can self-merge), **strict** required status checks
+(`Rust (check + test)`, `Frontend (tsc + vitest)`, `Orchestration (42 checks)`,
+`Integration tests (cross-module contracts)`, `Playwright smoke tests`, `DCO sign-off check`),
+required linear history + conversation resolution, force-pushes + deletions blocked.
+
+**Consequence:** NO direct pushes to `main` for anyone (incl. the maintainer) — every change goes
+branch → PR → CI green + DCO sign-off → self-merge. This is what `CONTRIBUTING.md` documents.
+
+- **When a co-maintainer joins:** bump approvals to 1 (re-PUT with
+  `required_pull_request_reviews.required_approving_review_count: 1`) — this is what lifts the
+  Scorecard `Code-Review` + makes required-review meaningful.
+- **If `strict` rebases get annoying solo:** `gh api --method PATCH
+  repos/albertdobmeyer/opentrapp/branches/main/protection/required_status_checks -f strict=false`.
+- **Revert entirely:** `gh api --method DELETE repos/albertdobmeyer/opentrapp/branches/main/protection`.
+- Scorecard `Branch-Protection` (was 4) should rise on the next nightly scan.
 
 ### Honest residual caps (do NOT chase to 10/10)
 - **Vulnerabilities:** Scorecard's external OSV scan won't read `deny.toml`; the GTK3 set keeps it
