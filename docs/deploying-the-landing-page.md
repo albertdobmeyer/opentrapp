@@ -1,6 +1,6 @@
 # Deploying the landing page
 
-The marketing site at <https://opentrapp.com> is a static page hosted on the project's Hetzner VPS, served by nginx behind Cloudflare. The source lives in this repository at [`docs/index.html`](index.html) (and `docs/bg-hero.png`); deploys are a manual `scp` after merging changes to `main`.
+The marketing site at <https://opentrapp.com> is a static page hosted on the project's Hetzner VPS, served by nginx behind Cloudflare. The source lives in this repository at [`docs/index.html`](index.html), [`docs/privacy.html`](privacy.html) (served at `/privacy.html`), and [`docs/bg-hero.png`](bg-hero.png), plus the assets under `docs/img/`; deploys are a manual `scp` after merging changes to `main`.
 
 This runbook covers the deploy procedure end-to-end, including verification and rollback. It is independent of [`RELEASING.md`](../RELEASING.md) — landing-page changes ship out-of-band from app releases.
 
@@ -49,6 +49,12 @@ Replace `<reason>` with a short tag like `deeplink`, `hero-copy`, `bg-image-swap
 scp docs/index.html root@hetzner:/var/www/opentrapp.com/html/index.html
 ```
 
+The site is more than one file. **`privacy.html`** (served at `/privacy.html`, linked from the footer) is a deployed asset too — whenever it changes, upload it alongside `index.html`:
+
+```bash
+scp docs/index.html docs/privacy.html root@hetzner:/var/www/opentrapp.com/html/
+```
+
 If the deploy includes new image assets, upload them in the same `scp` invocation. Note that `docs/index.html` references logos and the favicon under `img/` (e.g. `<img src="img/logo-banner.png">`), so the `docs/img/` subdirectory must be synced whenever its contents change — `scp` won't recurse into directories without `-r`:
 
 ```bash
@@ -67,11 +73,14 @@ If you change an asset path in `index.html` (moving a file between root and `img
 Run all three checks before declaring the deploy successful.
 
 ```bash
-# 4a. SHA-256 match between local and the file the server is serving from.
+# 4a. SHA-256 match between local and the file(s) the server is serving from.
 #     This is the authoritative sync check — bypasses Cloudflare entirely.
-LOCAL_HASH=$(sha256sum docs/index.html | awk '{print $1}')
-REMOTE_HASH=$(ssh hetzner sha256sum /var/www/opentrapp.com/html/index.html | awk '{print $1}')
-[ "$LOCAL_HASH" = "$REMOTE_HASH" ] && echo "✓ sync confirmed" || echo "✗ MISMATCH"
+#     Add any other deployed file (e.g. privacy.html) to the loop.
+for f in index.html privacy.html; do
+  LOCAL_HASH=$(sha256sum docs/$f | awk '{print $1}')
+  REMOTE_HASH=$(ssh hetzner sha256sum /var/www/opentrapp.com/html/$f | awk '{print $1}')
+  [ "$LOCAL_HASH" = "$REMOTE_HASH" ] && echo "✓ $f sync confirmed" || echo "✗ $f MISMATCH"
+done
 
 # 4b. nginx config still valid + service still active.
 ssh hetzner 'nginx -t 2>&1 && systemctl is-active nginx'
