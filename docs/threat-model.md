@@ -223,6 +223,7 @@ Every row in `trifecta.md` §7 is accounted for here. Layers marked "parked" rem
 
 ## Cross-references
 
+- [`known-advisories.md`](known-advisories.md) lists the upstream dependency advisories the project knowingly accepts (chiefly the unmaintained Tauri GTK3 webview crates) with rationale, and explains how to read the OpenSSF Scorecard.
 - [`README.md`](../README.md) "Limitations" cites this document as the authoritative residual-risk source.
 - [`SECURITY.md`](../SECURITY.md) "In scope" / "Out of scope" align with the T1–T5 categories above; T6 is described here for completeness even though most of T6 falls under "out of scope" for the vulnerability-reporting policy.
 - [`trifecta.md`](trifecta.md) §7 is the layer-side companion to this attacker-side document; the *Coverage check* section above verifies the bidirectional correspondence.

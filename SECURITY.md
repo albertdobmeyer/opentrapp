@@ -13,7 +13,7 @@ Single monorepo since [ADR-0013](docs/adr/0013-monorepo-consolidation.md). This 
 
 The previously-separate `opencli-container`, `openagent-skills`, and `openagent-social` GitHub repositories are archived references — please report vulnerabilities here, not there.
 
-Vulnerabilities in upstream dependencies (Tauri, mitmproxy, Rust crates, npm packages) and in the third-party platforms this software interfaces with (Anthropic API, Telegram, OpenClaw, ClawHub, Moltbook) are out of scope; please report those to their respective maintainers.
+Vulnerabilities in upstream dependencies (Tauri, mitmproxy, Rust crates, npm packages) and in the third-party platforms this software interfaces with (Anthropic API, Telegram, OpenClaw, ClawHub, Moltbook) are out of scope; please report those to their respective maintainers. Advisories we knowingly accept (chiefly the unmaintained Tauri GTK3 webview crates) and how to read the project's OpenSSF Scorecard are documented in [`docs/known-advisories.md`](docs/known-advisories.md).
 
 The full attacker-capability matrix (T1–T6), the perimeter layers that mitigate each, and the residual risks that remain after mitigation are documented in [`docs/threat-model.md`](docs/threat-model.md). The "In scope" and "Out of scope" sections below are aligned with that document.
 

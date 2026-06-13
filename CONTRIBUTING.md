@@ -108,6 +108,15 @@ We follow an issue-first workflow:
 5. **Address review feedback** by pushing additional commits to the same branch. Please avoid force-pushing during review (it makes incremental review harder); the maintainer will squash on merge.
 6. **The maintainer merges** when CI is green and the review is approved.
 
+**Maintainer changes go through pull requests too** — including the sole
+maintainer's own work. Land changes on a topic branch → open a PR → let CI run →
+merge after green, rather than pushing directly to `main`. This keeps every
+change behind the CI gate, makes the history reviewable, and lets the OpenSSF
+Scorecard *CI-Tests* check register (it has no signal when changes bypass PRs).
+Required-approval branch protection is only enabled once a second maintainer
+exists (a solo maintainer cannot approve their own PR); until then, self-merge
+after green is the norm.
+
 ## Commit-message style
 
 We follow a lightweight conventional-commits convention:

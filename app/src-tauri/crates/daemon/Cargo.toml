@@ -9,6 +9,7 @@ name = "opentrapp-daemon"
 version = "0.7.2"
 edition = "2021"
 license = "MIT"
+publish = false  # workspace-internal crate; never published to crates.io
 description = "Headless perimeter daemon for OpenTrApp (no GUI deps)"
 
 [[bin]]

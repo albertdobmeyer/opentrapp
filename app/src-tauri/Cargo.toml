@@ -10,6 +10,10 @@ resolver = "2"
 name = "opentrapp"
 version = "0.7.2"
 edition = "2021"
+# Never published to crates.io — this is a desktop app with workspace-internal
+# path deps. `publish = false` makes it a private crate so cargo-deny's
+# allow-wildcard-paths applies to the internal `opentrapp-core` path dependency.
+publish = false
 description = "Containerization perimeter + skill scanner for autonomous CLI agents"
 authors = ["Albert Dobmeyer"]
 license = "MIT"
