@@ -71,7 +71,7 @@ Every pull request keeps these checks green. CI runs them on every push to `main
 # 1. Rust unit tests (currently 56)
 cd app/src-tauri && cargo test --lib
 
-# 2. Vitest frontend unit tests (currently 74)
+# 2. Vitest frontend unit tests (currently 87)
 cd app && npm test -- --run
 
 # 3. TypeScript strict-mode checking
@@ -116,6 +116,34 @@ Scorecard *CI-Tests* check register (it has no signal when changes bypass PRs).
 Required-approval branch protection is only enabled once a second maintainer
 exists (a solo maintainer cannot approve their own PR); until then, self-merge
 after green is the norm.
+
+## Maintainers & code review
+
+The review policy scales with the number of maintainers:
+
+- **Solo (today):** the maintainer self-merges after CI is green. The OpenSSF
+  Scorecard `Code-Review` check stays low because no second approver exists — an
+  honest, documented limitation, not an oversight (see [`docs/known-advisories.md`](docs/known-advisories.md)).
+- **Two or more maintainers:** every pull request — *including a maintainer's own* —
+  requires **at least one approving review from a maintainer other than the author**
+  before merge. No self-approval. This is exactly what the `Code-Review` check
+  measures, and more importantly it puts a second set of eyes on every change.
+
+### Onboarding a new maintainer
+
+1. Add them as a repository collaborator with the **Maintain** (or Write) role.
+   *(A GitHub organization is not required for this — collaborators on the
+   existing repo can review and approve. Do not transfer the repo to an org while
+   the SignPath application is under review, as it would change the canonical URL.)*
+2. Add them to [`.github/CODEOWNERS`](.github/CODEOWNERS) so their review is
+   requested automatically.
+3. Ask them to set a distinct **company / affiliation** on their GitHub profile —
+   the Scorecard `Contributors` check rewards contributors from multiple
+   organizations, so affiliation *diversity* (not one shared org) is what counts.
+4. Once a second maintainer is active, **enable required approvals on `main`** —
+   re-run the branch-protection command in [`docs/handoff.md`](docs/handoff.md) with
+   `required_approving_review_count=1` (it is `0` while solo so the maintainer is
+   not locked out of their own merges).
 
 ## Commit-message style
 
