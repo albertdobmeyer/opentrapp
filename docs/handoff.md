@@ -630,18 +630,25 @@ Triaged the Scorecard (<https://scorecard.dev/viewer/?uri=github.com/albertdobme
 the honest finding: most low checks are **structurally capped for a solo Tauri app**, and
 "26 vulnerabilities" is mostly **unmaintained upstream Tauri GTK3 crates** (not exploitable, not
 ours). Full reasoning + the accepted-advisory list + how to read the Scorecard is in
-[`docs/known-advisories.md`](known-advisories.md). Landed on branch `scorecard-remediation` (PR):
+[`docs/known-advisories.md`](known-advisories.md). **Merged via PR #75 (`9e8e3db`), CI fully green —
+this dogfooded the new PR-based workflow (WS-C).**
 
 - **Real vuln fixed:** `react-router-dom ^6.26.0 → ^6.30.4` (kills `GHSA-2j2x-hqr9-3h42`
   open-redirect); `npm audit --omit=dev` now **0**. tsc/lint/vitest(87) green.
-- **`cargo deny` was RED on main** (Phase-B fallout): the version-less path dep
-  `opentrapp-core` tripped `[bans] wildcards = "deny"`. Fixed with `allow-wildcard-paths = true`
-  + `publish = false` on the three internal crates (they're never published). `cargo deny check`
-  + `cargo audit` now exit 0. Also synced a **stale `Cargo.lock`** (was `opentrapp 0.7.1`, missing
-  the two Phase-B crates) and dropped the resolved `RUSTSEC-2024-0429` ignore.
+- **Two PRE-EXISTING red CI checks on main fixed** (both Phase-B fallout, surfaced because the PR
+  touched Rust files):
+  - **`cargo deny`** — the version-less path dep `opentrapp-core` tripped `[bans] wildcards = "deny"`.
+    Fixed with `allow-wildcard-paths = true` + `publish = false` on the three internal crates (never
+    published). Also synced a **stale `Cargo.lock`** (was `opentrapp 0.7.1`, missing the two Phase-B
+    crates) + dropped the resolved `RUSTSEC-2024-0429` ignore.
+  - **`cargo-fuzz`** — the fuzz crate depended on the GUI `opentrapp` crate, so each target ran
+    `tauri-build` (fails under the sanitizer). Moved the `fuzz_api` shim into `opentrapp-core` and
+    repointed `fuzz/Cargo.toml` at `../crates/core`. All 3 fuzz jobs green.
 - **Docs:** `known-advisories.md` (new, linked from SECURITY + threat-model); CONTRIBUTING note
   that the maintainer routes own changes through PRs (recovers Scorecard *CI-Tests* from -1);
   CII Silver/Gold gap analysis in `openssf-best-practices-application.md`.
+- **PR #74** (esbuild dev bump) — being rebased by Dependabot onto fixed main (lockfile conflict
+  with #75's react-router bump), then merge when green.
 
 ### ⚠️ MAINTAINER ACTION — branch protection (WS-B)
 Apply the safe settings (NO required approvals — they'd block your own solo merges). Run:
