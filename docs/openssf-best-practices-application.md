@@ -114,15 +114,17 @@ notable ones and flags the genuine gaps.
 - **`dco` — sign-off on commits.** ✅ **Done** (2026-06-13). Enforced by a
   self-contained [`dco.yml`](../.github/workflows/dco.yml) check on every PR;
   contributor guidance in `CONTRIBUTING.md`. Use `git commit -s`.
-- **`test_statement_coverage` (Silver 80% / Gold 90%).** 🔶 **Tooling shipped,
-  threshold NOT met.** Coverage is now reported on every push/PR via
-  [`coverage.yml`](../.github/workflows/coverage.yml) (vitest v8 + `cargo-llvm-cov`).
-  **Honest current number: frontend statements ≈ 13%** — the React UI is exercised
-  mostly by Playwright E2E, which v8 unit-coverage does not count. Reaching the
-  Silver 80% is **substantial test-writing work**, not a form item, and is the
-  one criterion that genuinely needs *more code (tests)*. Do NOT claim this row
-  until the number is real. (Backend/core coverage is reported separately and is
-  higher, but Silver wants overall statement coverage.)
+- **`test_statement_coverage` (Silver 80% / Gold 90%).** 🔶 **Climbing, measured
+  honestly; not yet at 80%.** Two efforts landed: (1) priority-first unit tests for
+  the security-critical paths (IPC contract, credential flow, routing gate, install
+  conductor, status surfaces) took frontend unit coverage **13% → ~53%**; (2) the
+  E2E suite is now **instrumented** (`vite-plugin-istanbul`) and **merged** with the
+  unit coverage (`scripts/merge-coverage.mjs`, both istanbul so they union cleanly),
+  giving a **combined frontend ≈ 58% statements** — this counts the coverage the
+  Playwright suite already provides instead of re-unit-testing the UI. Reported on
+  every push/PR via [`coverage.yml`](../.github/workflows/coverage.yml). Do NOT
+  claim the 80% row until the combined number actually reaches it; the gap now is
+  the remaining presentational components, lower-risk and partly E2E-covered.
 - **`build_reproducible` (full).** SLSA L2 + SBOM exist; byte-for-byte reproducibility
   is not yet verified end-to-end (Scorecard Tier-3B work in `road-to-recommendable.md`).
 - **`two_person_review` (Gold).** Requires a second reviewer — same solo-maintainer
