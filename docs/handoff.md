@@ -680,6 +680,32 @@ the `Code-Review` + `Contributors` checks — the single highest-leverage real-w
 - **Packaging (-1):** desktop app, no registry target — accepted.
 - A literal 10/10 is neither achievable nor sensible for a solo Tauri project.
 
+## ⟶ Frontend test coverage (2026-06-13) — 13% → ~58%, priority-first
+
+Toward CII Silver `test_statement_coverage`, done **priority-first** (cover what's
+security-load-bearing, not what moves the % most). All merged (PRs #77–#82), each a
+signed-off PR through the new workflow + DCO gate.
+
+- **Set 1 (#77 region) — IPC security contract:** every credential / egress-allowlist /
+  perimeter-lifecycle wrapper pinned to its exact command+args (guards the v0.6 bug *class*).
+- **Set 2 (#79) — credential entry + setup gate:** ConnectStep (save-failure → toast, no
+  advance), App routing guard (un-set-up user forced to /setup), ActivationModal.
+- **Set 3 (#80) — runtime ops:** useInstallPipeline (the onboarding conductor), SecurityMonitor
+  + HeroStatusCard (the user sees the TRUTH about protection).
+- **Set 4 (#81) — status + keys:** useHero status mapping (the "not broken before setup" branch),
+  Preferences key rotation. (DevAllowlist/DevSecurity are 11-line placeholders — not targets.)
+- **Path C (#82) — E2E coverage merge:** instrumented the Playwright suite
+  (`vite-plugin-istanbul`, flag-gated `VITE_COVERAGE`), collect `window.__coverage__` via an
+  auto Playwright fixture, switched vitest **v8→istanbul** so the two merge as a true union
+  (`scripts/merge-coverage.mjs`). **Combined frontend ≈ 58.2%** (vs ~53% unit-only) — counts the
+  coverage the E2E already provides. `coverage.yml` runs `npm run coverage:combined` and reports
+  combined + unit-only on every push/PR.
+
+**State:** security-critical frontend paths fully unit-tested; 208 unit tests + 25 E2E specs;
+combined ~58%. The gap to Silver's 80% is the remaining **presentational** components (lower-risk,
+partly E2E-covered) — deliberately NOT chased (percentage-grind, low real value). For the CII
+Silver form: claim DCO + the already-met rows; report coverage honestly at ~58%, do NOT claim 80%.
+
 ### The security work blocking SignPath
 
 There is **one tracked task** in `~/.claude/state.json` (`lt-sec-001`) plus **one tracked known issue** (`lt-sec-001-residual`). The full plan is at `~/.claude/plans/soft-herding-whale.md` (Item A). The four sub-tasks:
