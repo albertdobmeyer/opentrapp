@@ -109,21 +109,29 @@ notable ones and flags the genuine gaps.
 | `warnings` / `warnings_fixed` | `eslint --max-warnings 0`, `cargo deny check` green |
 | `maintenance_or_update` | Dependabot (npm + cargo + actions) |
 
-**Genuine gaps to close for Silver (each is small):**
+**Genuine gaps for Silver:**
 
-- **`dco` — sign-off on commits.** Not enforced. Cheapest path: add a DCO check
-  (e.g. the DCO GitHub App or a `Signed-off-by` lint) and start using `git commit -s`.
-- **`test_statement_coverage` (Silver 80% / Gold 90%).** We have suites but publish
-  no coverage number. Add coverage reporting (vitest `--coverage`, `cargo llvm-cov`)
-  and state the figure. Likely the largest single item.
+- **`dco` — sign-off on commits.** ✅ **Done** (2026-06-13). Enforced by a
+  self-contained [`dco.yml`](../.github/workflows/dco.yml) check on every PR;
+  contributor guidance in `CONTRIBUTING.md`. Use `git commit -s`.
+- **`test_statement_coverage` (Silver 80% / Gold 90%).** 🔶 **Tooling shipped,
+  threshold NOT met.** Coverage is now reported on every push/PR via
+  [`coverage.yml`](../.github/workflows/coverage.yml) (vitest v8 + `cargo-llvm-cov`).
+  **Honest current number: frontend statements ≈ 13%** — the React UI is exercised
+  mostly by Playwright E2E, which v8 unit-coverage does not count. Reaching the
+  Silver 80% is **substantial test-writing work**, not a form item, and is the
+  one criterion that genuinely needs *more code (tests)*. Do NOT claim this row
+  until the number is real. (Backend/core coverage is reported separately and is
+  higher, but Silver wants overall statement coverage.)
 - **`build_reproducible` (full).** SLSA L2 + SBOM exist; byte-for-byte reproducibility
   is not yet verified end-to-end (Scorecard Tier-3B work in `road-to-recommendable.md`).
 - **`two_person_review` (Gold).** Requires a second reviewer — same solo-maintainer
   cap as the Scorecard `Code-Review` check. Out of reach until a co-maintainer exists.
 
-**Recommendation:** claim every "Met" row now (raises the Silver percentage
-immediately), then close `dco` + `test_statement_coverage` as the two concrete
-follow-ups. Gold is gated on `two_person_review` (a second maintainer) and full
+**Recommendation:** claim every "Met" row + `dco` now (raises the Silver
+percentage immediately). `test_statement_coverage` is the real remaining work —
+write unit tests until frontend statements clear 80%; only then claim it. Gold is
+gated on `two_person_review` (a second maintainer) and full
 reproducibility — track, don't block on them.
 
 ## Submission steps
