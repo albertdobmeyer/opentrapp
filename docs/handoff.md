@@ -1,8 +1,25 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-12 (**Now executing the road-to-recommendable checklist. This session: authored `tests/boundary-selftest.sh` (the 1A/1B boundary gate, fail-closed) and shipped the 3C residual-risk front-door page — both pushed (`77a9204`, `00505f6`).** Phase B (headless daemon/viewer split, B1–B4b) done + CI-green; v0.7.2-rc1 published (pre-release) + announced (Discussion #73); daemon ships in every installer. Current shipped release: **v0.7.2-rc1** (pre-release; v0.7.0 is last stable).)
-**Current phase:** Working [`road-to-recommendable.md`](road-to-recommendable.md) top-to-bottom. The gate is **Tier 1**, and its load-bearing items need **capable hardware** (the dev box swap-storms running the full perimeter). The strategy: author every executable artifact (scripts/playbooks) from the dev box so each hardware item is **one command**, then run them on the Windows box / a cloud VM.
-**Branch:** `main` — pushed; `v0.7.2-rc1` tag → published pre-release. Monorepo (ADR-0013); `app/src-tauri` is now a Cargo workspace (`opentrapp-core` + `opentrapp-daemon`).
+**Last updated:** 2026-06-13. **This session shipped a large project-health + checklist push:** SignPath application **submitted** (site deployed live); OpenSSF **Scorecard remediation** (real react-router vuln fixed; cargo-deny + cargo-fuzz red→green; honest advisory docs); **DCO + coverage CI**; **frontend test coverage 13% → ~58%** (priority-first, 4 unit sets + E2E-merge); and **branch protection APPLIED** to `main`. The boundary self-test (1A/1B) + daemon self-test wiring (#45) + residual-risk page (3C) also landed. **`main` is now PR-only** (direct pushes blocked — branch protection). Current shipped release: **v0.7.2-rc1** (pre-release; v0.7.0 is last stable).
+**Current phase:** Project-health hardening done from the dev box. The **mission-critical gate remains Tier 1 on real hardware** — `make boundary-selftest` cold + on every resume path ([`road-to-recommendable.md`](road-to-recommendable.md)). The dev box can't run the perimeter (swap-storms); the Windows box / a cloud VM is the critical path. Everything authorable from the dev box is now done.
+**Branch:** `main` (PR-only). Monorepo (ADR-0013); `app/src-tauri` is a Cargo workspace (`opentrapp-core` + `opentrapp-daemon`).
+
+> ## ⟶ NEXT SESSION — the open items are all PEOPLE / HARDWARE / EXTERNAL (none blocked on the agent)
+>
+> Everything authorable from the dev box is shipped. What's left to recommend OpenTrApp publicly:
+> 1. **Tier-1 boundary verification on capable hardware** (THE gate, §11) — `make perimeter-up` →
+>    `make boundary-selftest` cold, then with `OPENTRAPP_SELFTEST_ON_RESUME=1` after each resume path;
+>    then `make red-team` + `make proxy-soak`. Tasks #39/#40/#41/#54. The scripts exist; it's one command each.
+> 2. **Add the two prospective collaborators** → lifts Scorecard `Code-Review` + `Contributors`; then bump
+>    branch-protection approvals 0→1 (re-PUT, command in the WS-B note below). Do NOT transfer the repo to an
+>    org while SignPath is under review (URL change).
+> 3. **Submit CII Silver** (bestpractices.dev #12755) — claim DCO ✅ + the met rows; report coverage honestly
+>    at ~58%, do NOT claim the 80% row. Prep is in [`openssf-best-practices-application.md`](openssf-best-practices-application.md).
+> 4. **SignPath** — application submitted 2026-06-13, awaiting review (watch `albertkdobmeyer@gmail.com`); on
+>    approval, activate the `ci.yml` SignPath template. **Apple Developer** enrollment unblocks macOS notarization.
+> 5. **Dependabot** will reopen PRs against the protected `main` — they now MUST go branch→PR→green→merge
+>    (DCO sign-off required: `git commit -s`).
+> 6. **Pin Discussion #73** (GitHub UI only).
 
 > ## ⟶ NEXT SESSION — READ THIS FIRST: the road from "built" to "recommendable public security tool"
 >
