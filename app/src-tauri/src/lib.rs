@@ -11,38 +11,11 @@ mod status_aggregator;
 // `State<'_, AppState>` — keep resolving.
 pub use opentrapp_core::{orchestrator, util};
 
-// Public surface used exclusively by the `cargo-fuzz` harnesses at
-// app/src-tauri/fuzz/. Enabled by the `fuzzing` cargo feature; absent
-// from production builds. The two functions below mirror the parser and
-// the argument interpolator that handle untrusted input — manifests
-// loaded from third-party components, and user-supplied command
-// arguments respectively — and are the highest-leverage targets for
-// continuous fuzzing.
-#[cfg(feature = "fuzzing")]
-pub mod fuzz_api {
-    use std::collections::HashMap;
-
-    /// Parse a YAML byte slice as a `component.yml` manifest. Mirrors the
-    /// production parser invoked by `orchestrator::discovery`.
-    pub fn parse_manifest(input: &[u8]) -> Result<crate::orchestrator::manifest::Manifest, serde_yaml::Error> {
-        serde_yaml::from_slice(input)
-    }
-
-    /// Interpolate user-supplied arguments into a manifest-declared command
-    /// template. Mirrors the production path in `orchestrator::runner`.
-    pub fn interpolate_args(command: &str, args: &HashMap<String, String>) -> String {
-        crate::orchestrator::runner::interpolate_args_for_test(command, args)
-    }
-
-    /// Redact known token-bearing environment variables from a string. The
-    /// production caller is `lifecycle::redact_secrets`, which is invoked on
-    /// `podman compose` stderr before logging — failure modes worth surfacing
-    /// are panics, infinite loops, or under-redaction (a real
-    /// `TELEGRAM_BOT_TOKEN=…` substring escaping the redactor).
-    pub fn redact_secrets(s: &str) -> String {
-        crate::lifecycle::redact_secrets(s)
-    }
-}
+// The `cargo-fuzz` harnesses (app/src-tauri/fuzz/) target the parser,
+// interpolator, and redactor — all of which now live in the tauri-free
+// `opentrapp-core`. Their fuzz shim is `opentrapp_core::fuzz_api`, so the fuzz
+// build never compiles this GUI crate's `tauri-build` (which fails under the
+// sanitizer). No `fuzz_api` module here anymore.
 
 use orchestrator::state::AppState;
 use std::path::PathBuf;

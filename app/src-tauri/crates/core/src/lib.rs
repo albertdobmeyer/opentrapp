@@ -23,3 +23,34 @@ pub mod runguard;
 pub mod selftest;
 pub mod supervisor;
 pub mod util;
+
+/// Thin wrappers over the parsing / interpolation / redaction functions the
+/// fuzz harness drives (`fuzz/fuzz_targets/*`). Lives here in the tauri-free
+/// core (not the GUI crate) so the fuzz build never compiles `tauri-build` —
+/// building the GUI crate under cargo-fuzz fails its `build.rs`. Gated on the
+/// `fuzzing` feature so it costs nothing in normal builds.
+#[cfg(feature = "fuzzing")]
+pub mod fuzz_api {
+    use std::collections::HashMap;
+
+    /// Parse a YAML byte slice as a `component.yml` manifest. Mirrors the
+    /// production parser invoked by `orchestrator::discovery`.
+    pub fn parse_manifest(
+        input: &[u8],
+    ) -> Result<crate::orchestrator::manifest::Manifest, serde_yaml::Error> {
+        serde_yaml::from_slice(input)
+    }
+
+    /// Interpolate user-supplied arguments into a manifest-declared command
+    /// template. Mirrors the production path in `orchestrator::runner`.
+    pub fn interpolate_args(command: &str, args: &HashMap<String, String>) -> String {
+        crate::orchestrator::runner::interpolate_args_for_test(command, args)
+    }
+
+    /// Redact known token-bearing environment variables from a string. The
+    /// production caller is the perimeter stderr logger — failure modes worth
+    /// surfacing are panics, infinite loops, or under-redaction.
+    pub fn redact_secrets(s: &str) -> String {
+        crate::util::secrets::redact_secrets(s)
+    }
+}

@@ -22,9 +22,16 @@ serde_yaml = "0.9"
 # the fuzz targets `use`). Without the explicit `package` field, cargo
 # searches for a package literally named "opentrapp_lib" and fails with
 # "no matching package found".
+#
+# The fuzzed code (manifest parser, arg interpolator, secret redactor) lives in
+# the tauri-free `opentrapp-core`, exposed via its `fuzz_api` module under the
+# `fuzzing` feature. We depend on CORE — not the GUI `opentrapp` crate — so the
+# fuzz build never runs `tauri-build` (its `build.rs` fails under the sanitizer).
+# The key stays `opentrapp_lib` so the targets' `opentrapp_lib::…` paths are
+# unchanged; `package` maps it to the real crate.
 [dependencies.opentrapp_lib]
-package = "opentrapp"
-path = ".."
+package = "opentrapp-core"
+path = "../crates/core"
 features = ["fuzzing"]
 
 # Each fuzz target compiles to its own binary. Targets are added below;
