@@ -596,6 +596,26 @@ The maintainer applied to **SignPath Foundation** for free Windows code-signing 
 > - **Order still holds:** the security work (A1–A4 below) → green gates → resubmit SignPath under OpenTrApp
 >   + rerun OpenSSF badge. The scaffold doesn't change that order; it just means the *CI half is already done*.
 > - Full required-secrets tables: [`docs/code-signing-policy.md`](code-signing-policy.md).
+>
+> #### ⟶ Application prep (2026-06-13) — form drafted, site made submission-ready
+> The maintainer started the fresh SignPath Foundation application form. Done this session:
+> - **Form answers drafted** (in chat — not committed). Project name `opentrapp`; repo + homepage URLs;
+>   one-sentence tagline + a version-agnostic description paragraph; **Maintainer Type = Individual**,
+>   **Build System = GitHub Actions**; reputation = lead with security signals (OpenSSF Best Practices #12755,
+>   Scorecard, CodeQL, SBOM + cosign + SLSA, public threat model/whitepaper) since the repo is young (1★).
+> - **Download URL** = `https://www.opentrapp.com/#download`. SignPath requires that page to mention SignPath.
+>   It did — but the old line *"Windows installer signed by SignPath Foundation"* was **false today** and
+>   contradicted the "no certs yet" paragraph above it. Reworded to the honest program relationship (commit
+>   `77d4da0`): *"free Windows code signing provided by the SignPath Foundation's open-source program —
+>   rollout in progress"* + link to the policy. **If their reviewer demands unconditional present-tense, drop
+>   "rollout in progress" once the first signed release ships.**
+> - **Privacy Policy URL** = `https://www.opentrapp.com/privacy.html` — new `docs/privacy.html` (plain
+>   "collects no data" policy; footer-linked). Not strictly required (no data collected) but populates the field.
+> - **Deploy runbook** updated to track `privacy.html` as a third deployed asset (`a7d0f1b`).
+> - **⚠️ STILL MANUAL (maintainer):** (1) the site changes are in git but **NOT live** — `scp docs/index.html
+>   docs/privacy.html root@hetzner:/var/www/opentrapp.com/html/` then verify per `deploying-the-landing-page.md`
+>   §4 (home grep `code signing for OpenTrApp is provided by`; privacy grep `collects no personal data`, both
+>   HTTP 200). (2) **Then** submit the form. The Download/Privacy URLs only satisfy the reviewer once deployed.
 
 ### The security work blocking SignPath
 
