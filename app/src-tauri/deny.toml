@@ -34,10 +34,13 @@ ignore = [
   { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: transitive (same chain as unic-char-range)" },
   { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident: transitive (same chain as unic-char-range)" },
 
-  # NOTE: RUSTSEC-2024-0429 (glib 0.18.5 VariantStrIter unsoundness, ex-Dependabot
-  # alert #7) was removed from this list on 2026-06-13 — glib has been bumped past
-  # the affected version, so cargo-deny now reports it as "advisory-not-detected".
-  # Re-add if a future transitive downgrade reintroduces glib < 0.20.
+  # NOTE: RUSTSEC-2024-0429 (glib VariantStrIter unsoundness, ex-Dependabot alert
+  # #7) is intentionally NOT in this list. cargo-deny's advisory-DB view does not
+  # match our transitive glib version, so an `ignore` here emits a spurious
+  # "advisory-not-detected" warning on every supply-chain CI run. It IS still
+  # reported by `cargo audit` / OSV (hence the Scorecard count) and is accepted
+  # there: we call no VariantStrIter API, so the unsound path is never entered.
+  # See docs/known-advisories.md. Re-add if a future bump makes cargo-deny match.
 
   # NOTE: GitHub Dependabot alert #8 (RUSTSEC-2026-0097, rand 0.7/0.8 unsoundness
   # with custom logger via rand::rng()) is intentionally NOT in this list —
