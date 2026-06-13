@@ -46,9 +46,9 @@ https://www.opentrapp.com/privacy.html
 An open-source desktop app that runs autonomous CLI agents inside a five-container security perimeter on your own computer.
 ```
 
-**Description**
-```
-OpenTrApp is an open-source, MIT-licensed desktop application that makes it safer to run autonomous CLI agents on your own computer. Such agents execute shell commands, read files, and load skills from third-party registries, so a compromised agent, a malicious skill, or a prompt-injection attack can act with the user's full privileges. OpenTrApp wraps the agent in a defense-in-depth perimeter — network isolation, an egress allowlist, proxy-side credential injection, and an in-container skill scanner — so the impact of a compromise is contained rather than catastrophic. It is transparent about its residual risk, collects no telemetry, and is designed to extend from its reference agent to other CLI agents.
+**Description** *(≤300 characters — this version is 273)*
+```text
+OpenTrApp is an open-source desktop app that runs autonomous CLI agents inside a defense-in-depth security perimeter on your own computer — isolating the network, filtering egress, hiding credentials, and scanning skills — to contain a compromised or prompt-injected agent.
 ```
 
 **Reputation**
