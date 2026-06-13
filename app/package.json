@@ -22,7 +22,8 @@
     "demo:record": "bash ../scripts/demo-gif.sh",
     "demo:wizard": "bash ../scripts/demo-gif.sh demo-wizard.spec.ts",
     "demo:tour": "bash ../scripts/demo-gif.sh demo-tour.spec.ts",
-    "lint": "eslint . --max-warnings 0"
+    "lint": "eslint . --max-warnings 0",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",
@@ -49,6 +50,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/coverage-v8": "^4.1.8",
     "@vitest/eslint-plugin": "^1.6.16",
     "autoprefixer": "^10.5.0",
     "esbuild": "^0.28.1",

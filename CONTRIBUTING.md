@@ -145,6 +145,30 @@ The review policy scales with the number of maintainers:
    `required_approving_review_count=1` (it is `0` while solo so the maintainer is
    not locked out of their own merges).
 
+## Developer Certificate of Origin (DCO)
+
+All contributions are made under the [Developer Certificate of Origin](https://developercertificate.org/) —
+a lightweight, signature-free statement that you wrote the patch or otherwise
+have the right to submit it under the project's MIT license. You certify it by
+adding a `Signed-off-by` trailer to **every commit**:
+
+```bash
+git commit -s            # appends "Signed-off-by: Your Name <your@email>"
+```
+
+The name/email must match your commit author identity. A
+[DCO check](.github/workflows/dco.yml) runs on every pull request and fails if
+any commit is missing the sign-off. To fix:
+
+```bash
+git commit --amend -s --no-edit                 # the most recent commit
+git rebase --signoff origin/main                # every commit in the branch
+git push --force-with-lease                      # then update the PR
+```
+
+Tip: `git config alias.cs 'commit -s'`, or set up a `prepare-commit-msg` hook so
+the trailer is added automatically.
+
 ## Commit-message style
 
 We follow a lightweight conventional-commits convention:

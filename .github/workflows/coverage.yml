@@ -1,0 +1,79 @@
+name: Coverage
+
+# Informational test-coverage reporting (NOT a merge gate). Surfaces statement /
+# branch / function / line coverage to the run summary on every push + PR so the
+# numbers are visible and tracked over time. Toward the CII Best-Practices Silver
+# `test_statement_coverage` criterion — see docs/openssf-best-practices-application.md.
+# No thresholds fail the build: coverage is climbed deliberately, not enforced
+# before the tests exist to back it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-coverage:
+    name: Frontend coverage (vitest v8)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - name: Summarize coverage
+        if: always()
+        run: |
+          set -euo pipefail
+          f=coverage/coverage-summary.json
+          if [ ! -f "$f" ]; then echo "no coverage summary produced" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          {
+            echo "### Frontend coverage (vitest)"
+            echo ""
+            echo "| Metric | % | Covered / Total |"
+            echo "|---|---|---|"
+            node -e '
+              const t=require("./coverage/coverage-summary.json").total;
+              for (const k of ["statements","branches","functions","lines"]) {
+                const m=t[k];
+                console.log(`| ${k} | ${m.pct}% | ${m.covered}/${m.total} |`);
+              }'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  backend-coverage:
+    name: Backend coverage (cargo-llvm-cov, core)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+        with:
+          components: llvm-tools-preview
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: app/src-tauri
+      - name: Install cargo-llvm-cov
+        run: cargo install --locked cargo-llvm-cov
+      # Scope to opentrapp-core: the tauri-free crate that holds the unit-tested
+      # orchestration logic. The GUI crate needs webkitgtk + a built frontend
+      # (tauri-build) which is out of scope for a coverage probe.
+      - name: Run coverage (opentrapp-core)
+        working-directory: app/src-tauri
+        run: |
+          set -euo pipefail
+          {
+            echo "### Backend coverage (opentrapp-core)"
+            echo ""
+            echo '```'
+            cargo llvm-cov -p opentrapp-core --lib --summary-only
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
