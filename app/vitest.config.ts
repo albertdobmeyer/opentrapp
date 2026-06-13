@@ -19,8 +19,12 @@ export default defineConfig({
       // Informational (no failing thresholds) so CI never blocks on coverage
       // while we climb toward the CII Silver target; the json-summary feeds the
       // coverage report in coverage.yml.
-      provider: "v8",
-      reporter: ["text-summary", "json-summary", "html"],
+      // Istanbul (not v8) so unit + E2E coverage share the SAME statement maps
+      // and merge cleanly in scripts/merge-coverage.mjs (vite-plugin-istanbul
+      // instruments the E2E side with the same instrumenter).
+      provider: "istanbul",
+      // `json` (coverage-final.json) is what merge-coverage.mjs consumes.
+      reporter: ["text-summary", "json-summary", "json", "html"],
       reportsDirectory: "./coverage",
       include: ["src/**/*.{ts,tsx}"],
       exclude: [

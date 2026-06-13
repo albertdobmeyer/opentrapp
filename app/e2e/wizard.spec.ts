@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "./coverage-fixture";
 
 /**
  * Phase E.2.1 onboarding wizard tests.
