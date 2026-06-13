@@ -87,12 +87,44 @@ The full criteria are at [github.com/coreinfrastructure/best-practices-badge](ht
 - **`dynamic_analysis_enable_assertions`:** Yes. Debug-assertions on in fuzz builds.
 - **`dynamic_analysis_fixed`:** Yes. No outstanding fuzz findings.
 
-## Stretch (Silver/Gold) — items that need work
+## Silver / Gold gap analysis (2026-06-13)
 
-- **Reproducible builds:** SLSA Build Level 2 attestations are produced (cosign + provenance) but not yet *byte-for-byte reproducible*. SLSA L3 (a tamper-evident build platform) and reproducibility are stretch goals.
-- **DCO sign-off on commits:** not currently enforced; would need a CI check.
-- **Crypto algorithm review:** N/A as above; we don't ship custom crypto.
-- **`document_architecture`:** Yes — but the *Silver* version of this asks for an architectural-pattern overview. We have one in `docs/trifecta.md`, `docs/whitepaper.md`, `docs/diagrams.md`. Solid.
+The Passing badge is held (project #12755). Pursuing **Silver** (and where cheap,
+**Gold**) is the only `CII-Best-Practices` Scorecard lever left. Most Silver
+criteria we *already satisfy* from existing work; the table below maps the
+notable ones and flags the genuine gaps.
+
+**Already satisfied (answer "Met" with the cited evidence):**
+
+| Silver/Gold criterion | Evidence |
+|-----------------------|----------|
+| `signed_releases` (Gold) | cosign keyless + SLSA provenance per release |
+| `installation_common` / `build_reproducible` (partial) | `docs/reproduce.md` + `reproduce.sh`; SBOM per platform |
+| `static_analysis` + `_often` | CodeQL on every commit; `cargo clippy`/`eslint --max-warnings 0` as CI gates |
+| `dynamic_analysis` | fuzz workflow (`fuzz.yml`) |
+| `vulnerabilities_fixed_60_days` / `vulnerability_report_process` | `SECURITY.md` + this remediation; `docs/known-advisories.md` for accepted upstream advisories |
+| `architecture_documented` / `documentation_architecture` | `docs/trifecta.md`, `whitepaper.md`, `diagrams.md`, ADRs |
+| `crypto_*` | Met-N/A — no custom crypto; relies on rustls/TLS, cosign, OS keystores |
+| `test_policy` / `tests_documented_added` | `CONTRIBUTING.md` "Test gates"; CI requires green |
+| `warnings` / `warnings_fixed` | `eslint --max-warnings 0`, `cargo deny check` green |
+| `maintenance_or_update` | Dependabot (npm + cargo + actions) |
+
+**Genuine gaps to close for Silver (each is small):**
+
+- **`dco` — sign-off on commits.** Not enforced. Cheapest path: add a DCO check
+  (e.g. the DCO GitHub App or a `Signed-off-by` lint) and start using `git commit -s`.
+- **`test_statement_coverage` (Silver 80% / Gold 90%).** We have suites but publish
+  no coverage number. Add coverage reporting (vitest `--coverage`, `cargo llvm-cov`)
+  and state the figure. Likely the largest single item.
+- **`build_reproducible` (full).** SLSA L2 + SBOM exist; byte-for-byte reproducibility
+  is not yet verified end-to-end (Scorecard Tier-3B work in `road-to-recommendable.md`).
+- **`two_person_review` (Gold).** Requires a second reviewer — same solo-maintainer
+  cap as the Scorecard `Code-Review` check. Out of reach until a co-maintainer exists.
+
+**Recommendation:** claim every "Met" row now (raises the Silver percentage
+immediately), then close `dco` + `test_statement_coverage` as the two concrete
+follow-ups. Gold is gated on `two_person_review` (a second maintainer) and full
+reproducibility — track, don't block on them.
 
 ## Submission steps
 
