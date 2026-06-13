@@ -37,12 +37,20 @@
 >   documents the resumed==cold contract. The script is *embedded*, so there is **no packaged-resource staging
 >   to get wrong** — the daemon is self-contained. **Remaining (hardware):** flip the opt-in on, run green
 >   cold + every resume path, then promote opt-in→default.
-> - **1E — code-signing CI scaffolded** (commit `66750fc`). macOS: `tauri-action` `APPLE_*` env passthrough
->   — **live + inert** (signs/notarizes when the 6 secrets are present, skips when absent). Windows: a
->   **ready-to-activate SignPath template** (commented, inline activation checklist) — not live because slugs
->   come from the OSS account + every `uses:` must be SHA-pinned (Scorecard). `ci.yml` YAML-validated; GitHub
->   accepted the workflow. **Remaining = human only:** Apple Developer Program + `APPLE_*` secrets; SignPath
->   OSS approval + SHA-pin + `SIGNPATH_*` secrets. See `code-signing-policy.md`.
+> - **1E — code-signing CI scaffolded** (commit `66750fc`, then **fixed in `719cc19`**). **Both** macOS and
+>   Windows are now **commented ready-to-activate templates** (NOT live). Windows: SignPath template (inline
+>   activation checklist) — not live because slugs come from the OSS account + every `uses:` must be SHA-pinned
+>   (Scorecard). macOS: the six `APPLE_*` env lines, added only once the secrets are real. **Remaining = human
+>   only:** Apple Developer Program + `APPLE_*` secrets; SignPath OSS approval + SHA-pin + `SIGNPATH_*` secrets.
+>   See `code-signing-policy.md`.
+>   - **⚠️ CI regression + fix (the §11 lesson of the session):** `66750fc` wired the macOS `APPLE_*` env
+>     LIVE, assuming an empty `APPLE_CERTIFICATE` = "skip signing". It does NOT — `tauri` treats a
+>     *present-but-empty* cert as "sign now", runs `security import` on a blank cert, and **fails the macOS
+>     `.app` bundle**. Build (macOS Intel + ARM) went red `66750fc`→`2dc09aa` (Linux/Windows stayed green;
+>     the Rust/contract gates were never affected). **`719cc19` reverts the live env to a commented template;
+>     CI verified green on `719cc19` (all four platform builds success).** Takeaway: a workflow edit is only
+>     "inert" once a *real build* proves it — YAML-valid + GitHub-accepted is the producing end, not the
+>     consuming end.
 >
 > **The dev box is now tapped out** — every checklist item authorable without the perimeter is done + pushed.
 > Everything remaining needs the Windows box / a cloud VM (run the `make` targets, idle/defer tests) or an
@@ -68,7 +76,8 @@
 > 2. **Idle auto-pause + wake verified in production** (WS0-0a, task #35) — the headline feature firing and
 >    waking *exactly once* under a real agent (the box could never run this end-to-end).
 > 3. **Code signing** — **CI now scaffolded** (decision 2026-06-12: scaffold *both* Windows + macOS).
->    macOS notarization is live-inert; Windows SignPath is a ready-to-activate template. Remaining is human
+>    both macOS + Windows are commented ready-to-activate templates (macOS was briefly live but broke the
+>    build — fixed in `719cc19`). Remaining is human
 >    procurement only — see the signing decision in "RUN THIS NEXT — resubmit SignPath" below.
 > 4. **Daemon-split defer verified + promoted** — run `docs/b4b-hardware-test-plan.md` (7 tests); if it
 >    passes, flip `OPENTRAPP_DAEMON_DEFER` opt-in → default to actually deliver the lean background process.
@@ -88,7 +97,8 @@
 >    (slices `7cf0730` + `c8d4afc`), behind opt-in `OPENTRAPP_SELFTEST_ON_RESUME`. Script *embedded* in the
 >    daemon (no staging). Remaining is hardware-only (enable + verify).
 > 2. ✅ **2A `tests/proxy-memory-soak.sh`** + ✅ **2B `tests/red-team-breakout.sh`** — authored, lint-clean.
-> 3. ✅ **#55 / 1E — signing CI scaffolded** (`66750fc`): macOS live-inert, Windows ready-to-activate template.
+> 3. ✅ **#55 / 1E — signing CI scaffolded** (`66750fc` + fix `719cc19`): both macOS + Windows are commented
+>    ready-to-activate templates (the live macOS env broke the build; reverted to a template).
 > 4. **Dev box is now tapped out** — everything else needs the perimeter or an external human.
 >
 > **▸ If on CAPABLE HARDWARE (Windows box / cloud VM — can run the full perimeter):** execute, top-down.
@@ -573,9 +583,11 @@ The maintainer applied to **SignPath Foundation** for free Windows code-signing 
 > **Decision:** rather than wait on the SignPath resubmission, **pre-build the CI integration for both
 > platforms** (commit `66750fc`), so the moment certs/approval land, activation is a few-line change — not
 > new engineering. This de-risks the resubmission and removes signing from the critical path.
-> - **macOS — wired LIVE + inert.** `tauri-action` `APPLE_*` env passthrough signs + notarizes the
->   `.app`/`.dmg` automatically when the six secrets are present, skips when absent. No behavior change to
->   current releases. *Activate by:* enrolling in the Apple Developer Program and adding the `APPLE_*` secrets.
+> - **macOS — ready-to-activate template** (commented `APPLE_*` env in `ci.yml`). It was briefly wired live
+>   (`66750fc`) but that BROKE the macOS build: `tauri` treats a present-but-empty `APPLE_CERTIFICATE` as
+>   "sign now" and fails on the blank cert — so empty secrets are not inert. Reverted to a commented template
+>   in `719cc19` (CI green). *Activate by:* enrolling in the Apple Developer Program, adding the six `APPLE_*`
+>   secrets, then uncommenting the env lines (present==real, no longer empty).
 > - **Windows — ready-to-activate SignPath template** (commented in `ci.yml`, inline checklist). Deliberately
 >   NOT live: the org/project/policy slugs come from the (fresh, pending) SignPath OSS account, and every
 >   `uses:` must be SHA-pinned (OpenSSF Scorecard). *Activate by:* SHA-pinning the SignPath action, filling
