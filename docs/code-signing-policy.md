@@ -15,7 +15,7 @@ macOS and Linux artifacts are not signed through SignPath (macOS signing require
 
 ## macOS
 
-macOS artifacts (`.app` / `.dmg`) are signed with an **Apple Developer ID Application** certificate and **notarized** with Apple, so Gatekeeper accepts them without a first-launch warning. This is wired into the `build-and-release` job's `tauri-action` step, which signs + notarizes automatically when the Apple secrets are present and **skips signing when they are absent** — so the pipeline is unchanged until a Developer ID is provisioned.
+macOS artifacts (`.app` / `.dmg`) are signed with an **Apple Developer ID Application** certificate and **notarized** with Apple, so Gatekeeper accepts them without a first-launch warning. The `APPLE_*` env block is a **ready-to-activate template** (commented out in the `build-and-release` job's `tauri-action` step). It is **not** wired live: `tauri` treats a *present-but-empty* `APPLE_CERTIFICATE` as "sign now" and fails the macOS bundle on an empty cert — so the env lines must be added only **once the secrets are actually populated**, not left passing empty values. Until then the pipeline is unchanged.
 
 Required repository secrets (provision via Apple Developer Program → *Developer ID Application*):
 

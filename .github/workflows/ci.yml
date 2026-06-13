@@ -448,21 +448,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # macOS code-signing + notarization (1E / road-to-recommendable §1E).
-          # tauri-action signs + notarizes the .app/.dmg automatically when these
-          # are present; when they are ABSENT (the default today) tauri skips
-          # signing entirely — so this passthrough is INERT until an Apple
-          # Developer ID is provisioned. No behavior change to current releases.
-          # Provision: Apple Developer Program → Developer ID Application cert
-          # (base64 → APPLE_CERTIFICATE), its password, the identity string, and
-          # an app-specific password (APPLE_PASSWORD) under APPLE_ID + APPLE_TEAM_ID.
+          # macOS code-signing + notarization (1E / road-to-recommendable §1E) —
+          # READY-TO-ACTIVATE, NOT LIVE. Do NOT pass APPLE_* here from unset
+          # secrets: tauri treats a *present-but-empty* APPLE_CERTIFICATE as
+          # "sign now" and runs `security import` on an empty cert, which FAILS
+          # the macOS bundle (this broke the build on 66750fc — reverted here).
+          # Only add the six env lines below once the Apple Developer ID secrets
+          # are actually populated (then present==real, no longer empty):
+          #   APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          #   APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          #   APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          #   APPLE_ID: ${{ secrets.APPLE_ID }}
+          #   APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          #   APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # See docs/code-signing-policy.md "macOS".
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: app
           args: ${{ matrix.platform.args }}

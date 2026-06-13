@@ -103,8 +103,9 @@ inert/secret-gated, so the only remaining work is human (provision certs + the
 SignPath OSS account); see [`code-signing-policy.md`](code-signing-policy.md).
 
 - [ ] **macOS:** sign + **notarize** the `.app`/`.dmg` (Apple Developer ID). The
-  `tauri-action` env passthrough is **live and inert** — signs automatically once
-  the six `APPLE_*` secrets are provisioned, skips when absent. *Needs: Apple
+  six `APPLE_*` env lines are a **ready-to-activate template** (commented in
+  `ci.yml`) — uncomment once the secrets are populated. NOT passed empty: `tauri`
+  treats a present-but-empty cert as "sign" and fails the bundle. *Needs: Apple
   Developer Program enrollment.*
 - [ ] **Windows:** sign the `.exe`/`.msi` (SignPath OSS). A **ready-to-activate
   template** sits in `ci.yml` (commented, with an activation checklist) — uncomment
