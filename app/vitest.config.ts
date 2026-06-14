@@ -30,6 +30,7 @@ export default defineConfig({
       exclude: [
         "src/**/*.test.{ts,tsx}",
         "src/test-setup.ts",
+        "src/test/setup.ts", // test scaffolding (vi.mock only), not product code
         "src/**/*.d.ts",
         "src/main.tsx",
         "src/vite-env.d.ts",

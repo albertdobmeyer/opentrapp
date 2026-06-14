@@ -146,9 +146,11 @@ cited links.
 
 **Honest split of what remains for Silver:**
 
-- **Agent-doable, not yet done — `test_statement_coverage80`.** Combined frontend is
-  ≈58%; Silver wants 80%. This is real, sustained test-writing work — do NOT claim
-  the row until the measured number clears 80%.
+- **`test_statement_coverage80` — ✅ Met (2026-06-13).** Frontend statement coverage
+  is **80.11%** (1269/1584), measured by `npm run test:coverage` (istanbul), over 302
+  passing unit tests. The climb from ≈53% was priority-first (security-critical IPC
+  and credential flows first, then the install conductor, status surfaces, dev
+  projection, and the failure cascade). Claim this row with the measured number.
 - **People-blocked (cannot be satisfied solo, same root cause as the Scorecard
   `Code-Review`/`Contributors` 0-scores):** `two_person_review`,
   `contributors_unassociated`, `bus_factor`. These need a *second maintainer*. The
