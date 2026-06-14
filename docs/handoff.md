@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-06-13 (late). **This session drove the OpenSSF posture to its solo ceiling** — 4 PRs through the protected gate (#85–#88):
 - **#85 — every *fixable* OSV/Scorecard vulnerability eliminated.** Of 23, the 4 fixable (npm `ws`/`brace-expansion` via scoped overrides; Python `pytest`≥9.0.3 / `python-dotenv`≥1.2.2 floors) are gone → `npm audit` clean. The other **19 are upstream Tauri GTK3 / unmaintained / unsound** transitive warnings OSV counts but can't suppress via `deny.toml`; documented in [`known-advisories.md`](known-advisories.md) (also corrected a stale "glib resolved" claim — still OSV-detected, accepted as unsound-but-unreachable).
-- **#86 — Pinned-Dependencies 9→10 + Signed-Releases 8→10.** Pinned: hash-pinned the devcontainer's 3 unpinned commands (npm version pins + `pip --require-hashes`, cp312 wheel hashes verified by `pip download`). Signed-Releases: the release workflow now attaches the attestation bundle as `provenance-<platform>.intoto.jsonl` (Scorecard scans release *assets*, not the attestations store). **⚠️ Pinned takes effect next rescan; Signed-Releases lands on the NEXT tagged release (not retroactive) — verify the asset is attached when cutting it.**
+- **#86 — Signed-Releases 8→10 (deferred); Pinned-Dependencies stays 9 (npm not honestly fixable — #86's "→10" claim was CORRECTED 2026-06-14).** Signed-Releases: the release workflow now attaches the attestation bundle as `provenance-<platform>.intoto.jsonl` (Scorecard scans release *assets*, not the attestations store) → 10 **on the NEXT tagged release** (not retroactive — verify the asset is attached when cutting it). Pinned: the pip line is now hash-pinned (`--require-hashes`, verified) ✅, but the two `npm install -g` lines **cannot** satisfy Scorecard — its `isNpmUnpinnedDownload` credits only `npm ci` or git+commit-hash, never a version pin (verified against source). `npm ci` is impossible (no lockfile; `molthub` is the workbench's own CLI, not a registry pkg). So **Pinned-Dependencies stays 9** — accepted, documented in [`known-advisories.md`](known-advisories.md). The npm version pins are kept for reproducibility, not score.
 - **#87 — CII Silver solo-doable documentation criteria authored:** [`roadmap.md`](roadmap.md), [`governance.md`](governance.md) (honest bus-factor=1), [`assurance-case.md`](assurance-case.md) (claims C0–C5 → evidence + per-claim verification status, e.g. C4 resume-contract marked *unverified-on-hardware*), CONTRIBUTING §Review-standards.
 - **#88 — frontend statement coverage 52.5% → 80.11%** (302 vitest tests), meeting CII Silver `test_statement_coverage80`.
 
@@ -31,10 +31,12 @@ Earlier this session: SignPath application **submitted** (site live), branch pro
 > 5. **Dependabot** PRs against protected `main` MUST go branch→PR→green→merge (DCO: `git commit -s`).
 > 6. **Pin Discussion #73** (GitHub UI only).
 >
-> **Scorecard note (verify at the consumption end):** #86's two fixes are *deferred* — Pinned-Dependencies→10
-> registers on the next weekly rescan; Signed-Releases→10 only when a **new `v*` tag** ships with the
-> `provenance-*.intoto.jsonl` asset attached. When cutting the next release, confirm that asset exists on the
-> draft release before announcing — that's the proof the workflow change works.
+> **Scorecard note (verify at the consumption end):** Signed-Releases→10 only when a **new `v*` tag** ships
+> with the `provenance-*.intoto.jsonl` asset attached — confirm that asset exists on the draft release before
+> announcing (the proof the workflow change works). **Pinned-Dependencies stays 9, not 10** — #86's claim was
+> corrected 2026-06-14: Scorecard credits npm only via `npm ci`/git+hash, never version pins, and the
+> devcontainer's `molthub` global install can't be hash-pinned without fabrication. Accepted; see
+> [`known-advisories.md`](known-advisories.md).
 
 > ## ⟶ NEXT SESSION — READ THIS FIRST: the road from "built" to "recommendable public security tool"
 >

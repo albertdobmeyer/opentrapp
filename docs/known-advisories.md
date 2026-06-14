@@ -81,14 +81,19 @@ Token-Permissions, SAST, Security-Policy, License, Fuzzing, Maintained, CI-Tests
 are at maximum. See [`threat-model.md`](threat-model.md) for the application's
 actual security posture.
 
-### Improvable checks closed (2026-06-13)
+### Improvable-check work (2026-06-13) — one reached max, one is capped
 
-Two checks that were *not* structurally capped were taken to their maximum:
+| Check | Was | Gap (from Scorecard's own detail) | Outcome |
+|-------|-----|-----------------------------------|---------|
+| **Signed-Releases** | 8 | All recent releases lacked a *provenance* asset — `attest-build-provenance` wrote the attestation to GitHub's store, but no provenance **file** was attached to the release | ✅ **→10 on the next tagged release.** The release workflow now copies the attestation bundle to `provenance-<platform>.intoto.jsonl` and uploads it as a release asset (Scorecard matches the `.intoto.jsonl` suffix). The score climbs as provenance-bearing releases enter the 5-release window; existing releases are not retro-fixed. |
+| **Pinned-Dependencies** | 9 | 3 unpinned commands in `workloads/skills/.devcontainer/setup.sh` (2 npm global installs, 1 pip) | 🔶 **Stays at 9 — npm portion not honestly fixable.** The pip line is now hash-pinned (`pip install --require-hashes -r requirements.txt`, cp312 wheel hashes verified via `pip download`) ✅. The **two `npm install -g` lines cannot reach Scorecard's bar**: per `isNpmUnpinnedDownload` in `ossf/scorecard`, npm is "pinned" **only** for `npm ci` (lockfile-verified) or a git URL anchored to a commit hash — a semantic-version pin (`npm@11.17.0`) is *not examined* and counts as unpinned. `npm ci` is not possible here (the devcontainer's `package.json` has no deps / lockfile and `molthub` is the workbench's own CLI, not a registry package), and a git+hash URL would require a real `molthub` repo. Neither is achievable without fabrication, so we accept 9. The version pins are kept for reproducibility, not score. |
 
-| Check | Was | Gap (from Scorecard's own detail) | Fix |
-|-------|-----|-----------------------------------|-----|
-| **Pinned-Dependencies** | 9 | 3 unpinned commands in `workloads/skills/.devcontainer/setup.sh` (2 npm, 1 pip) | `npm@latest`/`molthub` → version-pinned; `pip install pyyaml` → `--require-hashes -r requirements.txt` (cp312 wheel hashes verified via `pip download`). **Effective on next rescan.** |
-| **Signed-Releases** | 8 | All 5 recent releases lacked a *provenance* asset — `attest-build-provenance` wrote the attestation to GitHub's store, but no provenance **file** was attached to the release | The release workflow now copies the attestation bundle to `provenance-<platform>.intoto.jsonl` and uploads it as a release asset (Scorecard matches the `.intoto.jsonl` suffix). **Effective on the next tagged release** — the score climbs as provenance-bearing releases enter the 5-release window; existing releases are not retro-fixed. |
+> **Correction (2026-06-14):** PR #86 originally claimed Pinned-Dependencies
+> would reach 10. That was wrong — Scorecard does not credit npm version-pins
+> (verified against its source). The score stays at 9; only the pip line and
+> Signed-Releases improved. Recorded here rather than silently left to surface
+> on the next rescan.
 
 The remaining non-maximal checks (Vulnerabilities, Code-Review, Contributors,
-Branch-Protection, CII Gold) are the structural / people caps described above.
+Branch-Protection, Pinned-Dependencies' npm lines, CII Gold) are the structural /
+upstream / people caps described above.
