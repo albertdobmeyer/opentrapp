@@ -46,9 +46,8 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0019](0019-headless-daemon-gui-viewer-split.md) | Accepted — implemented behind opt-in; unverified pending hardware | Headless daemon + on-demand GUI viewer split (the daemon is the product) |
 | [0020](0020-product-identity-and-distribution.md) | Accepted — direction ratified; implementation staged (0021/0022) | Product identity & distribution: a CLI/daemon with projected viewers (CLI/GUI/MCP); not a desktop app; not MCP-for-the-contained-agent |
 | [0021](0021-danger-gated-agentic-control-plane.md) | Proposed — must be accepted before any agentic control surface is built | Danger-gated agentic control plane: T7 (prompt-injected host operator), `boundary_impact` vs operational `danger`, out-of-band human gate for boundary-weakening (no agent call edge) |
+| [0022](0022-daemon-control-surface.md) | Proposed — architecture + transport security decided; implementation spike-gated | Daemon control surface: CLI · on-demand loopback web GUI (de-Tauri) · optional MCP; the ephemeral loopback-server security model; C1 (wait for GTK4) ruled out |
 
 ## Future ADRs
-
-- **ADR-0022 — Daemon control surface / de-Tauri** (CLI · on-demand loopback web GUI · optional MCP adapter over the manifest command set; the loopback-server security model).
 
 - **macOS/Windows runtime install** — `podman` is not present by default on those platforms; ADR-0011's bootstrap is Linux/AppImage-only so far. A future record should decide the Podman Desktop / Colima / WSL2 strategy.
