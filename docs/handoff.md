@@ -1,6 +1,31 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-13 (late). **This session drove the OpenSSF posture to its solo ceiling** — 4 PRs through the protected gate (#85–#88):
+**Last updated:** 2026-06-14. **This session ratified a major ARCHITECTURE PIVOT** — 5 decision/research artifacts through the gate (#91–#95) that redefine what OpenTrApp *is* and how it ships. **All SPEC; nothing built (by design — security-forward, spec-before-code).** Mission plan: `~/.claude/plans/glimmering-meandering-babbage.md`; identity conserved in the `product-identity` memory + CLAUDE.md §1.
+- **ADR-0020 — product identity:** OpenTrApp is a **registry-installable CLI/daemon + signed images**, with a web GUI + optional MCP adapter as **thin projections of one manifest-driven daemon** — operable by humans **and** the user's host agent (Claude Code). **NOT** a desktop app; **NOT** MCP-for-the-*contained*-agent.
+- **ADR-0021 — danger-gated agentic control plane (the security spine):** new threat **T7 (prompt-injected host operator)**, distinct from T4 (out of scope). Honest guarantee: the control plane is **"never an amplifier"** (no new boundary-weakening path beyond the T4 residual). `boundary_impact` (neutral/weakening) is a security axis distinct from operational `danger`; boundary-weakening needs **out-of-band** human confirmation, **no agent call edge** (ADR-0016 generalized). T7 added to `threat-model.md`.
+- **research note + ADR-0022 — control surface / de-Tauri:** CLI · on-demand loopback web GUI · optional MCP. The **ephemeral loopback-server security model** (Host-allowlist+Origin+token, fragment-nonce→HttpOnly-cookie, §10 reconciliation, §11 live-verify) is grounded in prior-art (Jupyter/Syncthing/Docker/Ollama CVEs — `docs/de-tauri-viewer-research.md`). **C1 (wait for Tauri's GTK4) is RULED OUT** (no path / ~1+ yr; tray+menus *also* pull GTK3) → de-Tauri must drop the tray + native menus too. **Spike-gated** before any build.
+- **ADR-0023 — distribution & packaging:** OS-agnostic / no-lock **and** Scorecard-legible: `cargo publish opentrapp-core` → crates.io (the *verified* pattern that flips Packaging) + `cargo-dist` prebuilt installers (all 3 OSes) + GHCR `docker push`; Homebrew/apt/stores rejected as primary.
+
+> ## ⟶ NEXT SESSION — implementation roadmap (the spec is done; this is what to build)
+>
+> The architecture (ADR-0020→0023) is ratified. Implementation, two honest buckets:
+> 1. **EARLY packaging win (cheap, no de-Tauri dependency, moves a real Scorecard number):** make
+>    `opentrapp-core` a publishable crate (flip `publish=false`, version the path deps) + add a literal
+>    `cargo publish` CI step → crates.io; switch the GHCR image push from `podman push` to a recognized
+>    `docker push` / `docker/build-push-action`. This flips Scorecard **Packaging** off `?` **decoupled
+>    from the whole de-Tauri migration** (ADR-0023 Sequencing).
+> 2. **De-Tauri migration — SPIKE FIRST (the first real code; hardware-gated; the go/no-go for the big bet):**
+>    a throwaway axum loopback server with the full ADR-0022 §3 security middleware, serving the React app,
+>    live-verified in real browsers; KILL criteria incl. the threat-model review + UX. Only if it passes:
+>    handler-lift → axum server → TS transport shim → displaced features → cutover (delete the Tauri crate;
+>    GTK3 leaves the build; Scorecard Vulnerabilities clears). Per-OS service/packaging work is hardware-gated.
+>
+> Also still open from the prior sub-session (people/hardware): the co-maintainer 4-check unlock, Tier-1
+> boundary verification on capable hardware, CII Silver submission, SignPath reply. See below.
+
+---
+
+### Prior sub-session (2026-06-13) — OpenSSF posture driven to its solo ceiling (#85–#88)
 - **#85 — every *fixable* OSV/Scorecard vulnerability eliminated.** Of 23, the 4 fixable (npm `ws`/`brace-expansion` via scoped overrides; Python `pytest`≥9.0.3 / `python-dotenv`≥1.2.2 floors) are gone → `npm audit` clean. The other **19 are upstream Tauri GTK3 / unmaintained / unsound** transitive warnings OSV counts but can't suppress via `deny.toml`; documented in [`known-advisories.md`](known-advisories.md) (also corrected a stale "glib resolved" claim — still OSV-detected, accepted as unsound-but-unreachable).
 - **#86 — Signed-Releases 8→10 (deferred); Pinned-Dependencies stays 9 (npm not honestly fixable — #86's "→10" claim was CORRECTED 2026-06-14).** Signed-Releases: the release workflow now attaches the attestation bundle as `provenance-<platform>.intoto.jsonl` (Scorecard scans release *assets*, not the attestations store) → 10 **on the NEXT tagged release** (not retroactive — verify the asset is attached when cutting it). Pinned: the pip line is now hash-pinned (`--require-hashes`, verified) ✅, but the two `npm install -g` lines **cannot** satisfy Scorecard — its `isNpmUnpinnedDownload` credits only `npm ci` or git+commit-hash, never a version pin (verified against source). `npm ci` is impossible (no lockfile; `molthub` is the workbench's own CLI, not a registry pkg). So **Pinned-Dependencies stays 9** — accepted, documented in [`known-advisories.md`](known-advisories.md). The npm version pins are kept for reproducibility, not score.
 - **#87 — CII Silver solo-doable documentation criteria authored:** [`roadmap.md`](roadmap.md), [`governance.md`](governance.md) (honest bus-factor=1), [`assurance-case.md`](assurance-case.md) (claims C0–C5 → evidence + per-claim verification status, e.g. C4 resume-contract marked *unverified-on-hardware*), CONTRIBUTING §Review-standards.
