@@ -47,6 +47,7 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0020](0020-product-identity-and-distribution.md) | Accepted — direction ratified; implementation staged (0021/0022) | Product identity & distribution: a CLI/daemon with projected viewers (CLI/GUI/MCP); not a desktop app; not MCP-for-the-contained-agent |
 | [0021](0021-danger-gated-agentic-control-plane.md) | Proposed — must be accepted before any agentic control surface is built | Danger-gated agentic control plane: T7 (prompt-injected host operator), `boundary_impact` vs operational `danger`, out-of-band human gate for boundary-weakening (no agent call edge) |
 | [0022](0022-daemon-control-surface.md) | Proposed — architecture + transport security decided; implementation spike-gated | Daemon control surface: CLI · on-demand loopback web GUI (de-Tauri) · optional MCP; the ephemeral loopback-server security model; C1 (wait for GTK4) ruled out |
+| [0023](0023-distribution-and-packaging.md) | Proposed — strategy decided; registry publish can land early, installers with de-Tauri | Distribution & packaging: OS-agnostic, vendor-neutral; `cargo publish` opentrapp-core → crates.io (flips Scorecard Packaging) + cargo-dist prebuilt installers (all 3 OSes) + GHCR; no Homebrew/OS-store lock |
 
 ## Future ADRs
 
