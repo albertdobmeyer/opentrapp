@@ -591,10 +591,25 @@ jobs:
           done
 
       - name: Generate SLSA build-provenance attestation
+        id: provenance
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
         with:
           subject-path: artefacts/*
+
+      # attest-build-provenance writes the attestation to GitHub's attestations
+      # store, but OpenSSF Scorecard's signed-releases check looks for a
+      # provenance FILE among the release assets (matched by the `.intoto.jsonl`
+      # suffix). Copy the bundle out and upload it alongside the artefacts so the
+      # provenance is detectable on the release itself, not only via the API.
+      - name: Stage provenance bundle as a release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp "${{ steps.provenance.outputs.bundle-path }}" \
+            "artefacts/provenance-${{ matrix.platform.slug }}.intoto.jsonl"
+          ls -la artefacts/*.intoto.jsonl
 
       - name: Attach SBOM, signatures, and attestation to release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -606,5 +621,6 @@ jobs:
             artefacts/sbom-*.cyclonedx.json
             artefacts/*.sig
             artefacts/*.pem
+            artefacts/*.intoto.jsonl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
