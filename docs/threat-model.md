@@ -6,7 +6,7 @@
 
 This document specifies the threats the OpenTrApp perimeter is designed to address, the perimeter layers that mitigate each, the residual risk that remains after the mitigations, and the empirical evidence — wherever it exists — that the mitigations work as documented. It is the single source of truth on the question *"what does this perimeter actually protect against, and what does it not?"*.
 
-The model is structured around six attacker categories (T1–T6). Within each category, capabilities are decomposed by STRIDE class — Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege — to make sure the analysis is complete rather than narrative-driven. Categories T1 and T2 are the principal threats the architecture is engineered against. T3 is addressed structurally. T4 is explicitly out of scope. T5 is addressed by user-experience measures rather than mechanical isolation. T6 is partially in scope.
+The model is structured around six accepted attacker categories (T1–T6), plus **T7 (Proposed)** — the prompt-injected host operator introduced by the agent-operable control plane ([ADR-0021](adr/0021-danger-gated-agentic-control-plane.md)), folded in fully on that ADR's acceptance. Within each category, capabilities are decomposed by STRIDE class — Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege — to make sure the analysis is complete rather than narrative-driven. Categories T1 and T2 are the principal threats the architecture is engineered against. T3 is addressed structurally. T4 is explicitly out of scope. T5 is addressed by user-experience measures rather than mechanical isolation. T6 is partially in scope. T7 is addressed structurally (the danger-gate), with an honest T4-inherited residual.
 
 ---
 
@@ -168,6 +168,14 @@ The "STRIDE" classes are interpreted as follows in this document:
 - **Image and layer caches persist by default.** Full cleanup is documented in [`whitepaper.md`](whitepaper.md) §9 and requires `podman system prune -a` (or the Docker equivalent).
 - **The host filesystem is the user's responsibility.** Files in `~/.opentrapp/`, the workspace volume, and the `.env` file are protected by ordinary host file permissions. A user who shares the host account broadly weakens this layer.
 - **Idle auto-pause shifts the poller, not the exposure.** When the perimeter is dormant the host process (not the agent) holds the single Telegram `getUpdates` poll. This is the same bot, token, and outbound polling pattern an observer could already see; the waker is peek-only (never advances the offset, never reads content), so no message content is newly exposed. The behavior is off by default and documented in [`adr/0018-idle-auto-pause-host-waker.md`](adr/0018-idle-auto-pause-host-waker.md).
+
+---
+
+## T7 — Prompt-injected host operator *(Proposed — defined in [ADR-0021](adr/0021-danger-gated-agentic-control-plane.md); folded in here on acceptance)*
+
+**Definition.** A *trusted, user-installed* host agent (Claude Code, opencode) that is **prompt-injected** via content it reads and that has, or can reach, an OpenTrApp control surface (the agent-operable control plane of [ADR-0020](adr/0020-product-identity-and-distribution.md)). The attacker controls the agent's *instructions*, not the host OS. Goal: weaken the perimeter protecting the *contained* agent — the T1 attack aimed one level up, at the *external* operator.
+
+**Scope.** T7 is **distinct from T4**: the host program is honest, only the content it reads is hostile. A *fully* injected, fully-privileged host agent can tamper with `~/.opentrapp` or kill the daemon directly — that residual **is T4 and stays out of scope**. The in-scope guarantee ADR-0021 defends is narrower and honest: **OpenTrApp's agentic control plane is never an *amplifier* — it adds no new, easier boundary-weakening path than the pre-existing T4 residual.** Boundary-weakening through any OpenTrApp surface (CLI/MCP/loopback/GUI) requires the *same out-of-band human confirmation* whether the caller is a human or an agent (`boundary_impact: weakening` → human tap / phone, never agent-auto-satisfiable; the weakening writers have no agent call edge — ADR-0016 generalized). Full STRIDE decomposition and the danger-gate rules are in [ADR-0021](adr/0021-danger-gated-agentic-control-plane.md).
 
 ---
 

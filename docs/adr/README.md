@@ -45,10 +45,10 @@ A bug-fix is not an ADR. A library version bump is not an ADR. A change in codin
 | [0018](0018-idle-auto-pause-host-waker.md) | Accepted — design (Phase 3 Slice D) | Idle auto-pause and the host-side wake-on-message waker (peek-only getUpdates; ~0 resting RAM) |
 | [0019](0019-headless-daemon-gui-viewer-split.md) | Accepted — implemented behind opt-in; unverified pending hardware | Headless daemon + on-demand GUI viewer split (the daemon is the product) |
 | [0020](0020-product-identity-and-distribution.md) | Accepted — direction ratified; implementation staged (0021/0022) | Product identity & distribution: a CLI/daemon with projected viewers (CLI/GUI/MCP); not a desktop app; not MCP-for-the-contained-agent |
+| [0021](0021-danger-gated-agentic-control-plane.md) | Proposed — must be accepted before any agentic control surface is built | Danger-gated agentic control plane: T7 (prompt-injected host operator), `boundary_impact` vs operational `danger`, out-of-band human gate for boundary-weakening (no agent call edge) |
 
 ## Future ADRs
 
-- **ADR-0021 — Danger-gated agentic control plane** (the security spine; external-operator threat model + the safe-vs-boundary-weakening split). Must be ratified before any agentic control surface is built.
 - **ADR-0022 — Daemon control surface / de-Tauri** (CLI · on-demand loopback web GUI · optional MCP adapter over the manifest command set; the loopback-server security model).
 
 - **macOS/Windows runtime install** — `podman` is not present by default on those platforms; ADR-0011's bootstrap is Linux/AppImage-only so far. A future record should decide the Podman Desktop / Colima / WSL2 strategy.
