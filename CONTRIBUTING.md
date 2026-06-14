@@ -129,6 +129,40 @@ The review policy scales with the number of maintainers:
   before merge. No self-approval. This is exactly what the `Code-Review` check
   measures, and more importantly it puts a second set of eyes on every change.
 
+### Review standards — what every review checks
+
+Whether a PR is self-merged (solo) or approved by another maintainer, the same
+documented criteria apply. A reviewer (or the author, when solo) confirms:
+
+1. **CI is green** — all required checks pass: Rust check+test, Frontend tsc+vitest,
+   Orchestration (42 checks), Integration (cross-module contracts), Playwright
+   smoke, and the DCO sign-off. A local green that skips the lint or integration
+   jobs does **not** count (see [`CLAUDE.md` §7](CLAUDE.md)).
+2. **Verification at the consumption end** — the change is confirmed correct at the
+   end that *consumes* its output, not merely that it built or ran
+   ([`CLAUDE.md` §11](CLAUDE.md)). Claims are scoped to what is actually verified;
+   anything that can only be checked on capable hardware is labelled *unverified*,
+   not asserted as done.
+3. **No developer jargon in user-facing text** — the 28-reserved-term rule
+   (enforced by `app/e2e/user-facing.spec.ts`).
+4. **The generic-backend constraint holds** — no workload-specific logic enters the
+   Rust/React orchestrator; workload logic stays under `workloads/<name>/`.
+5. **Manifest schema stays aligned** across all three layers
+   (`schemas/component.schema.json`, `manifest.rs`, `types.ts`) when the contract
+   changes.
+6. **Security-sensitive changes** are flagged and measured against the
+   [threat model](docs/threat-model.md) and the [assurance case](docs/assurance-case.md);
+   a change that weakens a boundary must justify itself. Command-injection,
+   path-traversal, and network-isolation invariants (see [`CLAUDE.md` §9](CLAUDE.md))
+   are preserved.
+7. **Tests accompany behavior changes** — new functionality lands with tests; bug
+   fixes land with a regression test where practical.
+8. **Commits are signed off** (DCO) and follow the [commit-message style](#commit-message-style).
+
+A review that finds a problem requests changes with a specific, actionable comment;
+unresolved review conversations block merge (branch protection requires
+conversation resolution).
+
 ### Onboarding a new maintainer
 
 1. Add them as a repository collaborator with the **Maintain** (or Write) role.

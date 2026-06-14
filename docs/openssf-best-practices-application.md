@@ -108,6 +108,13 @@ notable ones and flags the genuine gaps.
 | `test_policy` / `tests_documented_added` | `CONTRIBUTING.md` "Test gates"; CI requires green |
 | `warnings` / `warnings_fixed` | `eslint --max-warnings 0`, `cargo deny check` green |
 | `maintenance_or_update` | Dependabot (npm + cargo + actions) |
+| `documentation_roadmap` | [`docs/roadmap.md`](roadmap.md) — public, status-marked, with explicit out-of-scope |
+| `documentation_architecture` | [`docs/trifecta.md`](trifecta.md), [`whitepaper.md`](whitepaper.md), [`diagrams.md`](diagrams.md), ADRs |
+| `documentation_security` / `documentation_quick_start` | [`SECURITY.md`](../SECURITY.md) + [`threat-model.md`](threat-model.md); README Installation/Quick-start |
+| `governance` (project decision-making) | [`docs/governance.md`](governance.md) — model, decision process (ADRs), maintainer path, honest bus-factor |
+| `code_review_standards` | [`CONTRIBUTING.md` §Review standards](../CONTRIBUTING.md) — the 8-point reviewer checklist |
+| `assurance_case` | [`docs/assurance-case.md`](assurance-case.md) — claims C0–C5 mapped to argument + evidence + consumption-end check |
+| `require_2FA` (committers use 2FA) | Documented in [`governance.md`](governance.md) + [`CONTRIBUTING.md` onboarding] as a merge-rights requirement |
 
 **Genuine gaps for Silver:**
 
@@ -130,11 +137,32 @@ notable ones and flags the genuine gaps.
 - **`two_person_review` (Gold).** Requires a second reviewer — same solo-maintainer
   cap as the Scorecard `Code-Review` check. Out of reach until a co-maintainer exists.
 
-**Recommendation:** claim every "Met" row + `dco` now (raises the Silver
-percentage immediately). `test_statement_coverage` is the real remaining work —
-write unit tests until frontend statements clear 80%; only then claim it. Gold is
-gated on `two_person_review` (a second maintainer) and full
-reproducibility — track, don't block on them.
+**Documentation criteria — closed (2026-06-13).** The Silver documentation/process
+rows that were previously unanswered now have authored evidence: `documentation_roadmap`
+([roadmap.md](roadmap.md)), `governance` ([governance.md](governance.md)),
+`assurance_case` ([assurance-case.md](assurance-case.md)), and `code_review_standards`
+([CONTRIBUTING.md §Review standards](../CONTRIBUTING.md)). Claim these "Met" with the
+cited links.
+
+**Honest split of what remains for Silver:**
+
+- **Agent-doable, not yet done — `test_statement_coverage80`.** Combined frontend is
+  ≈58%; Silver wants 80%. This is real, sustained test-writing work — do NOT claim
+  the row until the measured number clears 80%.
+- **People-blocked (cannot be satisfied solo, same root cause as the Scorecard
+  `Code-Review`/`Contributors` 0-scores):** `two_person_review`,
+  `contributors_unassociated`, `bus_factor`. These need a *second maintainer*. The
+  governance and review-standards docs are written so that the moment a co-maintainer
+  is active, these flip without further code work (enable required approvals; their
+  commits supply the second affiliation).
+- **`build_reproducible` (full).** SLSA L2 + per-platform SBOM exist; byte-for-byte
+  reproducibility is not yet verified end-to-end (roadmap "Later").
+
+**Bottom line:** the Silver *percentage* rises with every "Met" row above, but the
+**Silver badge itself stays out of reach until a second maintainer exists** — and
+the Scorecard `CII-Best-Practices` number only moves when the badge tier changes, so
+this documentation work raises Silver readiness, not (yet) the Scorecard score. That
+is the honest, intended outcome: make Silver instant once the people-gate clears.
 
 ## Submission steps
 

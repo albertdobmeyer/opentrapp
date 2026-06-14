@@ -245,6 +245,20 @@ See [`CLAUDE.md`](CLAUDE.md) for the full architecture specification and contrib
 
 ---
 
+## Contributing & project docs
+
+Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the build,
+test gates, DCO sign-off, and pull-request workflow.
+
+| Document | What it covers |
+|----------|----------------|
+| [`docs/roadmap.md`](docs/roadmap.md) | Where the project is heading and what is explicitly *not* promised |
+| [`docs/governance.md`](docs/governance.md) | How decisions are made, the maintainer path, and the honest bus-factor |
+| [`docs/assurance-case.md`](docs/assurance-case.md) | The structured security argument (claims → evidence) |
+| [`docs/threat-model.md`](docs/threat-model.md) | Attacker categories and named residual gaps |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Participation standards |
+| [`SECURITY.md`](SECURITY.md) | Private vulnerability disclosure |
+
 ## License
 
 Released under the [MIT License](LICENSE). The license permits use, modification, redistribution, and inclusion in derivative works subject only to the attribution requirement (preservation of the copyright notice). No warranty is provided.
