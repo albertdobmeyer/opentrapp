@@ -79,4 +79,38 @@ describe("ConnectStep credential flow", () => {
     // The masked existing key shows a "Change" affordance instead of an input.
     await waitFor(() => expect(screen.getByText(/change/i)).toBeInTheDocument());
   });
+
+  test("entering both keys + Continue saves both", async () => {
+    mSave.mockResolvedValue(undefined);
+    const { onContinue } = renderStep();
+    fireEvent.change(screen.getByLabelText(/anthropic api key/i), { target: { value: "sk-ant-key" } });
+    fireEvent.change(screen.getByLabelText(/telegram bot/i), { target: { value: "1234567890:ABCdef" } });
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await waitFor(() => { expect(mSave).toHaveBeenCalledWith("sk-ant-key", "1234567890:ABCdef"); });
+    expect(onContinue).toHaveBeenCalledWith({ skippedKeys: false });
+  });
+
+  test("pasting an Anthropic key into the Telegram field re-routes it to the right field", () => {
+    renderStep();
+    const telegramInput = screen.getByLabelText(/telegram bot/i);
+    fireEvent.paste(telegramInput, {
+      clipboardData: { getData: () => "sk-ant-api03-pastedkey1234567890" },
+    });
+    expect(screen.getByLabelText(/anthropic api key/i)).toHaveValue("sk-ant-api03-pastedkey1234567890");
+  });
+
+  test("the show/hide toggle reveals the Anthropic key", () => {
+    renderStep();
+    const input = screen.getByLabelText(/anthropic api key/i);
+    expect(input).toHaveAttribute("type", "password");
+    // The first "Show key" toggle belongs to the Anthropic card.
+    fireEvent.click(screen.getAllByRole("button", { name: /show key/i })[0]);
+    expect(input).toHaveAttribute("type", "text");
+  });
+
+  test("the how-to link opens the Anthropic walkthrough modal", () => {
+    renderStep();
+    fireEvent.click(screen.getByRole("button", { name: /show me how to get one/i }));
+    expect(screen.getByText(/open the anthropic console/i)).toBeInTheDocument();
+  });
 });
