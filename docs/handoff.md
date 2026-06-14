@@ -1,25 +1,40 @@
 # Handoff — Active Mission
 
-**Last updated:** 2026-06-13. **This session shipped a large project-health + checklist push:** SignPath application **submitted** (site deployed live); OpenSSF **Scorecard remediation** (real react-router vuln fixed; cargo-deny + cargo-fuzz red→green; honest advisory docs); **DCO + coverage CI**; **frontend test coverage 13% → ~58%** (priority-first, 4 unit sets + E2E-merge); and **branch protection APPLIED** to `main`. The boundary self-test (1A/1B) + daemon self-test wiring (#45) + residual-risk page (3C) also landed. **`main` is now PR-only** (direct pushes blocked — branch protection). Current shipped release: **v0.7.2-rc1** (pre-release; v0.7.0 is last stable).
-**Current phase:** Project-health hardening done from the dev box. The **mission-critical gate remains Tier 1 on real hardware** — `make boundary-selftest` cold + on every resume path ([`road-to-recommendable.md`](road-to-recommendable.md)). The dev box can't run the perimeter (swap-storms); the Windows box / a cloud VM is the critical path. Everything authorable from the dev box is now done.
-**Branch:** `main` (PR-only). Monorepo (ADR-0013); `app/src-tauri` is a Cargo workspace (`opentrapp-core` + `opentrapp-daemon`).
+**Last updated:** 2026-06-13 (late). **This session drove the OpenSSF posture to its solo ceiling** — 4 PRs through the protected gate (#85–#88):
+- **#85 — every *fixable* OSV/Scorecard vulnerability eliminated.** Of 23, the 4 fixable (npm `ws`/`brace-expansion` via scoped overrides; Python `pytest`≥9.0.3 / `python-dotenv`≥1.2.2 floors) are gone → `npm audit` clean. The other **19 are upstream Tauri GTK3 / unmaintained / unsound** transitive warnings OSV counts but can't suppress via `deny.toml`; documented in [`known-advisories.md`](known-advisories.md) (also corrected a stale "glib resolved" claim — still OSV-detected, accepted as unsound-but-unreachable).
+- **#86 — Pinned-Dependencies 9→10 + Signed-Releases 8→10.** Pinned: hash-pinned the devcontainer's 3 unpinned commands (npm version pins + `pip --require-hashes`, cp312 wheel hashes verified by `pip download`). Signed-Releases: the release workflow now attaches the attestation bundle as `provenance-<platform>.intoto.jsonl` (Scorecard scans release *assets*, not the attestations store). **⚠️ Pinned takes effect next rescan; Signed-Releases lands on the NEXT tagged release (not retroactive) — verify the asset is attached when cutting it.**
+- **#87 — CII Silver solo-doable documentation criteria authored:** [`roadmap.md`](roadmap.md), [`governance.md`](governance.md) (honest bus-factor=1), [`assurance-case.md`](assurance-case.md) (claims C0–C5 → evidence + per-claim verification status, e.g. C4 resume-contract marked *unverified-on-hardware*), CONTRIBUTING §Review-standards.
+- **#88 — frontend statement coverage 52.5% → 80.11%** (302 vitest tests), meeting CII Silver `test_statement_coverage80`.
+
+Earlier this session: SignPath application **submitted** (site live), branch protection **APPLIED** (`main` PR-only), DCO + coverage CI, boundary self-test (1A/1B) + daemon wiring (#45) + residual-risk page (3C). Current shipped release: **v0.7.2-rc1** (pre-release; v0.7.0 last stable).
+**Current phase:** Project-health is at its **solo ceiling** — *every* Scorecard/CII item a single maintainer can move is done. The remaining scorecard movement is a **single people action: add the co-maintainer** (4-check unlock — Code-Review, Contributors, Branch-Protection, CII Silver's two-person/bus-factor rows). The **mission-critical gate remains Tier 1 on real hardware** — `make boundary-selftest` cold + every resume path ([`road-to-recommendable.md`](road-to-recommendable.md)). Dev box can't run the perimeter (swap-storms); Windows box / cloud VM is the critical path.
+**Branch:** `main` (PR-only). Monorepo (ADR-0013); `app/src-tauri` is a Cargo workspace (`opentrapp-core` + `opentrapp-daemon`). Scorecard agent-movable-vs-people/upstream map is captured in the `scorecard-solo-ceiling` memory.
 
 > ## ⟶ NEXT SESSION — the open items are all PEOPLE / HARDWARE / EXTERNAL (none blocked on the agent)
 >
-> Everything authorable from the dev box is shipped. What's left to recommend OpenTrApp publicly:
+> Everything authorable from the dev box is shipped (incl. all solo-doable Scorecard + CII Silver work). What's left to recommend OpenTrApp publicly:
 > 1. **Tier-1 boundary verification on capable hardware** (THE gate, §11) — `make perimeter-up` →
 >    `make boundary-selftest` cold, then with `OPENTRAPP_SELFTEST_ON_RESUME=1` after each resume path;
 >    then `make red-team` + `make proxy-soak`. Tasks #39/#40/#41/#54. The scripts exist; it's one command each.
-> 2. **Add the two prospective collaborators** → lifts Scorecard `Code-Review` + `Contributors`; then bump
->    branch-protection approvals 0→1 (re-PUT, command in the WS-B note below). Do NOT transfer the repo to an
->    org while SignPath is under review (URL change).
-> 3. **Submit CII Silver** (bestpractices.dev #12755) — claim DCO ✅ + the met rows; report coverage honestly
->    at ~58%, do NOT claim the 80% row. Prep is in [`openssf-best-practices-application.md`](openssf-best-practices-application.md).
+> 2. **Add the two prospective collaborators — THE highest-leverage move (a 4-check unlock).** Lifts Scorecard
+>    `Code-Review` (0) + `Contributors` (3) + makes `Branch-Protection` (4) raisable + clears CII Silver's
+>    `two_person_review`/`contributors_unassociated`/`bus_factor` rows. CODEOWNERS, `governance.md`, and
+>    CONTRIBUTING onboarding are all written so it's instant. After they accept + approve one PR, bump
+>    branch-protection `required_approving_review_count` 0→1 (re-PUT, command in the WS-B note below). Do NOT
+>    transfer the repo to an org while SignPath is under review (URL change).
+> 3. **Submit CII Silver** (bestpractices.dev #12755) — **all solo-doable rows are now Met**: DCO ✅,
+>    documentation (roadmap/architecture/security/quick-start), governance, assurance_case, code_review_standards,
+>    and `test_statement_coverage80` ✅ (**80.11%**, claim the real number). The badge itself still gates on the
+>    co-maintainer rows (#2). Full mapping in [`openssf-best-practices-application.md`](openssf-best-practices-application.md).
 > 4. **SignPath** — application submitted 2026-06-13, awaiting review (watch `albertkdobmeyer@gmail.com`); on
->    approval, activate the `ci.yml` SignPath template. **Apple Developer** enrollment unblocks macOS notarization.
-> 5. **Dependabot** will reopen PRs against the protected `main` — they now MUST go branch→PR→green→merge
->    (DCO sign-off required: `git commit -s`).
+>    approval, activate the `ci.yml` SignPath template (SHA-pin the action). **Apple Developer** enrollment unblocks macOS notarization.
+> 5. **Dependabot** PRs against protected `main` MUST go branch→PR→green→merge (DCO: `git commit -s`).
 > 6. **Pin Discussion #73** (GitHub UI only).
+>
+> **Scorecard note (verify at the consumption end):** #86's two fixes are *deferred* — Pinned-Dependencies→10
+> registers on the next weekly rescan; Signed-Releases→10 only when a **new `v*` tag** ships with the
+> `provenance-*.intoto.jsonl` asset attached. When cutting the next release, confirm that asset exists on the
+> draft release before announcing — that's the proof the workflow change works.
 
 > ## ⟶ NEXT SESSION — READ THIS FIRST: the road from "built" to "recommendable public security tool"
 >
