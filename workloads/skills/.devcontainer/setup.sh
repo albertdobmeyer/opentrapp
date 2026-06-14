@@ -3,12 +3,16 @@ set -euo pipefail
 
 echo "=== Setting up ClawHub Workbench ==="
 
-# Install npm + molthub globally
-npm install -g npm@latest
-npm install -g molthub
+# Install npm + molthub globally. Versions are pinned (not @latest / floating)
+# so the workbench is reproducible and OpenSSF Scorecard sees pinned npmCommands.
+# molthub is pinned to the same ecosystem release train as openclaw (see
+# workloads/agent/Containerfile: openclaw@2026.2.26).
+npm install -g npm@11.17.0
+npm install -g molthub@2026.2.26
 
-# Install Python pyyaml for frontmatter validation
-pip install --quiet pyyaml
+# Install Python pyyaml for frontmatter validation. Hash-pinned via the adjacent
+# requirements.txt (pipCommand pinned-by-hash for Scorecard + reproducibility).
+pip install --quiet --require-hashes -r "$(dirname "$0")/requirements.txt"
 
 # Create wrapper that intercepts 'molthub install' with a warning
 # Blocks third-party skill installs unless ALLOW_INSTALL=1 is set

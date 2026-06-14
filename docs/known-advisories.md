@@ -77,6 +77,18 @@ checks would be counterproductive. Honest interpretation:
 | **Packaging** | Looks for a package-registry publish workflow | A desktop app has no registry target; releases ship as signed GitHub Release assets (SBOM + cosign + SLSA). Accepted at the heuristic's expense. |
 
 The checks that reflect real engineering hygiene — Dangerous-Workflow,
-Token-Permissions, SAST, Pinned-Dependencies, Signed-Releases, Security-Policy,
-License, Fuzzing — are at or near maximum. See [`threat-model.md`](threat-model.md)
-for the application's actual security posture.
+Token-Permissions, SAST, Security-Policy, License, Fuzzing, Maintained, CI-Tests —
+are at maximum. See [`threat-model.md`](threat-model.md) for the application's
+actual security posture.
+
+### Improvable checks closed (2026-06-13)
+
+Two checks that were *not* structurally capped were taken to their maximum:
+
+| Check | Was | Gap (from Scorecard's own detail) | Fix |
+|-------|-----|-----------------------------------|-----|
+| **Pinned-Dependencies** | 9 | 3 unpinned commands in `workloads/skills/.devcontainer/setup.sh` (2 npm, 1 pip) | `npm@latest`/`molthub` → version-pinned; `pip install pyyaml` → `--require-hashes -r requirements.txt` (cp312 wheel hashes verified via `pip download`). **Effective on next rescan.** |
+| **Signed-Releases** | 8 | All 5 recent releases lacked a *provenance* asset — `attest-build-provenance` wrote the attestation to GitHub's store, but no provenance **file** was attached to the release | The release workflow now copies the attestation bundle to `provenance-<platform>.intoto.jsonl` and uploads it as a release asset (Scorecard matches the `.intoto.jsonl` suffix). **Effective on the next tagged release** — the score climbs as provenance-bearing releases enter the 5-release window; existing releases are not retro-fixed. |
+
+The remaining non-maximal checks (Vulnerabilities, Code-Review, Contributors,
+Branch-Protection, CII Gold) are the structural / people caps described above.
