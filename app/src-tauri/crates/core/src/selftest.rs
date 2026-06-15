@@ -17,9 +17,13 @@
 use std::path::{Path, PathBuf};
 
 /// The boundary self-test, embedded at compile time so the daemon is
-/// self-contained (no packaging path to get wrong). Kept byte-identical to the
-/// repo copy run by `make boundary-selftest`.
-pub const SCRIPT: &str = include_str!("../../../../../tests/boundary-selftest.sh");
+/// self-contained. **Vendored copy** of `tests/boundary-selftest.sh` — the
+/// canonical script `make boundary-selftest` runs. The copy lives INSIDE this
+/// crate so `opentrapp-core` is crates.io-publishable (ADR-0023); an
+/// `include_str!` from outside the crate is not packageable. A drift-check in
+/// `tests/orchestrator-check.sh` keeps the two byte-identical (run
+/// `make sync-core-embedded` after editing the canonical).
+pub const SCRIPT: &str = include_str!("embedded/boundary-selftest.sh");
 
 /// Opt-in: run the boundary self-test after every (re)start, fail-closed.
 /// Default OFF — until the script runs green on capable hardware, shipping

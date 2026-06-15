@@ -1,0 +1,210 @@
+# OpenTrApp perimeter spec — the runtime topology contract.
+#
+# This file is the SINGLE source of truth the Rust orchestrator
+# (src/orchestrator/podman.rs) uses to bring the perimeter up. It is
+# embedded into the signed binary via include_str!, so it is covered by the
+# AppImage signature: the perimeter cannot be altered without a rebuild +
+# re-sign. compose.yml is retained for dev-mode (`podman compose up`) and
+# audit; tests/orchestrator-check.sh asserts the two agree.
+#
+# Design rules:
+#   - Image DIGESTS and cosign identities are NOT here. They are produced by
+#     CI per release into a separate, signed `image-digests.json` overlay and
+#     verified before `podman run`. This file pins only repo:tag + source.
+#   - SECRETS are never inlined. Env entries reference a runtime variable name
+#     (kind: secret) resolved from the user's .env at run time.
+#   - Bind-mount sources of kind `resource` are verified files extracted from
+#     the signed bundle (seccomp profiles, proxy addon, allowlist, resolv.conf)
+#     — never user-writable paths. See ADR-0009 for the no-writable-policy rule.
+#
+# See docs/adr/0009-five-container-perimeter.md for the topology rationale.
+
+version: 1
+
+services:
+  # ─── vault-agent — agent runtime containment (no internet) ───────
+  vault-agent:
+    image: { repo: "ghcr.io/albertdobmeyer/opentrapp/vault-agent", source: built }
+    read_only: true
+    no_new_privileges: true
+    cap_drop_all: true
+    seccomp: vault-seccomp.json
+    pids_limit: 256
+    mem_limit: 4g
+    cpus: 2
+    networks: [agent-net]
+    depends_on:
+      - { service: vault-proxy, condition: started }
+    tmpfs:
+      - { path: /tmp, options: "size=256m,noexec,nosuid,mode=1777" }
+      - { path: /home/vault/.config, options: "size=64m,noexec,nosuid,mode=1777" }
+      - { path: /home/vault/workspace, options: "size=1g,noexec,nosuid,mode=1777" }
+    volumes:
+      - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
+      - { source: vault-data, target: /home/vault/.openclaw, kind: named }
+      - { source: skills-deliveries, target: /home/vault/workspace/skills, read_only: true, kind: named }
+    env:
+      - { name: HTTP_PROXY, kind: literal, value: "http://vault-proxy:8080" }
+      - { name: HTTPS_PROXY, kind: literal, value: "http://vault-proxy:8080" }
+      - { name: NO_PROXY, kind: literal, value: "localhost,127.0.0.1" }
+      - { name: TELEGRAM_BOT_TOKEN, kind: secret, var: TELEGRAM_BOT_TOKEN }
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  # ─── vault-proxy — L7 egress policy (holds keys, NOT NET_ADMIN) ──
+  vault-proxy:
+    image: { ref: "docker.io/mitmproxy/mitmproxy@sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1", source: external }
+    command:
+      - mitmdump
+      - --listen-host
+      - 0.0.0.0
+      - --listen-port
+      - "8080"
+      - --mode
+      - upstream:http://vault-egress:8888
+      - --set
+      - block_global=false
+      - --set
+      - block_private=false
+      - --set
+      - connection_strategy=lazy
+      - --scripts
+      - /opt/vault/vault-proxy.py
+    # ZONE 3 fix. The upstream mitmproxy image runs its entrypoint as root, then
+    # demotes to the non-root `mitmproxy` user (gosu) before running the command.
+    # The named log volume is created root-owned, so the demoted process can't
+    # write requests.jsonl and silently falls back to ephemeral /tmp — which
+    # disabled the idle-auto-pause activity signal (read_egress_log returns None).
+    # The ':U' chown-on-mount below does NOT fix this image: ':U' chowns to the
+    # image's *declared* user (root/0), but the runtime uid is derived later by
+    # the entrypoint, so the dir lands at 0 while the process runs as ~1000.
+    # This shim chowns the log dir to the mitmproxy user while still root, THEN
+    # hands off to the upstream entrypoint (docker-entrypoint.sh, on PATH) with
+    # the original command. Runner-agnostic (raw podman + compose).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - 'chown -R mitmproxy:mitmproxy /var/log/vault-proxy 2>/dev/null || true; exec docker-entrypoint.sh "$@"'
+      - sh
+    no_new_privileges: false
+    cap_drop_all: true
+    seccomp: vault-proxy-seccomp.json
+    cap_add: [NET_BIND_SERVICE, SETUID, SETGID, CHOWN, DAC_OVERRIDE]
+    mem_limit: 2g
+    pids_limit: 128
+    networks: [agent-net, skills-net, social-net, egress-net]
+    depends_on:
+      - { service: vault-egress, condition: healthy }
+    tmpfs:
+      - { path: /tmp, options: "size=64m,noexec,nosuid" }
+    volumes:
+      - { source: vault-proxy.py, target: /opt/vault/vault-proxy.py, read_only: true, kind: resource }
+      - { source: allowlist.txt, target: /opt/vault/allowlist.txt, read_only: true, kind: resource }
+      # chown: true → podman ':U' so the non-root mitmproxy process can
+      # write requests.jsonl into the named volume. Without this, mitmproxy
+      # silently falls back to in-container /tmp (logs never reach host).
+      - { source: vault-proxy-logs, target: /var/log/vault-proxy, kind: named, chown: true }
+      - { source: proxy-ca, target: /home/mitmproxy/.mitmproxy, kind: named }
+    env:
+      - { name: ANTHROPIC_API_KEY, kind: secret, var: ANTHROPIC_API_KEY }
+      - { name: OPENAI_API_KEY, kind: secret, var: OPENAI_API_KEY, optional: true }
+      - { name: ANTHROPIC_API_VERSION, kind: secret, var: ANTHROPIC_API_VERSION, default: "2023-06-01" }
+    restart: unless-stopped
+
+  # ─── vault-egress — L3 egress policy (NET_ADMIN, no secrets) ─────
+  vault-egress:
+    image: { repo: "ghcr.io/albertdobmeyer/opentrapp/vault-egress", source: built }
+    read_only: true
+    no_new_privileges: true
+    cap_drop_all: true
+    cap_add: [NET_ADMIN, NET_RAW, NET_BIND_SERVICE, CHOWN, DAC_OVERRIDE, SETUID, SETGID]
+    mem_limit: 256m
+    pids_limit: 64
+    cpus: 0.5
+    networks: [egress-net, external-net]
+    sysctls:
+      - { key: net.ipv4.ip_forward, value: "1" }
+      - { key: net.ipv6.conf.all.forwarding, value: "1" }
+    tmpfs:
+      - { path: /tmp, options: "size=64m,noexec,nosuid" }
+      - { path: /run, options: "size=8m,noexec,nosuid" }
+      - { path: /var/log/vault-egress, options: "size=32m,nosuid" }
+    volumes:
+      - { source: resolv.conf, target: /etc/resolv.conf, read_only: true, kind: resource }
+    healthcheck:
+      test: "nft list ruleset | grep -q vault_egress_drop_private && nc -z 127.0.0.1 8888"
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # ─── vault-skills — supply-chain defense (skill scanner + CDR) ────
+  vault-skills:
+    image: { repo: "ghcr.io/albertdobmeyer/opentrapp/vault-skills", source: built }
+    no_new_privileges: true
+    cap_drop_all: true
+    mem_limit: 1g
+    pids_limit: 128
+    networks: [skills-net]
+    command: ["bash", "-c", "echo 'vault-skills ready' && trap 'exit 0' TERM INT; sleep infinity & wait"]
+    volumes:
+      - { source: skills-deliveries, target: /app/exports, kind: named }
+      - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
+      # Shared Sentinel lib — the in-container shield (skill-cdr.sh) resolves
+      # /opt/sentinel. Verified, read-only, staged from the signed bundle like
+      # every other policy artifact (ADR-0009/0011, spec 08 §5).
+      - { source: sentinel, target: /opt/sentinel, read_only: true, kind: resource }
+    env:
+      - { name: HTTP_PROXY, kind: literal, value: "http://vault-proxy:8080" }
+      - { name: HTTPS_PROXY, kind: literal, value: "http://vault-proxy:8080" }
+      - { name: NO_PROXY, kind: literal, value: "localhost,127.0.0.1" }
+      - { name: CURL_CA_BUNDLE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
+      - { name: REQUESTS_CA_BUNDLE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
+      - { name: SSL_CERT_FILE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
+    restart: unless-stopped
+    # On-demand (Phase 1): not a daemon — started lazily by the command layer
+    # and stopped after an idle grace, so it stays out of the resting perimeter.
+    on_demand: true
+
+  # ─── vault-social — social-content analysis (parked) ────────────
+  vault-social:
+    image: { repo: "ghcr.io/albertdobmeyer/opentrapp/vault-social", source: built }
+    no_new_privileges: true
+    cap_drop_all: true
+    mem_limit: 512m
+    pids_limit: 64
+    networks: [social-net]
+    command: ["bash", "-c", "echo 'vault-social ready' && trap 'exit 0' TERM INT; sleep infinity & wait"]
+    volumes:
+      - { source: proxy-ca, target: /opt/proxy-ca, read_only: true, kind: named }
+      # Shared Sentinel lib — semantic-firewall.sh + persona-guard.sh resolve
+      # /opt/sentinel. Same verified read-only staging as vault-skills above.
+      - { source: sentinel, target: /opt/sentinel, read_only: true, kind: resource }
+    env:
+      - { name: HTTP_PROXY, kind: literal, value: "http://vault-proxy:8080" }
+      - { name: HTTPS_PROXY, kind: literal, value: "http://vault-proxy:8080" }
+      - { name: NO_PROXY, kind: literal, value: "localhost,127.0.0.1" }
+      - { name: CURL_CA_BUNDLE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
+      - { name: REQUESTS_CA_BUNDLE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
+      - { name: SSL_CERT_FILE, kind: literal, value: "/opt/proxy-ca/mitmproxy-ca-cert.pem" }
+    restart: unless-stopped
+    # On-demand (Phase 1): parked workload, never started until a social command
+    # runs (enable-feeds is deferred). See vault-skills note above.
+    on_demand: true
+
+# ─── networks ────────────────────────────────────────────────────
+networks:
+  agent-net:   { internal: true }
+  skills-net:   { internal: true }
+  social-net:  { internal: true }
+  egress-net:  { internal: true, subnet: "10.230.0.0/24" }
+  external-net: { internal: false }
+
+# ─── named volumes (podman auto-creates on first use) ────────────
+volumes:
+  - vault-proxy-logs
+  - proxy-ca
+  - vault-data
+  - skills-deliveries

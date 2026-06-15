@@ -13,7 +13,8 @@
         dogfood-tier-a dogfood-tier-b dogfood-tier-c dogfood-tier-d dogfood-full \
         dogfood-fresh-sessions dogfood-restore-sessions \
         audit-rust audit-npm audit-deny audit-all \
-        perimeter-up perimeter-down perimeter-status profile-memory
+        perimeter-up perimeter-down perimeter-status profile-memory \
+        sync-core-embedded
 
 help:
 	@echo "OpenTrApp common targets:"
@@ -171,6 +172,16 @@ profile-memory:
 boundary-selftest:
 	@echo "→ bash tests/boundary-selftest.sh (boundary holds? bring the perimeter up first)"
 	@bash tests/boundary-selftest.sh
+
+# Re-sync opentrapp-core's vendored copies of perimeter.yml + boundary-selftest.sh
+# from their canonical sources. The canonical files (resources/, tests/) are the
+# source of truth; core keeps in-crate copies so it is crates.io-publishable
+# (ADR-0023). orchestrator-check.sh fails if they drift — run this after editing
+# a canonical file.
+sync-core-embedded:
+	@cp app/src-tauri/resources/perimeter.yml app/src-tauri/crates/core/src/embedded/perimeter.yml
+	@cp tests/boundary-selftest.sh app/src-tauri/crates/core/src/embedded/boundary-selftest.sh
+	@echo "→ synced opentrapp-core/src/embedded/ from canonical resources/ + tests/"
 
 proxy-soak:
 	@echo "→ bash tests/proxy-memory-soak.sh (vault-proxy RSS over load×time; perimeter up first)"

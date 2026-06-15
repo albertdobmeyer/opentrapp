@@ -1473,6 +1473,25 @@ sys.exit(0 if ok(svc['vault-skills']) and ok(svc['vault-social']) else 1)
 PY
 
 # =============================================================================
+section "opentrapp-core vendored embeds (publishability — ADR-0023)"
+# =============================================================================
+
+# opentrapp-core is crates.io-publishable, so it carries in-crate VENDORED copies
+# of its data files under src/embedded/ (an include_str! from OUTSIDE the crate is
+# not packageable). These must stay byte-identical to the canonical sources;
+# `make sync-core-embedded` re-syncs after editing a canonical file.
+if cmp -s app/src-tauri/crates/core/src/embedded/perimeter.yml app/src-tauri/resources/perimeter.yml; then
+  pass "core embedded perimeter.yml matches canonical resources/perimeter.yml"
+else
+  fail "core embedded perimeter.yml DRIFTED from resources/perimeter.yml — run 'make sync-core-embedded'"
+fi
+if cmp -s app/src-tauri/crates/core/src/embedded/boundary-selftest.sh tests/boundary-selftest.sh; then
+  pass "core embedded boundary-selftest.sh matches canonical tests/boundary-selftest.sh"
+else
+  fail "core embedded boundary-selftest.sh DRIFTED from tests/boundary-selftest.sh — run 'make sync-core-embedded'"
+fi
+
+# =============================================================================
 section "Summary"
 # =============================================================================
 
