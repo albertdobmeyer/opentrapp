@@ -72,6 +72,17 @@ Keep images on **GHCR** (already), but change the publish step to a Scorecard-re
 for the score, but it makes the images count *and* GHCR/OCI is the vendor-neutral, OS-agnostic image
 standard (any OCI runtime — podman, docker, containerd — can pull them).
 
+**Landed (`ci.yml` `build-images`).** The perimeter-image push now uses `docker buildx build --push`
+(matches `docker.*push`); since `build-images` lives in `ci.yml`, which has successful runs, Scorecard
+recognizes the file as a publishing workflow (`checks/raw/github/packaging.go` requires a static matcher
+hit **and** ≥1 successful run of that file). The conversion preserves the zero-trust digest invariant by
+keeping every digest-sensitive step in **podman** — buildx only builds + pushes a single plain manifest
+(`--provenance=false --sbom=false`); the offline bundle is `podman pull`-by-digest (which verifies the
+content) → `podman save`, and a **fail-closed self-verify** (`podman load` → `image exists @digest`)
+mirrors the runtime `BundleVerifier` exactly, so a subtly-wrong publish fails the release instead of
+shipping a perimeter that silently refuses to start (§11). Recognition is verified statically; the
+tag-only execution is confirmed on the next release tag (e.g. an `-rc`), not on the dev box.
+
 ### 4. Explicitly rejected as a *primary* channel (the no-lock test)
 - **Homebrew / apt / AUR / winget / Chocolatey / Snap / Flatpak** — each is single-OS or single-vendor
   (Homebrew is macOS+Linux only, no Windows, *and* not Scorecard-recognized). **Allowed only as

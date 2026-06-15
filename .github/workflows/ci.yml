@@ -153,10 +153,14 @@ jobs:
 
   # ── Perimeter images (tag builds only) ─────────────────────────────────
   # Builds the four OpenTrApp container images in CI — never on the user's
-  # machine — then signs each (cosign keyless), pushes to GHCR by digest,
-  # exports an OCI tarball for bundling into the AppImage, and emits a signed
-  # `image-digests.json` overlay that the runtime verifies before `podman run`.
-  # This is the supply-chain backbone of the zero-trust bootstrap (ADR-0009).
+  # machine — via `docker buildx build --push` (the publish form OpenSSF
+  # Scorecard's packaging matcher recognizes — `docker.*push`; ADR-0023),
+  # signs each (cosign keyless), then bundles each as an OCI tarball via a
+  # digest-faithful podman pull→save and SELF-VERIFIES, fail-closed, that the
+  # bundle reloads to the pinned digest — the exact check the runtime
+  # BundleVerifier enforces (orchestrator/podman.rs; §11). Emits the signed
+  # `image-digests.json` overlay the runtime verifies before `podman run`.
+  # Supply-chain backbone of the zero-trust bootstrap (ADR-0009).
   # vault-proxy is upstream mitmproxy, pinned by digest (recorded in the
   # overlay as source=external) — not rebuilt here.
   build-images:
@@ -172,8 +176,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
-      - name: Build, push (by digest), sign, and export each image
+      - name: Build (buildx) + push, sign, bundle, and self-verify each image
         id: images
         shell: bash
         run: |
@@ -182,10 +187,11 @@ jobs:
           REG="ghcr.io/${OWNER}/opentrapp"
           TAG="${GITHUB_REF_NAME}"
           PROXY_REF="docker.io/mitmproxy/mitmproxy@sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1"
+          # Three logins, one token. docker: buildx --push. podman: the
+          # digest-faithful bundle pull. cosign: signature-blob upload, via its
+          # own ~/.docker/config.json keychain (which `docker login` populates).
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u '${{ github.actor }}' --password-stdin
-          # cosign uses its own keychain (~/.docker/config.json), NOT podman's
-          # auth store — it must be logged in separately or the signature-blob
-          # upload to GHCR fails with UNAUTHORIZED.
           echo "${{ secrets.GITHUB_TOKEN }}" | cosign login ghcr.io -u '${{ github.actor }}' --password-stdin
           mkdir -p images
 
@@ -213,20 +219,48 @@ jobs:
             ctx="${CTX[$svc]}"
             img="${REG}/${svc}"
             echo "::group::build ${svc}"
-            podman build -t "${img}:${TAG}" -f "${ctx}/Containerfile" "${ctx}"
-            # Push and capture the registry digest.
-            podman push --digestfile="images/${svc}.digest" "${img}:${TAG}"
-            digest="$(cat images/${svc}.digest)"
+            # Build + push via buildx. `--push` is the run text Scorecard's
+            # packaging matcher recognizes (`docker.*push`) — this is the genuine
+            # GHCR publish, expressed in the recognized form (ADR-0023). Disable
+            # provenance/SBOM so the pushed artifact is a SINGLE plain manifest
+            # (not an attestation index): its digest is what we pin, sign, bundle,
+            # and the runtime verifies. --metadata-file captures that digest.
+            docker buildx build --push \
+              --provenance=false --sbom=false \
+              --metadata-file "images/${svc}.meta.json" \
+              -t "${img}:${TAG}" \
+              -f "${ctx}/Containerfile" "${ctx}"
+            digest="$(jq -r '."containerimage.digest"' "images/${svc}.meta.json")"
+            case "$digest" in
+              sha256:*) : ;;
+              *) echo "::error::${svc}: buildx captured no manifest digest"; exit 1 ;;
+            esac
             echo "${svc} → ${img}@${digest}"
             # Sign the image by digest (keyless). Verified at runtime against
             # signer_identity_regexp + oidc_issuer above.
             cosign sign --yes "${img}@${digest}"
-            # Export the image as an OCI archive for bundling. Save by TAG —
-            # podman's local store resolves the tag, not the registry push
-            # digest (which would error "image not known"). The saved manifest
-            # is the same content, so a runtime `podman load` reproduces the
-            # digest recorded in the overlay.
-            podman save --format oci-archive -o "images/${svc}.tar" "${img}:${TAG}"
+            # Bundle for offline install. podman pull-by-digest VERIFIES the
+            # registry content matches the digest; podman save/load is symmetric,
+            # so the bundled tar reloads to this exact digest on the user's
+            # machine — every digest-sensitive step stays in podman (the path
+            # that round-trips a digest faithfully), buildx only builds + pushes.
+            podman pull "${img}@${digest}"
+            podman save --format oci-archive -o "images/${svc}.tar" "${img}@${digest}"
+            # FAIL-CLOSED self-verify, faithful to the runtime consumption end
+            # (orchestrator/podman.rs:570-592): drop the image, load ONLY from the
+            # bundled tar, and assert it is present AT THE PINNED DIGEST — the
+            # exact predicate BundleVerifier::verify_and_resolve uses to accept or
+            # refuse an image. If the publish mechanism ever makes the bundle
+            # diverge from the pinned digest, the release FAILS HERE rather than
+            # shipping a perimeter that silently refuses to start (§11: a visible
+            # failure beats a boundary that is alive but subtly wrong).
+            podman rmi -f "${img}@${digest}" >/dev/null 2>&1 || true
+            podman load --input "images/${svc}.tar"
+            if ! podman image exists "${img}@${digest}"; then
+              echo "::error::${svc}: bundled tar does not reload to pinned digest ${digest} — refusing to publish a corrupt overlay"
+              exit 1
+            fi
+            rm -f "images/${svc}.meta.json"
             # Append to the overlay.
             [ $first -eq 1 ] || echo ',' >> images/image-digests.json
             first=0
@@ -245,7 +279,7 @@ jobs:
           echo '  }' >> images/image-digests.json
           echo '}' >> images/image-digests.json
           cat images/image-digests.json
-          rm -f images/*.digest
+          rm -f images/*.meta.json
 
       - name: Attest provenance for the bundled image tarballs
         uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
