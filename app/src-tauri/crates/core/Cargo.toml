@@ -9,18 +9,8 @@ name = "opentrapp-core"
 version = "0.7.2"
 edition = "2021"
 license = "MIT"
-# Publishable to crates.io (ADR-0020 / ADR-0023): the reusable, tauri-free
-# orchestration core. It has NO workspace path deps (every dependency is a
-# registry crate), so it publishes standalone. The `opentrapp` GUI crate and the
-# daemon — which reference this crate by *path* — stay `publish = false`; that is
-# what holds the version-less path dep cargo-deny's `allow-wildcard-paths` covers.
+publish = false  # workspace-internal crate; never published to crates.io
 description = "Headless orchestration core for OpenTrApp (perimeter state contract, no GUI deps)"
-repository = "https://github.com/albertdobmeyer/opentrapp"
-homepage = "https://github.com/albertdobmeyer/opentrapp#readme"
-authors = ["Albert Dobmeyer"]
-readme = "README.md"
-keywords = ["security", "containerization", "ai-agent", "perimeter", "orchestration"]
-categories = ["virtualization", "command-line-utilities"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
