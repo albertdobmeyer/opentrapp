@@ -72,16 +72,22 @@ Keep images on **GHCR** (already), but change the publish step to a Scorecard-re
 for the score, but it makes the images count *and* GHCR/OCI is the vendor-neutral, OS-agnostic image
 standard (any OCI runtime — podman, docker, containerd — can pull them).
 
-**Landed (`ci.yml` `build-images`).** The perimeter-image push now uses `docker buildx build --push`
-(matches `docker.*push`); since `build-images` lives in `ci.yml`, which has successful runs, Scorecard
-recognizes the file as a publishing workflow (`checks/raw/github/packaging.go` requires a static matcher
-hit **and** ≥1 successful run of that file). The conversion preserves the zero-trust digest invariant by
-keeping every digest-sensitive step in **podman** — buildx only builds + pushes a single plain manifest
-(`--provenance=false --sbom=false`); the offline bundle is `podman pull`-by-digest (which verifies the
-content) → `podman save`, and a **fail-closed self-verify** (`podman load` → `image exists @digest`)
-mirrors the runtime `BundleVerifier` exactly, so a subtly-wrong publish fails the release instead of
-shipping a perimeter that silently refuses to start (§11). Recognition is verified statically; the
-tag-only execution is confirmed on the next release tag (e.g. an `-rc`), not on the dev box.
+**Attempted and REVERTED (PR #100 → revert PR #101); deferred.** Swapping `build-images` to
+`docker buildx build --push` (recognized) is **not** a drop-in: the zero-trust bundle path is
+digest-sensitive and the conversion broke it. Verified on tag `v0.7.2-rc2`: buildx pushes a
+**docker-v2** manifest (`application/vnd.docker.distribution.manifest.v2+json`), but the offline
+bundle is built with `podman save --format oci-archive`, which **converts docker-v2 → OCI and changes
+the manifest digest** (config `14d6befc…` → `cb8e75ab…`); `podman load` also rejected a by-digest
+save outright (`payload does not match any of the supported image formats`). So the bundled tar would
+not reload to the pinned digest the runtime `BundleVerifier` enforces — the fail-closed self-verify /
+release errored, nothing corrupt shipped (§11 working as designed). The proven path (`podman build` →
+`podman push --digestfile` → `podman save … BY TAG`) keeps push-format == save-format == pinned
+digest; the recognized form must preserve that (push **OCI mediatypes** so the digest is OCI, and save
+**by tag**, not digest) and be proven on an RC tag **before** re-merge. Because this re-engineers a
+security boundary that **cannot be exercised on the maintainer's hardware** (no working
+podman/perimeter; every fix is a blind real-tag gamble), and because **track 1 (`cargo publish`) flips
+Packaging on its own**, the image-recognition is **redundant for the score** and is **dropped** rather
+than risked blind. Revisit only with a container test environment.
 
 ### 4. Explicitly rejected as a *primary* channel (the no-lock test)
 - **Homebrew / apt / AUR / winget / Chocolatey / Snap / Flatpak** — each is single-OS or single-vendor
