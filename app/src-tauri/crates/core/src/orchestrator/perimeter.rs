@@ -15,11 +15,14 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-/// The embedded spec source. Single source of truth for the orchestrator.
-/// The resource lives in the GUI crate's `resources/` (it's bundled + signed
-/// there); after the Phase B move this file sits 2 levels deeper, hence the
-/// longer relative path (crates/core/src/orchestrator → app/src-tauri).
-const PERIMETER_YML: &str = include_str!("../../../../resources/perimeter.yml");
+/// The embedded spec source. **Vendored copy** of
+/// `app/src-tauri/resources/perimeter.yml` — the canonical file the packaged
+/// bundle stages + signs and `tests/orchestrator-check.sh` validates. The copy
+/// lives INSIDE this crate so `opentrapp-core` is self-contained and
+/// crates.io-publishable (ADR-0023); an `include_str!` from outside the crate is
+/// not packageable. A drift-check in `orchestrator-check.sh` keeps the two
+/// byte-identical (run `make sync-core-embedded` after editing the canonical).
+const PERIMETER_YML: &str = include_str!("../embedded/perimeter.yml");
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
 pub struct PerimeterSpec {

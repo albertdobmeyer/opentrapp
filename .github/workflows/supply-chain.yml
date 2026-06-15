@@ -13,6 +13,7 @@ on:
       - "app/package-lock.json"
       - "app/src-tauri/Cargo.toml"
       - "app/src-tauri/Cargo.lock"
+      - "app/src-tauri/crates/**"
       - ".github/workflows/supply-chain.yml"
   pull_request:
     branches: [main]
@@ -21,6 +22,8 @@ on:
       - "app/package-lock.json"
       - "app/src-tauri/Cargo.toml"
       - "app/src-tauri/Cargo.lock"
+      - "app/src-tauri/crates/**"
+      - ".github/workflows/supply-chain.yml"
   schedule:
     - cron: "37 6 * * 2"
   workflow_dispatch:
@@ -108,3 +111,29 @@ jobs:
         run: cargo install --locked cargo-deny
 
       - run: cargo deny --all-features check
+
+  cargo-package:
+    name: cargo package (opentrapp-core publishable)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/src-tauri
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: false
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: app/src-tauri
+
+      # Proves opentrapp-core is crates.io-publishable (it packages + compiles
+      # standalone from the tarball, with its vendored src/embedded/ data files)
+      # on every push/PR that touches the workspace. Uses `cargo package`, NOT
+      # `cargo publish --dry-run`, deliberately: `cargo package` does the same
+      # verification but does NOT match OpenSSF Scorecard's `cargo.*publish`
+      # pattern, so the Packaging check flips only on a REAL tag-gated publish
+      # (publish-crate.yml), never on this verification. (ADR-0023.)
+      - run: cargo package -p opentrapp-core
