@@ -60,8 +60,16 @@ podman compose ps
 - **Container runtime:** install **Podman** (Podman Desktop sets up a WSL2-backed `podman
   machine`). Prefer it over Docker Desktop — the footprint doc explains why (podman ~hundreds
   of MB vs Docker Desktop ~1.5–3 GB). Give the podman machine ≥4 GB.
+- **WSL2 terminal for all shell work.** The `make` targets, `bash tests/*.sh`, and
+  `podman compose` all run from a WSL2 terminal (not PowerShell or CMD). Open one via
+  Windows Terminal → Ubuntu (or `wsl`). GNU make and bash are available there by default;
+  the WSL2 podman shares the same machine as Podman Desktop so container operations
+  work transparently. Clone or `cd` to the repo path under `/mnt/b/...` or mount it.
 - **`gh` CLI** (for Path A's draft download) authenticated to your GitHub account.
+  Install inside WSL2: `gh auth login`.
 - **Keys:** the `@opentrappbot` token + an Anthropic key (a low-cap key is fine).
+  Copy `.env.example` → `.env` at the repo root and fill in both values before
+  running `podman compose up -d`.
 - **Ollama** (optional) only if you also exercise the Sentinel AI rungs; not needed for these tests.
 
 ## 4. The tests (with consumption-end acceptance criteria)
