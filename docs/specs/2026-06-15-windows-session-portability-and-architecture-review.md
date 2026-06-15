@@ -214,3 +214,43 @@ In priority order for the architecture discussion:
 | `docs/adr/0018-idle-auto-pause-host-waker.md` | What idle auto-pause does and why it's the main memory lever |
 | `docs/handoff.md` (top section) | Full session state including the ADR-0019→0023 architecture pivot |
 | `infra/proxy/vault-proxy.py` | What mitmproxy actually does — the L7 functions any replacement must replicate |
+
+---
+
+## 5. Decision (Linux agent + Albert, 2026-06-15)
+
+The architecture discussion is resolved: **verify-first; the lean Rust proxy is tracked (WS5), not
+built yet.**
+
+**Premise corrected — the project is not a fail.** The measured resting perimeter (~400 MB; ~0 MB with
+idle auto-pause) fits the 7.2 GB laptop. The swap-storm culprit was independently re-confirmed on the
+laptop this session: **Brave 3.0 GB + Cursor 1.7 GB + Claude 0.9 GB** — the perimeter was never the
+consumer. The "runs on the small laptop" bar is met with the heavy tools closed (as the footprint doc
+already expects).
+
+**Memory is not the refactor driver.** No proxy swap closes the GB-scale gap with the dev tools (Brave
+alone is 3 GB). 400→270 MB changes nothing operationally — you close Brave/Cursor either way. Footprint
+therefore does not justify re-architecting a security boundary.
+
+**Options resolved:**
+- **#3** (replace the Node agent) — impossible; it is OpenClaw. **#4** (compose profiles) — already shipped.
+- **#1 & #5** (collapse sidecars / plug-in the scanners) — **REJECTED.** They trade away ADR-0009's
+  privilege separation (egress holds `NET_ADMIN` + internet but no secrets; proxy holds the keys but no
+  internet), which is the product's security differentiator and the core of the opencode pitch — not
+  negotiable for memory the project does not need to save.
+- **#2 (mitmproxy → lean Rust proxy)** — **TRACKED as WS5 (task #69)**, justified by *attack-surface
+  reduction + Rust-core alignment, NOT memory*. The L7 policy is ~388 portable lines; the hard,
+  security-critical part is the MITM TLS engine mitmproxy provides for free (cert-gen under the proxy CA,
+  CONNECT, HTTP/2). A real project, not a quick win, and it must **not** block the opencode mission.
+
+**Sequencing (§11 — the one place we invert the handoff's "rethink before testing"):**
+1. **T0 first.** Run the boundary self-test cold + resumed on the laptop (heavy tools closed) → a GREEN
+   baseline proves both "it runs on the small laptop" *and* "the boundary holds." You cannot safely
+   re-architect a boundary you have not verified holds.
+2. **The green T0 becomes the regression gate** any WS5 rewrite must re-pass (B2 allowlist, B3
+   credential-injection, B5 CA-pin), with `test_vault_proxy.py` coverage preserved.
+3. **The mission keeps moving** — the opencode pitch's boundary claim upgrades from "built" to
+   "verified" after T0; de-Tauri proceeds. WS5 is a non-blocking attack-surface initiative behind the
+   baseline, with its own ADR when we commit to build.
+
+Net: **don't optimize what already fits — verify it, then reduce the proxy's attack surface deliberately.**
