@@ -46,7 +46,7 @@ services:
       - /home/vault/workspace:size=1g,noexec,nosuid,mode=1777
     security_opt:
       - no-new-privileges:true
-      - seccomp=/home/albertd/Repositories/opentrapp/workloads/agent/config/vault-seccomp.json
+      - seccomp=./workloads/agent/config/vault-seccomp.json
     cap_drop:
       - ALL
     pids_limit: 256
@@ -114,7 +114,7 @@ services:
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
     security_opt:
-      - seccomp=/home/albertd/Repositories/opentrapp/workloads/agent/config/vault-proxy-seccomp.json
+      - seccomp=./workloads/agent/config/vault-proxy-seccomp.json
     cap_drop:
       - ALL
     cap_add:

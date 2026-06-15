@@ -6,6 +6,8 @@
 #   - Long-running targets print a budget hint where applicable.
 #
 # Tested on the maintainer's dev machine (Ubuntu 24.04, podman, ~7 GB RAM).
+# On Windows: run from a WSL2 terminal (bash + GNU make are available there;
+# podman uses the same WSL2 machine so container operations work transparently).
 # CI runs the same commands directly; this Makefile is for local convenience.
 
 .PHONY: help \
