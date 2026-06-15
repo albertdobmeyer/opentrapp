@@ -23,8 +23,15 @@ carries all the context; the pointers in §1 are the reading list.*
 
 **What we're proving** (all currently *unverified, not done*):
 - **WS0-0a** — idle auto-pause actually *fires* in production.
+- **WS0-0b** — the perimeter passes the **automated boundary self-test** (`tests/boundary-selftest.sh`)
+  **cold**, and passes the **same** test **after a resume** (the §11 cold==resumed contract). This is
+  now scripted (6 checks B1–B6, fail-closed exit codes) and is the load-bearing **opencode gate**.
 - **WS0-0c** — on a message it *wakes*, delivers **exactly once**, and resumes **security-correct**.
 - **WS1-1a** — whether the always-on mitmproxy's RAM is *bounded* over a long session.
+
+> **Fastest path to the opencode gate:** §4 **T0** below (the automated boundary self-test) is the
+> single most important thing to run — it proves "the perimeter actually contains the agent" cold and
+> after resume. T1/T2 (idle→wake) supply the *production-faithful* resume that T0 then re-verifies.
 
 ## 2. Two ways to run it
 
@@ -59,6 +66,44 @@ podman compose ps
 
 ## 4. The tests (with consumption-end acceptance criteria)
 
+### T0 — WS0-0b: automated boundary self-test, cold == resumed (the opencode gate)
+
+The scripted proof that the perimeter actually *contains* the agent. It runs six boundary checks
+against the live perimeter — B1 network isolation, B2 L7 allowlist (deny + allow), B3 credential
+injection, B4 L3 egress filter, B5 proxy-CA pinned, B6 no host-side untrusted — fail-closed.
+Exit codes: **0** = all hold · **1** = a boundary FAILED (breach) · **2** = could not assess
+(perimeter down / tool missing — *not* a pass; unverifiable ≠ verified).
+
+**Cold start — record the CA baseline and prove the boundary holds fresh:**
+```
+make perimeter-up                       # podman compose up -d  (all five services)
+make perimeter-status                   # wait until all vault-* show Up/healthy
+bash tests/boundary-selftest.sh --record-baseline
+```
+- **PASS:** `pass=6 fail=0 skip=0`, `All boundaries hold.`, **exit 0**. The `--record-baseline` run
+  pins the proxy-CA fingerprint to `~/.opentrapp/boundary/ca-fingerprint.expected`.
+- A `FAIL` (exit 1) is a real cold breach — capture the line, that's a finding. `skip` (exit 2) means
+  a check couldn't run (e.g. no curl/wget in the agent image) — note which.
+
+**Resumed — the §11 core: the SAME test must pass after a resume, CA unchanged:**
+```
+# production-faithful (preferred): have the daemon run the self-test on every (re)start, then let
+# the real idle-pause → wake cycle (T1 → T2) drive the resume:
+export OPENTRAPP_SELFTEST_ON_RESUME=1   # selftest.rs gating; default OFF, so shipping is unchanged
+
+# manual proxy (Path B / no daemon): restart the perimeter, then re-assess against the baseline:
+make perimeter-down && make perimeter-up && make perimeter-status
+bash tests/boundary-selftest.sh         # assess mode — compares CA to the recorded baseline
+```
+- **PASS (the gate):** `pass=6 fail=0 skip=0`, **exit 0**, and **B5-ca-pinned → "CA fingerprint
+  unchanged"** — the resumed perimeter holds the *same* boundaries as cold, with no silent CA swap.
+- **FAIL (exit 1):** a resumed-but-leaky boundary — the worst outcome, and the whole reason this test
+  exists. Capture the failing check name.
+
+**Bring back:** the two result lines (cold + resumed) with exit codes (`--json` is easy to paste:
+`bash tests/boundary-selftest.sh --json`). A green T0 cold **and** resumed is the boundary half of
+"ready to recommend to opencode."
+
 ### T1 — WS0-0a: does idle auto-pause FIRE? (Path A)
 1. Complete the wizard; confirm the assistant reaches the running/green state.
 2. Leave it **completely idle** for ~15 min (default idle threshold is ~12 min).
@@ -77,16 +122,15 @@ podman compose ps
 2. **Observe:** the perimeter resumes within a few seconds and the assistant **replies once**.
 - **PASS:** exactly **one** reply (no double-processing, no lost message); record cold-start
   latency.
-- **Boundary checks after resume** (the part that makes resume *security-correct*, not just
-  alive) — run these against the resumed perimeter:
-  - From inside the agent container's network namespace, a direct connection to a
-    **non-allowlisted** host **fails** (no direct egress).
-  - A request to a **non-allowlisted** domain through the proxy is **blocked**.
-  - The proxy still **injects the key** on an allowlisted request (the assistant got a real
-    LLM reply ⇒ injection worked).
-  - `podman exec` into egress and confirm the nftables ruleset is loaded (RFC1918 dropped).
-  - Record whether any check fails — a resumed-but-leaky boundary is the worst outcome and
-    the reason this test exists.
+- **Boundary checks after resume** (the part that makes resume *security-correct*, not just alive):
+  this is now **T0's automated self-test** — run it against the just-resumed perimeter:
+  ```
+  bash tests/boundary-selftest.sh        # expect: exit 0, pass=6, B5 "CA fingerprint unchanged"
+  ```
+  It covers exactly the manual checks this step used to list (no direct egress, off-allowlist host
+  blocked, key still injected on an allowlisted request, nftables drop-private loaded) plus the
+  CA-pin compare. A resumed-but-leaky boundary (exit 1) is the worst outcome and the reason this
+  test exists. (With `OPENTRAPP_SELFTEST_ON_RESUME=1` the daemon runs this for you on wake.)
 
 ### T3 — WS1-1a: is the proxy's RAM bounded over time? (Path B)
 1. With the perimeter up, drive **sustained, large, streaming** traffic through the proxy —
