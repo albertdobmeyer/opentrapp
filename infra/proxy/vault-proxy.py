@@ -67,13 +67,49 @@ _PRIVATE_DEST_NETWORKS = tuple(
 # Redact before logging so tokens never hit stdout or the requests.jsonl file.
 BOT_TOKEN_PATH_RE = re.compile(r"(/bot)\d+:[A-Za-z0-9_-]{20,}")
 
+# --- Credential-injection rules (data-driven; ADR-0001 + the agent-recipe) -------
+# Each rule injects provider auth headers into requests to matching hosts, pulling
+# the secret from an env var set ONLY in this proxy container (never in the agent).
+#   match    : host suffixes — matched exactly or as ".suffix"
+#   env_var  : the env var holding the secret (empty => request goes out
+#              unauthenticated and fails at the provider, exactly as before — a
+#              missing key never leaks)
+#   headers  : header name -> value template; the literal "{key}" is replaced with
+#              the secret. Values without "{key}" are constants (e.g. the Anthropic
+#              API version).
+# In-image defaults cover Anthropic + OpenAI (the OpenClaw recipe). A BYOK opencode
+# user's provider (Google, OpenRouter, a local gateway) is added WITHOUT editing
+# this image, via an optional read-only mounted config at INJECTION_CONFIG_PATH —
+# mirroring how allowlist.txt is mounted. Data-driven rules are what make the
+# perimeter agent-agnostic (the agent-recipe; ADR-0024).
+INJECTION_CONFIG_PATH = Path("/opt/vault/injection.json")
+
+_DEFAULT_INJECTION_RULES = [
+    {
+        "match": ["api.anthropic.com"],
+        "env_var": "ANTHROPIC_API_KEY",
+        "headers": {"x-api-key": "{key}", "anthropic-version": ANTHROPIC_API_VERSION},
+    },
+    {
+        "match": ["api.openai.com"],
+        "env_var": "OPENAI_API_KEY",
+        "headers": {"Authorization": "Bearer {key}"},
+    },
+]
+
 
 class VaultProxy:
     def __init__(self):
         self.allowlist: set[str] = set()
         self.logger = self._setup_logger()
         self._load_allowlist()
-        self.logger.info("VaultProxy initialized with %d allowed domains", len(self.allowlist))
+        self.injection_rules = self._load_injection_rules()
+        self.injection_env_vars = sorted({r["env_var"] for r in self.injection_rules})
+        self.logger.info(
+            "VaultProxy initialized with %d allowed domains, %d injection rule(s) (env: %s)",
+            len(self.allowlist), len(self.injection_rules),
+            ", ".join(self.injection_env_vars) or "none",
+        )
         signal.signal(signal.SIGHUP, lambda s, f: self._reload_allowlist())
 
     def _setup_logger(self) -> logging.Logger:
@@ -161,6 +197,49 @@ class VaultProxy:
             if host == allowed or host.endswith("." + allowed):
                 return True
         return False
+
+    @staticmethod
+    def _host_matches(host: str, suffix: str) -> bool:
+        """Exact host or subdomain match (e.g. 'api.anthropic.com' or '*.api.anthropic.com')."""
+        host = host.lower()
+        suffix = suffix.lower()
+        return host == suffix or host.endswith("." + suffix)
+
+    def _load_injection_rules(self) -> list:
+        """In-image defaults + optional read-only mounted extensions (BYOK providers).
+
+        The mounted config (INJECTION_CONFIG_PATH) is a JSON array of rules with the
+        same shape as _DEFAULT_INJECTION_RULES. It is OPTIONAL and fail-safe: if
+        absent or malformed the in-image defaults stand, and a missing rule means a
+        request goes out unauthenticated (it never leaks a key). Mounting it (like
+        allowlist.txt) is how an opencode recipe injects a different provider's
+        credential without touching this image.
+        """
+        rules = [dict(r) for r in _DEFAULT_INJECTION_RULES]
+        if INJECTION_CONFIG_PATH.exists():
+            try:
+                extra = json.loads(INJECTION_CONFIG_PATH.read_text())
+                if not isinstance(extra, list):
+                    raise ValueError("injection.json must be a JSON array of rules")
+                added = 0
+                for r in extra:
+                    if (isinstance(r, dict) and isinstance(r.get("match"), list)
+                            and isinstance(r.get("env_var"), str)
+                            and isinstance(r.get("headers"), dict)):
+                        rules.append({
+                            "match": [str(m) for m in r["match"]],
+                            "env_var": r["env_var"],
+                            "headers": {str(k): str(v) for k, v in r["headers"].items()},
+                        })
+                        added += 1
+                    else:
+                        self.logger.warning("injection.json: skipping malformed rule: %r", r)
+                self.logger.info("injection.json: loaded %d extra rule(s)", added)
+            except (ValueError, OSError) as exc:
+                self.logger.warning(
+                    "injection.json present but unreadable (%s) — using in-image defaults only", exc
+                )
+        return rules
 
     def _resolves_to_private(self, host: str) -> bool:
         """DNS-rebinding defense: True if `host` resolves to any private range.
@@ -304,20 +383,16 @@ class VaultProxy:
         # Keys come from environment variables in the PROXY container only.
         # The OpenClaw container never sees these values.
 
-        if host == "api.anthropic.com" or host.endswith(".api.anthropic.com"):
-            api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        for rule in self.injection_rules:
+            if not any(self._host_matches(host, m) for m in rule["match"]):
+                continue
+            api_key = os.environ.get(rule["env_var"], "")
             if api_key:
-                flow.request.headers["x-api-key"] = api_key
-                flow.request.headers["anthropic-version"] = ANTHROPIC_API_VERSION
+                for hname, htmpl in rule["headers"].items():
+                    flow.request.headers[hname] = htmpl.replace("{key}", api_key)
             else:
-                ctx.log.warn("ANTHROPIC_API_KEY not set — request will fail auth")
-
-        elif host == "api.openai.com" or host.endswith(".api.openai.com"):
-            api_key = os.environ.get("OPENAI_API_KEY", "")
-            if api_key:
-                flow.request.headers["Authorization"] = f"Bearer {api_key}"
-            else:
-                ctx.log.warn("OPENAI_API_KEY not set — request will fail auth")
+                ctx.log.warn(f"{rule['env_var']} not set — request to {host} will fail auth")
+            break  # first matching rule wins
 
         self._log_event({
             "action": "ALLOWED",
@@ -346,7 +421,7 @@ class VaultProxy:
                 return
 
             # --- 2. Redact API keys if reflected in response (headers + body) ---
-            for env_var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
+            for env_var in self.injection_env_vars:
                 key = os.environ.get(env_var, "")
                 if not key:
                     continue
