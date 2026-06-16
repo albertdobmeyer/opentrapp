@@ -1,6 +1,6 @@
-# OpenCli-Container Setup Guide
+# vault-agent Setup Guide
 
-This guide walks you through setting up the OpenCli-Container from scratch. No terminal experience required — just follow the steps in order.
+This guide walks you through setting up vault-agent from scratch. No terminal experience required — just follow the steps in order.
 
 ---
 
@@ -54,8 +54,8 @@ You should see something like `podman version 4.9.3`.
 ## Step 2: Download the Vault
 
 ```bash
-git clone https://github.com/albertdobmeyer/opencli-container.git
-cd opencli-container
+git clone https://github.com/albertdobmeyer/opentrapp.git
+cd opentrapp/workloads/agent
 ```
 
 If you don't have `git` installed:
@@ -129,8 +129,8 @@ Replace `your-token-here` with the actual token from BotFather.
 ## Step 6: Build and Start the Vault
 
 ```bash
-podman build -t opencli-container -f Containerfile .
-podman tag opencli-container opencli-container_vault
+podman build -t vault-agent -f Containerfile .
+podman tag vault-agent vault-agent:latest
 podman-compose up -d
 ```
 
@@ -142,7 +142,7 @@ podman ps
 ```
 
 You should see two containers running:
-- `opencli-container` — the AI agent (safely contained)
+- `vault-agent` — the AI agent (safely contained)
 - `vault-proxy` — the security firewall
 
 ---
@@ -156,7 +156,7 @@ You should see two containers running:
 5. Back in your terminal, run:
 
 ```bash
-podman exec opencli-container openclaw pairing approve telegram YOUR_CODE_HERE
+podman exec vault-agent openclaw pairing approve telegram YOUR_CODE_HERE
 ```
 
 Replace `YOUR_CODE_HERE` with the actual code from Telegram.
@@ -213,7 +213,7 @@ bash scripts/kill.sh --hard
 
 **Starting again after a stop:**
 ```bash
-cd /path/to/opencli-container
+cd /path/to/opentrapp/workloads/agent
 podman-compose up -d
 ```
 
@@ -275,13 +275,13 @@ podman ps -a
 ```
 If they exited, check the logs:
 ```bash
-podman logs opencli-container
+podman logs vault-agent
 podman logs vault-proxy
 ```
 
 ### Telegram bot doesn't respond
 1. Check the vault is running: `podman ps`
-2. Check for errors: `podman logs opencli-container 2>&1 | grep -i error`
+2. Check for errors: `podman logs vault-agent 2>&1 | grep -i error`
 3. Make sure you approved the pairing code (Step 7)
 
 ### "Proxy CA cert not found" error
@@ -295,9 +295,9 @@ podman-compose up -d
 Make sure you have enough disk space (`df -h`) and memory (`free -h`). The build needs about 1 GB of disk and 2 GB of RAM.
 
 ### Moved the project folder and containers won't start
-If you moved the `opencli-container` directory to a different location, the existing containers have the old path baked in. Fix:
+If you moved the `opentrapp` directory to a different location, the existing containers have the old path baked in. Fix:
 ```bash
-podman rm -f vault-proxy opencli-container
+podman rm -f vault-proxy vault-agent
 podman-compose up -d
 ```
 This recreates the containers with the correct paths.
@@ -320,7 +320,7 @@ YOUR COMPUTER (safe — the agent can't touch this)
     |  │  ✓ Logs every network request                │
     |  └──────────────────────────────────────────────┘
     |           |
-    |  ┌─ Agent Container (opencli-container) ───────────┐
+    |  ┌─ Agent Container (vault-agent) ─────────────┐
     |  │  ✗ Cannot access your files                   │
     |  │  ✗ Cannot run programs on your computer       │
     |  │  ✗ Cannot install software                    │
