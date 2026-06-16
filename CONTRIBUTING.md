@@ -31,8 +31,8 @@ opentrapp/
 ├── app/             Tauri 2 + React 18 desktop application
 ├── workloads/
 │   ├── agent/       → vault-agent
-│   ├── forge/       → vault-skills
-│   └── social/      → vault-social  (parked)
+│   ├── skills/      → vault-skills
+│   └── social/      → vault-social  (opt-in, deferred)
 ├── infra/
 │   ├── proxy/       → vault-proxy
 │   └── egress/      → vault-egress

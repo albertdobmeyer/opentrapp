@@ -195,12 +195,12 @@ This section verifies that every defense-in-depth layer named in [`trifecta.md`]
 | Line verifier (§7.2 row 2) | T2 row "previously-unknown line shape" |
 | CDR rebuild (§7.2 row 3) | T2 row "formatting tricks" |
 | Network isolation forge → agent (§7.2 row 5) | T2 row "talk to forge directly" |
-| Feed scanner (pioneer; §7.3 row 1) | Parked; structural slot preserved per [`whitepaper.md`](whitepaper.md) §4.3 |
-| Network isolation pioneer → agent (§7.3 row 2) | Parked; preserved structurally |
+| Feed scanner (vault-social; §7.3 row 1) | Opt-in / on-demand; live AT Protocol adapter shipped (ADR-0017), full build-out deferred |
+| Network isolation vault-social → agent (§7.3 row 2) | Opt-in; isolation preserved structurally |
 | DM pairing policy (§7.3 row 3) | T1 row "Telegram message to unapproved counterpart"; T5 row "compromise of Telegram account" |
 | Coordinator approval (§7.3 row 5) | T5 row "destructive operation from Telegram" |
 
-Every row in `trifecta.md` §7 is accounted for here. Layers marked "parked" remain documented as architectural slots; the attacker-capability rows under T1 ("hostile feed content") describe what the perimeter would address when the layer is reactivated.
+Every row in `trifecta.md` §7 is accounted for here. Layers marked "opt-in / deferred" (`vault-social`) remain documented as architectural slots; the attacker-capability rows under T1 ("hostile feed content") describe what the perimeter addresses when the layer is enabled.
 
 ---
 
