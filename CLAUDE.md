@@ -55,7 +55,7 @@ opentrapp/                              (this repository — public, monorepo)
 |----------|-----------|-----------|------|--------|
 | Agent  | `workloads/agent/`  | `vault-agent`  | Runtime containment | Active |
 | Forge  | `workloads/skills/`  | `vault-skills`  | Supply-chain defense (skill scanner + CDR) | Active |
-| Social | `workloads/social/` | `vault-social` | Agent-to-agent social-feed analysis | Parked since 2026-05-03 (Moltbook acquired by Meta 2026-03-10; re-aim to generalized agent-social shield is Thread C of MISSION.md) |
+| Social | `workloads/social/` | `vault-social` | Agent-social-feed analysis | Opt-in / on-demand. Original Moltbook target parked 2026-05-03; a live AT Protocol (Bluesky) adapter shipped (ADR-0017). Full build-out as a generalized agent-social shield is the **deferred** third concern (MISSION Thread C / ADR-0024 — after Vault/Skill/GUI). |
 
 ## 3. UI rule (non-negotiable)
 

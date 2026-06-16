@@ -9,7 +9,7 @@
 # docs/adr/0013-monorepo-consolidation.md for the 3 workloads / 2 infra layout):
 #   vault-agent  — agent runtime containment   (workloads/agent/)
 #   vault-skills  — supply-chain defense        (workloads/skills/)
-#   vault-social — social-content analysis     (workloads/social/, parked since 2026-05-03)
+#   vault-social — agent-social analysis       (workloads/social/, opt-in; build-out deferred — ADR-0017/0024)
 #   vault-proxy  — L7 egress policy            (infra/proxy/)
 #   vault-egress — L3 egress policy            (infra/egress/)
 #
@@ -297,7 +297,7 @@ services:
     # Social is a task runner like forge. Idles between scans.
     command: ["bash", "-c", "echo 'vault-social ready' && trap 'exit 0' TERM INT; sleep infinity & wait"]
     restart: unless-stopped
-    # On-demand (Phase 1): parked workload, profiled so it never starts on a
+    # On-demand (Phase 1): opt-in workload (build-out deferred), profiled so it never starts on a
     # plain `podman compose up`. Mirrors perimeter.yml `on_demand: true`.
     profiles: ["on-demand"]
 

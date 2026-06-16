@@ -12,7 +12,7 @@ ASCII fallbacks remain in the original architecture documents ([`trifecta.md`](t
 
 ## 1. Five-container perimeter topology
 
-Source of truth: [`compose.yml`](../compose.yml). The L7/L3 policy split is specified in [ADR-0009](adr/0009-five-container-perimeter.md); the pinned DoT resolver in [ADR-0010](adr/0010-pinned-resolver-dns.md).
+Source of truth: [`compose.yml`](../compose.yml). The L7/L3 policy split is specified in [ADR-0009](adr/0009-five-container-perimeter.md); the pinned DoT resolver in [ADR-0010](adr/0010-pinned-resolver-dns.md). Mental model (the 60-second version): **one untrusted subject + two guards** — see [`perimeter-explained.md`](perimeter-explained.md) and [ADR-0024](adr/0024-product-structure-three-concerns.md).
 
 ```mermaid
 flowchart TB
@@ -25,7 +25,7 @@ flowchart TB
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway<br/>read-only root, dropped capabilities,<br/>narrow syscall profile, workspace-only mount"]
         FORGE["vault-skills<br/>87-pattern scanner +<br/>line classifier + CDR pipeline"]
-        PIONEER["vault-social<br/>(parked)"]
+        PIONEER["vault-social<br/>(opt-in)"]
         PROXY["vault-proxy<br/>L7 policy: allowlist, key injection,<br/>post-resolve IP check, request log"]
         EGRESS["vault-egress<br/>L3 policy: nftables RFC1918 drop,<br/>unbound DoT resolver (Quad9 + Cloudflare)"]
     end
@@ -63,7 +63,7 @@ flowchart TB
     class ANTHROPIC,TELEGRAM,CLAWHUB external
 ```
 
-**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-skills` is the write-only `skills-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-social` indicates the parked status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment** — it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
+**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-skills` is the write-only `skills-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-social` indicates its opt-in / on-demand status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment** — it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
 
 ---
 
@@ -159,7 +159,7 @@ flowchart LR
 
 ## 4. Agent-skill-loading flow (the CDR pipeline)
 
-Source of truth: [`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) and [`components/openagent-skills/tools/skill-cdr.sh`](../components/openagent-skills/tools/skill-cdr.sh).
+Source of truth: [`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) and [`workloads/skills/tools/skill-cdr.sh`](../workloads/skills/tools/skill-cdr.sh).
 
 ```mermaid
 sequenceDiagram
