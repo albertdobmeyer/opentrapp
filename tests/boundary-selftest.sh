@@ -84,28 +84,38 @@ xa() { $RUNTIME exec "$AGENT" "$@"; }     # exec in agent
 xe() { $RUNTIME exec "$EGRESS" "$@"; }    # exec in egress
 xp() { $RUNTIME exec "$PROXY" "$@"; }     # exec in proxy
 
-# Pick an available HTTP client inside the agent (alpine busybox wget / curl).
+# Pick an available HTTP client inside the agent. The hardened agent image
+# strips the curl/wget *symlinks* (workloads/agent/Containerfile) but keeps
+# busybox, whose built-in wget applet still works — so a bare `command -v wget`
+# misses it. Detect busybox-wget explicitly as the alpine fallback, else B1/B2
+# would SKIP (→ exit 2) on the very image they are meant to assert against.
 agent_http_tool() {
   if xa sh -c 'command -v curl' >/dev/null 2>&1; then echo curl
   elif xa sh -c 'command -v wget' >/dev/null 2>&1; then echo wget
+  elif xa sh -c 'command -v busybox >/dev/null 2>&1 && busybox 2>&1 | grep -qw wget'; then echo busybox-wget
   else echo none; fi
 }
+
+# Map the detected tool to the wget command to invoke. busybox needs the
+# `busybox` prefix since there is no wget symlink in PATH.
+agent_wget_cmd() { [ "$1" = busybox-wget ] && echo "busybox wget" || echo "wget"; }
 
 # ── the checks ───────────────────────────────────────────────────────────────
 
 # B1 — Network isolation: the agent network is internal:true (no gateway), so a
 # DIRECT (proxy-bypassed) connection to a public IP must fail to route.
 check_isolation() {
-  local tool out
+  local tool out wget
   tool="$(agent_http_tool)"
   if [ "$tool" = none ]; then skip "B1-isolation" "no http tool in $AGENT"; return; fi
+  wget="$(agent_wget_cmd "$tool")"
   # Unset proxy env so we test the raw route, not the proxied path.
   if [ "$tool" = curl ]; then
     out="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy \
       curl -sS --max-time 6 http://$PROBE_IP/ -o /dev/null -w '%{http_code}' 2>&1; echo \" exit=\$?\"")"
   else
     out="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy \
-      wget -T 6 -q -O /dev/null http://$PROBE_IP/ 2>&1; echo \"exit=\$?\"")"
+      $wget -T 6 -q -O /dev/null http://$PROBE_IP/ 2>&1; echo \"exit=\$?\"")"
   fi
   # Success (exit=0 / a real HTTP code) would mean the agent reached the internet
   # directly — a boundary breach. Any failure (no route / timeout) is the pass.
@@ -119,16 +129,24 @@ check_isolation() {
 # B2 — L7 allowlist: through the proxy, an off-allowlist host returns 403; an
 # on-allowlist host is NOT 403 (any other response means the proxy permitted it).
 check_allowlist() {
-  local tool off on
+  local tool off on wget
   tool="$(agent_http_tool)"
   if [ "$tool" = none ]; then skip "B2-allowlist" "no http tool in $AGENT"; return; fi
+  wget="$(agent_wget_cmd "$tool")"
+  # busybox wget (and GNU wget) read the *lowercase* http_proxy; the container
+  # sets only the uppercase HTTP_PROXY (compose.yml). Without bridging them the
+  # probe bypasses the proxy, hits the internal-only net, and returns nothing —
+  # a false "allowlisted host blocked". Pin the proxy from the agent's own
+  # configured value so the request is proxied exactly like the real agent's.
+  local pxy
+  pxy="$(xa sh -c 'printf %s "${HTTP_PROXY:-${http_proxy:-}}"' 2>/dev/null)"
   status_for() {
-    # Uses the agent's configured HTTP_PROXY. Plain http to avoid TLS-trust noise;
-    # the proxy applies the allowlist before any upstream connect.
+    # Forces the request through the perimeter proxy, which applies the allowlist
+    # before any upstream connect. Plain http to avoid TLS-trust noise.
     if [ "$tool" = curl ]; then
-      xa sh -c "curl -sS --max-time 8 -o /dev/null -w '%{http_code}' http://$1/ 2>/dev/null"
+      xa sh -c "http_proxy='$pxy' https_proxy='$pxy' curl -sS --max-time 8 -o /dev/null -w '%{http_code}' http://$1/ 2>/dev/null"
     else
-      xa sh -c "wget -T 8 -S -q -O /dev/null http://$1/ 2>&1 | awk '/HTTP\\//{print \$2; exit}'"
+      xa sh -c "http_proxy='$pxy' https_proxy='$pxy' $wget -T 8 -S -q -O /dev/null http://$1/ 2>&1 | awk '/HTTP\\//{print \$2; exit}'"
     fi
   }
   off="$(status_for "$OFFLIST_HOST")"
@@ -162,11 +180,25 @@ check_credentials() {
 # B4 — L3 egress filter: vault-egress nftables ruleset has the drop-private set
 # loaded (same marker the container healthcheck uses).
 check_egress_filter() {
-  if xe nft list ruleset 2>/dev/null | grep -q 'vault_egress_drop_private'; then
-    pass "B4-l3-egress" "nftables drop-private set loaded in $EGRESS"
-  else
-    fail "B4-l3-egress" "vault_egress_drop_private NOT in $EGRESS ruleset"
-  fi
+  # Capture the ruleset into a var and match separately, rather than piping
+  # `nft | grep` straight into the `if`. Under `set -o pipefail` a transient
+  # non-zero from `podman exec`/`nft` under load (it still streams the full
+  # ruleset) fails the pipeline even when the marker IS present — the source of
+  # an intermittent false B4 failure on a freshly-(re)started egress, and worse
+  # because the daemon fail-closes on this test (a flaky negative = spurious
+  # "boundary breached" alert). `|| true` tolerates the transient; we judge
+  # solely on the marker's presence in the output. The set is static once
+  # loaded, so retry briefly — a genuine absence still fails after the loop.
+  local i rs
+  for i in $(seq 1 10); do
+    rs="$(xe nft list ruleset 2>/dev/null || true)"
+    if printf '%s' "$rs" | grep -q 'vault_egress_drop_private'; then
+      pass "B4-l3-egress" "nftables drop-private set loaded in $EGRESS"
+      return
+    fi
+    sleep 1
+  done
+  fail "B4-l3-egress" "vault_egress_drop_private NOT in $EGRESS ruleset (after retries)"
 }
 
 # B5 — Proxy CA pinned: the CA the agent trusts must be stable across restarts.
