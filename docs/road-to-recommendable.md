@@ -5,10 +5,17 @@ for open agent systems** (OpenClaw and peers) — honestly, without overclaiming
 
 **The premise (CLAUDE.md §11):** the architecture is built and CI-green, but a
 *security* tool's protective claims must be **verified at the consumption end on
-real hardware**, not asserted from a green build. Most Tier-1 items below are
-gated on **capable hardware** that can run the full five-container perimeter under
-load — *not* the 7.2 GB dev laptop (it swap-storms). Run those on the Windows box
-or a cloud VM.
+real hardware**, not asserted from a green build.
+
+**Update (2026-06-16, PR #112):** the **boundary self-test is now verified on the
+7.2 GB Linux laptop itself** — the full from-scratch image build *and* the live
+five-container perimeter ran with ~3.6 GB free and **no swap-storm**;
+`make boundary-selftest` is exit 0 cold (1A) and across three restart-resume cycles
+(1B restart path), reproducibly. The earlier "this box swap-storms the perimeter"
+caveat does **not** hold for the *idle* boundary test. The remaining Tier-1 items
+still need a **capable box or a live production run** — idle-auto-pause → wake under a
+real agent (1C), the daemon-split memory win (1D) — plus the sustained-load soak (2A);
+that's where the small box's headroom genuinely runs out.
 
 **Status key:** ✅ done · 🔶 partial / implemented-but-unverified · ⬜ not started
 · 🖥️ needs capable hardware · 👤 needs a human / external party
@@ -21,50 +28,60 @@ and can overlap.
 
 ## TIER 1 — Load-bearing (cannot recommend without these)
 
-### 1A · Boundary self-test on a COLD-STARTED perimeter 🖥️ 🔶 (WS0-0b, task #39)
+### 1A · Boundary self-test on a COLD-STARTED perimeter ✅ (WS0-0b, task #39)
 
-**Script authored** — [`tests/boundary-selftest.sh`](../tests/boundary-selftest.sh)
+**Verified ✅ (2026-06-16, PR #112).** [`tests/boundary-selftest.sh`](../tests/boundary-selftest.sh)
 (`make boundary-selftest`) encodes all six checks below, fail-closed (exit 1 on any
-boundary failure, exit 2 if it can't assess — "unverifiable ≠ verified"). It is
-syntax/lint-clean and its fail-closed paths are verified; the boundary assertions
-themselves are 🔶 **unrun pending capable hardware**. Bring the perimeter up fresh
-(`make perimeter-up`), then `make boundary-selftest` and record the output. Each
-box below maps to one check ID in the script.
+boundary failure, exit 2 if it can't assess — "unverifiable ≠ verified"). On the
+7.2 GB Linux laptop a fresh `make perimeter-up` + `make boundary-selftest ARGS=--record-baseline`
+returns **exit 0, `pass=7 fail=0 skip=0`, "All boundaries hold"** — all six checks pass
+on real hardware. Each box below maps to one check ID in the script.
 
-- [ ] **(B1) Network isolation — no direct egress.** From inside `vault-agent`, a
+- [x] **(B1) Network isolation — no direct egress.** From inside `vault-agent`, a
   proxy-bypassed connection to the public internet must fail (the agent network is
   `internal: true` — no gateway). Script unsets `HTTP(S)_PROXY` and confirms no route.
-- [ ] **(B2) L7 allowlist enforced.** Through the proxy, an **off-allowlist** host
+  *Verified:* direct hit to `1.1.1.1` → `Network unreachable`.
+- [x] **(B2) L7 allowlist enforced.** Through the proxy, an **off-allowlist** host
   → 403 (`BLOCKED`); an on-allowlist host (e.g. the agent's vendor API) → not 403.
-- [ ] **(B3) Credential injection — the vendor key never sits with the agent.**
+  *Verified:* `example.org` → 403, `api.anthropic.com` → 400 from upstream (allowed).
+- [x] **(B3) Credential injection — the vendor key never sits with the agent.**
   `podman exec vault-agent env | grep -iE '^(ANTHROPIC|OPENAI)_API_KEY='` → empty
   (ADR-0001). **Note:** `TELEGRAM_BOT_TOKEN` *is* legitimately in the agent
   (OpenClaw polls Telegram itself, compose:69) — only the **Anthropic/OpenAI** key
   is proxy-injected, so the check asserts on that, not a blanket token grep.
-- [ ] **(B4) L3 egress filter active.** `vault-egress` nftables ruleset is loaded:
+- [x] **(B4) L3 egress filter active.** `vault-egress` nftables ruleset is loaded:
   `podman exec vault-egress nft list ruleset | grep -q vault_egress_drop_private`.
-- [ ] **(B5) Proxy CA unchanged / pinned.** The mitmproxy CA the agent trusts
+- [x] **(B5) Proxy CA unchanged / pinned.** The mitmproxy CA the agent trusts
   matches the recorded fingerprint (no silent CA swap). Cold start pins the
-  baseline: `make boundary-selftest` once with `--record-baseline`; resumes compare.
-- [ ] **(B6) No untrusted content on the host.** Skill delivery is read-only into
+  baseline: `make boundary-selftest ARGS=--record-baseline`; resumes compare.
+- [x] **(B6) No untrusted content on the host.** Skill delivery is read-only into
   the agent (compose `:ro`); untrusted scanning/downloads run *inside* `vault-skills`
   (CLAUDE.md §9), via `podman exec`, not host bash.
 
 > The script doubles as the thing the daemon runs on every (re)start (1B). Basis:
 > [`docs/threat-model.md`](threat-model.md) + CLAUDE.md §9.
 
-### 1B · The same self-test on a RESUMED perimeter 🖥️ 🔶 (WS0-0b/0c, tasks #39/#40)
+### 1B · The same self-test on a RESUMED perimeter 🔶 (WS0-0b/0c, tasks #39/#40)
 
 A boundary that is "alive but subtly wrong" after a resume is worse than a visible
 failure (CLAUDE.md §11). Prove the resumed boundary == the cold boundary. Same
-script as 1A — re-run `make boundary-selftest` after each resume path:
+script as 1A — re-run `make boundary-selftest` after each resume path. **Partial
+(2026-06-16, PR #112):** the **restart** path is verified ✅; the **idle→wake** path
+(1C) and a daemon-level fail-close on a deliberately injected fault remain.
 
 - [ ] Pause → resume (user) and re-run **all of 1A** → every box still passes.
+  *(In-place pause/unpause not separately exercised; the stricter full-restart path
+  below recreates the containers and re-passes all of 1A.)*
 - [ ] Idle-auto-pause → wake (dormant → resume) and re-run **all of 1A** → still passes.
-- [ ] Daemon restart (`opentrapp-daemon` killed + relaunched, or its supervisor
-  restart) → re-run **1A** → still passes.
+  *(→ the production path in 1C; not yet run.)*
+- [x] Daemon/perimeter restart (`make perimeter-down && make perimeter-up`) → re-run
+  **1A** → still passes. **Verified ✅:** exit 0, `pass=7`, **B5 "CA fingerprint
+  unchanged"**, across **three** restart-resume cycles on real hardware.
 - [ ] **Fail-closed:** if any boundary check fails on resume, the perimeter holds
   closed and alerts (does NOT serve traffic through a half-built boundary).
+  *(The script's fail-closed exit codes were exercised — exit 1 on a failing check,
+  exit 2 on a skip; the daemon supervisor's hold-closed on an injected fault is still
+  unverified on hardware.)*
 - [x] **Daemon wiring landed (opt-in, CI-green)** — `opentrapp_core::selftest`
   embeds the script; the supervisor runs it after every (re)start
   (`verify_boundary_fail_closed`: Fail→stop+`boundary-failed` marker, CannotAssess→
@@ -190,6 +207,8 @@ The gold standard for "official security tool."
 ## The gate
 
 **Public recommendation is unlocked when all of Tier 1 is ✅.** Tier 2 makes it
-defensible under scrutiny; Tier 3 makes it trustworthy on first contact. The
-bottleneck is hardware that can run the full perimeter — so the first move next
-session is to stand the perimeter up on the Windows box and start ticking 1A.
+defensible under scrutiny; Tier 3 makes it trustworthy on first contact. **1A is now
+✅ and 1B's restart path is verified (PR #112) — on the dev laptop, no Windows box
+needed for the boundary self-test.** The remaining Tier-1 bottleneck is a *production*
+run: 1C (idle-auto-pause → wake under a real agent), 1D (daemon-split), plus the 2A
+soak — those still want a capable box or a live production session.

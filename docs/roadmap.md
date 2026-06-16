@@ -30,8 +30,8 @@ These are the load-bearing items. The project does not describe itself as
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Boundary self-test on a **cold-started** perimeter | 🔶 🖥️ | `tests/boundary-selftest.sh` (6 checks: network isolation, L7 allowlist, credential injection, L3 egress drop, proxy-CA pinning, read-only skill delivery). Wired into the supervisor (opt-in until hardware-verified). |
-| The **same** self-test on a **resumed** perimeter | 🔶 🖥️ | A resumed/idle-auto-paused boundary must pass the *same* tests as a cold start before it is reported healthy. Fail-closed on any failure. |
+| Boundary self-test on a **cold-started** perimeter | ✅ | `tests/boundary-selftest.sh` (6 checks: network isolation, L7 allowlist, credential injection, L3 egress drop, proxy-CA pinning, read-only skill delivery). **Verified on real hardware 2026-06-16 (PR #112): exit 0, all six pass.** Wired into the supervisor (opt-in). |
+| The **same** self-test on a **resumed** perimeter | 🔶 🖥️ | **Restart-resume path verified (PR #112): exit 0, CA fingerprint unchanged, ×3.** The *production* idle-auto-pause → wake path still needs a live run before this is fully met. Fail-closed on any failure. |
 | Idle auto-pause + wake verified **in production** | ⬜ 🖥️ | ADR-0018. Proven on the dev box; needs a production-representative run. |
 | Code signing (Windows + macOS) | 🔶 👤 | SignPath Foundation application submitted; Apple Developer enrollment pending. CI is a ready-to-activate template. |
 

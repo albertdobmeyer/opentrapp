@@ -38,8 +38,9 @@ allowlist) over `vault-egress` (L3 filter). See [ADR-0009](adr/0009-five-contain
 - L7 allowlist denial returns 403 — self-test **B2**.
 
 **Consumption-end check.** `make boundary-selftest` on a running perimeter:
-B1/B2/B4 pass. **Status:** 🔶 verified on the dev box for individual checks; full
-cold+resume run gated on capable hardware (roadmap Tier 1).
+B1/B2/B4 pass. **Status:** ✅ **verified on real hardware** (2026-06-16, PR #112) —
+the full `make boundary-selftest` run is exit 0 with B1/B2/B4 PASS, cold and across a
+restart resume, reproducibly on the 7.2 GB Linux laptop (no swap-storm).
 
 ### C2 — The vendor API credential is never exposed to the agent
 
@@ -54,7 +55,9 @@ The agent sends unauthenticated requests; the proxy adds the credential.
 - The host's `.env` and stored credentials are never mounted into `vault-agent`.
 
 **Consumption-end check.** Self-test B3 asserts the key reaches the *upstream* call
-but is not readable inside `vault-agent`. **Status:** 🔶 (same hardware gate as C1).
+but is not readable inside `vault-agent`. **Status:** ✅ **verified on real hardware**
+(2026-06-16, PR #112) — B3 PASS (no Anthropic/OpenAI key in the agent env) in the full
+run; the B2 on-allowlist probe reaching the vendor API corroborates proxy-side injection.
 
 ### C3 — Untrusted content is never processed on the host
 
@@ -73,8 +76,8 @@ on the agent side.
   the host-side Rust/React code).
 
 **Consumption-end check.** Self-test B6; the skills test suite (scanner self-test,
-CDR/disarm). **Status:** ✅ for the scanner/CDR unit suites; 🔶 for the in-perimeter
-read-only delivery assertion (hardware gate).
+CDR/disarm). **Status:** ✅ — scanner/CDR unit suites green, and the in-perimeter
+read-only delivery assertion (B6) now **verified on real hardware** (2026-06-16, PR #112).
 
 ### C4 — A rebuilt or resumed perimeter is held to the same boundary as a cold start
 
@@ -89,9 +92,15 @@ self-tests as a fresh cold start before being reported healthy; any failure hold
 - Fail-closed exit-code contract (0 pass / 1 boundary failed / 2 cannot-assess).
 
 **Consumption-end check.** Resume the perimeter, confirm the self-test runs and
-fail-closes on an injected boundary fault. **Status:** ⬜ **unverified on capable
-hardware** — implemented and opt-in-gated; not yet exercised end-to-end in
-production. Recorded as unverified, not met.
+fail-closes on an injected boundary fault. **Status:** 🔶 **partially verified**
+(2026-06-16, PR #112). *Verified:* the full self-test passes on a **restart-resumed**
+perimeter (`make perimeter-down && make perimeter-up`) with **B5 "CA fingerprint
+unchanged"**, reproducibly across three resume cycles on real hardware; and the
+script's fail-closed exit-code contract was exercised in practice (a transient B4 read
+returned exit 1 "BOUNDARY FAILED" pre-fix; a SKIP returns exit 2). *Still unverified:*
+the **production idle-auto-pause → wake** resume path (WS0-0a/0c) and the daemon
+supervisor's hold-closed (`BOUNDARY_FAILED` marker) on a **deliberately injected** fault.
+Not yet met in full.
 
 ### C5 — The residual risks are named, not hidden
 
@@ -118,7 +127,8 @@ docs without reading source. **Status:** ✅.
 - It does not claim immunity to a host-level compromise that precedes the perimeter
   (the host is the trust root).
 - It does not claim byte-for-byte reproducibility yet (roadmap "Later").
-- It does not claim the C4 resume contract is verified in production (see C4).
+- It does not yet claim the C4 resume contract is verified for the *production*
+  idle→wake path — only the restart-resume path is verified so far (see C4).
 
 ## Maintenance
 
