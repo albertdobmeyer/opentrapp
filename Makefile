@@ -206,9 +206,14 @@ sync-core-embedded:
 	@echo "→ synced opentrapp-core/src/embedded/ from canonical resources/ + tests/"
 
 proxy-soak:
-	@echo "→ bash tests/proxy-memory-soak.sh (vault-proxy RSS over load×time; perimeter up first)"
-	@bash tests/proxy-memory-soak.sh
+	@echo "→ bash tests/proxy-memory-soak.sh $(ARGS) (vault-proxy RSS over load×time; perimeter up first)"
+	@OPENTRAPP_PROXY_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-proxy --format '{{.Names}}' | head -1) \
+	 OPENTRAPP_LOAD_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-agent --format '{{.Names}}' | head -1) \
+	 bash tests/proxy-memory-soak.sh $(ARGS)
 
 red-team:
-	@echo "→ bash tests/red-team-breakout.sh (adversarial breakout attempts; perimeter up first)"
-	@bash tests/red-team-breakout.sh
+	@echo "→ bash tests/red-team-breakout.sh $(ARGS) (adversarial breakout attempts; perimeter up first)"
+	@OPENTRAPP_AGENT_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-agent --format '{{.Names}}' | head -1) \
+	 OPENTRAPP_PROXY_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-proxy --format '{{.Names}}' | head -1) \
+	 OPENTRAPP_EGRESS_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-egress --format '{{.Names}}' | head -1) \
+	 bash tests/red-team-breakout.sh $(ARGS)
