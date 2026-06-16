@@ -99,7 +99,7 @@ awk '/const BANNED_TERMS = \[/,/^\];/' app/e2e/user-facing.spec.ts | grep -oE '"
 | Expected output | `5` |
 | Runtime | < 1 s |
 
-The five services are `vault-agent`, `vault-skills`, `vault-social`, `vault-proxy` (L7 policy), `vault-egress` (L3 policy + pinned DoT resolver). The social container is parked but its definition remains in the compose file (see [`docs/whitepaper.md`](whitepaper.md) §3.2). The L7/L3 split between vault-proxy and vault-egress is enforced by `tests/orchestrator-check.sh` §10 (no container holds both API keys and `NET_ADMIN`).
+The five services are `vault-agent`, `vault-skills`, `vault-social`, `vault-proxy` (L7 policy), `vault-egress` (L3 policy + pinned DoT resolver). The social container is opt-in / off by default (a live AT Protocol adapter shipped — ADR-0017; full build-out deferred) but its definition remains in the compose file (see [`docs/whitepaper.md`](whitepaper.md) §3.2). The L7/L3 split between vault-proxy and vault-egress is enforced by `tests/orchestrator-check.sh` §10 (no container holds both API keys and `NET_ADMIN`).
 
 ### 6. Three trust tiers
 

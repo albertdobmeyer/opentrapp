@@ -9,7 +9,7 @@ Single monorepo since [ADR-0013](docs/adr/0013-monorepo-consolidation.md). This 
 - `infra/proxy/`      — L7 egress policy (`vault-proxy`) — domain allowlist + API-key injection
 - `infra/egress/`     — L3 egress policy (`vault-egress`) — kernel RFC1918 drop + pinned DNS
 - `workloads/skills/`  — supply-chain defense workload (`vault-skills`) — skill scanner + CDR
-- `workloads/social/` — agent-social-feed analysis workload (`vault-social`); **parked since 2026-05-03**
+- `workloads/social/` — agent-social-feed analysis workload (`vault-social`); **opt-in / on-demand** (a live AT Protocol adapter shipped — ADR-0017; full build-out deferred)
 
 The previously-separate `opencli-container`, `openagent-skills`, and `openagent-social` GitHub repositories are archived references — please report vulnerabilities here, not there.
 
@@ -45,5 +45,5 @@ The following classes of issue are accepted:
 
 - Issues that require physical access to the host machine
 - Social-engineering attacks that require explicit user approval to succeed (the agent runs in an approval-gated mode by default)
-- Issues affecting `vault-social` until the Moltbook API stabilises and the module is un-parked
+- Issues affecting `vault-social` — it ships opt-in / off by default, and its security hardening is deferred until the generalized agent-social shield is built out (ADR-0024 Thread C)
 - Configuration mistakes by an end user that override defaults documented as security-critical
