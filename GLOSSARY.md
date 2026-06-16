@@ -14,7 +14,7 @@ The desktop application (`opentrapp`) is the only surface non-technical users se
 |---|---|---|
 | `agent` (workload) | **My Assistant** | Sidebar, dashboard, component detail |
 | `forge` (workload) | **Skills** / **Skill Store** | Sidebar, dashboard |
-| `social` (workload) | **Agent Network** | Sidebar, dashboard (parked in v0.3.0) |
+| `social` (workload) | **Agent Network** | Sidebar, dashboard (opt-in; build-out deferred) |
 | Hard Shell | **Chat Only** | Mode descriptions |
 | Split Shell | **Supervised** | Mode descriptions |
 | Soft Shell | *(default — no mode label shown)* | Default user experience |
@@ -96,7 +96,7 @@ Three privilege levels for the agent. Each level defines an allowed tool surface
 | `app/`             | Desktop application + perimeter orchestrator | none (host) | Active |
 | `workloads/agent/` | Runtime containment | `vault-agent` | Active |
 | `workloads/skills/` | Supply-chain defense (scanner, CDR) | `vault-skills` | Active |
-| `workloads/social/` | Agent-social-feed analysis | `vault-social` | **Parked** (Moltbook acquired by Meta 2026-03-10; re-aim to generalized agent-social shield tracked in MISSION.md Thread C) |
+| `workloads/social/` | Agent-social-feed analysis | `vault-social` | **Opt-in / on-demand** — live AT Protocol adapter shipped (ADR-0017); full build-out deferred (MISSION Thread C / ADR-0024) |
 | `infra/proxy/`     | L7 egress policy | `vault-proxy` | Active |
 | `infra/egress/`    | L3 egress policy | `vault-egress` | Active |
 

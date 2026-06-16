@@ -71,9 +71,10 @@ Supply-chain and open-source-hygiene work that runs alongside the security gate:
   remotely controllable by design.
 - **Processing untrusted content on the host.** All skill downloads, scanning, and
   feed processing happen inside containers, never on the host filesystem.
-- **The parked social workload** (`vault-social`) returns only if the generalized
-  agent-social-shield thread (see [ADR-0017](adr/0017-unpark-social-live-adapter.md))
-  is unparked; it is not on the critical path.
+- **The agent-social workload** (`vault-social`) is **opt-in / on-demand**: a live AT Protocol
+  adapter shipped ([ADR-0017](adr/0017-unpark-social-live-adapter.md)), but its full build-out as a
+  generalized agent-social shield is the **deferred** third concern (MISSION Thread C /
+  [ADR-0024](adr/0024-product-structure-three-concerns.md)); it is not on the critical path.
 
 ## How to influence the roadmap
 

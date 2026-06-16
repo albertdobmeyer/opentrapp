@@ -1,105 +1,103 @@
-# The five-container perimeter, explained in one page
+# OpenTrApp, explained in one page
 
-> Audience: someone (a maintainer, an opencode engineer, an OpenSSF reviewer) who has 60
-> seconds and wants the architecture to make sense. For the full version, see
-> [`docs/trifecta.md`](trifecta.md) and [ADR-0009](adr/0009-five-container-perimeter.md).
+> Audience: a maintainer, an opencode engineer, or an OpenSSF reviewer who has 60 seconds.
+> Full version: [`docs/trifecta.md`](trifecta.md). The decisions: [ADR-0024](adr/0024-product-structure-three-concerns.md)
+> (this structure), [ADR-0009](adr/0009-five-container-perimeter.md) (Guard 1), and
+> [ADR-0003](adr/0003-content-disarm-reconstruction.md) (Guard 2).
 
-## TL;DR
+## The whole idea, in two sentences
 
-Five containers, **all running in parallel** as one compose stack. Each is a *boundary*,
-not a layer wrapping another. They are statically composed (every bring-up starts all of
-them), not dynamic or progressive. After [ADR-0013](adr/0013-monorepo-consolidation.md)
-the repository is a single monorepo with three workload directories and two infra
-directories — no more submodules.
+OpenTrApp runs an autonomous CLI coding agent you don't fully trust, and puts **two guards** around
+it. **Guard 1 (egress):** no single box ever holds both your API keys *and* internet access.
+**Guard 2 (supply chain):** every skill the agent would load is scanned and rebuilt in a box the
+agent *can't touch*, then handed over read-only.
 
-## How we got to five (the honest history)
+That's it — **one untrusted subject, two guards.** Everything below is detail.
 
-| Stage | Count | Why we added the boundary |
-|------:|------:|---------------------------|
-| v0    | **1** | One container around the whole agent. Smallest possible blast radius for "agent escapes its sandbox." |
-| v1    | **3** | One container per *area of concern* — the agent runtime, the skill scanner, the social-feed analyser. Compromise of any one cannot reach the others' state. |
-| v2    | **4** | Add `vault-proxy`. The three workload containers should not hold API credentials or talk to the internet directly. Pull both responsibilities into a dedicated gateway. ([ADR-0006](adr/0006-four-container-topology.md)) |
-| v3    | **5** | Split `vault-proxy` in two. **L7 policy** (domain allowlist, key injection, TLS interception — credential-bearing) and **L3 policy** (kernel-level RFC1918/loopback drop, pinned DNS — privilege-bearing) are structurally different responsibilities. The container that holds live API keys should not also hold `NET_ADMIN`. ([ADR-0009](adr/0009-five-container-perimeter.md)) |
+## The two guards = the two things only we do
 
-The rule used at every step: *a boundary exists when the responsibilities on either side
-of it have structurally different roles (different secrets, different capabilities,
-different attack surfaces).* The count grew because we found two responsibilities living
-in one container that shouldn't be.
+**Guard 1 — egress ([USP-1](adr/0009-five-container-perimeter.md): privilege separation).** One job
+split across two boxes so neither is worth compromising alone:
 
-## The five containers, in one table
+- `vault-proxy` holds the live API keys and injects them into requests — but has **no route to the
+  internet**.
+- `vault-egress` is the **only** box that reaches the internet (and the only one with `NET_ADMIN`)
+  — but holds **no secrets** and runs no application code (just an nftables ruleset + a pinned DNS
+  resolver).
+- To steal a key *and* exfiltrate it, an attacker must break **both** — and they are separate boxes.
 
-| # | Container | Owns | Directory | Capabilities | Holds secrets? | Reaches internet? |
-|--:|-----------|------|-----------|--------------|----------------|-------------------|
-| 1 | `vault-agent`  | Agent runtime + Telegram gateway + loaded skills | `workloads/agent/`  | all dropped | no | only via vault-proxy |
-| 2 | `vault-skills`  | Skill scanner + CDR pipeline                     | `workloads/skills/`  | all dropped | no | only via vault-proxy |
-| 3 | `vault-social` | Agent-to-agent social-feed analyser *(parked)*   | `workloads/social/` | all dropped | no | only via vault-proxy |
-| 4 | `vault-proxy`  | **L7 policy** — allowlist, API-key injection, TLS interception, payload limits, response redaction | `infra/proxy/`  | unprivileged | **yes** (live API keys) | **no** — chains upstream |
-| 5 | `vault-egress` | **L3 policy** — kernel RFC1918/loopback drop, pinned DNS, masquerade | `infra/egress/` | `NET_ADMIN` only | no | **yes — only container with `external-net`** |
+**Guard 2 — the skill firewall ([USP-2](adr/0003-content-disarm-reconstruction.md): anti-tamper
+supply chain).** Every skill is pattern-scanned and **Content-Disarm-Reconstructed** (parsed to
+intent, the original discarded, a clean copy rebuilt) inside `vault-skills` — a box the agent has
+**no path to** — then delivered **read-only**. The agent receives a clean reconstruction; the
+original bytes never reach it. *The agent is the thing being checked, not the thing doing the
+checking.*
 
-## The flow, drawn
+> **Why a separate box and not "inside the agent"?** Because an inspector the agent can tamper with
+> is not an inspector. A compromised agent sharing the scanner's container could rewrite the pattern
+> catalogue, forge its own clearance report, and read the un-disarmed bytes. The isolation *is* the
+> defense. ([ADR-0024](adr/0024-product-structure-three-concerns.md) §3.)
+
+## One brand, three concerns, run what you need
+
+OpenTrApp is **one product** organized as **three concern sub-apps + an optional GUI** — each
+runnable on its own, CLI-first:
+
+| Sub-app | Concern | What it is |
+|---|---|---|
+| **Vault** | Containerization | The perimeter itself — the contained agent + the egress guard. *"The Vault" is the whole containment, **not** the agent's box.* |
+| **Skill** | Supply chain | The skill firewall (scan + CDR). Runs inside the Vault, **and standalone** as a pre-install check — no perimeter required. |
+| **Social** | Agent-social | An opt-in shield for untrusted agent-social feeds (a second instance of the Guard-2 vetting pattern). A live AT Protocol adapter shipped ([ADR-0017](adr/0017-unpark-social-live-adapter.md)); full build-out is deferred. |
+| **GUI** | (optional) | A disposable projection. The CLI controls every concern; the GUI is never required. |
+
+You don't have to run the whole bundle: the skill firewall alone vets a skill; the Vault alone
+contains an agent.
+
+## The containers (the detail, not the headline)
+
+The Vault is realized as a small set of containers — three run while an agent is active; the skill
+firewall is an **on-demand** job; Social is opt-in.
+
+| Container | Role | Secrets? | Internet? | Caps |
+|---|---|---|---|---|
+| `vault-agent` | the contained **subject** (agent runtime) | no | only via the proxy | all dropped |
+| `vault-proxy` | **Guard 1, L7** — allowlist + key injection | **yes** (keys) | **no** (chains upstream) | unprivileged |
+| `vault-egress` | **Guard 1, L3** — kernel RFC1918 drop, pinned DNS | no | **yes — the only one** | `NET_ADMIN` only |
+| `vault-skills` | **Guard 2** — scan + CDR (on-demand) | no | only via the proxy | all dropped |
+| `vault-social` | Social shield (opt-in) | no | only via the proxy | all dropped |
+
+Each workload sits on its own `internal: true` network; only `vault-proxy` bridges them, and only
+`vault-egress` touches the internet. The agent↔skills channel is a **one-way, read-only volume**
+(`skills-deliveries`) — there is no network path between them. (Source of truth:
+[`compose.yml`](../compose.yml); diagrams in [`docs/diagrams.md`](diagrams.md).)
 
 ```
-  agent-net ─┐
-  skills-net ─┼──→ vault-proxy ──→ egress-net ──→ vault-egress ──→ external-net
-social-net ─┘    (L7 policy:                     (L3 policy:
-                   credentials,                    NET_ADMIN,
-                   allowlist,                      kernel drop,
-                   TLS MITM)                       pinned DNS)
+  the Vault (= the perimeter)
+  ┌────────────────────────────────────────────────────────────────┐
+  │  vault-agent ─┐                                                  │
+  │  vault-skills ┼─► vault-proxy ──► vault-egress ──► internet      │
+  │  (Guard 2)    │   GUARD 1: keys,   GUARD 1: net,                 │
+  │               │   no internet      no keys, NET_ADMIN            │
+  │               │                                                  │
+  │   Guard 2 delivers the cleaned skill to the agent                │
+  │   one-way, READ-ONLY — no network path between them              │
+  └────────────────────────────────────────────────────────────────┘
+   vault-social — opt-in, a second Guard-2 instance (agent-social feeds)
 ```
 
-Each of the three workload containers (agent / forge / social) sits on its own *internal*
-network with no default gateway. They can reach `vault-proxy` and nothing else — not each
-other, not the host, not the internet. `vault-proxy` bridges the three internal networks
-and chains upstream to `vault-egress`. `vault-egress` is the **only** container attached
-to `external-net`, and it's the only one with `NET_ADMIN`.
+## Why this is defensible (and what we deliberately don't do)
 
-## Frequently asked
+- **No box holds both keys and internet** (Guard 1). **No box holds both elevated capabilities and
+  application code** — only `vault-egress` has `NET_ADMIN`, and it runs nothing but the kernel
+  ruleset + resolver.
+- **The agent can't influence the scanner, and the scanner can't reach the agent** — except via the
+  one-way, read-only delivery volume (Guard 2).
+- **We do not collapse the guards into the agent** to save a container — that would hand a
+  compromised agent the keys, the internet, or the scanner it is supposed to be checked by. Memory
+  is not a reason to weaken a boundary (the resting perimeter is ~400 MB; ~0 when idle-auto-paused).
+  See [ADR-0024](adr/0024-product-structure-three-concerns.md) and the
+  [verify-first decision](specs/2026-06-15-windows-session-portability-and-architecture-review.md) §5.
 
-**Q: Are containers 4 and 5 *around* the others (nested), or *parallel* to them?**
-Parallel. All five run side-by-side as services in one compose stack. The relationship is
-"who can talk to whom" (network attachments), not "who wraps whom."
-
-**Q: How does the directory layout map to the containers?**
-3 workloads + 2 infra + 1 orchestrator. `workloads/{agent,forge,social}/` each builds
-exactly one container. `infra/{proxy,egress}/` each builds exactly one container. `app/`
-is the Tauri orchestrator that composes them. The directory name matches the container
-name; there is no indirection. (See [ADR-0013](adr/0013-monorepo-consolidation.md) for why
-this replaced the earlier three-submodule layout.)
-
-**Q: Are they dynamic / progressive — spun up as needed?**
-No. They are statically composed; every perimeter bring-up starts all five. (`vault-social`
-is "parked" — its image still builds and the service is defined, but it's not actively
-exercised. See [ADR-0004](adr/0004-parking-moltbook-pioneer.md). Thread C of MISSION.md
-plans to unpark it as a generalized agent-social shield.)
-
-**Q: Why isn't the agent's own container considered enough? Isn't one container the simplest?**
-Because compromise of *any* of the four other responsibilities (skill scan, social-feed
-parse, credential handling, network egress) inside the agent's container would let an
-attacker pivot through all of them at once. The whole point of the perimeter is that the
-credential-bearing container has no internet, the internet-bearing container has no code,
-the skill scanner can't influence the agent, and the agent can't influence the scanner.
-One container cannot offer those properties; five can.
-
-## Why this design is defensible
-
-- **No single container holds both API credentials and internet access.** vault-proxy
-  holds the keys but cannot reach the public internet. vault-egress reaches the internet
-  but holds no secrets and runs no application code.
-- **No single container holds both elevated capabilities and application code.** Only
-  vault-egress has `NET_ADMIN`; it runs nftables and a DNS forwarder — nothing else.
-  The four other containers drop all capabilities.
-- **Three independent egress defenses.** (1) L7 domain allowlist in vault-proxy,
-  (2) post-resolve IP check in vault-proxy, (3) kernel RFC1918 drop in vault-egress. A
-  bug in any single layer does not produce the vulnerability. See ADR-0009 §Consequences.
-- **The three workload containers cannot reach each other.** Agent, forge, and social
-  are on separate internal networks with no path between them. Compromise of one cannot
-  pivot to another.
-
-## When to question this design
-
-Honestly: if Tier 3/4 (kernel drop in vault-egress) ever proves operationally fragile,
-collapsing back to four containers (with the kernel filter co-located inside vault-proxy)
-is a documented alternative — explicitly rejected today, but the rejection has knobs. The
-five-container framing is a *public commitment* (README hero, whitepaper, landing page),
-so reverting costs another ADR and a doc sweep. We do not revert lightly. But we are not
-locked in by ego, only by the cost of re-explaining.
+> **Agent-agnostic by design.** The guards don't care which agent sits inside. The OpenClaw recipe
+> adds a Telegram gateway; an opencode recipe would wrap a terminal session. The guards are the same
+> — which is what makes OpenTrApp recommendable beyond any one agent.

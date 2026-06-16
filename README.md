@@ -106,7 +106,7 @@ re-scanned and signed before reaching the agent.
 - Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility. The full attacker-capability matrix and residual-risk enumeration are in [`docs/threat-model.md`](docs/threat-model.md); the differential against alternative containment strategies (Firejail, gVisor, VM-only isolation, scanner-only, etc.) is in [`docs/why-not-x.md`](docs/why-not-x.md).
 - The agent's reasoning is not local. Operating OpenTrApp without internet access to Anthropic's API is not supported.
 - Installer binaries are signed with the Tauri auto-updater key, not with OS-level code-signing certificates. macOS Gatekeeper and Windows SmartScreen will display a first-launch warning.
-- The social-feed workload (`vault-social`, formerly `vault-pioneer`) is **parked since 2026-05-03**. The target API (Moltbook) has been intermittent since 2026-04-05 following Meta's acquisition. The container is still defined in `compose.yml`; the code is preserved at [`workloads/social/`](workloads/social/). Re-aim to a generalized agent-to-agent social shield is tracked in MISSION.md (Thread C).
+- The agent-social workload (`vault-social`, formerly `vault-pioneer`) is **opt-in / on-demand**, and its full build-out is **deferred** (the third concern, after Vault/Skill/GUI). The original Moltbook target was parked 2026-05-03 (Meta's acquisition); a live AT Protocol (Bluesky) adapter has since shipped ([ADR-0017](docs/adr/0017-unpark-social-live-adapter.md)). The container is defined in `compose.yml` (off by default); code at [`workloads/social/`](workloads/social/). Tracked in MISSION.md (Thread C).
 
 ## Requirements
 
@@ -142,7 +142,7 @@ The runtime perimeter consists of five containers connected by per-service inter
 | `vault-agent`   | Runtime containment | Read-only root filesystem, all Linux capabilities dropped, custom syscall profile, workspace mount only |
 | `vault-skills`   | Supply-chain defense | 87-pattern skill scanner, zero-trust line verifier, Content Disarm & Reconstruction pipeline |
 | `vault-proxy`   | **L7 egress policy** | Domain allowlist, API-key injection, request logging, post-resolve destination-IP check. Holds API keys; **no internet attachment** (chains to `vault-egress`). |
-| `vault-social` | Social-content analysis | **Parked** — see *Limitations* |
+| `vault-social` | Agent-social analysis | **Opt-in / on-demand** — build-out deferred; see *Limitations* |
 | `vault-egress`  | **L3 egress policy** | Kernel-level RFC1918 drop; pinned DoT resolver (Quad9 + Cloudflare); the *only* container with internet attachment. Holds `NET_ADMIN` but **no secrets**. |
 
 `vault-proxy` is the bridge between the internal containers. `vault-egress` is the bridge to the public internet. Neither container holds both API credentials *and* elevated network capabilities — that separation is the load-bearing security property the five-container topology exists for.
@@ -155,7 +155,7 @@ flowchart LR
     subgraph PERIMETER["Perimeter"]
         AGENT[vault-agent]
         FORGE[vault-skills]
-        PIONEER["vault-social<br/>(parked)"]
+        PIONEER["vault-social<br/>(opt-in)"]
         PROXY["vault-proxy<br/>(L7 policy)"]
         EGRESS["vault-egress<br/>(L3 policy + DoT)"]
     end
@@ -230,7 +230,7 @@ opentrapp/                            (this repository — single monorepo)
 ├── workloads/                        one directory per workload container
 │   ├── agent/                          → vault-agent  (runtime containment)
 │   ├── forge/                          → vault-skills  (supply-chain defense — skill scanner + CDR)
-│   └── social/                         → vault-social (agent-social-feed analysis — parked)
+│   └── social/                         → vault-social (agent-social analysis — opt-in, deferred)
 ├── infra/                            shared infrastructure containers
 │   ├── proxy/                          → vault-proxy  (L7 egress policy)
 │   └── egress/                         → vault-egress (L3 egress policy)
