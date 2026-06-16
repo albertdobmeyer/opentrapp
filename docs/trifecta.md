@@ -64,7 +64,7 @@ flowchart TB
     subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway"]
         FORGE["vault-skills<br/>87-pattern scanner + CDR"]
-        PIONEER["vault-social (parked)"]
+        PIONEER["vault-social (opt-in)"]
         PROXY["vault-proxy<br/>L7 policy: allowlist, key injection"]
         EGRESS["vault-egress<br/>L3 policy: nftables drop, DoT resolver"]
     end
@@ -104,11 +104,11 @@ HOST
     │     vault-agent via a write-only shared volume
     │     Network isolated from vault-agent
     │
-    ├── vault-social (parked — see §8)
-    │     Originally: scan posts on the Moltbook agent social
-    │     network for prompt-injection patterns
-    │     Container is defined; target API has been intermittent
-    │     since 2026-04-05 following Meta's acquisition of Moltbook
+    ├── vault-social (opt-in — see §8)
+    │     Vets untrusted agent-social feeds for prompt-injection
+    │     patterns before the agent sees them; opt-in / off by default.
+    │     A live AT Protocol adapter shipped (ADR-0017); full build-out
+    │     deferred (original Moltbook target parked 2026-05-03)
     │
     ├── vault-proxy
     │     L7 (application-layer) egress policy:
@@ -175,9 +175,9 @@ Runs as `vault-skills`, isolated from the agent at the network layer. Implements
 
 Output is delivered to `vault-agent` via a write-only volume. The agent has no path to influence the scanner; a compromised agent cannot bypass the supply-chain check by talking to forge directly because no such path exists.
 
-### 4.3 openagent-social — social-content analysis (parked)
+### 4.3 vault-social — agent-social analysis (opt-in / deferred)
 
-Runs as `vault-social`. Built to scan posts on Moltbook, an AI-agent social network, for prompt-injection patterns before the content was relayed to `vault-agent`. The container is still defined in `compose.yml`. The target API has been intermittent since 2026-04-05 following Meta's acquisition of Moltbook (2026-03-10), so the module has been parked since 2026-05-03; see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes are preserved in [`components/openagent-social/`](../components/openagent-social/).
+Runs as `vault-social`. Vets untrusted agent-social feeds for prompt-injection patterns before content reaches `vault-agent`. The original Moltbook target was parked 2026-05-03 (Meta's acquisition; API instability), but a **live AT Protocol (Bluesky) adapter has since shipped** ([ADR-0017](adr/0017-unpark-social-live-adapter.md)) — the module is now **opt-in / off by default**, and its full build-out is **deferred** (the third concern after Vault/Skill/GUI — [ADR-0024](adr/0024-product-structure-three-concerns.md)); see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes live in [`workloads/social/`](../workloads/social/).
 
 ### 4.4 vault-proxy — egress gateway
 
@@ -251,8 +251,8 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 | Layer | Owner | Container | Mitigation |
 |-------|-------|-----------|-----------|
-| Feed scanner       | pioneer (parked) | vault-social | 25 prompt-injection patterns |
-| Network isolation  | perimeter | compose network | Pioneer has no path to the agent |
+| Feed scanner       | vault-social (opt-in) | vault-social | 25 prompt-injection patterns |
+| Network isolation  | perimeter | compose network | vault-social has no path to the agent |
 | DM pairing policy  | vault | vault-agent | Each Telegram counterpart explicitly approved by the user |
 | Tool policy        | vault | vault-agent | Denied tools stay invisible to the LLM |
 | Coordinator approval | Tier 1 | host | The user retains visibility on every privileged action |
@@ -265,7 +265,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 |--------------------|----------------------------------|--------------------|
 | opencli-container     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
 | openagent-skills      | vault-skills                      | Active. 87-pattern scanner + CDR pipeline operational. |
-| openagent-social   | vault-social                    | **Parked since 2026-05-03.** Code preserved; target API intermittent following Meta's acquisition of Moltbook. |
+| vault-social       | vault-social                    | **Opt-in / deferred.** Live AT Protocol adapter shipped (ADR-0017); off by default, full build-out deferred (ADR-0024 Thread C). |
 | opentrapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
 
 **Current implementation:**
@@ -308,7 +308,7 @@ Each capability has exactly one owning module to avoid duplication or ambiguity.
 | Skill linting and structure validation | forge | vault-skills |
 | Zero-trust line verification | forge | vault-skills |
 | Content Disarm & Reconstruction | forge | vault-skills |
-| Feed-injection scanning (25 patterns) | pioneer (parked) | vault-social |
+| Feed-injection scanning (25 patterns) | vault-social (opt-in) | vault-social |
 | Workflow orchestration | opentrapp | GUI / CLI |
 | Cross-component workflows | opentrapp | `config/orchestrator-workflows.yml` |
 

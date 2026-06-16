@@ -86,11 +86,11 @@ The five containers and their internal-network connectivity are summarised below
 
 - **vault-agent** runs the agent runtime, the Telegram gateway, and any loaded skills. Read-only root filesystem, all Linux capabilities dropped, custom seccomp profile, no host filesystem mounts, no host network access. A single workspace directory is the only writable surface.
 - **vault-skills** scans skills downloaded from ClawHub against an 87-pattern catalogue, runs a zero-trust line-classifier over each file, and rebuilds the skill from parsed semantic intent (CDR; §6). Output is delivered to vault-agent through a write-only shared volume; vault-skills has no path to vault-agent.
-- **vault-social** was designed to scan posts on the Moltbook agent social network for prompt-injection patterns before the content reached vault-agent. Following Meta's acquisition of Moltbook on 2026-03-10 and the resulting API instability since 2026-04-05, the module is **parked**: the container is still defined in `compose.yml` for completeness but has no functional API to talk to.
+- **vault-social** vets untrusted agent-social feeds for prompt-injection patterns before content reaches vault-agent. The original Moltbook target was parked 2026-05-03 (Meta's acquisition; API instability), but a **live AT Protocol (Bluesky) adapter has since shipped** (ADR-0017); the module is **opt-in / off by default** and its full build-out is **deferred** (ADR-0024 Thread C). The container is defined in `compose.yml` but does not start unless enabled.
 - **vault-proxy** enforces the **L7 (application-layer) egress policy.** It holds the user's API credentials in environment variables visible only to itself, replaces a placeholder string in outbound headers with the literal credential immediately before forwarding, enforces a per-host allowlist, performs a post-resolve destination-IP check against private/loopback ranges as a DNS-rebinding defence (ADR-0009 Tier 2), and writes a structured request log to a host-readable volume. Has no direct internet attachment — chains upstream to vault-egress.
 - **vault-egress** enforces the **L3 (network-layer) egress policy.** Holds `NET_ADMIN` (the only container in the perimeter that does); holds no secrets and runs no application code. Drops outbound packets destined for RFC1918, loopback, link-local, multicast, or reserved address space at the kernel level via nftables. Runs an `unbound` pinned DoT resolver against Quad9 (primary) and Cloudflare (secondary) with `cache-min-ttl: 60` to defeat DNS-rebinding TTL=0 attacks (ADR-0010). The only container with public-internet attachment.
 
-The first four containers each run on their own Docker `internal: true` network. `vault-proxy` bridges those internal networks and reaches outbound only via `egress-net` to `vault-egress`. `vault-egress` is the only container on `external-net`. `vault-agent` cannot reach `vault-skills` or `vault-social` through any routed path; the only means by which a certified skill reaches `vault-agent` is the write-only shared volume `skills-deliveries`. The L7/L3 split is the load-bearing security property: no single container holds both API credentials *and* elevated network capabilities.
+Each of the three workload containers (`vault-agent`, `vault-skills`, `vault-social`) runs on its own Docker `internal: true` network. `vault-proxy` bridges those internal networks and reaches outbound only via `egress-net` to `vault-egress`. `vault-egress` is the only container on `external-net`. `vault-agent` cannot reach `vault-skills` or `vault-social` through any routed path; the only means by which a certified skill reaches `vault-agent` is the write-only shared volume `skills-deliveries`. The L7/L3 split is the load-bearing security property: no single container holds both API credentials *and* elevated network capabilities.
 
 ### 3.3 Lifecycle ownership
 
@@ -132,15 +132,15 @@ Layer 3 (CDR) is the architectural innovation. A static scanner with N patterns 
 
 ### 4.3 Hostile feed content (T3, network/social)
 
-The pioneer container was designed to address this category; it is currently parked (§3.2). The architectural slot remains:
+The `vault-social` container addresses this category; it is opt-in / off by default (§3.2), with a live AT Protocol adapter shipped (ADR-0017). The layers:
 
 1. **Feed scanner** (vault-social): 25 prompt-injection patterns calibrated against the early-2026 Moltbook ecosystem.
-2. **Network isolation**: pioneer cannot reach vault-agent through any routed path.
+2. **Network isolation**: vault-social cannot reach vault-agent through any routed path.
 3. **DM pairing policy**: each Telegram counterpart explicitly approved.
 4. **Tool policy**: the agent has no tools that fetch from Moltbook absent explicit user enablement.
 5. **Coordinator approval**: the user retains visibility on every privileged action.
 
-Layers 3–5 are functional regardless of pioneer status. Layers 1 and 2 are dormant pending a stable target API.
+Layers 3–5 are functional regardless of `vault-social`'s status. Layers 1 and 2 are opt-in / off by default (a live AT Protocol adapter shipped; full build-out deferred).
 
 ---
 
@@ -258,7 +258,7 @@ The architecture is honest about what it does not address.
 
 **Container destruction does not guarantee complete cleanup.** Layer caches, image metadata, and runtime logs persist on the host after `compose down --volumes`. These do not contain the API key (proxy-side injection guarantees that) but may contain conversation logs or activity metadata. Full cleanup requires `podman system prune -a` or the Docker equivalent.
 
-**Pioneer is dormant.** The fourth container is currently parked following Meta's acquisition of Moltbook in March 2026. Threat category T3 (hostile network or social-feed content) is therefore mitigated only by the structural layers (network isolation, DM pairing policy, tool policy, coordinator approval) — the active feed-scanner layer is offline. Future revisions are gated on a stable target API or a successor agent-social-network platform.
+**vault-social is opt-in / off by default.** The agent-social workload does not start unless enabled; a live AT Protocol adapter shipped (ADR-0017) but its full build-out is deferred (ADR-0024 Thread C). While it is off, threat category T3 (hostile network or social-feed content) is mitigated only by the structural layers (network isolation, DM pairing policy, tool policy, coordinator approval) — the active feed-scanner layer is not running. Enabling the workload activates the feed-scanner layer.
 
 **Installer signing is updater-only.** Builds are signed with the Tauri auto-updater key; OS-level code-signing certificates (Apple Developer ID, Windows Authenticode) are not currently in place. macOS Gatekeeper and Windows SmartScreen will warn on first launch.
 
@@ -294,9 +294,9 @@ Future work falls into three categories.
 
 **Architectural evolution.** A planned VM-isolation tier (Phase 2 of the vault module's roadmap) would address the "host is trusted" assumption for users requiring stronger isolation. The CDR pipeline (§6) is currently applied only to skills; extension to other untrusted-input categories (Telegram message bodies, fetched URL responses) is open research.
 
-**Ecosystem.** Pioneer is parked pending a stable target API. If the agent-social-network category re-emerges (under Meta's continued operation of Moltbook, under a successor platform, or under an entirely new ecosystem), the architectural slot is preserved and re-activation requires only the API integration; the perimeter layer is in place.
+**Ecosystem.** `vault-social` ships opt-in / off by default, with a live AT Protocol adapter (ADR-0017) and a deferred full build-out (ADR-0024 Thread C). As the agent-social-network category evolves, the architectural slot is in place and enabling the workload activates the perimeter layer.
 
-The implementation is open-source under the MIT licence at [github.com/albertdobmeyer/opentrapp](https://github.com/albertdobmeyer/opentrapp) and the four-component family of repositories. All code, configuration, manifest schemas, verification scripts, and design documents are public. We invite review.
+The implementation is open-source under the MIT licence at [github.com/albertdobmeyer/opentrapp](https://github.com/albertdobmeyer/opentrapp) (a single monorepo since ADR-0013). All code, configuration, manifest schemas, verification scripts, and design documents are public. We invite review.
 
 ---
 
