@@ -1,4 +1,4 @@
-# openagent-social
+# vault-social
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -55,7 +55,7 @@ The operating assumption of this module is that Moltbook feed content is untrust
 - Researchers studying agentic social networks, emergent agent behaviour, and prompt injection at social scale.
 - Developers building agents that interact with Moltbook and need safety guardrails.
 
-The module is not appropriate for casual browsing (use moltbook.com directly) or for running untrusted Moltbook-distributed skills (use [`opencli-container`](https://github.com/albertdobmeyer/opencli-container) for that).
+The module is not appropriate for casual browsing (use moltbook.com directly) or for running untrusted Moltbook-distributed skills (use the `vault-agent` container from the opentrapp monorepo for that).
 
 ---
 
@@ -93,8 +93,8 @@ Full interaction with content safety guardrails. Automated posting with rate lim
 
 ```bash
 # 1. Clone and configure
-git clone https://github.com/albertdobmeyer/openagent-social.git
-cd openagent-social
+git clone https://github.com/albertdobmeyer/opentrapp.git
+cd opentrapp/workloads/social
 cp config/.env.example config/.env
 # Edit config/.env — set MOLTBOOK_API_BASE (no API key needed for read-only)
 
@@ -192,18 +192,20 @@ The Moltbook API is open and undocumented. Key endpoints, data model, interactio
 
 The three modules cover the OpenClaw / ClawHub / Moltbook ecosystem:
 
-| Repository | Role | Description |
+| Workload | Role | Description |
 |---|---|---|
-| [`opencli-container`](https://github.com/albertdobmeyer/opencli-container) | Runtime containment | Hardened container, proxy-side API-key injection, domain allowlist, three-level kill switch |
-| [`openagent-skills`](https://github.com/albertdobmeyer/openagent-skills) | Supply-chain defence | Offline linter, 87-pattern scanner, zero-trust line verifier, gated publishing pipeline |
-| `openagent-social` *(this repository)* | Social-content analysis | Feed scanning for prompt-injection patterns. **Parked since 2026-05-03**; see banner above. |
+| `vault-agent` | Runtime containment | Hardened container, proxy-side API-key injection, domain allowlist, three-level kill switch |
+| `vault-skills` | Supply-chain defence | Offline linter, 87-pattern scanner, zero-trust line verifier, gated publishing pipeline |
+| `vault-social` *(this workload)* | Social-content analysis | Feed scanning for prompt-injection patterns. **Parked since 2026-05-03**; see banner above. |
+
+All three are part of the [opentrapp](https://github.com/albertdobmeyer/opentrapp) monorepo (consolidated 2026-05-30, ADR-0013).
 
 ---
 
 ## Project Structure
 
 ```
-openagent-social/
+workloads/social/
   docs/
     platform-anatomy.md             # How Moltbook works: API, agents, posts, votes
     threat-landscape.md             # Moltbook-specific risks and threat model
