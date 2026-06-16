@@ -1,8 +1,10 @@
-# OpenCli-Container — Hardened Security Harness for OpenClaw
+# vault-agent — Hardened Agent Runtime Container
+
+> **This is the `agent` workload of the [opentrapp](https://github.com/albertdobmeyer/opentrapp) monorepo** — `workloads/agent/`, container `vault-agent`. It is **not** a standalone repo or submodule (see "This is a OpenTrApp workload" below). Older docs call it "OpenCli-Container"; that name is retired.
 
 ## What This Is
 
-OpenCli-Container is a **hardened security harness** that safely runs the OpenClaw autonomous agent runtime inside a containerized, proxy-gated environment. Its core innovations:
+`vault-agent` is the **hardened runtime container** that safely runs an autonomous CLI agent inside a containerized, proxy-gated environment. The default (and only currently-built) agent is **OpenClaw**; the container is a hardened, agent-agnostic **base + a pluggable recipe** (`recipes/<name>/`, default `openclaw`) so it can wrap other agents (e.g. opencode) without weakening the perimeter — see [`recipes/README.md`](recipes/README.md). Its core innovations:
 
 1. **API keys never enter the agent container** — a mitmproxy sidecar injects credentials at the network layer
 2. **All network traffic is logged and filtered** — domain allowlist enforced by the proxy
@@ -12,13 +14,13 @@ OpenCli-Container is a **hardened security harness** that safely runs the OpenCl
 
 **For detailed source code analysis:** See `docs/openclaw-internals.md`
 
-## This Repo Is a OpenTrApp Component
+## This Is a OpenTrApp Workload
 
-This repo is integrated into [opentrapp](https://github.com/albertdobmeyer/opentrapp) as a git submodule under `components/opencli-container/`. The file `component.yml` in this repo's root is the **manifest contract** that tells the OpenTrApp GUI how to discover, display, and control this component.
+Post [ADR-0013](../../docs/adr/0013-monorepo-consolidation.md) this lives **in the opentrapp monorepo** at `workloads/agent/` — **not** a git submodule. The old `components/opencli-container/` submodule layout was consolidated 2026-05-30; `components/` no longer exists. The `component.yml` in this directory is the **manifest contract** that tells the OpenTrApp daemon/GUI how to discover, display, and control this workload.
 
 ### Manifest Contract Rules
 - `component.yml` must always parse as valid YAML
-- `identity.id` must be `opencli-container` (the GUI uses this as a stable key)
+- `identity.id` must be `agent` (the daemon/GUI uses this as a stable key)
 - `identity.role` must be `runtime`
 - All `available_when` values must reference states declared in `status.states`
 - All `restart_command` values in configs must reference command IDs in `commands`
@@ -28,14 +30,14 @@ This repo is integrated into [opentrapp](https://github.com/albertdobmeyer/opent
 ### Validating the Manifest
 From the opentrapp root:
 ```bash
-bash tests/orchestrator-check.sh    # Validates all manifests including this one
-cargo test -p opentrapp          # Rust tests parse this manifest specifically
+bash tests/orchestrator-check.sh        # Validates all manifests including this one
+(cd app/src-tauri && cargo test --lib)  # Rust tests parse the manifests
 ```
 
 ## Architecture
 
 ```
-Two-container stack (compose.yml):
+Core agent ⇄ proxy view — the full perimeter is five containers (see below):
 
 ┌─────────────────────────────────────────────┐
 │  vault-proxy (mitmproxy sidecar)            │
@@ -43,12 +45,12 @@ Two-container stack (compose.yml):
 │  - Enforces domain allowlist                │
 │  - Injects API key into request headers     │
 │  - Logs every request as structured JSON    │
-│  - Has internet access (vault-external net) │
+│  - No internet (reaches via vault-egress)   │
 │  - SETUID/SETGID caps for gosu entrypoint   │
 └──────────────┬──────────────────────────────┘
-               │ HTTP proxy (vault-internal network)
+               │ HTTP proxy (agent-net, internal)
 ┌──────────────┴──────────────────────────────┐
-│  opencli-container (agent container)           │
+│  vault-agent (agent container)               │
 │  - OpenClaw gateway running with Haiku      │
 │  - Read-only root filesystem                │
 │  - All Linux capabilities dropped           │
@@ -68,23 +70,23 @@ Two-container stack (compose.yml):
 
 ### The Full Perimeter
 
-This repo's 2-container stack (vault-agent + vault-proxy) is the core of a larger 4-container perimeter defined in `compose.yml` at the opentrapp root. Two additional containers operate inside this perimeter:
+`vault-agent` + `vault-proxy` are the core of the **five-container perimeter** defined in `compose.yml` at the opentrapp root (ADR-0009). The headline guarantee — **USP-1: privilege separation** — is that **no single container holds both the API keys and internet access**:
 
-- **vault-skills** (openagent-skills) — downloads and scans SKILL files inside the fence, delivers certified clean output to the agent via a shared volume (skills-deliveries). Runs on skills-net.
-- **vault-social** (openagent-social) — originally scanned Moltbook feed content for injection patterns. **Parked since 2026-05-03** following Meta's acquisition of Moltbook (2026-03-10) and the resulting API instability since 2026-04-05. The container is still defined in `compose.yml` for completeness.
+- **vault-proxy** — holds the real API keys, enforces the L7 (application-layer) allowlist, injects credentials. **No internet** — reaches the network only through vault-egress.
+- **vault-egress** — has `NET_ADMIN` + internet and enforces the L3 (network-layer) filter. **No keys.**
+- **vault-skills** (the Skill Firewall) — downloads + pattern-scans + CDR-rebuilds SKILL files in isolation the agent **cannot tamper with**, delivering certified-clean output to the agent via the read-only `skills-deliveries` volume (**USP-2: anti-tamper supply-chain defense**). On skills-net.
+- **vault-social** — generalized agent-social-feed vetting; a live AT Protocol (Bluesky) adapter shipped (ADR-0017). **Opt-in / on-demand**; full build-out as the third concern is **deferred** until Vault/Skill/GUI are closed (ADR-0024).
 
-Both connect to vault-proxy for internet access but cannot reach vault-agent or each other directly. The vault is the inner perimeter; forge and pioneer operate alongside it inside the same compose network.
+The skill and social workloads reach the internet only through vault-proxy → vault-egress and cannot reach `vault-agent` or each other directly.
 
 ```
-4-container perimeter (opentrapp compose.yml):
+five-container perimeter (opentrapp compose.yml):
 
-vault-proxy ←── skills-net ──→ vault-skills
-     ↑
- agent-net
-     ↓
-vault-agent ←── skills-deliveries (shared volume, read-only) ──→ vault-skills
-     ↑
- social-net ──→ vault-social
+  internet ◄── vault-egress ◄──(egress-net)── vault-proxy ──┬─ agent-net ─── vault-agent
+               (NET_ADMIN, no keys)    (holds keys, no net)  ├─ skills-net ── vault-skills
+                                                             └─ social-net ── vault-social
+
+  vault-skills ──(skills-deliveries, read-only volume)──► vault-agent   (certified-clean skills)
 ```
 
 ### How Our Vault Synergizes With OpenClaw
@@ -100,8 +102,11 @@ vault-agent ←── skills-deliveries (shared volume, read-only) ──→ vau
 ## Directory Structure
 
 ```
-opencli-container/
-├── Containerfile                   Hardened multi-stage image (Node 22-alpine)
+workloads/agent/                    (the `agent` workload of the opentrapp monorepo)
+├── Containerfile                   Hardened multi-stage base (Node 22-alpine) + recipe COPY
+├── recipes/                        Pluggable agent recipes — base+recipe (see recipes/README.md)
+│   ├── openclaw/install.sh         OpenClaw build install (default recipe)
+│   └── opencode/install.sh         opencode recipe — fail-closed scaffold (part 2b)
 ├── compose.yml                     Container + proxy orchestration
 ├── .env.example                    API key + bot token template (gitignored)
 ├── component.yml                   MANIFEST — OpenTrApp contract
@@ -175,7 +180,7 @@ opencli-container/
 | `network-report` | `make network-report` | safe | Analyze proxy logs for anomalies |
 | `session-report` | `make session-report` | safe | Post-session activity summary |
 | `log-rotate` | `make log-rotate` | safe | Rotate proxy logs, check transcript size |
-| `logs` | `podman logs -f opencli-container` | safe | Stream vault logs |
+| `logs` | `podman logs -f vault-agent` | safe | Stream vault logs |
 | `proxy-logs` | `podman logs -f vault-proxy` | safe | Stream proxy logs |
 
 ## Editable Configs (via GUI)
@@ -249,4 +254,4 @@ opencli-container/
 - Do not give the agent any destructive capabilities — the agent is constructive only (read, write, create, search); all destructive operations are handled by the user or Claude from the host side
 
 ---
-*Last updated: 2026-05-03 — v0.3.0 release; all three shell levels verified.*
+*Last updated: 2026-06-16 — monorepo workload (id `agent`, container `vault-agent`); five-container perimeter; pluggable agent-recipe base (default `openclaw`). All three shell levels verified.*
