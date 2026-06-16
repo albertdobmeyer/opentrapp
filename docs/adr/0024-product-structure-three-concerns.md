@@ -93,7 +93,7 @@ in this ADR.)
 - A naming/narration sweep: docs + diagrams, and the "Workshop/Monitoring Station" labels that teach a
   *tool* framing must flip to *guard* framing to match the egress side ("Gate/Fence/Cell Block").
 - The standalone Skill firewall adds a second delivery surface with its own scope/claim boundary →
-  ADR-0025 (forthcoming, roadmap Phase 2).
+  [ADR-0025](0025-standalone-skill-firewall-scope.md).
 - None of this changes the running topology, so there is **no perimeter risk** — but the docs sweep and
   the CLI/standalone work are real effort.
 
