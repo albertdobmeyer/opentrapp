@@ -10,6 +10,7 @@
 //!
 //! Modes:
 //!   (default / `run`)  own + supervise the perimeter until signalled
+//!   `vault <verb>`     friendly CLI surface: up|down|status|verify|pause|resume|restart
 //!   `--status`         print the durable perimeter state and exit
 //!   `--selftest`       exercise the marker contract end-to-end, exit 0/1
 //!   `--help`           usage
@@ -25,6 +26,14 @@ use tokio::sync::Notify;
 #[tokio::main]
 async fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // Friendly `vault <verb>` CLI surface (CLI-first; ADR-0020/0024) — a thin alias
+    // layer over the same operations as the engine flags/verbs below. The bare
+    // `opentrapp` command + GUI demotion lands in Phase 3 (de-Tauri); until then the
+    // operator CLI is `opentrapp-daemon vault <verb>`. Checked before the global
+    // `--help` scan so `vault --help` reaches the vault help, not the top-level one.
+    if args.first().map(String::as_str) == Some("vault") {
+        return dispatch_vault(args.get(1).map(String::as_str)).await;
+    }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         print_help();
         return ExitCode::SUCCESS;
@@ -132,8 +141,49 @@ fn print_status() -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// Friendly `vault <verb>` surface mapping to the engine operations. `up` owns +
+/// supervises the perimeter (long-running); the rest are one-shot. This is the
+/// CLI-first projection (ADR-0020/0024) over the same `opentrapp-core` calls the
+/// engine flags use — no new perimeter logic.
+async fn dispatch_vault(verb: Option<&str>) -> ExitCode {
+    match verb {
+        Some("up") => run().await,
+        Some("down") => submit_control(ControlRequest::Shutdown),
+        Some("pause") => submit_control(ControlRequest::Pause),
+        Some("resume") => submit_control(ControlRequest::Resume),
+        Some("restart") => submit_control(ControlRequest::Restart),
+        Some("status") => print_status(),
+        Some("verify") => boundary_selftest(),
+        Some("--help") | Some("-h") | None => {
+            print_vault_help();
+            ExitCode::SUCCESS
+        }
+        Some(other) => {
+            eprintln!("opentrapp vault: unknown verb '{other}' (try `vault --help`)");
+            print_vault_help();
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn print_vault_help() {
+    println!("opentrapp vault — control the containment perimeter (the Vault)");
+    println!("  up        bring the perimeter up and supervise it (idle auto-pause + wake)");
+    println!("  down      tear the perimeter down (stop owning it)");
+    println!("  status    print durable perimeter state + the current owner");
+    println!("  verify    run the live boundary self-test now (0 hold / 1 fail / 2 can't assess)");
+    println!("  pause     pause the running perimeter");
+    println!("  resume    resume a paused perimeter");
+    println!("  restart   restart the perimeter");
+    println!();
+    println!("  Invoked via the headless daemon today: `opentrapp-daemon vault <verb>`.");
+    println!("  The bare `opentrapp` command arrives with the GUI demotion (ADR-0022 / Phase 3).");
+}
+
 fn print_help() {
     println!("opentrapp-daemon (Phase B / ADR-0019)");
+    println!("  vault <verb> friendly CLI: up|down|status|verify|pause|resume|restart");
+    println!("               (see `opentrapp-daemon vault --help`)");
     println!("  (no args)    own + supervise the perimeter until SIGTERM/SIGINT");
     println!("  pause|resume|restart|shutdown");
     println!("               queue a control request for the running daemon");
