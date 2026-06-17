@@ -102,6 +102,20 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Readable wrapping: balance headings/short text, pretty-wrap paragraphs.
+     Removes single-word orphans and mid-phrase breaks responsively at every
+     width (better than hardcoded <br>, which is only correct at one size). */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
