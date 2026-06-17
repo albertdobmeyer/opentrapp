@@ -1,0 +1,29 @@
+# SCAFFOLD — viewer-server (ADR-0022 de-Tauri loopback web GUI).
+#
+# This crate is intentionally NOT a [workspace].members entry yet — it is in
+# [workspace].exclude in ../../Cargo.toml. It exists as a spike-ready skeleton so
+# the implementing agent sees the exact shape. Activate it (move to members) only
+# after the §0 de-risking spike in docs/specs/2026-06-17-loopback-web-gui-implementation.md
+# passes its threat-model review. Until then `cargo` ignores this directory.
+#
+# INVARIANT (CI gate ci.yml:82 extends here): this crate must stay gtk/webkit/wry-free.
+# `cargo tree -p viewer-server | grep -iE 'tauri|wry|webkit'` must be EMPTY.
+[package]
+name = "viewer-server"
+version = "0.0.0"          # 0.0.0 = scaffold; bump when activated
+edition = "2021"
+publish = false
+
+[dependencies]
+# Pure-Rust async HTTP/WS — verified zero gtk/webkit (ADR-0022 §4).
+axum = { version = "0.8", features = ["ws"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "set-header", "limit", "timeout"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "signal"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rand = "0.9"               # ≥256-bit token (§2.3)
+# The orchestration engine — the server calls THIS, never duplicates logic (CLAUDE.md §5).
+opentrapp-core = { path = "../core" }
+# Optional single-binary asset embedding (§5); or serve app/dist/ from a path.
+# rust-embed = "8"
