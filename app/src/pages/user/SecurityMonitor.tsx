@@ -39,7 +39,7 @@ const LAYERS: Layer[] = [
     icon: ScanSearch,
     title: "Every skill is scanned",
     body:
-      "Before any skill from a third-party registry is installed, it's downloaded into a separate container and checked against 87 known-bad patterns. Suspect skills are rebuilt from scratch — the original file is discarded.",
+      "Before any skill from an outside source is installed, it's downloaded into an isolated sandbox and checked against 87 known-bad patterns. If a skill looks suspect, it's rebuilt from scratch and the original file is discarded.",
   },
   {
     icon: KeyRound,
@@ -91,8 +91,8 @@ export default function SecurityMonitor() {
         </p>
         <p className="mt-2 text-sm text-neutral-500">
           A small on-device check also watches for unusual activity in the
-          background. The badge above shows what it&apos;s doing — it only works
-          harder when something genuinely needs a closer look.
+          background. The badge above shows what it&apos;s doing. It works harder
+          only when something genuinely needs a closer look.
         </p>
       </header>
 
@@ -170,7 +170,7 @@ export default function SecurityMonitor() {
         </h2>
         <p className="mb-3 text-sm text-neutral-400">
           The full architecture, threat model, and what each layer actually
-          catches are published openly — you can audit, fork, and verify every
+          catches are published openly. You can audit, fork, and verify every
           line.
         </p>
         <div className="flex flex-wrap gap-2">

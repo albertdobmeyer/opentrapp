@@ -165,9 +165,9 @@ function KeysSection() {
       <SectionHeader icon={Key} title="Your keys" />
 
       <p className="mb-5 text-sm text-neutral-400">
-        Both keys are stored only on this computer, in a file readable only by
-        your user account. Your assistant never sees the literal values — the
-        secure gateway substitutes them on every request.
+        Both keys are stored only on this computer, in a file that only your
+        user account can read. Your assistant never sees the actual values. A
+        secure gateway adds them to each request.
       </p>
 
       <KeyRow

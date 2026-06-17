@@ -22,20 +22,20 @@ const SECTIONS: Section[] = [
     icon: KeyRound,
     title: "Where are my keys stored?",
     body:
-      "Your Anthropic API key and Telegram bot token live in a file on this computer, only ever readable by your user account. The assistant never sees the literal key — the secure gateway substitutes it on every request, so a compromised assistant can't leak it.",
+      "Your Anthropic API key and Telegram bot token are stored in a file on this computer that only your user account can read. The assistant never sees the actual key. A secure gateway adds it to each request, so even a compromised assistant can't leak it.",
   },
   {
     icon: Wrench,
-    title: "Something is broken — how do I recover?",
+    title: "Something broke. How do I fix it?",
     body:
-      "Open Preferences and try \"Restart the secure environment\". If that doesn't help, re-run the setup wizard — it's safe to run again and won't lose your data. Your conversation history stays on this computer.",
+      "Open Preferences and try \"Restart the secure environment\". If that doesn't help, re-run the setup wizard. It's safe to run again and won't lose your data, and your conversation history stays on this computer.",
     cta: { label: "Open Preferences", href: "/preferences" },
   },
   {
     icon: ShieldCheck,
     title: "How do I know it's safe?",
     body:
-      "The Security page shows the five protective layers around your assistant — what's running, what's been blocked, what's been scanned. Each layer is independent: even if one fails, the others still hold.",
+      "The Security page shows the five protective layers around your assistant: what's running, what's been blocked, and what's been scanned. Each layer works on its own, so even if one fails, the others still hold.",
     cta: { label: "Open Security", href: "/security" },
   },
 ];
@@ -66,9 +66,9 @@ export default function Help() {
         </div>
         <h1 className="text-2xl font-semibold text-neutral-100">Help & support</h1>
         <p className="mt-2 text-sm text-neutral-400">
-          The quickest path to a fix is usually your assistant itself — message
-          it on Telegram and describe what&apos;s happening. The answers below cover
-          the most common stuck-points.
+          The quickest way to fix something is usually to ask your assistant.
+          Message it on Telegram and describe what&apos;s happening. The answers
+          below cover the most common problems.
         </p>
       </header>
 
