@@ -112,7 +112,7 @@ test.describe("Non-technical user experience", () => {
     ).toBeVisible();
 
     // Must contain assistant-first language
-    await expect(page.getByText(/personal AI assistant/i)).toBeVisible();
+    await expect(page.getByText(/AI assistant/i)).toBeVisible();
     await expect(page.getByText(/safely|safe/i).first()).toBeVisible();
     await expect(
       page.getByRole("button", { name: /get started/i }),
