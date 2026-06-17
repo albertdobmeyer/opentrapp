@@ -14,7 +14,7 @@ the [architecture decision records](adr/).
 
 The roadmap is ordered by *containment confidence*, not by feature count. A feature
 does not ship until the security boundary it depends on has been verified at the end
-that consumes it — see the verification discipline in
+that consumes it; see the verification discipline in
 [`CLAUDE.md` §11](../CLAUDE.md). "Builds" and "runs" are necessary, never sufficient.
 
 ## Status legend
@@ -23,7 +23,7 @@ that consumes it — see the verification discipline in
 
 ---
 
-## Now — the recommendability gate (v0.7.x → first stable)
+## Now: the recommendability gate (v0.7.x → first stable)
 
 These are the load-bearing items. The project does not describe itself as
 "recommendable to non-expert users" until **Tier 1** is green on capable hardware.
@@ -35,7 +35,7 @@ These are the load-bearing items. The project does not describe itself as
 | Idle auto-pause + wake verified **in production** | ⬜ 🖥️ | ADR-0018. Proven on the dev box; needs a production-representative run. |
 | Code signing (Windows + macOS) | 🔶 👤 | SignPath Foundation application submitted; Apple Developer enrollment pending. CI is a ready-to-activate template. |
 
-## Next — hardening (makes the claim robust)
+## Next: hardening (makes the claim robust)
 
 | Item | Status | Notes |
 |------|--------|-------|
@@ -43,7 +43,7 @@ These are the load-bearing items. The project does not describe itself as
 | Adversarial / red-team pass | 🔶 🖥️👤 | `tests/red-team-breakout.sh` playbook authored; needs an execution pass on capable hardware. |
 | Third-party security review | ⬜ 👤 | An independent reviewer of the perimeter design and implementation. |
 
-## Later — trust polish
+## Later: trust polish
 
 | Item | Status | Notes |
 |------|--------|-------|
@@ -72,7 +72,8 @@ Supply-chain and open-source-hygiene work that runs alongside the security gate:
 - **Processing untrusted content on the host.** All skill downloads, scanning, and
   feed processing happen inside containers, never on the host filesystem.
 - **The agent-social workload** (`vault-social`) is **opt-in / on-demand**: a live AT Protocol
-  adapter shipped ([ADR-0017](adr/0017-unpark-social-live-adapter.md)), but its full build-out as a
+  adapter shipped ([ADR-0017](adr/0017-unpark-social-live-adapter.md)), though it is not yet
+  invoked by a default product command (canned data remains the default). Its full build-out as a
   generalized agent-social shield is the **deferred** third concern (MISSION Thread C /
   [ADR-0024](adr/0024-product-structure-three-concerns.md)); it is not on the critical path.
 
@@ -80,5 +81,5 @@ Supply-chain and open-source-hygiene work that runs alongside the security gate:
 
 Open a GitHub issue describing the use case or gap. Architectural changes are
 proposed as ADRs (see [`docs/adr/`](adr/)). Contributions that broaden agent
-compatibility or strengthen the perimeter are explicitly welcomed — see
+compatibility or strengthen the perimeter are explicitly welcomed; see
 [`CONTRIBUTING.md`](../CONTRIBUTING.md).

@@ -67,8 +67,8 @@ echo "── Group 1: counted artefacts (offline) ──"
 patterns=$(grep -cE "^\s*'(CRITICAL|HIGH|MEDIUM)\|" workloads/skills/tools/lib/patterns.sh 2>/dev/null || echo "0")
 row "1. malicious-skill patterns" "87" "$patterns"
 
-# verify.sh uses two patterns: `check N "..." \\` (checks 1–13) and an inline
-# printf "  [%2d]" with a literal check number (checks 14–24). Count unique
+# verify.sh uses two patterns: `check N "..." \\` (checks 1 to 13) and an inline
+# printf "  [%2d]" with a literal check number (checks 14 to 24). Count unique
 # check numbers across both patterns.
 verify_checks=$(
   {
@@ -87,7 +87,7 @@ banned_terms=$(awk '/const BANNED_TERMS = \[/,/^\];/' app/e2e/user-facing.spec.t
 row "4. reserved terms" "28" "$banned_terms"
 
 services=$(python3 -c "import yaml; print(len(yaml.safe_load(open('compose.yml'))['services']))" 2>/dev/null || echo "0")
-row "5. compose services" "4" "$services"
+row "5. compose services" "5" "$services"
 
 tiers=$(grep -cE "^TIER " docs/trifecta.md 2>/dev/null || echo "0")
 row "6. trust tiers" "3" "$tiers"
@@ -95,8 +95,8 @@ row "6. trust tiers" "3" "$tiers"
 shells=$(grep -E "^\| (Hard|Split|Soft) Shell" docs/trifecta.md 2>/dev/null | wc -l)
 row "7. shell levels" "3" "$shells"
 
-attackers=$(grep -cE "^## T[0-9] —" docs/threat-model.md 2>/dev/null || echo "0")
-row "8. attacker categories (T1–T6)" "6" "$attackers"
+attackers=$(grep -cE "^## T[1-6]:" docs/threat-model.md 2>/dev/null || echo "0")
+row "8. attacker categories (T1 to T6)" "6" "$attackers"
 
 # ── Group 2: test suites (offline; longer-running) ──────────────────────────
 if (( quick == 1 )); then
@@ -152,7 +152,7 @@ else
   row "13. orchestrator-check warnings" "0" "$oc_warnings"
   oc_passed=$(echo "$oc_line" | grep -oE '[0-9]+ passed' | grep -oE '[0-9]+' | head -1)
   oc_passed=${oc_passed:-0}
-  row "3. orchestrator checks" "42" "$oc_passed"
+  row "3. orchestrator checks" "120" "$oc_passed"
 fi
 
 # ── Group 3: external claims (cited only) ───────────────────────────────────

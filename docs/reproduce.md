@@ -2,13 +2,13 @@
 
 **Document status:** Active
 **Created:** 2026-05-04
-**Companion script:** [`docs/reproduce.sh`](reproduce.sh) — runs every command in this document end-to-end.
+**Companion script:** [`docs/reproduce.sh`](reproduce.sh) runs the key verification commands in this document.
 
-This document lists every numerical claim made in the project's user-facing surfaces — [`README.md`](../README.md), [`docs/whitepaper.md`](whitepaper.md), [`CLAUDE.md`](../CLAUDE.md) — and gives the exact command sequence to verify it independently. The goal is that a reader running [`docs/reproduce.sh`](reproduce.sh) from a fresh `git clone --recurse-submodules` arrives at the same numbers within roughly ten minutes.
+This document lists every numerical claim made in the project's user-facing surfaces (the [`README.md`](../README.md), [`docs/whitepaper.md`](whitepaper.md), and [`CLAUDE.md`](../CLAUDE.md)) and gives the exact command sequence to verify it independently. The goal is that a reader running [`docs/reproduce.sh`](reproduce.sh) from a fresh `git clone --recurse-submodules` arrives at the same numbers within roughly ten minutes.
 
 Each claim is presented as a row with: the claim, the command that verifies it, the expected output (or a tight range), an upper-bound runtime, and the source file the claim appears in. Rows whose verification depends on running the perimeter (which requires Podman or Docker) are flagged accordingly; rows whose verification is offline-only run in any environment.
 
-The document is structured in three groups: counted artefacts (1–8), test-suite counts (9–13), and external claims (14–16) where the claim is supported by an external study and we link to that study rather than re-deriving it.
+The document is structured in three groups: counted artefacts (1 to 8), test-suite counts (9 to 13), and external claims (14 to 16) where the claim is supported by an external study and we link to that study rather than re-deriving it.
 
 ---
 
@@ -17,12 +17,12 @@ The document is structured in three groups: counted artefacts (1–8), test-suit
 - **Working directory:** every command assumes a fresh clone at `opentrapp/` and starts from that directory unless stated otherwise.
 - **Recursive clone required:** several rows cite files inside submodules; clone with `--recurse-submodules` (see [`CONTRIBUTING.md`](../CONTRIBUTING.md) "Cloning the repository").
 - **Runtime ceilings:** "≤ N s" is the upper bound on the maintainer's dev machine (Lenovo ideapad 320, AMD A12-9720P, 7.2 GB RAM). Faster machines arrive sooner.
-- **Test-count drift:** test counts grow as features are added. The numbers below are the released-version counts at v0.3.0; the rows describe the *measurement command* and a *floor* — running the suite at any tagged version should produce a count at or above the floor. The exact tag-time count is in [`docs/handoff.md`](handoff.md).
+- **Test-count drift:** test counts grow as features are added, so the rows below do not pin an exact total. Each row describes the *measurement command* and a *floor*: running the suite at any tagged version should produce a count at or above the floor. The exact tag-time count is in [`docs/handoff.md`](handoff.md).
 - **`git lfs` / signed assets:** none of the rows below depend on LFS objects or signed assets being downloaded.
 
 ---
 
-## Group 1 — counted artefacts (offline)
+## Group 1: counted artefacts (offline)
 
 ### 1. Eighty-seven malicious-skill patterns in `vault-skills`
 
@@ -53,7 +53,7 @@ grep -oE "^\s*'(CRITICAL|HIGH|MEDIUM)\|[a-z_]+" workloads/skills/tools/lib/patte
 | Expected output | `24` (combined; see `docs/reproduce.sh` for the exact recipe) |
 | Runtime | < 1 s |
 
-Checks 1–23 are invoked through the `check N "<title>"` helper; check 24 (configuration-integrity hash) is implemented inline because it needs the hash-comparison logic in-context. The 24 checks fall into three groups: 14 universal-hardening checks, 4 shell-specific checks, and 6 per-tool security checks. The grouping is documented in [`docs/whitepaper.md`](whitepaper.md) §8.
+Checks 1 to 23 are invoked through the `check N "<title>"` helper; check 24 (configuration-integrity hash) is implemented inline because it needs the hash-comparison logic in-context. The 24 checks fall into three groups: 14 universal-hardening checks, 4 shell-specific checks, and 6 per-tool security checks. The grouping is documented in [`docs/whitepaper.md`](whitepaper.md) §8.
 
 To list the 23 helper-invoked check titles:
 
@@ -61,14 +61,14 @@ To list the 23 helper-invoked check titles:
 grep -E '^check [0-9]+ "' workloads/agent/scripts/verify.sh
 ```
 
-### 3. Forty-two orchestration checks
+### 3. One hundred twenty orchestration checks
 
 | Field | Value |
 |-------|-------|
-| Claim | A 42-check manifest-orchestration suite runs on every commit and reports zero warnings in the released configuration |
+| Claim | A 120-check manifest-orchestration suite runs on every commit and reports zero warnings in the released configuration |
 | Source | [`README.md`](../README.md) "Test suite", [`docs/whitepaper.md`](whitepaper.md) §8, [`CLAUDE.md`](../CLAUDE.md) §7 |
 | Command | `bash tests/orchestrator-check.sh` |
-| Expected output | Last line: `Results: 42 passed, 0 failed, 0 warnings (total: 42 checks)` |
+| Expected output | Last line: `Results: 120 passed, 0 failed, 0 warnings (total: 120 checks)` |
 | Runtime | ≤ 30 s |
 
 The script needs `python3` (with `pyyaml` installed) and `node` available. The `Results:` line is what the README cites; rows above it are the per-check pass/fail listing.
@@ -94,12 +94,12 @@ awk '/const BANNED_TERMS = \[/,/^\];/' app/e2e/user-facing.spec.ts | grep -oE '"
 | Field | Value |
 |-------|-------|
 | Claim | The runtime perimeter is composed of five containers with an L7/L3 policy split |
-| Source | Multiple — [`README.md`](../README.md), [`docs/whitepaper.md`](whitepaper.md), [`docs/trifecta.md`](trifecta.md), [`adr/0009-five-container-perimeter.md`](adr/0009-five-container-perimeter.md) |
+| Source | Multiple: [`README.md`](../README.md), [`docs/whitepaper.md`](whitepaper.md), [`docs/trifecta.md`](trifecta.md), [`adr/0009-five-container-perimeter.md`](adr/0009-five-container-perimeter.md) |
 | Command | `python3 -c "import yaml; print(len(yaml.safe_load(open('compose.yml'))['services']))"` |
 | Expected output | `5` |
 | Runtime | < 1 s |
 
-The five services are `vault-agent`, `vault-skills`, `vault-social`, `vault-proxy` (L7 policy), `vault-egress` (L3 policy + pinned DoT resolver). The social container is opt-in / off by default (a live AT Protocol adapter shipped — ADR-0017; full build-out deferred) but its definition remains in the compose file (see [`docs/whitepaper.md`](whitepaper.md) §3.2). The L7/L3 split between vault-proxy and vault-egress is enforced by `tests/orchestrator-check.sh` §10 (no container holds both API keys and `NET_ADMIN`).
+The five services are `vault-agent`, `vault-skills`, `vault-social`, `vault-proxy` (L7 policy), `vault-egress` (L3 policy + pinned DoT resolver). The social container is opt-in / off by default (a live AT Protocol adapter shipped under ADR-0017; full build-out deferred) but its definition remains in the compose file (see [`docs/whitepaper.md`](whitepaper.md) §3.2). The L7/L3 split between vault-proxy and vault-egress is enforced by `tests/orchestrator-check.sh` §10 (no container holds both API keys and `NET_ADMIN`).
 
 ### 6. Three trust tiers
 
@@ -111,7 +111,7 @@ The five services are `vault-agent`, `vault-skills`, `vault-social`, `vault-prox
 | Expected output | `3` |
 | Runtime | < 1 s |
 
-The tier names appear in the architecture diagram in `docs/trifecta.md` §2 ("TIER 1 — TRUSTED", "TIER 2 — INFRASTRUCTURE", "TIER 3 — CONTAINED").
+The tier names appear in the architecture diagram in `docs/trifecta.md` §2 ("TIER 1: TRUSTED", "TIER 2: INFRASTRUCTURE", "TIER 3: CONTAINED").
 
 ### 7. Three shell levels
 
@@ -127,44 +127,44 @@ The tier names appear in the architecture diagram in `docs/trifecta.md` §2 ("TI
 
 | Field | Value |
 |-------|-------|
-| Claim | The threat model enumerates six attacker categories (T1–T6) |
+| Claim | The threat model enumerates six attacker categories (T1 to T6) |
 | Source | [`docs/threat-model.md`](threat-model.md) |
-| Command | `grep -cE "^## T[0-9] —" docs/threat-model.md` |
+| Command | `grep -cE "^## T[1-6]:" docs/threat-model.md` |
 | Expected output | `6` |
 | Runtime | < 1 s |
 
 ---
 
-## Group 2 — test-suite counts (offline)
+## Group 2: test-suite counts (offline)
 
 ### 9. Rust unit-test count
 
 | Field | Value |
 |-------|-------|
-| Claim | 56 Rust unit tests pass at v0.3.0 (floor: ≥ 56) |
+| Claim | The Rust unit-test suite passes with a floor of ≥ 56 tests (counts grow with later versions) |
 | Source | [`README.md`](../README.md) "Test suite", [`docs/whitepaper.md`](whitepaper.md) §8, [`CLAUDE.md`](../CLAUDE.md) §7 |
 | Command | `cd app/src-tauri && cargo test --lib 2>&1 \| tail -3` |
-| Expected output | A line containing `test result: ok. 56 passed; 0 failed; 0 ignored` (or `≥ 56` for later versions) |
+| Expected output | A line containing `test result: ok. N passed; 0 failed; 0 ignored` with `N ≥ 56` |
 | Runtime | ≤ 4 min on a cold Cargo cache, ≤ 30 s on a warm one |
 
 ### 10. Vitest frontend unit-test count
 
 | Field | Value |
 |-------|-------|
-| Claim | 74 Vitest tests pass at v0.3.0 (floor: ≥ 74) |
+| Claim | The Vitest frontend suite passes with a floor of ≥ 74 tests (the current count is well above this and grows with later versions) |
 | Source | [`README.md`](../README.md) "Test suite", [`CLAUDE.md`](../CLAUDE.md) §7, [`whitepaper.md`](whitepaper.md) §8 |
 | Command | `cd app && npm test -- --run 2>&1 \| tail -3` |
-| Expected output | A line containing `Tests  74 passed (74)` (or `≥ 74` for later versions) |
+| Expected output | A line containing `Tests  N passed (N)` with `N ≥ 74` |
 | Runtime | ≤ 30 s |
 
 ### 11. Playwright end-to-end count
 
 | Field | Value |
 |-------|-------|
-| Claim | 25 end-to-end browser tests pass at v0.3.0 (floor: ≥ 25) |
+| Claim | The Playwright end-to-end suite passes with a floor of ≥ 25 browser tests (counts grow with later versions) |
 | Source | [`README.md`](../README.md) "Test suite", [`docs/whitepaper.md`](whitepaper.md) §8 |
 | Command | `cd app && npx playwright test 2>&1 \| tail -3` |
-| Expected output | A line containing `25 passed` (or `≥ 25` for later versions) |
+| Expected output | A line containing `N passed` with `N ≥ 25` |
 | Runtime | ≤ 90 s; first run downloads ~150 MB of Chromium |
 
 ### 12. TypeScript strict-mode pass
@@ -181,15 +181,15 @@ The tier names appear in the architecture diagram in `docs/trifecta.md` §2 ("TI
 
 | Field | Value |
 |-------|-------|
-| Claim | The 42-check orchestrator suite reports zero warnings |
+| Claim | The 120-check orchestrator suite reports zero warnings |
 | Source | [`README.md`](../README.md), [`docs/whitepaper.md`](whitepaper.md) §8, [`docs/handoff.md`](handoff.md) |
 | Command | `bash tests/orchestrator-check.sh 2>&1 \| grep -E "Results:"` |
-| Expected output | `Results: 42 passed, 0 failed, 0 warnings (total: 42 checks)` |
+| Expected output | `Results: 120 passed, 0 failed, 0 warnings (total: 120 checks)` |
 | Runtime | ≤ 30 s |
 
 ---
 
-## Group 3 — external claims (cited, not re-derived)
+## Group 3: external claims (cited, not re-derived)
 
 These are claims supported by external studies or vendor-disclosed events. We do not re-derive them; we cite the original source.
 
@@ -202,7 +202,7 @@ These are claims supported by external studies or vendor-disclosed events. We do
 | Verification | The study's methodology and per-skill classification dataset are documented in `workloads/agent/docs/research/` (companion repository, agent workload) |
 | Reproduction | The study's methodology can be re-run on the current ClawHub corpus by following `workloads/agent/docs/research/clawhavoc-methodology.md`. We do not re-run it as part of `reproduce.sh`. |
 
-The figure is intentionally a snapshot of the registry as of 2026-Q1. A current re-run would produce a different (likely lower, as ClawHub has since added moderation) percentage; the architectural assumption — *every* incoming skill is potentially hostile — does not depend on the precise rate.
+The figure is intentionally a snapshot of the registry as of 2026-Q1. A current re-run would produce a different (likely lower, as ClawHub has since added moderation) percentage; the architectural assumption (that *every* incoming skill is potentially hostile) does not depend on the precise rate.
 
 ### 15. CVE-2026-25253 (OpenClaw management API RCE)
 
@@ -211,7 +211,7 @@ The figure is intentionally a snapshot of the registry as of 2026-Q1. A current 
 | Claim | A one-click remote-code-execution path through OpenClaw's management API |
 | Source | [`docs/whitepaper.md`](whitepaper.md) §1, [`docs/adr/0001-proxy-side-api-key-injection.md`](adr/0001-proxy-side-api-key-injection.md) |
 | Verification | The CVE record at the National Vulnerability Database (NVD) and the upstream OpenClaw advisory are the authoritative sources. |
-| Reproduction | Not applicable — the vulnerability has been patched upstream; the architectural lesson (do not co-locate credential and runtime) is encoded in the proxy-side credential-injection ADR. |
+| Reproduction | Not applicable; the vulnerability has been patched upstream, and the architectural lesson (do not co-locate credential and runtime) is encoded in the proxy-side credential-injection ADR. |
 
 ### 16. The Moltbook database breach (2026-01)
 
@@ -224,7 +224,7 @@ The figure is intentionally a snapshot of the registry as of 2026-Q1. A current 
 
 ---
 
-## Optional — running the perimeter (online, requires Podman or Docker)
+## Optional: running the perimeter (online, requires Podman or Docker)
 
 The perimeter smoke test is part of `reproduce.sh` only when the `RUN_PERIMETER=1` environment variable is set, because it requires container tooling that is not always available on a documentation-review machine.
 
@@ -232,7 +232,7 @@ The perimeter smoke test is part of `reproduce.sh` only when the `RUN_PERIMETER=
 # Bring the perimeter up
 podman compose up -d
 
-# All four services should be in "running" state
+# All five services should be in "running" state
 podman compose ps
 
 # Full per-container 24-point verification
@@ -252,13 +252,13 @@ The list above does *not* cover:
 
 - **Build reproducibility** in the strict-cryptographic sense (same source → same artefact bytes). That is the SLSA work tracked in [`roadmap-post-launch.md`](roadmap-post-launch.md) §4 second half (cosign signing + provenance attestation in CI). When that lands, this document will gain a section pointing readers at `cosign verify` and the SLSA `intoto.jsonl` evidence.
 - **Performance claims** about the runtime (memory, latency, CPU). The whitepaper makes no specific performance claim; if it later does, those become reproducibility rows here.
-- **Subjective claims** like "polished", "academic-tone", "delightful" — these are evaluated by a human reviewer using the rubric in [`docs/specs/2026-04-20-ux-principles-rubric.md`](specs/2026-04-20-ux-principles-rubric.md), not by a deterministic command. The Pass-8 audit ([`docs/specs/2026-05-02-pass-8-preship-walk.md`](specs/2026-05-02-pass-8-preship-walk.md)) is the corresponding evaluation artefact.
+- **Subjective claims** like "polished", "academic-tone", "delightful": these are evaluated by a human reviewer using the rubric in [`docs/specs/2026-04-20-ux-principles-rubric.md`](specs/2026-04-20-ux-principles-rubric.md), not by a deterministic command. The Pass-8 audit ([`docs/specs/2026-05-02-pass-8-preship-walk.md`](specs/2026-05-02-pass-8-preship-walk.md)) is the corresponding evaluation artefact.
 
 ---
 
 ## Cross-references
 
-- [`README.md`](../README.md) "Test suite" — points readers at this document for verification.
-- [`docs/whitepaper.md`](whitepaper.md) §8 — the empirical-evaluation section that this document operationalises.
-- [`docs/handoff.md`](handoff.md) — the working-state snapshot that names the v0.3.0 test counts.
-- [`docs/roadmap-post-launch.md`](roadmap-post-launch.md) §4 — the planned SLSA / SBOM / cosign work that will extend this document.
+- [`README.md`](../README.md) "Test suite": points readers at this document for verification.
+- [`docs/whitepaper.md`](whitepaper.md) §8: the empirical-evaluation section that this document operationalises.
+- [`docs/handoff.md`](handoff.md): the working-state snapshot that names the current tag-time test counts.
+- [`docs/roadmap-post-launch.md`](roadmap-post-launch.md) §4: the planned SLSA / SBOM / cosign work that will extend this document.
