@@ -111,7 +111,7 @@ const PATTERNS: Pattern[] = [
     severity: "transient",
     title: "Safety check didn't finish",
     userMessage: "One of the safety checks didn't finish.",
-    suggestedAction: "Try again — it usually works the second time.",
+    suggestedAction: "Try again. It usually works the second time.",
     retryable: true,
   },
   {
@@ -120,7 +120,7 @@ const PATTERNS: Pattern[] = [
     severity: "transient",
     title: "A setup step didn't finish",
     userMessage: "That setup step didn't finish successfully.",
-    suggestedAction: "Try again — it usually works the second time.",
+    suggestedAction: "Try again. It usually works the second time.",
     retryable: true,
   },
   // Existing patterns — preserve category/retryable for back-compat
@@ -130,7 +130,7 @@ const PATTERNS: Pattern[] = [
     severity: "transient",
     title: "That took too long",
     userMessage: "That took too long to finish.",
-    suggestedAction: "Let's try again — it usually works the second time.",
+    suggestedAction: "Let's try again. It usually works the second time.",
     retryable: true,
   },
   {
@@ -222,7 +222,7 @@ const UNKNOWN_FALLBACK: Omit<Pattern, "test"> = {
   severity: "unknown",
   title: "Something went wrong",
   userMessage: "Something didn't work as expected.",
-  suggestedAction: "Let's try again — if it keeps happening, get help.",
+  suggestedAction: "Let's try again. If it keeps happening, get help.",
   retryable: false,
 };
 
@@ -238,7 +238,7 @@ const CONTEXT_FALLBACKS: Record<ErrorContext, Pick<Pattern, "title" | "userMessa
   check: {
     title: "Computer check didn't work",
     userMessage: "Checking your computer didn't work as expected.",
-    suggestedAction: "Let's try again — if it keeps happening, get help.",
+    suggestedAction: "Let's try again. If it keeps happening, get help.",
   },
   download: {
     title: "Download didn't finish",
@@ -248,12 +248,12 @@ const CONTEXT_FALLBACKS: Record<ErrorContext, Pick<Pattern, "title" | "userMessa
   build: {
     title: "Building didn't finish",
     userMessage: "Building your assistant didn't work as expected.",
-    suggestedAction: "Let's try again — if it keeps happening, get help.",
+    suggestedAction: "Let's try again. If it keeps happening, get help.",
   },
   safety: {
     title: "Safety checks didn't finish",
     userMessage: "Running the safety checks didn't work as expected.",
-    suggestedAction: "Let's try again — if it keeps happening, get help.",
+    suggestedAction: "Let's try again. If it keeps happening, get help.",
   },
 };
 

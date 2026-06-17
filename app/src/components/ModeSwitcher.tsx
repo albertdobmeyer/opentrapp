@@ -106,7 +106,7 @@ export default function ModeSwitcher() {
             </kbd>
             .
           </li>
-          <li>This mode is hidden by default — you probably don’t need it.</li>
+          <li>This mode is hidden by default. You probably don’t need it.</li>
         </ul>
         <div className="flex items-center justify-end gap-2">
           <button

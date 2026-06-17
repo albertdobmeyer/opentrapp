@@ -424,7 +424,7 @@ function AnthropicStep({
         {phase === "valid" && <Check size={16} className="text-success-400" />}
       </div>
       <p className="mb-4 text-sm text-neutral-400">
-        Your assistant&rsquo;s brain — also how you&rsquo;ll pay for its thoughts (~$5–20/month for typical use).
+        Powers your assistant. Usage costs about $5 to $20 a month for most people.
       </p>
       <div className="relative mb-1">
         <input type={show ? "text" : "password"} value={value}
