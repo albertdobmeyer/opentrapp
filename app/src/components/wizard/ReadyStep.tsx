@@ -73,7 +73,7 @@ export default function ReadyStep({ onGoToDashboard }: Props) {
       </h1>
       <p className="animate-slide-up mb-10 max-w-md text-base text-neutral-400">
         {settings.telegramBotUsername
-          ? <>Say hi on Telegram — search for <span className="text-neutral-200">@{settings.telegramBotUsername}</span> if it doesn’t open the right chat.</>
+          ? <>Say hi on Telegram. If it doesn’t open the right chat, search for <span className="text-neutral-200">@{settings.telegramBotUsername}</span>.</>
           : "Say hi on Telegram to get started."}
       </p>
 

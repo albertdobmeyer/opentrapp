@@ -37,7 +37,7 @@ const ANTHROPIC_STEPS: HowToStep[] = [
   },
   {
     heading: "Copy the key immediately",
-    body: "Anthropic shows the full key once — the string starts with sk-ant-. Copy it now; you can't retrieve it later. If you lose it, you can always create another.",
+    body: "Anthropic shows your key just once, and it starts with sk-ant-. Copy it now and keep it safe. If you lose it, create a new one.",
   },
   {
     heading: "Paste it back in OpenTrApp",
@@ -149,7 +149,7 @@ export default function ConnectStep({ onContinue, onBack }: Props) {
         kind="anthropic"
         icon={<Key size={18} className="text-primary-400" />}
         label="Anthropic API key"
-        hint="The AI’s brain. Also how you’ll pay for its thoughts (about $5–20/month for typical use)."
+        hint="Powers your assistant. Usage costs about $5 to $20 a month for most people."
         placeholder="sk-ant-api03-..."
         inputId="anthropic-key"
         inputRef={anthropicInputRef}

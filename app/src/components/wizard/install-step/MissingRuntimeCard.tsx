@@ -61,7 +61,7 @@ export function MissingRuntimeCard({ onBack, onRetry }: MissingRuntimeCardProps)
         </div>
 
         <p className="mb-6 text-xs text-neutral-500">
-          After installing, click “Check again” — we’ll pick it up
+          After installing, click “Check again” and we’ll pick it up
           automatically.
         </p>
 
