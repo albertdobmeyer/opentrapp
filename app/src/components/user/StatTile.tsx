@@ -37,7 +37,7 @@ export default function StatTile({
       type="button"
       onClick={() => { navigate(href); }}
       className={`card-interactive text-left ${accent}`}
-      aria-label={`${title} — ${value}. Click for details.`}
+      aria-label={`${title}: ${value}. Click for details.`}
     >
       <div className="mb-3 flex items-center gap-2">
         <Icon size={16} className={iconTint} />

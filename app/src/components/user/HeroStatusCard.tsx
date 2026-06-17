@@ -60,7 +60,7 @@ const COPY: Record<HeroState, Copy> = {
   },
   starting: {
     title: "Your assistant is starting…",
-    subline: "Hang tight — this usually takes a few seconds.",
+    subline: "This usually takes a few seconds.",
     ringTint: "border-warning-500/40 border-warning-500/60",
     dotTint: "bg-warning-500",
   },
@@ -203,7 +203,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
       action: retryBootstrap,
       pendingTitle: "Restarting setup…",
       pendingMessage: "Live progress will appear on this card.",
-      successTitle: "Setup running — watch the progress above",
+      successTitle: "Setup is running. Watch the progress above",
       successMessage: undefined,
       errorFallbackTitle: "Couldn't restart setup",
     });
@@ -277,7 +277,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
         {(state === "installing" || state === "bootstrapping") &&
           !bootstrapProgress.label && (
             <span className="text-xs text-neutral-500">
-              Working on it — no action needed.
+              Working on it. No action needed.
             </span>
           )}
 
@@ -386,7 +386,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
 
         {(state === "starting" || state === "recovering") && (
           <span className="text-xs text-neutral-500">
-            Working on it — no action needed.
+            Working on it. No action needed.
           </span>
         )}
 

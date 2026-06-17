@@ -37,7 +37,7 @@ const COPY: Record<SentinelRung, RungCopy> = {
   },
   deep_analysis: {
     label: "Deep analysis",
-    hint: "Looking very carefully at a tricky case you asked about — this may be slow.",
+    hint: "Looking carefully at a tricky case you asked about. This may be slow.",
     icon: Search,
     tone: "border-amber-500/30 bg-amber-500/10 text-amber-300",
   },
