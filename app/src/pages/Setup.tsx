@@ -47,7 +47,7 @@ export default function Setup() {
 
   async function finish() {
     await complete();
-    navigate("/");
+    void navigate("/");
   }
 
   return (
@@ -66,7 +66,7 @@ export default function Setup() {
           <WelcomeStep
             onNext={() => advance("connect")}
             canSkipToDashboard={settings.wizardCompleted}
-            onSkipToDashboard={() => { navigate("/"); }}
+            onSkipToDashboard={() => { void navigate("/"); }}
           />
         )}
 

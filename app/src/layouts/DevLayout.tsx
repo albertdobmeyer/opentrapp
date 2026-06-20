@@ -65,7 +65,7 @@ export default function DevLayout() {
 
   async function exitDevMode() {
     await setMode("user");
-    navigate("/", { replace: true });
+    void navigate("/", { replace: true });
   }
 
   return (

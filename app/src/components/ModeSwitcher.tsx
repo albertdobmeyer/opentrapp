@@ -32,12 +32,12 @@ export default function ModeSwitcher() {
       void toggleMode().then((next) => {
         if (next === "developer") {
           setLastEnteredFrom(location.pathname);
-          navigate("/dev", { replace: false });
+          void navigate("/dev", { replace: false });
           if (enteringDeveloper && !settings.hasSeenAdvancedModeIntro) {
             setIntroOpen(true);
           }
         } else {
-          navigate("/", { replace: false });
+          void navigate("/", { replace: false });
         }
       });
     }
@@ -61,7 +61,7 @@ export default function ModeSwitcher() {
     await markAdvancedModeIntroSeen();
     setIntroOpen(false);
     await toggleMode();
-    navigate(lastEnteredFrom ?? "/", { replace: true });
+    void navigate(lastEnteredFrom ?? "/", { replace: true });
   }
 
   if (!introOpen) return null;

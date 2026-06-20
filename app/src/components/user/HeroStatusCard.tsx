@@ -320,7 +320,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
                 )
               )}
               {!recovery.secondaryLabel && (
-                <button type="button" onClick={() => { navigate("/help"); }} className="btn btn-lg btn-ghost">
+                <button type="button" onClick={() => { void navigate("/help"); }} className="btn btn-lg btn-ghost">
                   Get help
                 </button>
               )}
@@ -402,7 +402,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
             </button>
             <button
               type="button"
-              onClick={() => { navigate("/help"); }}
+              onClick={() => { void navigate("/help"); }}
               className="btn btn-lg btn-ghost"
             >
               Get help
@@ -413,7 +413,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
         {state === "error_key" && (
           <button
             type="button"
-            onClick={() => { navigate("/preferences"); }}
+            onClick={() => { void navigate("/preferences"); }}
             className="btn btn-lg btn-primary"
           >
             <RotateCcw size={18} />
@@ -424,7 +424,7 @@ export default function HeroStatusCard({ state, loading, onLaunch, bootstrapFail
         {state === "not_setup" && (
           <button
             type="button"
-            onClick={() => { navigate("/setup"); }}
+            onClick={() => { void navigate("/setup"); }}
             className="btn btn-lg btn-primary"
           >
             Run setup
