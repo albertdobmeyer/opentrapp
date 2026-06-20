@@ -7,6 +7,11 @@ skill defense (the Vault is the full five-container perimeter; this is the one-l
 The scan is **fully offline**: no model and no network. It runs the same engine OpenTrApp runs inside
 its perimeter, so there is no separate fork to trust.
 
+The same action is also published as the standalone repository
+[`opentrapp/skill-firewall`](https://github.com/opentrapp/skill-firewall), a one-way generated
+projection of this engine, so you can reference it with the shorter `uses: opentrapp/skill-firewall@v1`.
+Both run identical code; edit and file issues here in the source repo.
+
 ## What it checks
 
 - An **87-pattern blocklist** mapped to MITRE ATT&CK, including **16 prompt-injection** patterns.
