@@ -89,8 +89,14 @@ app/src-tauri/resources/perimeter/
 /app/coverage-e2e/
 /app/coverage-merged/
 
-# Portfolio article + embedded assets (deployed to albertdobmeyer.dev, not the repo)
-article/
+# Portfolio article + embedded assets (deployed to albertdobmeyer.dev, not the repo).
+# The prose and logo binaries stay out; the three brand diagram SVGs are tracked.
+article/*
+!article/assets/
+article/assets/*
+!article/assets/cdr-rebuild.svg
+!article/assets/evolution-timeline.svg
+!article/assets/perimeter-flow.svg
 
 # GitHub Pages teaser (deployed to opentrapp.github.io, not this repo)
 teaser/

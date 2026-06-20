@@ -1,0 +1,99 @@
+<svg viewBox="0 0 940 420" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" role="img" aria-label="A request flows from the caged agent through the key-injecting proxy and the network filter to the allowlisted internet. The proxy holds the keys but has no internet route; the egress filter has the internet route but holds no keys.">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#020617"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="agentG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2a12"/><stop offset="1" stop-color="#241a0c"/></linearGradient>
+    <linearGradient id="proxyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f2a3a"/><stop offset="1" stop-color="#0a1c28"/></linearGradient>
+    <linearGradient id="egressG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#102a18" /><stop offset="1" stop-color="#0a1c10"/></linearGradient>
+    <linearGradient id="netG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1e293b"/><stop offset="1" stop-color="#0f172a"/></linearGradient>
+    <radialGradient id="req" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#7dd3fc"/><stop offset="0.5" stop-color="#0ea5e9"/><stop offset="1" stop-color="#0369a1" stop-opacity="0"/></radialGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <style>
+      text{font-family:'Segoe UI',Inter,system-ui,sans-serif;fill:#cbd5e1}
+      .h{font-weight:700;font-size:15px}
+      .s{font-size:11px;fill:#94a3b8}
+      .tag{font-size:10.5px;font-weight:600}
+      .keyflash{animation:flash 4s ease-in-out infinite}
+      @keyframes flash{0%,38%{opacity:.25}44%,52%{opacity:1}60%,100%{opacity:.25}}
+      .pulse{animation:pulse 4s ease-in-out infinite}
+      @keyframes pulse{0%,100%{opacity:.15}50%{opacity:.4}}
+      .blocked{stroke-dasharray:4 4;animation:dash 1.4s linear infinite}
+      @keyframes dash{to{stroke-dashoffset:-16}}
+    </style>
+  </defs>
+
+  <rect width="940" height="420" fill="url(#bg)"/>
+  <text x="36" y="46" class="h" style="font-size:19px">The OpenTrApp perimeter: one request, two guards that don't trust each other</text>
+  <text x="36" y="70" class="s">The container with the keys can't reach the internet. The container that reaches the internet has no keys.</text>
+
+  <!-- connectors -->
+  <g stroke="#1e293b" stroke-width="2">
+    <line x1="210" y1="232" x2="250" y2="232"/>
+    <line x1="450" y1="232" x2="490" y2="232"/>
+    <line x1="690" y1="232" x2="730" y2="232"/>
+  </g>
+
+  <!-- vault-agent -->
+  <g>
+    <rect x="40" y="150" width="170" height="164" rx="12" fill="url(#agentG)" stroke="#b8860b" stroke-width="1.5"/>
+    <rect x="40" y="150" width="170" height="34" rx="12" fill="#b8860b" opacity="0.18"/>
+    <text x="125" y="172" text-anchor="middle" class="h" fill="#f0c674">vault-agent</text>
+    <text x="125" y="206" text-anchor="middle" class="s">the caged agent</text>
+    <!-- bars motif -->
+    <g stroke="#f0c674" stroke-width="2" opacity="0.5"><line x1="95" y1="224" x2="95" y2="294"/><line x1="113" y1="224" x2="113" y2="294"/><line x1="131" y1="224" x2="131" y2="294"/><line x1="149" y1="224" x2="149" y2="294"/></g>
+    <text x="125" y="308" text-anchor="middle" class="tag" fill="#94a3b8">no host · no route</text>
+  </g>
+
+  <!-- vault-proxy -->
+  <g>
+    <rect x="250" y="150" width="200" height="164" rx="12" fill="url(#proxyG)" stroke="#0ea5e9" stroke-width="1.5"/>
+    <rect x="250" y="150" width="200" height="34" rx="12" fill="#0ea5e9" opacity="0.2"/>
+    <text x="350" y="172" text-anchor="middle" class="h" fill="#7dd3fc">vault-proxy · L7</text>
+    <text x="350" y="200" text-anchor="middle" class="s">allowlist + inject key</text>
+    <!-- key -->
+    <g class="keyflash" fill="#facc15" filter="url(#glow)" transform="translate(330,222)">
+      <circle cx="6" cy="8" r="7" fill="none" stroke="#facc15" stroke-width="3"/>
+      <rect x="11" y="6.5" width="22" height="3.2"/><rect x="27" y="6.5" width="3.2" height="8"/><rect x="22" y="6.5" width="3.2" height="6"/>
+    </g>
+    <text x="350" y="258" text-anchor="middle" class="tag" fill="#facc15">HOLDS KEYS</text>
+    <text x="350" y="298" text-anchor="middle" class="tag" fill="#f85149">✕ no internet route</text>
+  </g>
+
+  <!-- vault-egress -->
+  <g>
+    <rect x="490" y="150" width="200" height="164" rx="12" fill="url(#egressG)" stroke="#009966" stroke-width="1.5"/>
+    <rect x="490" y="150" width="200" height="34" rx="12" fill="#009966" opacity="0.2"/>
+    <text x="590" y="172" text-anchor="middle" class="h" fill="#10b981">vault-egress · L3</text>
+    <text x="590" y="200" text-anchor="middle" class="s">nftables · drop private</text>
+    <g transform="translate(566,218)" stroke="#10b981" stroke-width="2" fill="none" opacity="0.7"><path d="M0 12 H48"/><path d="M0 20 H48"/><path d="M12 6 V26"/><path d="M24 4 V28"/><path d="M36 6 V26"/></g>
+    <text x="590" y="258" text-anchor="middle" class="tag" fill="#10b981">HAS INTERNET</text>
+    <text x="590" y="298" text-anchor="middle" class="tag" fill="#f85149">✕ holds no keys</text>
+  </g>
+
+  <!-- internet / allowlisted api -->
+  <g>
+    <rect x="730" y="150" width="170" height="164" rx="12" fill="url(#netG)" stroke="#475569" stroke-width="1.5"/>
+    <path d="M775 232 a22 22 0 0 1 42 -8 a16 16 0 0 1 6 31 h-46 a16 16 0 0 1 -2 -23z" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="815" y="196" text-anchor="middle" class="s">allowlisted</text>
+    <text x="815" y="300" text-anchor="middle" class="tag" fill="#94a3b8">api.anthropic.com ✓</text>
+  </g>
+
+  <!-- a blocked off-allowlist attempt (decorative) -->
+  <g class="blocked" stroke="#f85149" stroke-width="2" opacity="0.8"><line x1="350" y1="150" x2="350" y2="120"/></g>
+  <text x="350" y="112" text-anchor="middle" class="tag" fill="#f85149">off-allowlist → 403</text>
+
+  <!-- the flowing request -->
+  <circle r="8" fill="url(#req)">
+    <animateMotion dur="4s" repeatCount="indefinite" path="M 125 232 H 815" calcMode="spline" keyPoints="0;0.22;0.5;0.78;1" keyTimes="0;0.3;0.5;0.7;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1;0.4 0 0.6 1"/>
+    <animate attributeName="opacity" values="0;1;1;1;1;1;0" keyTimes="0;0.06;0.3;0.5;0.7;0.94;1" dur="4s" repeatCount="indefinite"/>
+  </circle>
+  <!-- the request gains a gold 'key' tint as it leaves the proxy -->
+  <circle r="4.5" fill="#facc15" filter="url(#glow)">
+    <animateMotion dur="4s" repeatCount="indefinite" path="M 350 232 H 815"/>
+    <animate attributeName="opacity" values="0;0;1;1;0" keyTimes="0;0.5;0.52;0.92;1" dur="4s" repeatCount="indefinite"/>
+  </circle>
+
+  <text x="470" y="396" text-anchor="middle" class="s">Compromise one container and you get nothing. To turn the agent into an exfiltration tool you would have to defeat both, in order.</text>
+</svg>
