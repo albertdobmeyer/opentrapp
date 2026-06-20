@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# openagent-skills — the standalone Skill Firewall (CLI-first; ADR-0024 / ADR-0025).
+#
+# Vets an agent skill / plugin BEFORE it reaches an agent, with NO perimeter required:
+#   scan    Tier A — offline 87-pattern + zero-trust scan (no model, no network)
+#   verify  Tier A — zero-trust line-by-line classification (+ optional .trust pin)
+#   cdr     Tier B — Content-Disarm-Reconstruction rebuild (bring-your-own model)
+#
+# Exits non-zero on a finding, so it drops in as an `opencode plugin install` pre-hook
+# (or any pre-install gate). Inside the Vault this same code runs isolated in
+# vault-skills; standalone it runs on the host — it *reads and pattern-matches text,
+# it does not execute the skill*, so the stronger "no untrusted content touches the
+# host" guarantee remains the full perimeter's (the Vault). See docs/adr/0025.
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+  cat <<'EOF'
+openagent-skills — standalone Skill Firewall (vet a skill before an agent loads it)
+
+usage:
+  skill scan   <path> [--strict] [--format=default|summary|json|sarif]
+  skill verify <path> [--strict] [--report] [--json] [--trust]
+  skill cdr    <file> | --download <name>      # Tier B (bring-your-own model)
+
+exit codes:
+  0  clean / passed
+  1  a finding (blocks an install when used as a pre-hook)
+  2  usage error
+
+The scan + verify stages are pure-offline (no model, no network). The cdr rebuild
+calls a configurable model endpoint (config/cdr.conf — Ollama or any OpenAI-compatible
+API); see docs/adr/0003 for the Tier A (offline) vs Tier B (model-backed) split.
+
+opencode pre-hook example (block an install on a finding):
+  skill scan "$PLUGIN_DIR" --strict || { echo "blocked by skill firewall" >&2; exit 1; }
+EOF
+}
+
+case "${1:-help}" in
+  scan)            shift; exec bash "$HERE/tools/skill-scan.sh"   "$@" ;;
+  verify)          shift; exec bash "$HERE/tools/skill-verify.sh" "$@" ;;
+  cdr)             shift; exec bash "$HERE/tools/skill-cdr.sh"    "$@" ;;
+  -h|--help|help)  usage ;;
+  *) echo "skill: unknown command '${1}' (try 'skill --help')" >&2; usage >&2; exit 2 ;;
+esac

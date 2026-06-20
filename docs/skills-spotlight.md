@@ -1,12 +1,12 @@
-# openagent-skills — the supply-chain defence
+# The Skill Firewall: OpenTrApp's supply-chain defense
 
-![The scanner blocks a malicious opencode SKILL.md — credential exfil + an AMOS-style C2 download + prompt injection — before it reaches the agent](assets/demo-skill-caught.gif)
+![The scanner blocks a malicious opencode SKILL.md (credential exfil + an AMOS-style C2 download + prompt injection) before it reaches the agent](assets/demo-skill-caught.gif)
 
 > Audience: someone evaluating OpenTrApp's security claims, or any CLI-agent
 > maintainer (e.g. the opencode team) wondering whether the skill-loading
 > attack surface has a real answer. The demo above is a real run of the scanner
-> on a malicious skill in **opencode's own `SKILL.md` format** — the defence is
-> agent-agnostic, not OpenClaw-specific. For the architecture context, see
+> on a malicious skill in **opencode's own `SKILL.md` format**, so the defense
+> is agent-agnostic, not OpenClaw-specific. For the architecture context, see
 > [`docs/perimeter-explained.md`](perimeter-explained.md). For the full
 > threat model, see [`docs/threat-model.md`](threat-model.md). The
 > implementation lives at [`workloads/skills/`](../workloads/skills/) and runs
@@ -14,14 +14,14 @@
 
 ## The problem nobody else is solving
 
-Autonomous CLI agents load *skills* — markdown files (plus optional helper
+Autonomous CLI agents load *skills*: markdown files (plus optional helper
 scripts) that extend what the agent can do. The skills are downloaded from
 third-party registries at the agent's own request and ingested directly into
 its reasoning context. There is no review step between "found in the registry"
 and "executing as part of the agent's behaviour."
 
-The ClawHavoc study (2026-Q1) of the ClawHub registry — the de-facto skill
-store for OpenClaw — classified **341 of 2,857 published skills as malicious
+The ClawHavoc study (2026-Q1) of the ClawHub registry, the de-facto skill
+store for OpenClaw, classified **341 of 2,857 published skills as malicious
 (11.9 %)**. The attacks observed:
 
 - **Prompt-injection payloads** hidden inside what looked like helper
@@ -34,58 +34,59 @@ store for OpenClaw — classified **341 of 2,857 published skills as malicious
   a sibling `.sh`/`.py`/`.json` file that the agent would invoke when the
   skill was used.
 
-Container hardening (the first defence layer in the perimeter) limits what an
+Container hardening (the first defense layer in the perimeter) limits what an
 already-compromised skill can *do* on the host. It does not prevent the agent
 from following a malicious instruction inside a skill it just loaded. That's
-the gap forge is built to close.
+the gap the Skill Firewall (informally "forge") is built to close.
 
-## What forge does
+## What the Skill Firewall does
 
 `vault-skills` is the third workload container in the
 [five-container perimeter](perimeter-explained.md). It runs the skill scanner
 and the Content Disarm & Reconstruction (CDR) pipeline. The agent in
 `vault-agent` cannot reach it directly; it can only read the **certified
-output** that forge delivers via a one-way shared volume.
+output** that `vault-skills` delivers via a one-way shared volume.
 
-The pipeline runs five defence layers before any skill reaches the agent.
-They are layers, not five fully-independent detectors: layers 1, 2, and the
-post-install re-scan share the same pattern catalogue (layer 2's injection
-patterns are a specialised subset of layer 1's), so they catch overlapping
-things. The genuinely distinct mechanisms are three — a pattern blocklist, a
-default-deny line classifier, and the parse-and-rebuild (CDR) — backed by
-signing and fail-closed quarantine:
+The pipeline runs **three distinct mechanisms across eight internal stages**
+before any skill reaches the agent. The stages are not eight fully-independent
+detectors: the static scan, the injection check, and the post-install re-scan
+share the same pattern catalogue (the injection patterns are a specialised
+subset of the main set), so they catch overlapping things. The genuinely
+distinct mechanisms are three: a pattern blocklist, a default-deny line
+classifier, and the parse-and-rebuild (CDR), backed by signing and fail-closed
+quarantine.
 
-### 1. Static scanner — 87 patterns, MITRE ATT&CK-mapped
+### 1. Static scanner: 87 patterns, MITRE ATT&CK-mapped
 
 Each skill is scanned across `.md`, `.sh`, `.py`, `.js`, `.ts`, `.yaml`,
 `.yml`, and `.json` files for **87 malicious-content patterns in 13
 categories**. Every pattern is mapped to a MITRE ATT&CK technique so the
 findings are reviewable against the standard adversary-behaviour taxonomy
-(not just "looks bad to forge").
+(not just "looks bad to the scanner").
 
 The pattern set was derived from the trojanised skills observed in the
-ClawHavoc campaign and the `moltbook-ay` trojan — i.e. it's calibrated to
+ClawHavoc campaign and the `moltbook-ay` trojan, i.e. it's calibrated to
 attacks that actually happened, not hypothetical ones.
 
 Strict mode (`make scan-strict`) escalates `HIGH`-severity matches to blocking
 in addition to `CRITICAL`. Defends against credential theft, persistence, and
 container-escape patterns that fall short of `CRITICAL` thresholds.
 
-### 2. Prompt-injection detector — 16 patterns
+### 2. Prompt-injection detector: 16 patterns
 
 A separate pattern set targets injection-shaped content the agent's reasoning
 would otherwise read straight into context: instruction override, persona
 hijacking, stealth commands, exfiltration directives, and LLM control-token
-injection. These are not "malware" in the traditional sense — they're text
+injection. These are not "malware" in the traditional sense; they're text
 that exploits *the agent*, not the host. Conventional static analysis misses
-them; forge is built to catch them.
+them; the Skill Firewall is built to catch them.
 
-### 3. Zero-trust line verifier — every line classified
+### 3. Zero-trust line verifier: every line classified
 
 `make verify-all` runs a line-by-line classifier across every file in every
 included skill. Each line is sorted into a recognised category (prose,
-fenced-code, command example, frontmatter, …). **A single unrecognised line
-quarantines the entire skill.** This is the defence against the novel attack
+fenced-code, command example, frontmatter, and so on). **A single unrecognised
+line quarantines the entire skill.** This is the defense against the novel attack
 the static blocklist hasn't been told about: if the pattern set doesn't know
 about a category of payload yet, the line verifier still catches it because
 unrecognised content is treated as untrusted by default.
@@ -95,15 +96,15 @@ unrecognised content is treated as untrusted by default.
 This is the part most worth understanding. **The skill that reaches the agent
 is not the skill that was downloaded.**
 
-For each scanned skill, forge:
+For each scanned skill, the Skill Firewall:
 
 1. **Parses the original** into a structured representation of its declared
-   intent — what the skill claims to do, what tools it expects, what files
+   intent: what the skill claims to do, what tools it expects, what files
    it touches, what prompts it includes.
 2. **Discards the original artefact.** It is never reachable by the agent.
 3. **Rebuilds the skill from scratch** using only the parsed intent and a
    set of clean templates. The rebuilt artefact contains no bytes from the
-   original file — every comment, every example, every prompt fragment is
+   original file; every comment, every example, every prompt fragment is
    regenerated from the structured intent.
 
 The threat model: any attack that requires specific byte sequences to be
@@ -120,7 +121,7 @@ we know, original to this project.**
 ### 5. Post-install re-scan + suppression audit
 
 When `ALLOW_INSTALL=1` is set, the scanner re-runs against the *installed*
-skill after delivery — defending against any tampering between the certify
+skill after delivery, defending against any tampering between the certify
 step and the agent's first read. `.scanignore` ranges greater than 50 lines
 are rejected: blanket suppression of large file regions is the most common
 "clean the alert" antipattern, and the audit refuses it.
@@ -149,7 +150,7 @@ are rejected: blanket suppression of large file regions is the most common
        └────────────────────┬────────────────────────────────┘
                             ▼
        ┌─────────────────────────────────────────────────────┐
-       │ shared volume — read-only from vault-agent          │
+       │ shared volume, read-only from vault-agent           │
        │ Only the *certified* artefact appears here.         │
        │ The original download is never reachable.           │
        └─────────────────────────────────────────────────────┘
@@ -158,19 +159,21 @@ are rejected: blanket suppression of large file regions is the most common
 The structural property: **the agent cannot influence the inspection.** The
 scanner runs in its own container, on its own network, with no path back into
 the agent's filesystem or process. A compromised agent cannot bypass the
-supply-chain check by talking to forge directly — that path doesn't exist.
+supply-chain check by talking to `vault-skills` directly; that path doesn't exist.
 
 ## Why this matters for any CLI agent (not just OpenClaw)
 
 The 87-pattern catalogue, the 16-pattern injection set, the line verifier,
 and the CDR pipeline are all **agent-agnostic**. They operate on the
-text + scripts that any markdown-based skill format ships. Adapting forge
-to a different skill registry — opencode plugins, a different agent's
-extension format, a community markdown-based prompt-library — is a question
-of writing the connector, not redesigning the defence.
+text + scripts that any markdown-based skill format ships. Adapting the
+Skill Firewall to a different skill registry (opencode plugins, a different
+agent's extension format, a community markdown-based prompt-library) is a
+question of writing the connector, not redesigning the defense. The
+inspection engine is format-generic; only the download/registry connector is
+ClawHub-specific, so scanning an opencode `SKILL.md` works standalone today.
 
 The pitch to maintainers of other CLI agents: **plug in any open-source
-skill registry; forge tells you if the skills are safe before the agent
+skill registry; the Skill Firewall tells you if the skills are safe before the agent
 ever reads them.**
 
 ## What's known not to be solved yet
@@ -180,18 +183,19 @@ Honest list of the residual risks documented in
 
 - **Polymorphic prompt injection** that survives both the pattern set *and*
   the parse-and-rebuild round-trip is not currently caught by static analysis.
-  The line verifier provides defence in depth, but a sufficiently
+  The line verifier provides defense in depth, but a sufficiently
   text-natural injection is an open research problem.
 - **Supply-chain attacks against the registry itself** (compromised author
-  account, malicious upstream maintainer) are not detected by forge — that's
-  a registry-level signing problem, not a content-inspection one. OpenTrApp's
-  position: refuse install for any skill from an unsigned registry.
-- **The CDR pipeline's clean-skill end-to-end on the Ollama-backed
-  reconstruct stage** has an open bug as of v0.5.0 — fails closed (safe;
-  blocks a clean skill, doesn't pass a malicious one), but would block
-  legitimate skill delivery. Tracked as AGENT-TODO ZONE 4a.
+  account, malicious upstream maintainer) are not detected by the Skill
+  Firewall; that's a registry-level signing problem, not a content-inspection
+  one. OpenTrApp's position: refuse install for any skill from an unsigned
+  registry.
 
-## How to engage with forge
+A historical false-quarantine issue, where the Ollama-backed reconstruct
+stage failed closed on *clean* skills (safe, but blocking legitimate
+delivery), has been resolved: stages 4-7 now run inside the retry-repair loop.
+
+## How to engage with the Skill Firewall
 
 | Goal | How |
 |------|-----|
@@ -203,15 +207,42 @@ Honest list of the residual risks documented in
 | Read the workload's own README | [`workloads/skills/README.md`](../workloads/skills/README.md) |
 | Read the original CDR ADR | [`docs/adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) |
 
+### The standalone `skill` CLI (no perimeter required)
+
+The same inspection engine ships as a standalone CLI at
+[`workloads/skills/skill`](../workloads/skills/skill). It vets any markdown
+skill or plugin **before** an agent loads it, with no container perimeter
+running. It runs on any markdown-based skill format, including an opencode
+`SKILL.md`, today; this is the agent-agnostic proof in action.
+
+| Command | Tier | What it does |
+|---------|------|--------------|
+| `skill scan <path>` | A (offline) | 87-pattern + zero-trust scan. No model, no network. |
+| `skill verify <path>` | A (offline) | Zero-trust line-by-line classification (optional `.trust` pin). No model, no network. |
+| `skill cdr <file>` | B (model-backed) | CDR parse-and-rebuild. Uses Ollama `qwen2.5-coder:1.5b` by default, or any OpenAI-compatible endpoint (`config/cdr.conf`). |
+
+`scan` and `verify` exit non-zero on a finding, so they drop in directly as a
+plugin-install pre-hook (e.g. an `opencode plugin install` gate):
+
+```bash
+skill scan "$PLUGIN_DIR" --strict || { echo "blocked by skill firewall" >&2; exit 1; }
+```
+
+Tier A is fully offline; only the Tier B `cdr` rebuild calls a model. In the
+perimeter this same code runs isolated in `vault-skills` (the on-demand
+supply-chain workload, ~0 RAM at rest); standalone it reads and pattern-matches
+text on the host without executing the skill. The stronger "no untrusted
+content touches the host" guarantee remains the full perimeter's.
+
 ## Where this came from
 
-forge began as a standalone toolchain for the project author's own ClawHub
-skills (twenty-five published skills are still included as the corpus the
+The Skill Firewall began as a standalone toolchain for the project author's own
+ClawHub skills (twenty-five published skills are still included as the corpus the
 scanner is regression-tested against). The same scanner is now the engine of
 the `vault-skills` perimeter container, after the v0.5.0 monorepo
 consolidation lifted it to [`workloads/skills/`](../workloads/skills/) (see
 [ADR-0013](adr/0013-monorepo-consolidation.md)).
 
-The original ADR introducing CDR as the third-tier supply-chain defence —
-the strategic decision this whole document explains — is
+The original ADR introducing CDR as the third-tier supply-chain defense, the
+strategic decision this whole document explains, is
 [ADR-0003](adr/0003-content-disarm-reconstruction.md).

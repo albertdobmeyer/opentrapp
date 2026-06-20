@@ -10,7 +10,7 @@ OpenSkill Forge is the **security gatekeeper** that ensures every skill entering
 | **Anvil** | Helps users create new skills with AI assistance and automatic pipeline verification |
 | **Stamp** | Publishes skills with security certificates proving they passed the full pipeline |
 
-**Role in ecosystem**: `toolchain` — the supply chain defense layer that vets skills before they reach the agent runtime (opencli-container).
+**Role in ecosystem**: `toolchain` — the supply chain defense layer that vets skills before they reach the agent runtime (`vault-agent`).
 
 **Authoritative design document:** `docs/forge-identity-and-design.md` — the complete identity, feature spec, and handoff document.
 
@@ -25,11 +25,11 @@ The forge makes all security decisions FOR the user and presents clear pass/fail
 
 ## This Repo Is a OpenTrApp Component
 
-This repo is integrated into [opentrapp](https://github.com/albertdobmeyer/opentrapp) as a git submodule under `components/openagent-skills/`. The file `component.yml` in this repo's root is the **manifest contract** that tells the OpenTrApp GUI how to discover, display, and control this component.
+This is the **skills workload** of the [opentrapp](https://github.com/albertdobmeyer/opentrapp) monorepo, at `workloads/skills/` ([ADR-0013](../../docs/adr/0013-monorepo-consolidation.md) dissolved the former `components/openagent-skills/` submodule). The `component.yml` here is the **manifest contract** that tells the OpenTrApp GUI how to discover, display, and control this component.
 
 ### Manifest Contract Rules
 - `component.yml` must always parse as valid YAML
-- `identity.id` must be `openagent-skills` (the GUI uses this as a stable key)
+- `identity.id` must be `skills` (the GUI uses this as a stable key)
 - `identity.role` must be `toolchain`
 - Commands with `options_from` must have working commands (e.g., `ls skills/` must work from repo root)
 - All `available_when` values must reference states declared in `status.states`
@@ -44,10 +44,10 @@ cargo test -p opentrapp          # Rust tests parse this manifest specifically
 
 ## Containerized Deployment (Perimeter Model)
 
-In production, forge runs inside **vault-skills** — a dedicated container in the OpenTrApp 4-container perimeter. All untrusted content (downloaded SKILL files) is processed inside this container, never on the user's host machine.
+In production, the skill firewall runs inside **vault-skills** — a dedicated container in the OpenTrApp five-container perimeter. All untrusted content (downloaded SKILL files) is processed inside this container, never on the user's host machine.
 
 - **Containerfile** in this repo's root defines the image (~233MB, python:3.10-slim + bash toolchain)
-- **vault-skills** is one of 4 services in `compose.yml` at the opentrapp root
+- **vault-skills** is one of five services in `compose.yml` at the opentrapp root
 - Runs on **skills-net** (internal network) — can reach vault-proxy but CANNOT reach vault-agent or vault-social
 - Certified skills delivered to agent via **skills-deliveries** shared volume (write in forge, read-only in agent)
 - Non-root user, capabilities dropped, 1GB memory limit
@@ -161,19 +161,9 @@ The original downloaded file is NEVER accessible. Binary: clean rebuild or disca
 - SARIF output for GitHub code scanning integration
 - Post-install quarantine scan for newly downloaded skills
 
-## Dual-Copy Sync
+## Monorepo (no submodule sync)
 
-This repo may exist as both a standalone clone and a submodule under opentrapp.
-
-**GitHub**: https://github.com/albertdobmeyer/openagent-skills
-
-After pushing changes from either location, sync the other:
-```bash
-# In the other copy:
-git pull
-# If submodule copy, also update parent:
-cd ../.. && git add components/openagent-skills && git commit -m "Update openagent-skills ref"
-```
+This is the `workloads/skills/` workload in the opentrapp monorepo ([ADR-0013](../../docs/adr/0013-monorepo-consolidation.md)) — there is no submodule and no dual-copy sync; edit and commit here directly. The former standalone `openagent-skills` GitHub repo is archived; do not push there.
 
 ## Development Principles
 

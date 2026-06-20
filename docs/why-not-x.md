@@ -1,14 +1,14 @@
-# Why not X? — Prior-art comparison
+# Why not X? Prior-art comparison
 
 **Document status:** Active
 **Created:** 2026-05-04
 **Companion documents:** [`whitepaper.md`](whitepaper.md) §10 (related work, narrative); [`threat-model.md`](threat-model.md) (the attacker model the comparisons below are evaluated against); [`trifecta.md`](trifecta.md) §7 (the defense-in-depth tables).
 
-This document answers the question a security-aware reader is most likely to ask first: *"why this design rather than $X$?"* — for each well-established alternative containment strategy that could plausibly be applied to OpenClaw on a personal computer. Each section names the alternative, summarises what it offers, names what it does *not* offer, and states the differential against this work.
+This document answers the question a security-aware reader is most likely to ask first: *"why this design rather than $X$?"* for each well-established alternative containment strategy that could plausibly be applied to OpenClaw on a personal computer. Each section names the alternative, summarises what it offers, names what it does *not* offer, and states the differential against this work.
 
 The alternatives are not mutually exclusive with this design. Several (notably the OpenClaw native sandbox-mode and the proxy-side allowlist) are *layered* into this perimeter rather than positioned as competitors. The discussion is "why not $X$ *alone*" wherever the alternative is being treated as a standalone answer.
 
-The threat model in [`threat-model.md`](threat-model.md) names six attacker categories (T1–T6). Each comparison cites which categories the alternative addresses and which it does not.
+The threat model in [`threat-model.md`](threat-model.md) names the attacker categories T1 through T6, plus T7 (proposed). Each comparison cites which categories the alternative addresses and which it does not.
 
 ---
 
@@ -18,12 +18,12 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 **What it does not offer.**
 
-- **No credential isolation (T1.4).** The API key is read from the same environment that the runtime starts the container with. The container inherits it.
+- **No credential isolation (T1).** The API key is read from the same environment that the runtime starts the container with. The container inherits it.
 - **No supply-chain layer (T2).** Skills are downloaded and loaded inside the same container the agent runs in. A malicious skill executes inside the agent's runtime by design.
 - **Single layer (no defense-in-depth).** A misconfiguration of `tools.deny`, a regression in `sandbox.mode`'s container-spec, or a vulnerability in the runtime itself exposes the entire surface.
 - **Lifecycle is the user's responsibility.** The container may be left running after the OpenClaw CLI exits; cleanup is the user's vigilance.
 
-**Differential against this work.** OpenTrApp uses `sandbox.mode` (the runtime's native containerisation) as **layer 1 of 6** for T1. Layers 2–6 (proxy allowlist, tool policy, exec controls, workspace restriction, kill switch) are this perimeter's contribution. T2's six layers (scanner, line verifier, CDR, allowlist, network isolation, container hardening) and the proxy-side credential injection are entirely absent from the standalone-`sandbox.mode` approach.
+**Differential against this work.** OpenTrApp uses `sandbox.mode` (the runtime's native containerisation) as **layer 1 of 6** for T1. Layers 2 to 6 (proxy allowlist, tool policy, exec controls, workspace restriction, kill switch) are this perimeter's contribution. T2's six layers (scanner, line verifier, CDR, allowlist, network isolation, container hardening) and the proxy-side credential injection are entirely absent from the standalone-`sandbox.mode` approach.
 
 **Reference.** [OpenClaw documentation, `sandbox.mode`](https://www.getopenclaw.ai/docs/configuration#sandbox).
 
@@ -41,7 +41,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 - **macOS / Windows portability.** Firejail is Linux-only. Bubblewrap is Linux-only. The architecture would not work on the user base's full target platform set.
 - **Per-application profile maintenance.** Each new agent tool is a configuration burden; a tool that needs file access must be granted file access generally.
 
-**Differential against this work.** The container approach gains cross-platform portability (Docker Desktop / Podman Desktop on macOS and Windows, plus native Linux), gains structured network policy (per-container egress filtered through a single proxy), and gains the architectural slot for a separate supply-chain container (forge). Firejail addresses T1 partially (process-level isolation analogous to vault-agent's hardening) but does not address T2, addresses T3 only via "block all egress", and does not address the credential-isolation thread of T1 at all.
+**Differential against this work.** The container approach gains cross-platform portability (Docker Desktop / Podman Desktop on macOS and Windows, plus native Linux), gains structured network policy (per-container egress filtered through a single proxy), and gains the architectural slot for a separate supply-chain container (the Skill Firewall, `vault-skills`, informally "forge"). Firejail addresses T1 partially (process-level isolation analogous to vault-agent's hardening) but does not address T2, addresses T3 only via "block all egress", and does not address the credential-isolation thread of T1 at all.
 
 **Reference.** [firejail.wordpress.com](https://firejail.wordpress.com/); [containers/bubblewrap](https://github.com/containers/bubblewrap).
 
@@ -49,17 +49,17 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 ## 3. gVisor
 
-**What it offers.** A Google-developed user-space kernel that intercepts syscalls from the contained workload and re-implements a (deliberately narrow) subset in user-space Go. The result is a stronger isolation boundary than standard containers — a kernel exploit in the contained workload finds itself talking to gVisor's kernel rather than the host kernel.
+**What it offers.** A Google-developed user-space kernel that intercepts syscalls from the contained workload and re-implements a (deliberately narrow) subset in user-space Go. The result is a stronger isolation boundary than standard containers: a kernel exploit in the contained workload finds itself talking to gVisor's kernel rather than the host kernel.
 
 **What it does not offer.**
 
 - **Performance overhead.** I/O-heavy workloads see significant performance reduction. Acceptable for many server workloads; less acceptable for an interactive desktop application that the user would notice.
-- **Supply-chain pipeline.** Same as Firejail — gVisor isolates execution; it does not gate downloads.
+- **Supply-chain pipeline.** Same as Firejail: gVisor isolates execution; it does not gate downloads.
 - **Credential isolation.** Same as Firejail.
 - **Cross-platform portability.** Linux-only; the macOS / Windows path requires running gVisor inside a Linux VM, at which point the user is paying VM overhead to run a user-space kernel.
 - **Operational simplicity.** gVisor as a runtime requires either Docker's `runsc` runtime or a Kubernetes integration; for a desktop application installed by a non-developer user, the operational surface is larger than ordinary containers.
 
-**Differential against this work.** gVisor is the **next isolation tier** the project would consider for users with stronger requirements. The current architecture's container hardening (read-only root, dropped capabilities, seccomp, narrow network policy) approximates gVisor's protections at a fraction of the operational cost. Users who require VM-equivalent isolation are currently directed to a disposable virtual machine ([`whitepaper.md`](whitepaper.md) §9); a future "VM-isolation tier" is queued in the opencli-container module's roadmap.
+**Differential against this work.** gVisor is the **next isolation tier** the project would consider for users with stronger requirements. The current architecture's container hardening (read-only root, dropped capabilities, seccomp, narrow network policy) approximates gVisor's protections at a fraction of the operational cost. Users who require VM-equivalent isolation are currently directed to a disposable virtual machine ([`whitepaper.md`](whitepaper.md) §9); a future "VM-isolation tier" is queued for the agent workload (`vault-agent`) in [`roadmap.md`](roadmap.md).
 
 **Reference.** [gvisor.dev](https://gvisor.dev).
 
@@ -77,13 +77,13 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 **Differential against this work.** A Tauri 2 desktop application running outside the App Sandbox / AppContainer layer is the architectural choice. The trade-off is documented: the application asks the user's host OS for the privileges it needs (Docker / Podman runnable, network access, filesystem access in the user's home directory), and the perimeter's defense-in-depth runs at the container layer rather than at the platform-sandbox layer.
 
-**Reference.** [Apple — App Sandbox](https://developer.apple.com/documentation/security/app_sandbox); [Microsoft — AppContainer](https://learn.microsoft.com/en-us/windows/win32/secauthz/appcontainer-isolation).
+**Reference.** [Apple: App Sandbox](https://developer.apple.com/documentation/security/app_sandbox); [Microsoft: AppContainer](https://learn.microsoft.com/en-us/windows/win32/secauthz/appcontainer-isolation).
 
 ---
 
 ## 5. VM-only isolation (the "disposable cloud VM" recommendation)
 
-**What it offers.** Run the agent on a fresh, disposable virtual machine — a cloud-vendor-provided VM, a local VM via VirtualBox or qemu, or a lightweight microVM (Firecracker, Cloud Hypervisor). On compromise: terminate the VM. Hardware-backed isolation; one of the strongest practical containment boundaries.
+**What it offers.** Run the agent on a fresh, disposable virtual machine: a cloud-vendor-provided VM, a local VM via VirtualBox or qemu, or a lightweight microVM (Firecracker, Cloud Hypervisor). On compromise: terminate the VM. Hardware-backed isolation; one of the strongest practical containment boundaries.
 
 **What it does not offer.**
 
@@ -104,11 +104,11 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 **What it does not offer.**
 
-- **Pattern N+1 problem.** A scanner with $N$ patterns detects $N$ attacks. Pattern $N{+}1$ — a novel obfuscation, a new persistence mechanism, a category nobody has yet enumerated — slips through. The 87-pattern catalogue in `vault-skills` is the architectural floor, not the ceiling.
+- **Pattern N+1 problem.** A scanner with $N$ patterns detects $N$ attacks. Pattern $N{+}1$ (a novel obfuscation, a new persistence mechanism, a category nobody has yet enumerated) slips through. The 87-pattern catalogue in `vault-skills` is the architectural floor, not the ceiling.
 - **Obfuscation tolerance.** Layered base-64, zero-width Unicode, HTML-comment-encoded payloads, and similar tricks defeat pure-text pattern matching. A line-level zero-trust classifier (also in `vault-skills`) addresses some of this; both layers stack against obfuscation but neither is sufficient.
 - **Same-shape-as-safe attacks.** A skill whose surface looks like a known-safe template but whose semantic effect is malicious passes a scanner that asks *"is the *artefact* safe?"*.
 
-**Differential against this work.** The forge pipeline applies all three layers — static scanner ($N$ = 87), zero-trust line classifier, *and* Content Disarm and Reconstruction. CDR ([`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md)) is the architectural innovation: rather than asking "is this artefact safe?" (an answer only as good as the catalogue of known badness), it asks "can the artefact's intent be re-expressed in a known-safe form?" — and if yes, the original artefact is discarded. CDR catches a strict superset of what the scanner catches and addresses categories the scanner cannot enumerate.
+**Differential against this work.** The Skill Firewall pipeline (`vault-skills`) applies all three layers: static scanner ($N$ = 87), zero-trust line classifier, *and* Content Disarm and Reconstruction. CDR ([`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md)) is the architectural innovation: rather than asking "is this artefact safe?" (an answer only as good as the catalogue of known badness), it asks "can the artefact's intent be re-expressed in a known-safe form?", and if yes, the original artefact is discarded. CDR catches a strict superset of what the scanner catches and addresses categories the scanner cannot enumerate.
 
 **Reference.** [Sonatype Nexus](https://www.sonatype.com/products/nexus-repository); [Snyk](https://snyk.io/); [Checkmarx](https://checkmarx.com/); [OSV-Scanner](https://google.github.io/osv-scanner/).
 
@@ -122,7 +122,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 
 - **No isolation of the runtime itself.** A successful prompt injection or malicious skill executes with the user's own privileges. File system access is the user's full filesystem; process execution is at the user's authority; the proxy controls only outbound HTTP.
 - **No supply-chain pipeline.** Skills are loaded into the unhardened runtime; an early-stage skill payload that performs damage on the local filesystem is not gated by the proxy at all.
-- **Proxy-side credential injection still works in this approach** — but its value is reduced because the runtime itself is fully exposed.
+- **Proxy-side credential injection still works in this approach**, but its value is reduced because the runtime itself is fully exposed.
 
 **Differential against this work.** The proxy is one of six layers for T1, not the whole defense. A proxy-only approach addresses egress (T1's "fetch from attacker URL", T2's "second-stage payload") but does not address local-filesystem attacks, local-command-execution attacks, or credential exposure on the local machine.
 
@@ -137,7 +137,7 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 **What it does not offer.**
 
 - **Self-modifying.** The agent has tools that can edit its own configuration. A successful prompt injection or skill exploit can rewrite `tools.deny` and immediately enable what was previously disabled. Configuration as a security boundary is brittle when the contained workload can edit the configuration.
-- **Single layer.** Misconfiguration anywhere — a typo in `tools.deny`, a forgotten entry in `proxy.allowlist`, a wildcard expansion that does not match expectations — exposes the surface beneath it.
+- **Single layer.** Misconfiguration anywhere (a typo in `tools.deny`, a forgotten entry in `proxy.allowlist`, a wildcard expansion that does not match expectations) exposes the surface beneath it.
 - **Credential-adjacent.** Storing the credential in `.env` next to the runtime puts it within reach of any process compromise inside the runtime.
 - **No lifecycle ownership.** The runtime starts and stops at the user's discretion; "is the agent currently exposed?" is a question of user vigilance rather than a structural property.
 
@@ -174,16 +174,16 @@ The threat model in [`threat-model.md`](threat-model.md) names six attacker cate
 | Capsicum / capability OS | Strong (research) | None | None | No | FreeBSD only |
 | **This perimeter (OpenTrApp)** | **Strong (6 layers)** | **Strong (6 layers + CDR)** | **Allowlist + logging** | **Yes (proxy-side)** | **Yes** |
 
-The "Strong" / "Partial" / "None" classification follows the [`threat-model.md`](threat-model.md) attacker-capability matrix: "Strong" means the attacker category has multiple independent mitigating layers each backed by an evidence cell; "Partial" means a subset of capabilities are addressed; "None" means the alternative does not address the category. The "Cross-platform" column is for the user-installable target platform set (Linux, macOS, Windows on x86-64 / Apple Silicon).
+The "Strong" / "Partial" / "None" classification follows the [`threat-model.md`](threat-model.md) attacker-capability matrix: "Strong" means the attacker category has multiple independent mitigating layers each backed by an evidence cell; "Partial" means a subset of capabilities are addressed; "None" means the alternative does not address the category. The "Cross-platform" column is for the user-installable target platform set (Linux, macOS, Windows on x86-64 / Apple Silicon); installers for all three are published (the README lists `.deb` / `.rpm` / `.AppImage` for Linux, `.dmg` for macOS, and `.msi` / `.exe` for Windows). Linux is the primary tested target; the macOS and Windows installers are not OS-level code-signed (signing is updater-only, per [`threat-model.md`](threat-model.md) T4).
 
-The architectural choice that most distinguishes this work — and that the alternatives above do not provide — is the **composition**. Container hardening, allowlist proxy, supply-chain pipeline, and credential isolation each exist independently in the literature; their integration into a coherent perimeter that an end user can install with a setup wizard, control from a Telegram bot, and reason about with a single clearly-bounded surface (`compose.yml` plus three component manifests) is the contribution.
+The architectural choice that most distinguishes this work (and that the alternatives above do not provide) is the **composition**. Container hardening, allowlist proxy, supply-chain pipeline, and credential isolation each exist independently in the literature; their integration into a coherent perimeter that an end user can install with a setup wizard, control from a Telegram bot, and reason about with a single clearly-bounded surface (`compose.yml` plus three component manifests) is the contribution.
 
 ---
 
 ## Cross-references
 
-- [`whitepaper.md`](whitepaper.md) §10 (related work, narrative form) — the conversational counterpart to this comparison matrix.
-- [`threat-model.md`](threat-model.md) — the attacker model that the "Strong / Partial / None" classifications above are evaluated against.
-- [`README.md`](../README.md) "Limitations" — cites this document for the differential against alternative containment strategies.
-- [`trifecta.md`](trifecta.md) §7 — the layer-by-layer enumeration of the perimeter design that the alternatives above are compared against.
-- [`adr/0001`](adr/0001-proxy-side-api-key-injection.md), [`adr/0002`](adr/0002-adaptive-shell-levels.md), [`adr/0003`](adr/0003-content-disarm-reconstruction.md) — the three architectural decisions most cited in the comparisons.
+- [`whitepaper.md`](whitepaper.md) §10 (related work, narrative form): the conversational counterpart to this comparison matrix.
+- [`threat-model.md`](threat-model.md): the attacker model that the "Strong / Partial / None" classifications above are evaluated against.
+- [`README.md`](../README.md) "Limitations": cites this document for the differential against alternative containment strategies.
+- [`trifecta.md`](trifecta.md) §7: the layer-by-layer enumeration of the perimeter design that the alternatives above are compared against.
+- [`adr/0001`](adr/0001-proxy-side-api-key-injection.md), [`adr/0002`](adr/0002-adaptive-shell-levels.md), [`adr/0003`](adr/0003-content-disarm-reconstruction.md): the three architectural decisions most cited in the comparisons.

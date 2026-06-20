@@ -6,6 +6,8 @@
 #   - Long-running targets print a budget hint where applicable.
 #
 # Tested on the maintainer's dev machine (Ubuntu 24.04, podman, ~7 GB RAM).
+# On Windows: run from a WSL2 terminal (bash + GNU make are available there;
+# podman uses the same WSL2 machine so container operations work transparently).
 # CI runs the same commands directly; this Makefile is for local convenience.
 
 .PHONY: help \
@@ -151,14 +153,25 @@ audit-all: audit-rust audit-npm audit-deny
 	@echo "✓ all three audits passed"
 
 # ── Perimeter operations ────────────────────────────────────────────────────
+# Prefer the native podman-compose when present. Bare `podman compose` (no
+# hyphen) delegates to the docker-compose CLI plugin where that plugin is
+# installed, which is INCOMPATIBLE with this compose file on podman: it inlines
+# `security_opt: seccomp=<file>` as JSON (podman's API then rejects it as a path
+# → "file name too long") and mismatches compose network labels. Native
+# podman-compose passes `--security-opt seccomp=<path>` straight to `podman run`.
+# Falls back to `podman compose` only where podman-compose is absent.
+# Verified on the 7.2 GB Linux laptop (2026-06-16): full from-scratch build +
+# the live five-container perimeter ran with ~3.6 GB free, no swap-storm, and
+# T0 boundary-selftest = exit 0 cold AND resumed.
+COMPOSE := $(shell command -v podman-compose >/dev/null 2>&1 && echo podman-compose || echo podman compose)
 
 perimeter-up:
-	@echo "→ podman compose up -d"
-	podman compose up -d
+	@echo "→ $(COMPOSE) up -d"
+	$(COMPOSE) up -d
 
 perimeter-down:
-	@echo "→ podman compose down"
-	podman compose down
+	@echo "→ $(COMPOSE) down"
+	$(COMPOSE) down
 
 perimeter-status:
 	@echo "── perimeter health snapshot ──"
@@ -169,9 +182,18 @@ profile-memory:
 	@echo "→ bash tests/memory-profile.sh (per-container RSS; bring the perimeter up first)"
 	@bash tests/memory-profile.sh
 
+# Derive the live container names from the compose-service label so this works
+# whatever the runner named them (podman-compose → opentrapp_vault-*_1,
+# docker-compose → opentrapp-vault-*-1, or a bare vault-*). An empty result
+# (container absent) falls back to the script's default and is reported as
+# CANNOT ASSESS. Pass cold-start flags via ARGS:
+#   make boundary-selftest ARGS=--record-baseline
 boundary-selftest:
-	@echo "→ bash tests/boundary-selftest.sh (boundary holds? bring the perimeter up first)"
-	@bash tests/boundary-selftest.sh
+	@echo "→ bash tests/boundary-selftest.sh $(ARGS) (boundary holds? bring the perimeter up first)"
+	@OPENTRAPP_AGENT_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-agent --format '{{.Names}}' | head -1) \
+	 OPENTRAPP_PROXY_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-proxy --format '{{.Names}}' | head -1) \
+	 OPENTRAPP_EGRESS_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-egress --format '{{.Names}}' | head -1) \
+	 bash tests/boundary-selftest.sh $(ARGS)
 
 # Re-sync opentrapp-core's vendored copies of perimeter.yml + boundary-selftest.sh
 # from their canonical sources. The canonical files (resources/, tests/) are the
@@ -184,9 +206,14 @@ sync-core-embedded:
 	@echo "→ synced opentrapp-core/src/embedded/ from canonical resources/ + tests/"
 
 proxy-soak:
-	@echo "→ bash tests/proxy-memory-soak.sh (vault-proxy RSS over load×time; perimeter up first)"
-	@bash tests/proxy-memory-soak.sh
+	@echo "→ bash tests/proxy-memory-soak.sh $(ARGS) (vault-proxy RSS over load×time; perimeter up first)"
+	@OPENTRAPP_PROXY_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-proxy --format '{{.Names}}' | head -1) \
+	 OPENTRAPP_LOAD_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-agent --format '{{.Names}}' | head -1) \
+	 bash tests/proxy-memory-soak.sh $(ARGS)
 
 red-team:
-	@echo "→ bash tests/red-team-breakout.sh (adversarial breakout attempts; perimeter up first)"
-	@bash tests/red-team-breakout.sh
+	@echo "→ bash tests/red-team-breakout.sh $(ARGS) (adversarial breakout attempts; perimeter up first)"
+	@OPENTRAPP_AGENT_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-agent --format '{{.Names}}' | head -1) \
+	 OPENTRAPP_PROXY_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-proxy --format '{{.Names}}' | head -1) \
+	 OPENTRAPP_EGRESS_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-egress --format '{{.Names}}' | head -1) \
+	 bash tests/red-team-breakout.sh $(ARGS)

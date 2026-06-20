@@ -253,5 +253,96 @@ class DNSRebindingDefenseTests(unittest.TestCase):
         self.assertFalse(self.proxy._resolves_to_private("8.8.8.8"))
 
 
+class CredentialInjectionTests(unittest.TestCase):
+    """Pins the data-driven credential-injection behavior (ADR-0001 + the agent-recipe).
+
+    Behavior must match the pre-refactor hardcoded rules: api.anthropic.com gets
+    x-api-key + anthropic-version; api.openai.com gets Authorization: Bearer; a
+    matching host with no key set gets nothing (the request goes out
+    unauthenticated — a missing key never leaks); a non-provider allowlisted host
+    gets nothing. Also pins the optional mounted injection.json extension.
+    """
+
+    mod = _VAULT_PROXY_MOD
+    proxy = _VAULT_PROXY_INSTANCE
+
+    @staticmethod
+    def _mock_flow(host):
+        req = types.SimpleNamespace(
+            pretty_host=host, method="POST", pretty_url=f"https://{host}/v1/x",
+            content=b"{}", headers={},
+        )
+        return types.SimpleNamespace(request=req, response=None)
+
+    def _inject(self, host, env):
+        """Run request() against a public-resolving allowlisted host; return the flow."""
+        from unittest.mock import patch
+        flow = self._mock_flow(host)
+        public = [(2, 1, 0, "", ("8.8.8.8", 0))]  # getaddrinfo → public => not rebinding
+        with patch.dict(os.environ, env, clear=False), \
+                patch.object(self.mod.socket, "getaddrinfo", return_value=public):
+            self.proxy.request(flow)
+        return flow
+
+    def test_default_env_vars(self):
+        self.assertEqual(self.proxy.injection_env_vars, ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"])
+
+    def test_anthropic_injects_key_and_version(self):
+        flow = self._inject("api.anthropic.com", {"ANTHROPIC_API_KEY": "sk-test-123"})
+        self.assertEqual(flow.request.headers.get("x-api-key"), "sk-test-123")
+        self.assertIn("anthropic-version", flow.request.headers)
+        self.assertIsNone(flow.response)  # allowlisted + public => not blocked
+
+    def test_openai_injects_bearer(self):
+        flow = self._inject("api.openai.com", {"OPENAI_API_KEY": "sk-oai-9"})
+        self.assertEqual(flow.request.headers.get("Authorization"), "Bearer sk-oai-9")
+
+    def test_missing_key_injects_nothing(self):
+        flow = self._inject("api.anthropic.com", {"ANTHROPIC_API_KEY": ""})
+        self.assertNotIn("x-api-key", flow.request.headers)
+
+    def test_non_provider_host_no_injection(self):
+        flow = self._inject("raw.githubusercontent.com", {"ANTHROPIC_API_KEY": "sk-test-123"})
+        self.assertNotIn("x-api-key", flow.request.headers)
+        self.assertNotIn("Authorization", flow.request.headers)
+
+    def test_host_matches(self):
+        self.assertTrue(self.proxy._host_matches("api.anthropic.com", "api.anthropic.com"))
+        self.assertTrue(self.proxy._host_matches("foo.api.anthropic.com", "api.anthropic.com"))
+        self.assertFalse(self.proxy._host_matches("api.anthropic.com.evil.com", "api.anthropic.com"))
+
+    def test_injection_config_extends_rules(self):
+        import json as _json
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            _json.dump([{
+                "match": ["generativelanguage.googleapis.com"],
+                "env_var": "GOOGLE_API_KEY",
+                "headers": {"x-goog-api-key": "{key}"},
+            }], f)
+            cfg = f.name
+        try:
+            with patch.object(self.mod, "INJECTION_CONFIG_PATH", Path(cfg)):
+                rules = self.proxy._load_injection_rules()
+            self.assertEqual(len(rules), 3)  # 2 in-image defaults + 1 mounted
+            self.assertIn("GOOGLE_API_KEY", {r["env_var"] for r in rules})
+        finally:
+            os.unlink(cfg)
+
+    def test_injection_config_malformed_falls_back(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            f.write("not valid json {{{")
+            cfg = f.name
+        try:
+            with patch.object(self.mod, "INJECTION_CONFIG_PATH", Path(cfg)):
+                rules = self.proxy._load_injection_rules()
+            self.assertEqual(len(rules), 2)  # fail-safe: in-image defaults stand
+        finally:
+            os.unlink(cfg)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
