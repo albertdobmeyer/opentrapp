@@ -27,7 +27,7 @@ You do not have to adopt the whole perimeter to get value out of this.
 **1. Scan your agent's skills in CI (one line, fully offline, no model).** The skill scanner runs as a GitHub Action, so any repository can gate its skills or plugins against malware and prompt injection before they ship:
 
 ```yaml
-- uses: albertdobmeyer/opentrapp/actions/skill-scan@main
+- uses: albertdobmeyer/opentrapp/actions/skill-scan@skill-scan-v1
   with: { path: ./skills }
 ```
 
