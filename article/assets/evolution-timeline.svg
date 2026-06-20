@@ -1,0 +1,76 @@
+<svg viewBox="0 0 960 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A timeline of the project's evolution: a cage for OpenClaw, then Lobster-TrApp, then the five-container perimeter, then the rebrand to OpenTrApp, then the headless daemon, then the agent-operable CLI, and finally the three-concern structure with a standalone Skill Firewall.">
+  <defs>
+    <linearGradient id="tl" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e5484d"/><stop offset="0.42" stop-color="#e5484d"/>
+      <stop offset="0.58" stop-color="#0ea5e9"/><stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <filter id="g2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <style>
+      text{font-family:'Segoe UI',Inter,system-ui,sans-serif;fill:#cbd5e1}
+      .t{font-weight:700;font-size:19px;fill:#f1f5f9}
+      .lab{font-size:13px;font-weight:600}
+      .sub{font-size:11px;fill:#94a3b8}
+      .node{opacity:0}
+      @keyframes appear{to{opacity:1}}
+    </style>
+  </defs>
+  <rect width="960" height="360" fill="#020617"/>
+  <text x="48" y="48" class="t">From a lobster trap to a security perimeter: the evolution</text>
+
+  <!-- baseline -->
+  <line x1="60" y1="190" x2="900" y2="190" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+  <!-- animated progress fill -->
+  <line x1="60" y1="190" x2="900" y2="190" stroke="url(#tl)" stroke-width="4" stroke-linecap="round" stroke-dasharray="840" stroke-dashoffset="840">
+    <animate attributeName="stroke-dashoffset" from="840" to="0" dur="6s" fill="freeze" calcMode="spline" keySplines="0.5 0 0.5 1"/>
+  </line>
+  <!-- a glowing head -->
+  <circle r="6" fill="#0ea5e9" filter="url(#g2)">
+    <animateMotion dur="6s" fill="freeze" path="M 60 190 H 900" calcMode="spline" keyPoints="0;1" keyTimes="0;1" keySplines="0.5 0 0.5 1"/>
+  </circle>
+
+  <!-- nodes: x, color, dot, label(top/bottom). begin staggered to match the fill. -->
+  <!-- 1 -->
+  <g class="node" style="animation:appear .4s forwards .3s">
+    <circle cx="60" cy="190" r="7" fill="#e5484d"/>
+    <text x="60" y="150" text-anchor="middle" class="lab" fill="#ff7b72">The spark</text>
+    <text x="60" y="168" text-anchor="middle" class="sub">a cage for OpenClaw</text>
+  </g>
+  <!-- 2 -->
+  <g class="node" style="animation:appear .4s forwards 1.1s">
+    <circle cx="200" cy="190" r="7" fill="#e5484d"/>
+    <text x="200" y="232" text-anchor="middle" class="lab" fill="#ff7b72">Lobster-TrApp</text>
+    <text x="200" y="250" text-anchor="middle" class="sub">v0.1, Tauri, 4 containers</text>
+  </g>
+  <!-- 3 -->
+  <g class="node" style="animation:appear .4s forwards 1.9s">
+    <circle cx="340" cy="190" r="7" fill="#e5484d"/>
+    <text x="340" y="150" text-anchor="middle" class="lab" fill="#ff7b72">Five-container perimeter</text>
+    <text x="340" y="168" text-anchor="middle" class="sub">L7 + L3 split (ADR-0009)</text>
+  </g>
+  <!-- 4 rebrand -->
+  <g class="node" style="animation:appear .4s forwards 2.9s">
+    <circle cx="480" cy="190" r="9" fill="#0ea5e9" filter="url(#g2)"/>
+    <text x="480" y="232" text-anchor="middle" class="lab" fill="#7dd3fc">Monorepo + rebrand</text>
+    <text x="480" y="250" text-anchor="middle" class="sub">becomes OpenTrApp, v0.4</text>
+  </g>
+  <!-- 5 -->
+  <g class="node" style="animation:appear .4s forwards 3.7s">
+    <circle cx="620" cy="190" r="7" fill="#0ea5e9"/>
+    <text x="620" y="150" text-anchor="middle" class="lab" fill="#7dd3fc">The daemon is the product</text>
+    <text x="620" y="168" text-anchor="middle" class="sub">GUI becomes a viewer (ADR-0019)</text>
+  </g>
+  <!-- 6 -->
+  <g class="node" style="animation:appear .4s forwards 4.6s">
+    <circle cx="760" cy="190" r="7" fill="#0ea5e9"/>
+    <text x="760" y="232" text-anchor="middle" class="lab" fill="#38bdf8">CLI + projections</text>
+    <text x="760" y="250" text-anchor="middle" class="sub">agent-operable, OS-agnostic</text>
+  </g>
+  <!-- 7 -->
+  <g class="node" style="animation:appear .4s forwards 5.5s">
+    <circle cx="900" cy="190" r="9" fill="#0ea5e9" filter="url(#g2)"/>
+    <text x="900" y="150" text-anchor="end" class="lab" fill="#38bdf8">Three concerns</text>
+    <text x="900" y="168" text-anchor="end" class="sub">Vault, Skill Firewall, Shield</text>
+  </g>
+
+  <text x="48" y="330" class="sub">Each step earned its place. The colour shift marks the moment the lobster-specific trap became an agent-agnostic, open perimeter.</text>
+</svg>
