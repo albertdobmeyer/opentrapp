@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Offline security scanner — pattern-based detection without network
+# Offline security scanner - pattern-based detection without network
 # Usage: skill-scan.sh [--format=default|summary|json|sarif] <path>
 set -euo pipefail
 
@@ -22,6 +22,17 @@ for arg in "$@"; do
   esac
 done
 TARGET="${TARGET:-skills}"
+DISPLAY_TARGET="$TARGET"
+
+# Standalone / CI convenience (ADR-0025): if TARGET is a single file (for example a
+# plugin's SKILL.md, or a loose .md), wrap it in a temporary one-skill directory so the
+# directory-oriented discovery scans it. The wrapper is removed on exit.
+if [[ -f "$TARGET" ]]; then
+  _WRAP="$(mktemp -d)"
+  trap 'rm -rf "$_WRAP"' EXIT
+  cp "$TARGET" "$_WRAP/SKILL.md"
+  TARGET="$_WRAP"
+fi
 
 # Suppress colors for machine-readable output
 if [[ "$FORMAT" != "default" ]]; then
@@ -29,7 +40,7 @@ if [[ "$FORMAT" != "default" ]]; then
 fi
 
 if [[ "$FORMAT" == "default" ]]; then
-  log_header "Security scanning: $TARGET"
+  log_header "Security scanning: $DISPLAY_TARGET"
 fi
 
 skills=()
@@ -38,8 +49,15 @@ while IFS= read -r dir; do
 done < <(discover_skills "$TARGET")
 
 if (( ${#skills[@]} == 0 )); then
-  echo "No skills found in $TARGET"
-  exit 1
+  # No SKILL.md at the given path. "Nothing to scan" is not a security finding, so this
+  # exits clean (0) rather than 1, so that a CI gate does not false-fail on an empty or
+  # restructured path. The message stays visible so a misconfigured path is noticeable.
+  case "$FORMAT" in
+    sarif) printf '%s\n' '{"$schema":"https://json.schemastore.org/sarif-2.1.0.json","version":"2.1.0","runs":[{"tool":{"driver":{"name":"OpenTrApp Skill Firewall","informationUri":"https://github.com/albertdobmeyer/opentrapp","rules":[]}},"results":[]}]}' ;;
+    json)  printf '%s\n' '{"skills":0,"findings":0,"note":"no SKILL.md found at the given path"}' ;;
+    *)     echo "No skill (SKILL.md) found in $DISPLAY_TARGET. Nothing to scan." ;;
+  esac
+  exit 0
 fi
 
 CRITICAL_COUNT=0
@@ -57,7 +75,7 @@ is_ignored() {
   local line
   line=$(sed -n "${line_num}p" "$file")
 
-  # Same-line inline suppression ONLY (not ignore-next-line — prevents self-suppression)
+  # Same-line inline suppression ONLY (not ignore-next-line - prevents self-suppression)
   if echo "$line" | grep -q '<!-- scan:ignore -->'; then
     return 0
   fi
@@ -115,13 +133,13 @@ audit_scanignore() {
       local start="${BASH_REMATCH[1]}" end="${BASH_REMATCH[2]}"
       local span=$(( end - start + 1 ))
       if (( span > 50 )); then
-        echo "  SCANIGNORE_AUDIT_FAIL: $slug/.scanignore — range L${start}-L${end} spans $span lines (max 50)" >&2
+        echo "  SCANIGNORE_AUDIT_FAIL: $slug/.scanignore - range L${start}-L${end} spans $span lines (max 50)" >&2
         SCANIGNORE_AUDIT_FAIL=$((SCANIGNORE_AUDIT_FAIL + 1))
       fi
     elif [[ "$range" =~ ^L([0-9]+)$ ]]; then
-      : # Single line — valid
+      : # Single line - valid
     else
-      echo "  SCANIGNORE_AUDIT_FAIL: $slug/.scanignore — invalid format: $range" >&2
+      echo "  SCANIGNORE_AUDIT_FAIL: $slug/.scanignore - invalid format: $range" >&2
       SCANIGNORE_AUDIT_FAIL=$((SCANIGNORE_AUDIT_FAIL + 1))
     fi
   done < "$scanignore"
