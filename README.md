@@ -49,6 +49,12 @@ Autonomous CLI agents, such as [OpenClaw](https://www.getopenclaw.ai), execute s
 
 Reasoning is delegated to the agent's vendor API (Anthropic's, for OpenClaw); only the agent's execution layer (file work, tool calls, skill invocations) is local.
 
+<p align="center">
+  <img src="article/assets/perimeter-flow.svg" alt="A request flows from the caged agent through the key-injecting proxy and the network filter to the allowlisted internet. The proxy holds the keys but has no internet route; the egress filter has the internet route but holds no keys." width="820"/>
+</p>
+
+<p align="center"><em>Privilege separation in one picture: the proxy holds your keys but has no route to the internet, and the egress filter has the route but never sees your keys.</em></p>
+
 ## Values
 
 These are the principles that shape every design and product decision in this project. They are written down because the alternative, leaving them implicit, is how projects drift.
@@ -100,6 +106,12 @@ pattern blocklist, a default-deny line classifier, and the parse-and-rebuild
    attachments; applying it to agent skills is, as far as we know, original.
 5. **Post-install re-scan and suppression audit**: `.scanignore` ranges over
    50 lines are rejected, and the scanner re-runs against the installed artefact.
+
+<p align="center">
+  <img src="article/assets/cdr-rebuild.svg" alt="Content Disarm and Reconstruction: an untrusted skill is parsed into structured intent, the malicious line is dropped, the original is discarded, and a clean rebuild is the only thing that reaches the agent." width="820"/>
+</p>
+
+<p align="center"><em>Content Disarm and Reconstruction: the original skill is parsed for intent and then discarded, so only a clean rebuild reaches the agent.</em></p>
 
 The scanner, the injection patterns, the line verifier, and CDR are all
 **agent-agnostic**. They work on the text and helper-script content any
@@ -287,6 +299,14 @@ See [`CLAUDE.md`](CLAUDE.md) for the full architecture specification and contrib
 </details>
 
 ---
+
+## How it got here
+
+<p align="center">
+  <img src="article/assets/evolution-timeline.svg" alt="A timeline of the project's evolution: a cage for OpenClaw, then Lobster-TrApp, then the five-container perimeter, then the rebrand to OpenTrApp, then the headless daemon, then the agent-operable CLI, and finally the three-concern structure with a standalone Skill Firewall." width="820"/>
+</p>
+
+OpenTrApp began as a single container around OpenClaw, became Lobster-TrApp, and grew into the five-container perimeter before the rebrand. The standalone Skill Firewall is shipped today. The headless daemon and the agent-operable CLI further along the timeline are the ratified direction ([ADR-0020](docs/adr/0020-product-identity-and-distribution.md)), not yet shipped.
 
 ## Contributing, and please tear it apart
 
