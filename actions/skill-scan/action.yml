@@ -1,5 +1,5 @@
 name: 'OpenTrApp Skill Firewall'
-description: 'Offline supply-chain scan for agent skills and plugins. Catches malware and prompt injection before an agent loads them. No model, no network.'
+description: 'Offline supply-chain scan of AI agent skills and plugins for malware and prompt injection (MITRE ATT&CK, SARIF).'
 author: 'Albert Dobmeyer'
 branding:
   icon: 'shield'
