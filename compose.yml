@@ -9,7 +9,7 @@
 # docs/adr/0013-monorepo-consolidation.md for the 3 workloads / 2 infra layout):
 #   vault-agent  — agent runtime containment   (workloads/agent/)
 #   vault-skills  — supply-chain defense        (workloads/skills/)
-#   vault-social — social-content analysis     (workloads/social/, parked since 2026-05-03)
+#   vault-social — agent-social analysis       (workloads/social/, opt-in; build-out deferred — ADR-0017/0024)
 #   vault-proxy  — L7 egress policy            (infra/proxy/)
 #   vault-egress — L3 egress policy            (infra/egress/)
 #
@@ -46,7 +46,7 @@ services:
       - /home/vault/workspace:size=1g,noexec,nosuid,mode=1777
     security_opt:
       - no-new-privileges:true
-      - seccomp=/home/albertd/Repositories/opentrapp/workloads/agent/config/vault-seccomp.json
+      - seccomp=./workloads/agent/config/vault-seccomp.json
     cap_drop:
       - ALL
     pids_limit: 256
@@ -114,7 +114,7 @@ services:
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
     security_opt:
-      - seccomp=/home/albertd/Repositories/opentrapp/workloads/agent/config/vault-proxy-seccomp.json
+      - seccomp=./workloads/agent/config/vault-proxy-seccomp.json
     cap_drop:
       - ALL
     cap_add:
@@ -297,7 +297,7 @@ services:
     # Social is a task runner like forge. Idles between scans.
     command: ["bash", "-c", "echo 'vault-social ready' && trap 'exit 0' TERM INT; sleep infinity & wait"]
     restart: unless-stopped
-    # On-demand (Phase 1): parked workload, profiled so it never starts on a
+    # On-demand (Phase 1): opt-in workload (build-out deferred), profiled so it never starts on a
     # plain `podman compose up`. Mirrors perimeter.yml `on_demand: true`.
     profiles: ["on-demand"]
 

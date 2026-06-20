@@ -1,4 +1,4 @@
-# Skill install flow — current state, interim path, target end-state
+# Skill install flow: current state, interim path, target end-state
 
 > Audience: contributors and maintainers who need a straight answer to *"how
 > does a user actually install a skill in this thing today, and what's the
@@ -11,7 +11,7 @@
 | Phase | Where it works | What the user does | Status |
 |-------|----------------|--------------------|--------|
 | **v0.6 (today)** | Host CLI only | Power user runs `make` targets in `workloads/skills/`; certified skills land in the agent's workspace via the shared volume | **shipped** |
-| **v0.7 (interim GUI)** | Desktop app + bot | Bot says "I can't install skills directly — here is the exact command to paste into a terminal", or GUI shows a "Paste this command" panel; user runs it; new skill appears | designed below, not built |
+| **v0.7 (interim GUI)** | Desktop app + bot | Bot says "I can't install skills directly; here is the exact command to paste into a terminal", or GUI shows a "Paste this command" panel; user runs it; new skill appears | designed below, not built |
 | **v0.8 (target)** | Desktop app, end-to-end | "Skills" page in user mode: search → candidate cards → one-click install with progress | sketched below, not designed |
 
 The shipped `install-skill` orchestrator workflow + forge's `safe-download` +
@@ -26,15 +26,15 @@ Three independent observations forced the issue:
 1. **Bot vs reality drift.** The agent's CONSTRAINTS.md (in
    `workloads/agent/scripts/entrypoint.sh`) used to instruct the bot to tell
    users to *"open the desktop app and use **Browse the Skill Library**"*.
-   That feature does not exist in `app/src/` — there is no Skills page, no
+   That feature does not exist in `app/src/`; there is no Skills page, no
    library browser, no install dialog. The bot was promising vaporware.
 2. **A4 in the 2026-05-20 dogfood E2E.** The bot, asked to install a CSV
-   skill, refused honestly: *"I can't browse ClawHub — no web access. No
+   skill, refused honestly: *"I can't browse ClawHub, no web access. No
    blind installs. I'll review it with you before installing."* This is
    correct security posture but the user had nowhere to go from there.
    `docs/specs/2026-05-20-dogfood-full-arc-findings.md` records the gap.
 3. **Thread D's editorial spotlight** ([`docs/skills-spotlight.md`](skills-spotlight.md))
-   pitches forge as the supply-chain defence — and the inevitable follow-up
+   pitches forge as the supply-chain defence, and the inevitable follow-up
    question is "how do I, the user, actually trigger it?". Until this doc
    exists, the spotlight is hollow.
 
@@ -65,17 +65,17 @@ Each stage of `skill-cdr.sh` is independently runnable for debugging:
 | Reconstruct | `tools/lib/cdr-reconstruct.py` | Parses intent → rebuilds artefact from clean templates |
 | Quarantine | (any failure) | Original + rebuild dropped to `quarantine/`, never reaches the agent |
 
-**Known bug (AGENT-TODO ZONE 4a):** the Ollama-backed reconstruct glue stage
-of `skill-cdr.sh` currently fails on *clean* skills (fails closed — would
-block a legit skill, never passes a malicious one). Individual stages all
-pass on the clean fixture. Fix tracked separately; this doc assumes the bug
-is resolved before v0.7 GUI work.
+**Resolved (historical false-quarantine):** the Ollama-backed reconstruct glue
+stage of `skill-cdr.sh` once failed closed on *clean* skills (would block a
+legit skill, never passed a malicious one). That issue is fixed in current
+HEAD: stages 4-7 now run inside the retry-repair loop, so the pipeline
+completes end-to-end on legitimate skills.
 
 ### What the bot tells the user today (post-Zone-4b)
 
 The CONSTRAINTS.md heredoc is updated to be honest:
 
-> *"I can't install skills directly — installing requires running a setup
+> *"I can't install skills directly; installing requires running a setup
 > command from a terminal on this computer. If you can ask whoever set this
 > up to run `cd workloads/skills && bash tools/skill-cdr.sh <skill-name>`,
 > the new skill will appear in my workspace and I'll let you know when I can
@@ -86,7 +86,7 @@ That's an honest answer the bot can give. It names a concrete next action
 about confirmation arriving via Telegram once the install completes. No
 promise of a GUI feature that doesn't exist.
 
-## v0.7 interim — "Paste this command" GUI
+## v0.7 interim: "Paste this command" GUI
 
 The next step is to lift the operator-runs-a-CLI-command path into the GUI
 without building the full search UI. Two viable shapes:
@@ -122,10 +122,11 @@ What needs to be built for option A:
 - CONSTRAINTS.md updated to instruct the bot to emit the marker when the
   user agrees to an install.
 
-Estimate: one focused dev day. Depends on Zone 4a (CDR bug) being fixed
-first so the workflow actually completes on legitimate skills.
+Estimate: one focused dev day. The CDR pipeline now completes end-to-end on
+legitimate skills (the former false-quarantine issue is resolved), so the
+workflow this GUI invokes is unblocked.
 
-## v0.8 target — full Skills page
+## v0.8 target: full Skills page
 
 Once the v0.7 install path is exercised and stable, the natural follow-up
 is a dedicated "Skills" page in the user-mode sidebar (sixth icon, between
@@ -151,11 +152,11 @@ priority for v0.7.
   remains the default; the agent never gains direct registry-access
   capability.
 - **The agent never initiates an install autonomously.** Every install
-  goes through user approval — today via a terminal, in v0.7 via the
+  goes through user approval: today via a terminal, in v0.7 via the
   GUI banner, in v0.8 via a one-click button. The Approve gate is
   non-negotiable.
 - **The bot's role is discovery, not execution.** It can suggest, it
-  can refuse, it can emit a structured request for the GUI to surface —
+  can refuse, it can emit a structured request for the GUI to surface,
   but it never reaches forge directly. The "agent cannot influence the
   inspection" property of [`docs/skills-spotlight.md`](skills-spotlight.md)
   depends on this.
@@ -165,15 +166,15 @@ priority for v0.7.
 
 ## Cross-references
 
-- [`docs/skills-spotlight.md`](skills-spotlight.md) — why forge exists at all.
-- [ADR-0003](adr/0003-content-disarm-reconstruction.md) — CDR as the third
+- [`docs/skills-spotlight.md`](skills-spotlight.md): why forge exists at all.
+- [ADR-0003](adr/0003-content-disarm-reconstruction.md): CDR as the third
   supply-chain defence.
-- [`workloads/skills/README.md`](../workloads/skills/README.md) — the
+- [`workloads/skills/README.md`](../workloads/skills/README.md): the
   toolchain reference for the CLI path.
 - [`config/orchestrator-workflows.yml`](../config/orchestrator-workflows.yml)
-  `install-skill` — the workflow definition the v0.7 GUI banner will
+  `install-skill`: the workflow definition the v0.7 GUI banner will
   invoke.
-- `MISSION.md` Thread D (gitignored, multi-session plan) — this doc
+- `MISSION.md` Thread D (gitignored, multi-session plan): this doc
   closes step 2 of Thread D's 5 steps.
-- A4 + B5 in [`docs/specs/2026-05-20-dogfood-full-arc-findings.md`](specs/2026-05-20-dogfood-full-arc-findings.md)
-  — the dogfood evidence that forced this decision.
+- A4 + B5 in [`docs/specs/2026-05-20-dogfood-full-arc-findings.md`](specs/2026-05-20-dogfood-full-arc-findings.md):
+  the dogfood evidence that forced this decision.

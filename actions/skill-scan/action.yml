@@ -1,0 +1,72 @@
+name: 'OpenTrApp Skill Firewall'
+description: 'Offline supply-chain scan for agent skills and plugins. Catches malware and prompt injection before an agent loads them. No model, no network.'
+author: 'Albert Dobmeyer'
+branding:
+  icon: 'shield'
+  color: 'green'
+
+inputs:
+  path:
+    description: 'What to scan: a skill or plugin directory, a parent directory of several, or a single SKILL.md file.'
+    required: false
+    default: '.'
+  strict:
+    description: 'Treat suspicious lines as findings, not only the clearly malicious ones.'
+    required: false
+    default: 'false'
+  format:
+    description: 'Human-readable console format printed to the job log: default, summary, or json.'
+    required: false
+    default: 'summary'
+  upload-sarif:
+    description: 'Upload findings to the GitHub Security tab (code scanning). Requires security-events: write in the calling job.'
+    required: false
+    default: 'true'
+  fail-on-finding:
+    description: 'Fail the job when a finding is detected. This is the point of a pre-install gate; set to false to report only.'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: OpenTrApp Skill Firewall (offline scan)
+      id: scan
+      shell: bash
+      run: |
+        set -uo pipefail
+        SCANNER="${{ github.action_path }}/../../workloads/skills/skill"
+        if [ ! -e "$SCANNER" ]; then
+          echo "::error::Skill Firewall scanner not found at $SCANNER. Reference this action as 'uses: albertdobmeyer/opentrapp/actions/skill-scan@<ref>' so the scanner is checked out alongside it."
+          exit 1
+        fi
+        STRICT=""; [ "${{ inputs.strict }}" = "true" ] && STRICT="--strict"
+        # One pass for SARIF (the Security tab) and the gate exit code.
+        RC=0
+        bash "$SCANNER" scan "${{ inputs.path }}" --format=sarif $STRICT > "$RUNNER_TEMP/skill-firewall.sarif" || RC=$?
+        echo "rc=$RC" >> "$GITHUB_OUTPUT"
+        echo "sarif=$RUNNER_TEMP/skill-firewall.sarif" >> "$GITHUB_OUTPUT"
+        # A second, human-readable pass for the job log.
+        echo "::group::OpenTrApp Skill Firewall report"
+        bash "$SCANNER" scan "${{ inputs.path }}" --format="${{ inputs.format }}" $STRICT || true
+        echo "::endgroup::"
+        if [ "$RC" -eq 0 ]; then
+          echo "OpenTrApp Skill Firewall: clean."
+        else
+          echo "::warning::OpenTrApp Skill Firewall flagged the skills at '${{ inputs.path }}' (exit $RC)."
+        fi
+
+    - name: Upload SARIF to the Security tab
+      if: ${{ inputs.upload-sarif == 'true' }}
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@dd903d2e4f5405488e5ef1422510ee31c8b32357 # v3
+      with:
+        sarif_file: ${{ steps.scan.outputs.sarif }}
+        category: opentrapp-skill-firewall
+
+    - name: Enforce the gate
+      if: ${{ inputs.fail-on-finding == 'true' && steps.scan.outputs.rc != '0' }}
+      shell: bash
+      run: |
+        echo "::error::Blocked by the OpenTrApp Skill Firewall. A finding was detected. See the report above or the Security tab." >&2
+        exit 1

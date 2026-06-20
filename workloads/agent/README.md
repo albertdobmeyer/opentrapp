@@ -1,10 +1,10 @@
-# opencli-container
+# vault-agent
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A hardened container harness for the [OpenClaw](https://github.com/anthropics/openclaw) autonomous agent runtime. Provides runtime containment for an autonomous AI agent that would otherwise have full access to the host system.
 
-This repository is the runtime-containment module of the [OpenTrApp](https://github.com/albertdobmeyer/opentrapp) distribution; it ships as a git submodule and contributes the `vault-agent`, `vault-proxy` (L7 policy), and `vault-egress` (L3 policy + pinned DoT resolver) containers to the five-container perimeter. See [ADR-0009](https://github.com/albertdobmeyer/opentrapp/blob/main/docs/adr/0009-five-container-perimeter.md) for the L7/L3 split rationale.
+This is the runtime-containment workload of the [OpenTrApp](https://github.com/albertdobmeyer/opentrapp) monorepo (consolidated 2026-05-30, [ADR-0013](https://github.com/albertdobmeyer/opentrapp/blob/main/docs/adr/0013-monorepo-consolidation.md)); it contributes the `vault-agent`, `vault-proxy` (L7 policy), and `vault-egress` (L3 policy + pinned DoT resolver) containers to the five-container perimeter. See [ADR-0009](https://github.com/albertdobmeyer/opentrapp/blob/main/docs/adr/0009-five-container-perimeter.md) for the L7/L3 split rationale.
 
 **Author:** [@albertdobmeyer](https://github.com/albertdobmeyer)
 
@@ -22,7 +22,7 @@ Three names, three layers:
 - **ClawHub** — a third-party skill (plugin) registry for OpenClaw. The ClawHavoc study (2026-Q1) classified 341 of 2,857 published ClawHub skills (11.9 %) as malicious.
 - **Moltbook** — a third-party AI-agent social network. Acquired by Meta on 2026-03-10.
 
-`opencli-container` does not develop, distribute, or alter any of these. It provides container-level isolation around the OpenClaw runtime so that an end user can experiment with the ecosystem without granting the agent process unrestricted access to the host filesystem, host network, or stored credentials.
+`vault-agent` does not develop, distribute, or alter any of these. It provides container-level isolation around the OpenClaw runtime so that an end user can experiment with the ecosystem without granting the agent process unrestricted access to the host filesystem, host network, or stored credentials.
 
 ## Architecture
 
@@ -85,7 +85,7 @@ The vault is a constrained-execution environment for OpenClaw, not an agentic wo
 
 - Connect to the Moltbook API (when available) for read-and-react workflows
 - Receive Telegram messages and send replies through the dedicated bot
-- Hold sessions, accept system-prompt and persona updates, and run skills certified by `openagent-skills`
+- Hold sessions, accept system-prompt and persona updates, and run skills certified by `vault-skills`
 - Read and write within its sandboxed workspace
 - Make outbound HTTP(S) requests to allowlisted domains via the proxy
 
@@ -121,8 +121,8 @@ Requirements: Podman or Docker, an Anthropic or OpenAI API key.
 ### Recommended path: Podman/Docker + mitmproxy sidecar
 
 ```bash
-git clone https://github.com/albertdobmeyer/opencli-container.git
-cd opencli-container
+git clone https://github.com/albertdobmeyer/opentrapp.git
+cd opentrapp/workloads/agent
 bash scripts/setup.sh        # Linux / macOS
 .\scripts\setup.ps1          # Windows PowerShell
 ```
@@ -239,7 +239,7 @@ podman compose restart vault-proxy   # full restart
 podman exec vault-proxy kill -HUP 1  # hot reload without restart
 ```
 
-ClawHub registry domains are commented out by default. Uncomment only after explicit source-code review of a specific skill; the recommended practice is to use `openagent-skills` to scan and certify the skill instead.
+ClawHub registry domains are commented out by default. Uncomment only after explicit source-code review of a specific skill; the recommended practice is to use `vault-skills` to scan and certify the skill instead.
 
 ---
 
@@ -283,7 +283,7 @@ These are architectural realities of the design, not bugs.
 ## Project structure
 
 ```
-opencli-container/
+workloads/agent/
 ├── Containerfile                    multi-stage hardened image
 ├── compose.yml                      container + proxy orchestration
 ├── component.yml                    OpenTrApp manifest contract

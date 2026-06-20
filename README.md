@@ -10,103 +10,146 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12755/badge)](https://www.bestpractices.dev/projects/12755)
 [![License: MIT](https://img.shields.io/badge/License-MIT-009966.svg)](LICENSE)
 
-A desktop application that runs an autonomous CLI agent inside a five-container security perimeter on the user's own computer, with a Telegram interface for chat. Open-source under MIT. Ships pre-wired for [OpenClaw](https://www.getopenclaw.ai); the perimeter is designed to extend to other CLI agents.
+A safer way to run an autonomous CLI agent on your own computer. OpenTrApp wraps the agent in a security perimeter built on two ideas. **Privilege separation:** no single container holds both your API keys and internet access, so a compromised agent can reach neither directly. **Supply-chain defense:** every skill the agent loads is vetted in isolation before it can reach the agent, because a malicious skill runs as part of the agent's own reasoning. Open-source under MIT.
 
-For a one-page elevator explainer of the five-container perimeter, see [`docs/perimeter-explained.md`](docs/perimeter-explained.md). The full architecture, threat model, and per-component capabilities are in [`docs/trifecta.md`](docs/trifecta.md).
+It ships today as a desktop app pre-wired for [OpenClaw](https://www.getopenclaw.ai). The perimeter is agent-agnostic by design; opencode, Claude Code, and other CLI agents are candidates for support.
+
+For a one-page explainer of how the perimeter works (one contained agent, two guards around it), see [`docs/perimeter-explained.md`](docs/perimeter-explained.md). The full architecture, threat model, and per-component capabilities are in [`docs/trifecta.md`](docs/trifecta.md).
 
 **Author:** [@albertdobmeyer](https://github.com/albertdobmeyer) · **Public landing page:** [opentrapp.com](https://opentrapp.com)
 
 ---
 
+## Try it, lowest commitment first
+
+You do not have to adopt the whole perimeter to get value out of this.
+
+**1. Scan your agent's skills in CI (one line, fully offline, no model).** The skill scanner runs as a GitHub Action, so any repository can gate its skills or plugins against malware and prompt injection before they ship:
+
+```yaml
+- uses: albertdobmeyer/opentrapp/actions/skill-scan@skill-scan-v1
+  with: { path: ./skills }
+```
+
+Findings land in your repository's Security tab, and a finding fails the job. Details in [`actions/skill-scan/`](actions/skill-scan/).
+
+**2. Scan a skill locally before you install it.** From a clone of this repo, the same offline check runs as a one-line pre-install gate, with no global install needed:
+
+```bash
+workloads/skills/skill scan ./that-plugin --strict || echo "blocked by the skill firewall"
+```
+
+**3. Run the full perimeter (the desktop app).** Download an installer from the [latest release](https://github.com/albertdobmeyer/opentrapp/releases/latest); the setup wizard does the rest. This is the end-to-end containment story.
+
+---
+
 ## Purpose
 
-Autonomous CLI agents — [OpenClaw](https://www.getopenclaw.ai) is one prominent example — execute shell commands, read files, and load skills from third-party registries. Run with default settings, the agent has the same operating-system privileges as the user. The ClawHavoc study (2026-Q1) of one such registry classified 11.9 % of published skills as malicious (341 of 2,857). OpenTrApp wraps any such agent in a defense-in-depth perimeter to reduce the impact of agent compromise, malicious skills, and prompt-injection attacks. The shipped integration is OpenClaw; the perimeter is designed to extend to other CLI agents.
+Autonomous CLI agents, such as [OpenClaw](https://www.getopenclaw.ai), execute shell commands, read files, and load skills from third-party registries. Run with default settings, the agent has the same operating-system privileges as the user. The ClawHavoc study (2026-Q1) of one such registry classified 11.9% of published skills as malicious (341 of 2,857). OpenTrApp wraps any such agent in a defense-in-depth perimeter to reduce the impact of agent compromise, malicious skills, and prompt-injection attacks. The shipped integration is OpenClaw, and the perimeter is designed to extend to other CLI agents.
 
 Reasoning is delegated to the agent's vendor API (Anthropic's, for OpenClaw); only the agent's execution layer (file work, tool calls, skill invocations) is local.
 
 ## Values
 
-These are the principles that shape every design and product decision in this project. They are written down because the alternative — leaving them implicit — is how projects drift.
+These are the principles that shape every design and product decision in this project. They are written down because the alternative, leaving them implicit, is how projects drift.
 
 - **Safety-first, safety-always.** The perimeter exists because autonomous agents are powerful and powerful tools fail in expensive ways. Every architectural choice is evaluated against its containment effect first; convenience second. Defaults err on the restrictive side and are documented when they do.
-- **Honest about residual risk.** The application can never claim to make running an autonomous agent absolutely safe. It raises the cost of compromise via defense-in-depth and is open about the gaps that remain. [**What this protects against — and what it doesn't**](docs/what-this-protects.md) is the plain-language summary; the [threat model](docs/threat-model.md) names every gap; the [whitepaper](docs/whitepaper.md) explains them.
+- **Honest about residual risk.** The application can never claim to make running an autonomous agent absolutely safe. It raises the cost of compromise via defense-in-depth and is open about the gaps that remain. [**What this protects against, and what it doesn't**](docs/what-this-protects.md) is the plain-language summary; the [threat model](docs/threat-model.md) names every gap; the [whitepaper](docs/whitepaper.md) explains them.
 - **Agent-agnostic, community-driven.** The perimeter is not coupled to any single CLI agent. The reference deployment is OpenClaw because OpenClaw exists today; the architecture is designed to extend to others. Contributions that broaden compatibility are welcomed.
 - **Transparency over marketing.** No tracking, no telemetry, no proprietary blobs. Every dependency, every container layer, every external request is documentable from the source tree. Reproducibility steps are in [`docs/reproduce.md`](docs/reproduce.md).
 - **Shared for the safety of the commons.** This project is MIT-licensed and developed in the open. Security research findings, hardening recipes, and threat-model deltas land in the repo where everyone running an autonomous CLI agent can benefit, not in private channels.
 
 ## Capabilities (default Split Shell)
 
-- Telegram bot interface — message the agent from a paired phone
+- Telegram bot interface for messaging the agent from a paired phone
 - File read/write within a sandboxed workspace; the host filesystem is not exposed to the container
 - Image processing on Telegram-supplied content
-- Skill loading from ClawHub gated by a 87-pattern scanner with MITRE-ATT&CK mapping and Content Disarm & Reconstruction
+- Skill loading from ClawHub gated by an 87-pattern scanner (MITRE ATT&CK-mapped, including 16 prompt-injection patterns) and Content Disarm & Reconstruction
 - 24-point startup verification of the perimeter topology
 - API keys held by `vault-proxy` and injected per request; the agent container never reads the literal key
 
-Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled by default. They are available at "Soft Shell" via CLI configuration in v0.3.0; see [`workloads/agent/`](workloads/agent/).
+Web browsing, web fetch, and the broader OpenClaw tool surface are not enabled by default. They are available at the "Soft Shell" tier via configuration; see [`workloads/agent/`](workloads/agent/).
 
 ## Skill scanner & Content Disarm & Reconstruction
 
 ![A malicious skill caught: the scanner blocks an opencode SKILL.md hiding credential exfil and an AMOS-style C2 download, before it reaches the agent](docs/assets/demo-skill-caught.gif)
 
-The most novel piece of the project is the supply-chain defence in
+The most novel piece of the project is the supply-chain defense in
 [`workloads/skills/`](workloads/skills/). The ClawHavoc study (2026-Q1) found
-**11.9 % of published ClawHub skills were malicious** (341 of 2,857) — the
-gap container hardening doesn't close, because a malicious skill loaded by
-the agent runs *as part of* the agent's reasoning. `vault-skills` runs a
-layered defence — five stages, though not five fully-independent detectors:
-stages 1, 2, and the post-install re-scan share the same pattern catalogue
-(stage 2 is a specialised subset of stage 1). The genuinely distinct
-mechanisms are three — a pattern blocklist, a default-deny line classifier,
-and the parse-and-rebuild (CDR):
+**11.9% of published ClawHub skills were malicious** (341 of 2,857). That is the
+gap container hardening doesn't close, because a malicious skill loaded by the
+agent runs *as part of* the agent's reasoning. `vault-skills` runs a layered
+defense of five stages, though not five fully-independent detectors: stages 1,
+2, and the post-install re-scan share the same pattern catalogue (stage 2 is a
+specialised subset of stage 1). The three genuinely distinct mechanisms are a
+pattern blocklist, a default-deny line classifier, and the parse-and-rebuild
+(CDR):
 
 1. **87-pattern static scanner**, MITRE ATT&CK-mapped, calibrated to skills
    observed in real attacks (the ClawHavoc campaign + the `moltbook-ay`
    trojan).
-2. **16-pattern prompt-injection detector** — instruction override, persona
-   hijack, exfil directives, LLM control-token injection.
-3. **Zero-trust line verifier** — every line of every file classified; a
-   single unrecognised line quarantines the entire skill. Defence against
-   novel attacks the pattern set hasn't been told about yet.
-4. **Content Disarm & Reconstruction** — the original artefact is parsed
-   into structured intent, then discarded; the skill that reaches the agent
-   is rebuilt from scratch using only the parsed intent and clean templates.
-   Bytes from the original never reach the agent. CDR is standard for email
+2. **16-pattern prompt-injection detector** covering instruction override,
+   persona hijack, exfil directives, and LLM control-token injection.
+3. **Zero-trust line verifier**: every line of every file is classified, and a
+   single unrecognised line quarantines the entire skill. This is the defense
+   against novel attacks the pattern set hasn't been told about yet.
+4. **Content Disarm & Reconstruction**: the original artefact is parsed into
+   structured intent, then discarded. The skill that reaches the agent is
+   rebuilt from scratch using only the parsed intent and clean templates, so
+   bytes from the original never reach the agent. CDR is standard for email
    attachments; applying it to agent skills is, as far as we know, original.
-5. **Post-install re-scan + suppression audit** — `.scanignore` ranges over
-   50 lines are rejected; the scanner re-runs against the installed artefact.
+5. **Post-install re-scan and suppression audit**: `.scanignore` ranges over
+   50 lines are rejected, and the scanner re-runs against the installed artefact.
 
 The scanner, the injection patterns, the line verifier, and CDR are all
-**agent-agnostic** — they work on the text and helper-script content any
+**agent-agnostic**. They work on the text and helper-script content any
 markdown-based skill format ships, not on anything OpenClaw-specific. Adapting
-forge to a different agent's skill registry is a connector question, not a
-redesign.
+the scanner to a different agent's skill registry is a connector question, not a
+redesign, and the offline scanner already runs standalone as a command-line
+check you can drop into any agent's plugin-install step.
 
-**On cost (so there are no surprises).** Stages 1–3 and the re-scan are **pure
-offline pattern matching — no model, no network**, and `vault-skills` is
-**on-demand** (it isn't started with the perimeter and costs ~0 RAM at rest).
-If you only ever *scan* skills, you download and run nothing extra. Only the
-optional CDR *rebuild* (stage 4) needs an LLM, and it doesn't have to be a
-dedicated download: point it at a **small local model (~1 GB, `qwen2.5-coder:1.5b`)
-or at a model you already run** — any Ollama-native *or* OpenAI-compatible
-endpoint (your agent's model, LM Studio, vLLM, a managed API) via
-[`workloads/skills/config/cdr.conf`](workloads/skills/config/cdr.conf). The
-rebuild is model-backed and best-effort, not bit-identical across runs; what it
-guarantees is that the original file is never delivered and every rebuild is
+**On cost (so there are no surprises).** Stages 1 to 3 and the re-scan are **pure
+offline pattern matching, with no model and no network**, and `vault-skills` is
+**on-demand** (it isn't started with the perimeter and costs roughly 0 RAM at
+rest). If you only ever *scan* skills, you download and run nothing extra. Only
+the optional CDR *rebuild* (stage 4) needs a model, and it doesn't have to be a
+dedicated download: point it at a **small local model (about 1 GB,
+`qwen2.5-coder:1.5b`) or at a model you already run**, whether an Ollama-native
+or OpenAI-compatible endpoint (your agent's model, LM Studio, vLLM, or a managed
+API), via [`workloads/skills/config/cdr.conf`](workloads/skills/config/cdr.conf).
+The rebuild is model-backed and best-effort, not bit-identical across runs. What
+it guarantees is that the original file is never delivered, and every rebuild is
 re-scanned and signed before reaching the agent.
 
 **Full narrative + the pitch to other CLI-agent maintainers:**
 [`docs/skills-spotlight.md`](docs/skills-spotlight.md).
 
+## For the skeptical
+
+**"Isn't this just a container sandbox? Why not gVisor, Firejail, or a VM?"**
+A sandbox is necessary but not sufficient, and OpenTrApp uses one. The two parts a generic sandbox does not give you are the reason this project exists. First, a privilege split: the container holding your API keys has no internet route, and the container with the internet route holds no keys, so compromising one yields neither exfiltration nor credential theft. Second, skill defense: sandboxing the agent does not contain a malicious skill, because the skill runs as part of the agent's own reasoning. The point-by-point comparison against Firejail, gVisor, VM-only isolation, and scanner-only tools is in [`docs/why-not-x.md`](docs/why-not-x.md).
+
+**"Is the boundary actually verified, or is this a claim?"**
+The perimeter ships with an automated boundary self-test: network isolation, the egress allowlist, credential injection, the L3 filter, and a proxy-CA pin, with the rule that a resumed perimeter must pass the same checks as a cold one. Full verification on real hardware is in progress, and until it is green the honest position is that any "it holds" statement is in progress, not done. The [threat model](docs/threat-model.md) names every residual gap.
+
+**"Does Content Disarm and Reconstruction break legitimate skills?"**
+The offline scan and verify, which is the wedge and what the Action runs, do not rebuild anything; they read and classify. Only the optional CDR rebuild reconstructs a skill. That rebuild is model-backed and best-effort rather than bit-identical, and it errs conservative: a single unrecognised line quarantines the whole skill. What it guarantees is that the original bytes are never delivered and every rebuild is re-scanned before it reaches the agent.
+
+**"Why five containers? Is that not overkill?"**
+Four are load-bearing and one (the agent-social shield) is opt-in and off by default. The count exists for the privilege split above: separating the L7 application-layer policy from the L3 network-layer policy is what lets "holds the keys" and "can reach the internet" sit in different trust domains. See [ADR-0009](docs/adr/0009-five-container-perimeter.md).
+
+**"It is solo and early. Why should I trust it?"**
+You should not trust it on reputation, and the project does not ask you to. It is MIT, built entirely in public, with an OpenSSF Best Practices badge, signed releases, a public threat model, and a reproducible-build recipe. The most useful thing you can do is review it adversarially, which is exactly what the project is asking for below.
+
 ## Limitations
 
-> **Start here:** [**What this protects against — and what it doesn't**](docs/what-this-protects.md) is a two-minute, plain-language summary of where the walls are and where the doors are. The points below and the [threat model](docs/threat-model.md) are the detailed version.
+> **Start here:** [**What this protects against, and what it doesn't**](docs/what-this-protects.md) is a two-minute, plain-language summary of where the walls are and where the doors are. The points below and the [threat model](docs/threat-model.md) are the detailed version.
 
 - This is experimental software. It is provided as-is, without warranty of any kind. The authors accept no responsibility for damage resulting from its use.
 - Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility. The full attacker-capability matrix and residual-risk enumeration are in [`docs/threat-model.md`](docs/threat-model.md); the differential against alternative containment strategies (Firejail, gVisor, VM-only isolation, scanner-only, etc.) is in [`docs/why-not-x.md`](docs/why-not-x.md).
 - The agent's reasoning is not local. Operating OpenTrApp without internet access to Anthropic's API is not supported.
 - Installer binaries are signed with the Tauri auto-updater key, not with OS-level code-signing certificates. macOS Gatekeeper and Windows SmartScreen will display a first-launch warning.
-- The social-feed workload (`vault-social`, formerly `vault-pioneer`) is **parked since 2026-05-03**. The target API (Moltbook) has been intermittent since 2026-04-05 following Meta's acquisition. The container is still defined in `compose.yml`; the code is preserved at [`workloads/social/`](workloads/social/). Re-aim to a generalized agent-to-agent social shield is tracked in MISSION.md (Thread C).
+- The agent-social workload (`vault-social`, formerly `vault-pioneer`) is **opt-in / on-demand**, and its full build-out is **deferred** (the third concern, after Vault/Skill/GUI). The original Moltbook target was parked 2026-05-03 (Meta's acquisition); a live AT Protocol (Bluesky) adapter has since shipped ([ADR-0017](docs/adr/0017-unpark-social-live-adapter.md)). The container is defined in `compose.yml` (off by default); code at [`workloads/social/`](workloads/social/). Tracked in MISSION.md (Thread C).
 
 ## Requirements
 
@@ -135,17 +178,17 @@ For unsupported platforms or to audit the build pipeline, see *Building from sou
 <details>
 <summary><strong>Architecture summary</strong></summary>
 
-The runtime perimeter consists of five containers connected by per-service internal compose networks. The L7 (application-layer) policy and the L3 (network-layer) policy live in separate containers — see [ADR-0009](docs/adr/0009-five-container-perimeter.md) for the rationale.
+The runtime perimeter consists of five containers connected by per-service internal compose networks. The L7 (application-layer) policy and the L3 (network-layer) policy live in separate containers; see [ADR-0009](docs/adr/0009-five-container-perimeter.md) for the rationale.
 
 | Container | Role | Description |
 |-----------|------|-------------|
 | `vault-agent`   | Runtime containment | Read-only root filesystem, all Linux capabilities dropped, custom syscall profile, workspace mount only |
 | `vault-skills`   | Supply-chain defense | 87-pattern skill scanner, zero-trust line verifier, Content Disarm & Reconstruction pipeline |
 | `vault-proxy`   | **L7 egress policy** | Domain allowlist, API-key injection, request logging, post-resolve destination-IP check. Holds API keys; **no internet attachment** (chains to `vault-egress`). |
-| `vault-social` | Social-content analysis | **Parked** — see *Limitations* |
+| `vault-social` | Agent-social analysis | **Opt-in / on-demand**; build-out deferred (see *Limitations*) |
 | `vault-egress`  | **L3 egress policy** | Kernel-level RFC1918 drop; pinned DoT resolver (Quad9 + Cloudflare); the *only* container with internet attachment. Holds `NET_ADMIN` but **no secrets**. |
 
-`vault-proxy` is the bridge between the internal containers. `vault-egress` is the bridge to the public internet. Neither container holds both API credentials *and* elevated network capabilities — that separation is the load-bearing security property the five-container topology exists for.
+`vault-proxy` is the bridge between the internal containers. `vault-egress` is the bridge to the public internet. Neither container holds both API credentials *and* elevated network capabilities. That separation is the load-bearing security property the five-container topology exists for.
 
 ```mermaid
 flowchart LR
@@ -155,7 +198,7 @@ flowchart LR
     subgraph PERIMETER["Perimeter"]
         AGENT[vault-agent]
         FORGE[vault-skills]
-        PIONEER["vault-social<br/>(parked)"]
+        PIONEER["vault-social<br/>(opt-in)"]
         PROXY["vault-proxy<br/>(L7 policy)"]
         EGRESS["vault-egress<br/>(L3 policy + DoT)"]
     end
@@ -168,8 +211,8 @@ flowchart LR
     EGRESS --> TELEGRAM[Telegram]
     EGRESS --> CLAWHUB[ClawHub]
 
-    classDef parked stroke-dasharray: 5 5,color:#777
-    class PIONEER parked
+    classDef optional stroke-dasharray: 5 5,color:#777
+    class PIONEER optional
 ```
 
 Five Mermaid drawings (topology, trust tiers, network-isolation matrix, the skill-loading flow, the assistant-state machine) are in [`docs/diagrams.md`](docs/diagrams.md). The full architecture, attacker-capability matrix, defense-in-depth tables, and ownership matrix are in [`docs/trifecta.md`](docs/trifecta.md) and [`docs/threat-model.md`](docs/threat-model.md).
@@ -194,11 +237,11 @@ For a release-style desktop build, install Tauri's prerequisites for the target 
 ### Test suite
 
 ```bash
-cd app/src-tauri && cargo test --lib     # Rust unit tests (56 at v0.3.0)
-cd app && npm test -- --run              # Vitest (74 at v0.3.0)
+cd app/src-tauri && cargo test --lib     # Rust unit tests
+cd app && npm test -- --run              # Vitest unit tests
 cd app && npx tsc --noEmit               # TypeScript strict
-cd app && npx playwright test            # End-to-end (25)
-bash tests/orchestrator-check.sh         # Manifest validation (42 checks)
+cd app && npx playwright test            # End-to-end tests
+bash tests/orchestrator-check.sh         # Manifest validation (120 checks)
 podman compose up -d && podman compose down  # Perimeter smoke test
 ```
 
@@ -218,19 +261,19 @@ cosign verify-blob \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
   sbom.cyclonedx.json
 
-# SLSA build provenance — see the `intoto.jsonl` asset on each release
+# SLSA build provenance: see the `intoto.jsonl` asset on each release
 cosign verify-attestation --type slsaprovenance ...
 ```
 
 ### Repository layout
 
 ```
-opentrapp/                            (this repository — single monorepo)
+opentrapp/                            (this repository, single monorepo)
 ├── app/                              Tauri 2 + React 18 desktop application (the orchestrator)
 ├── workloads/                        one directory per workload container
 │   ├── agent/                          → vault-agent  (runtime containment)
-│   ├── forge/                          → vault-skills  (supply-chain defense — skill scanner + CDR)
-│   └── social/                         → vault-social (agent-social-feed analysis — parked)
+│   ├── forge/                          → vault-skills  (supply-chain defense: skill scanner + CDR)
+│   └── social/                         → vault-social (agent-social analysis: opt-in, deferred)
 ├── infra/                            shared infrastructure containers
 │   ├── proxy/                          → vault-proxy  (L7 egress policy)
 │   └── egress/                         → vault-egress (L3 egress policy)
@@ -245,10 +288,11 @@ See [`CLAUDE.md`](CLAUDE.md) for the full architecture specification and contrib
 
 ---
 
-## Contributing & project docs
+## Contributing, and please tear it apart
 
-Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md) for the build,
-test gates, DCO sign-off, and pull-request workflow.
+This is an early, solo project, and the single most valuable contribution is adversarial review. Read the [threat model](docs/threat-model.md) and tell me where the perimeter leaks, where the scanner is bypassable, or where a claim outruns its evidence. Code reviewers and a co-maintainer are especially welcome. Open an issue, open a pull request, or ask and I will point you at a good place to start.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the build, test gates, DCO sign-off, and pull-request workflow.
 
 | Document | What it covers |
 |----------|----------------|

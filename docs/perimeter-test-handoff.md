@@ -46,22 +46,32 @@ Install it, launch, and go through the **first-run wizard** (enter the Anthropic
 exactly the v0.7.0 first-run fix, so a clean run here doubles as a Windows re-grade of it.
 This path runs the real shipped app, including the watchdog that drives idle auto-pause.
 
-**Path B — `podman compose` directly (best for WS1-1a; no app needed).**
+**Path B — compose directly (best for WS1-1a; no app needed).**
 ```
 git clone https://github.com/albertdobmeyer/opentrapp && cd opentrapp
 # create the runtime .env with your two keys (see infra/proxy for the variable names):
 #   ANTHROPIC_API_KEY=...   TELEGRAM_BOT_TOKEN=...
-podman compose up -d            # all five services
-podman compose ps
+make perimeter-up               # auto-detects podman-compose (see T0 runner notes); all five services
+make perimeter-status
 ```
+(If invoking compose by hand, use `podman-compose up -d`, **not** `podman compose up -d` — see the
+runner notes in §4 T0 for why the docker-compose CLI plugin breaks on this file.)
 
 ## 3. Prerequisites on Windows
 
 - **Container runtime:** install **Podman** (Podman Desktop sets up a WSL2-backed `podman
   machine`). Prefer it over Docker Desktop — the footprint doc explains why (podman ~hundreds
   of MB vs Docker Desktop ~1.5–3 GB). Give the podman machine ≥4 GB.
+- **WSL2 terminal for all shell work.** The `make` targets, `bash tests/*.sh`, and
+  `podman compose` all run from a WSL2 terminal (not PowerShell or CMD). Open one via
+  Windows Terminal → Ubuntu (or `wsl`). GNU make and bash are available there by default;
+  the WSL2 podman shares the same machine as Podman Desktop so container operations
+  work transparently. Clone or `cd` to the repo path under `/mnt/b/...` or mount it.
 - **`gh` CLI** (for Path A's draft download) authenticated to your GitHub account.
+  Install inside WSL2: `gh auth login`.
 - **Keys:** the `@opentrappbot` token + an Anthropic key (a low-cap key is fine).
+  Copy `.env.example` → `.env` at the repo root and fill in both values before
+  running `podman compose up -d`.
 - **Ollama** (optional) only if you also exercise the Sentinel AI rungs; not needed for these tests.
 
 ## 4. The tests (with consumption-end acceptance criteria)
@@ -74,16 +84,37 @@ injection, B4 L3 egress filter, B5 proxy-CA pinned, B6 no host-side untrusted �
 Exit codes: **0** = all hold · **1** = a boundary FAILED (breach) · **2** = could not assess
 (perimeter down / tool missing — *not* a pass; unverifiable ≠ verified).
 
+> **Verified on the 7.2 GB Linux laptop (2026-06-16) — T0 does *not* need this Windows fallback.**
+> The full from-scratch image build **and** the live five-container perimeter ran with ~3.6 GB free
+> and **no swap-storm**; T0 was **exit 0 cold and across three resume cycles** (`pass=7`, CA unchanged).
+> Runner notes from that run, now encoded in the Makefile and the commands below:
+> - **Use native `podman-compose`.** Bare `podman compose` selects the docker-compose CLI plugin where
+>   installed, which breaks on this file: it inlines `security_opt: seccomp=<file>` as JSON (podman
+>   rejects it as a path → "file name too long"), mismatches network labels, and needs the
+>   `podman.socket` user service (`systemctl --user enable --now podman.socket`). `make perimeter-up`
+>   now auto-detects and prefers `podman-compose`.
+> - **`podman-compose` ignores `profiles:`**, so it starts **all five** containers (incl. on-demand
+>   skills/social), not three. Harmless for T0 — B6 still asserts the agent's read-only skills mount.
+> - **Two harness fixes shipped from that run** (`tests/boundary-selftest.sh`): B1/B2 now detect the
+>   agent's **busybox wget** (the hardened image strips the curl/wget symlinks, so the old
+>   `command -v wget` made them SKIP); and B4 no longer pipes `nft | grep` straight into the `if`
+>   under `set -o pipefail` (a transient non-zero `podman exec` made it flake on a fresh egress).
+
 **Cold start — record the CA baseline and prove the boundary holds fresh:**
 ```
-make perimeter-up                       # podman compose up -d  (all five services)
+make perimeter-up                       # auto-detects podman-compose; brings up all five services
 make perimeter-status                   # wait until all vault-* show Up/healthy
-bash tests/boundary-selftest.sh --record-baseline
+make boundary-selftest ARGS=--record-baseline
 ```
-- **PASS:** `pass=6 fail=0 skip=0`, `All boundaries hold.`, **exit 0**. The `--record-baseline` run
-  pins the proxy-CA fingerprint to `~/.opentrapp/boundary/ca-fingerprint.expected`.
+- **PASS:** `pass=7 fail=0 skip=0`, `All boundaries hold.`, **exit 0** (seven assertions: B1, B2-deny,
+  B2-allow, B3, B4, B5, B6). The `--record-baseline` run pins the proxy-CA fingerprint to
+  `~/.opentrapp/boundary/ca-fingerprint.expected`.
 - A `FAIL` (exit 1) is a real cold breach — capture the line, that's a finding. `skip` (exit 2) means
-  a check couldn't run (e.g. no curl/wget in the agent image) — note which.
+  a check couldn't run — note which.
+- **Use `make boundary-selftest`, not bare `bash tests/boundary-selftest.sh`.** The make target derives
+  the live container names from the compose-service label, so it works whatever the runner named them
+  (podman-compose → `opentrapp_vault-*_1`). Bare invocation assumes containers literally named `vault-*`
+  and otherwise reports CANNOT ASSESS.
 
 **Resumed — the §11 core: the SAME test must pass after a resume, CA unchanged:**
 ```
@@ -93,15 +124,15 @@ export OPENTRAPP_SELFTEST_ON_RESUME=1   # selftest.rs gating; default OFF, so sh
 
 # manual proxy (Path B / no daemon): restart the perimeter, then re-assess against the baseline:
 make perimeter-down && make perimeter-up && make perimeter-status
-bash tests/boundary-selftest.sh         # assess mode — compares CA to the recorded baseline
+make boundary-selftest                  # assess mode — compares CA to the recorded baseline
 ```
-- **PASS (the gate):** `pass=6 fail=0 skip=0`, **exit 0**, and **B5-ca-pinned → "CA fingerprint
+- **PASS (the gate):** `pass=7 fail=0 skip=0`, **exit 0**, and **B5-ca-pinned → "CA fingerprint
   unchanged"** — the resumed perimeter holds the *same* boundaries as cold, with no silent CA swap.
 - **FAIL (exit 1):** a resumed-but-leaky boundary — the worst outcome, and the whole reason this test
   exists. Capture the failing check name.
 
 **Bring back:** the two result lines (cold + resumed) with exit codes (`--json` is easy to paste:
-`bash tests/boundary-selftest.sh --json`). A green T0 cold **and** resumed is the boundary half of
+`make boundary-selftest ARGS=--json`). A green T0 cold **and** resumed is the boundary half of
 "ready to recommend to opencode."
 
 ### T1 — WS0-0a: does idle auto-pause FIRE? (Path A)
@@ -125,7 +156,7 @@ bash tests/boundary-selftest.sh         # assess mode — compares CA to the rec
 - **Boundary checks after resume** (the part that makes resume *security-correct*, not just alive):
   this is now **T0's automated self-test** — run it against the just-resumed perimeter:
   ```
-  bash tests/boundary-selftest.sh        # expect: exit 0, pass=6, B5 "CA fingerprint unchanged"
+  make boundary-selftest                 # expect: exit 0, pass=7, B5 "CA fingerprint unchanged"
   ```
   It covers exactly the manual checks this step used to list (no direct egress, off-allowlist host
   blocked, key still injected on an allowlisted request, nftables drop-private loaded) plus the

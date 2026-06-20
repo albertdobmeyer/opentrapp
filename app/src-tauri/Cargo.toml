@@ -4,6 +4,11 @@
 # `fuzz/` is a workspace-of-its-own and is intentionally not a member.
 [workspace]
 members = ["crates/core", "crates/daemon"]
+# crates/viewer-server is a SCAFFOLD for the de-Tauri loopback web GUI (ADR-0022 /
+# docs/specs/2026-06-17-loopback-web-gui-implementation.md). Excluded — and therefore
+# ignored by cargo, CI, and Cargo.lock — until the §0 de-risking spike passes its
+# threat-model review. The implementing agent moves it to `members` at migration step 2.
+exclude = ["crates/viewer-server"]
 resolver = "2"
 
 [package]

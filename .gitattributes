@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Shell scripts must always use LF so they execute correctly in WSL2 / Linux
+# even when checked out on a Windows host (where text=auto would give CRLF).
+*.sh text eol=lf
+Makefile text eol=lf

@@ -21,6 +21,24 @@ Scorecard's external OSV scan reports **23**. They split cleanly:
   OSV scan **cannot read `deny.toml`**, so the count stays at 19 regardless; our
   local/CI audit is clean and the acceptance is auditable.
 
+**Re-verified 2026-06-16 (Scorecard 7.7/10, commit `63d4426`; count now 21 — the
+`rand` advisory is tallied at both 0.7.3 and 0.8.5).** Two findings this pass:
+
+1. **No dependency bump at our layer fixes any of them — verified, not assumed.** Each
+   advisory was traced to its root: the GTK3 set and `glib` come via `tauri`/`wry`;
+   `rand`, `fxhash` and the `unic-*` chain come via `tauri-utils`' build-time codegen
+   (`html5ever`→`rand`, `selectors`→`fxhash`, `urlpattern`→`unic-*`); `idna` is already
+   on the clean 1.x / `icu4x` line. `cargo update` moves **0** packages. The only
+   resolution is removing the Tauri tree — the **Phase 3 de-Tauri cutover** — or an
+   upstream GTK4 migration in `tauri-apps/wry`.
+2. **All 21 are confined to the optional desktop-GUI binary; the perimeter spine is
+   advisory-clean.** `cargo tree` shows the `opentrapp` GUI crate pulling the full Tauri
+   stack, while the crates.io-published **`opentrapp-core`** and the headless
+   **`opentrapp-daemon`** — the code that actually runs the containment — contain **zero**
+   GTK / WebKit / `wry` / `tauri-utils` / `unic-*` / `rand 0.7–0.8` crates (their only
+   `tauri` string is the `src-tauri/` directory *path*). So the Scorecard *Vulnerabilities*
+   count is entirely the optional GUI's deprecated GTK3 bindings; the daemon + core have none.
+
 ## Accepted Rust advisories (all *warnings*, not vulnerabilities)
 
 The machine-readable acceptance for the `unmaintained` set is in `deny.toml`

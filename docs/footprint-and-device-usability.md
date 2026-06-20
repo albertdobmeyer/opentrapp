@@ -87,7 +87,7 @@ shields are on-demand and absent at rest):
 | **vault-proxy** | mitmproxy (Python) | 250 MB | **54 MB [measured, fresh]** | **Our security infra** |
 | **vault-egress** | nftables/resolver (+ unused Node) | 176 MB | **10.6 MB [measured]** | **Our security infra** |
 | *vault-skills* | Python + bash (idle) | 234 MB | ~0 at rest (on-demand) | Our security infra |
-| *vault-social* | Python + bash (idle) | 154 MB | ~0 (parked) | Our security infra |
+| *vault-social* | Python + bash (idle) | 154 MB | ~0 (opt-in, off by default) | Our security infra |
 
 The resting perimeter was **measured at ≈ 421 MB** (egress 10.6 + proxy 54 + agent 356,
 `podman stats`, 2026-06-09) — well under the ~600 MB the planning docs feared for the agent

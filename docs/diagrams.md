@@ -12,20 +12,20 @@ ASCII fallbacks remain in the original architecture documents ([`trifecta.md`](t
 
 ## 1. Five-container perimeter topology
 
-Source of truth: [`compose.yml`](../compose.yml). The L7/L3 policy split is specified in [ADR-0009](adr/0009-five-container-perimeter.md); the pinned DoT resolver in [ADR-0010](adr/0010-pinned-resolver-dns.md).
+Source of truth: [`compose.yml`](../compose.yml). The L7/L3 policy split is specified in [ADR-0009](adr/0009-five-container-perimeter.md); the pinned DoT resolver in [ADR-0010](adr/0010-pinned-resolver-dns.md). Mental model (the 60-second version): **one untrusted subject + two guards**; see [`perimeter-explained.md`](perimeter-explained.md) and [ADR-0024](adr/0024-product-structure-three-concerns.md).
 
 ```mermaid
 flowchart TB
-    subgraph HOST["Host (Tier 1 — trusted)"]
+    subgraph HOST["Host (Tier 1: trusted)"]
         USER[User]
         GUI["OpenTrApp GUI<br/>(Tauri 2 + Rust)"]
         COORD["Trusted CLI coordinator<br/>(Claude Code or equivalent)"]
     end
 
-    subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
+    subgraph PERIMETER["Perimeter (Tier 2: infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway<br/>read-only root, dropped capabilities,<br/>narrow syscall profile, workspace-only mount"]
         FORGE["vault-skills<br/>87-pattern scanner +<br/>line classifier + CDR pipeline"]
-        PIONEER["vault-social<br/>(parked)"]
+        SOCIAL["vault-social<br/>(opt-in)"]
         PROXY["vault-proxy<br/>L7 policy: allowlist, key injection,<br/>post-resolve IP check, request log"]
         EGRESS["vault-egress<br/>L3 policy: nftables RFC1918 drop,<br/>unbound DoT resolver (Quad9 + Cloudflare)"]
     end
@@ -44,7 +44,7 @@ flowchart TB
 
     AGENT --> PROXY
     FORGE --> PROXY
-    PIONEER -.-> PROXY
+    SOCIAL -.-> PROXY
     AGENT <-.->|"write-only volume<br/>(skills-deliveries)"| FORGE
 
     PROXY --> EGRESS
@@ -54,16 +54,16 @@ flowchart TB
 
     classDef trusted fill:#e7f3ff,stroke:#1f6feb,color:#000
     classDef perim fill:#fff7d6,stroke:#9a6700,color:#000
-    classDef parked fill:#f6f8fa,stroke:#bbb,color:#777,stroke-dasharray: 5 5
+    classDef optional fill:#f6f8fa,stroke:#bbb,color:#777,stroke-dasharray: 5 5
     classDef external fill:#f0f0f0,stroke:#777,color:#000
 
     class USER,GUI,COORD trusted
     class AGENT,FORGE,PROXY,EGRESS perim
-    class PIONEER parked
+    class SOCIAL optional
     class ANTHROPIC,TELEGRAM,CLAWHUB external
 ```
 
-**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-skills` is the write-only `skills-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-social` indicates the parked status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment** — it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
+**Reading guide.** Solid arrows are routed network paths; the dashed double-arrow between `vault-agent` and `vault-skills` is the write-only `skills-deliveries` shared volume (no routed network path exists between them). The dotted line from `vault-social` indicates its opt-in / on-demand status. The five boxes inside *Perimeter* are the five containers in `compose.yml`'s `services:` map. `vault-proxy` enforces L7 policy and holds API credentials but has **no direct internet attachment**; it chains upstream to `vault-egress`. `vault-egress` enforces L3 policy at the kernel level and is the **only** container with public-internet attachment. No single container holds both credentials and elevated network capabilities.
 
 ---
 
@@ -73,20 +73,20 @@ Source of truth: [`trifecta.md`](trifecta.md) §2.
 
 ```mermaid
 flowchart TD
-    subgraph T1["TIER 1 — TRUSTED (host)"]
+    subgraph T1["TIER 1: TRUSTED (host)"]
         direction LR
         T1A["User (issues high-level intent)"]
         T1B["Trusted CLI coordinator<br/>(Claude Code or equivalent)"]
         T1C["OpenTrApp desktop GUI"]
     end
 
-    subgraph T2["TIER 2 — INFRASTRUCTURE (perimeter)"]
+    subgraph T2["TIER 2: INFRASTRUCTURE (perimeter)"]
         direction LR
         T2A["OpenTrApp container orchestrator"]
         T2B["Five containers: vault-agent,<br/>vault-skills, vault-social,<br/>vault-proxy (L7), vault-egress (L3)"]
     end
 
-    subgraph T3["TIER 3 — CONTAINED (inside perimeter)"]
+    subgraph T3["TIER 3: CONTAINED (inside perimeter)"]
         direction LR
         T3A[agent process]
         T3B[Telegram gateway]
@@ -126,7 +126,7 @@ flowchart LR
     end
 
     subgraph N3["network: social-net (internal)"]
-        PIONEER[vault-social]
+        SOCIAL[vault-social]
     end
 
     subgraph N4["network: proxy-bridge"]
@@ -135,11 +135,11 @@ flowchart LR
 
     PROXY -- "agent-net" --> AGENT
     PROXY -- "skills-net" --> FORGE
-    PROXY -- "social-net" --> PIONEER
+    PROXY -- "social-net" --> SOCIAL
     PROXY -->|public internet| INET[Public internet]
 
     AGENT -.->|"NO routed path"| FORGE
-    AGENT -.->|"NO routed path"| PIONEER
+    AGENT -.->|"NO routed path"| SOCIAL
     AGENT <==>|"write-only volume<br/>skills-deliveries"| FORGE
 
     HOST[Host / GUI] --> PROXY
@@ -148,18 +148,18 @@ flowchart LR
     classDef host fill:#e7f3ff,stroke:#1f6feb,color:#000
     classDef inet fill:#f0f0f0,stroke:#777,color:#000
 
-    class AGENT,FORGE,PIONEER,PROXY cont
+    class AGENT,FORGE,SOCIAL,PROXY cont
     class HOST host
     class INET inet
 ```
 
-**Reading guide.** Each container has its own `internal: true` network; only `vault-proxy` is dual-homed onto each. Solid arrows are the only routed paths; the dotted lines from `vault-agent` to `vault-skills` and `vault-social` are emphatically *not-paths* (drawn for clarity, to make the absence visible). The `==>` line is the `skills-deliveries` shared volume — a unidirectional file-system surface, not a network path. Public-internet egress is the single arrow from `vault-proxy`; no other container has a path out.
+**Reading guide.** Each container has its own `internal: true` network; only `vault-proxy` is dual-homed onto each. Solid arrows are the only routed paths; the dotted lines from `vault-agent` to `vault-skills` and `vault-social` are emphatically *not-paths* (drawn for clarity, to make the absence visible). The `==>` line is the `skills-deliveries` shared volume: a unidirectional file-system surface, not a network path. Public-internet egress is the single arrow from `vault-proxy`; no other container has a path out.
 
 ---
 
 ## 4. Agent-skill-loading flow (the CDR pipeline)
 
-Source of truth: [`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) and [`components/openagent-skills/tools/skill-cdr.sh`](../components/openagent-skills/tools/skill-cdr.sh).
+Source of truth: [`adr/0003-content-disarm-reconstruction.md`](adr/0003-content-disarm-reconstruction.md) and [`workloads/skills/tools/skill-cdr.sh`](../workloads/skills/tools/skill-cdr.sh).
 
 ```mermaid
 sequenceDiagram
@@ -213,7 +213,7 @@ stateDiagram-v2
     [*] --> NotSetup
 
     NotSetup --> Starting: Wizard complete<br/>+ .env present
-    Starting --> Recovering: 1–4 of 5 containers up
+    Starting --> Recovering: 1 to 4 of 5 containers up
     Starting --> Ok: 4 of 4 up + key probe valid
     Recovering --> Ok: 4 of 4 up + key probe valid
     Recovering --> ErrorPerimeter: All 4 stopped<br/>(unexpectedly)
