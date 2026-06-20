@@ -422,7 +422,7 @@ function ReRunSetupSection() {
 
   async function confirm() {
     await update({ wizardCompleted: false });
-    navigate("/setup");
+    void navigate("/setup");
   }
 
   return (
@@ -478,7 +478,7 @@ function AdvancedModeSection() {
   async function toggle() {
     const next = !enabled;
     await update({ mode: next ? "developer" : "user" });
-    navigate(next ? "/dev" : "/");
+    void navigate(next ? "/dev" : "/");
   }
 
   return (

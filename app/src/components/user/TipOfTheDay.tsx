@@ -56,7 +56,7 @@ export default function TipOfTheDay() {
         </button>
         <button
           type="button"
-          onClick={() => { navigate("/discover"); }}
+          onClick={() => { void navigate("/discover"); }}
           className="text-xs text-primary-400 underline-offset-4 hover:text-primary-300 hover:underline"
         >
           Explore more ideas →

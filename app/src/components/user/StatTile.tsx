@@ -35,7 +35,7 @@ export default function StatTile({
   return (
     <button
       type="button"
-      onClick={() => { navigate(href); }}
+      onClick={() => { void navigate(href); }}
       className={`card-interactive text-left ${accent}`}
       aria-label={`${title} — ${value}. Click for details.`}
     >

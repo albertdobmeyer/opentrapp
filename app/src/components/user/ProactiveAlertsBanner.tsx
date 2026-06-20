@@ -46,7 +46,7 @@ export default function ProactiveAlertsBanner() {
                 return (
                   <button
                     type="button"
-                    onClick={() => { navigate(cta.to); }}
+                    onClick={() => { void navigate(cta.to); }}
                     className="mt-2 text-xs font-medium text-primary-400 underline-offset-4 hover:text-primary-300 hover:underline"
                   >
                     {cta.label}
