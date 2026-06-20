@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: albertdobmeyer/opentrapp/actions/skill-scan@main
+      - uses: albertdobmeyer/opentrapp/actions/skill-scan@skill-scan-v1
         with:
           path: ./skills        # a skill dir, a parent of several, or a single SKILL.md
           strict: false
