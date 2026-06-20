@@ -1,0 +1,95 @@
+name: Sync Skill Firewall projection
+
+# Regenerates the published, Marketplace-ready projection repo (opentrapp/skill-firewall)
+# from this monorepo and pushes it, one way. The monorepo is the source of truth; the
+# projection exists only because a Marketplace listing needs a single action with
+# action.yml at a repository root, which a monorepo cannot provide.
+#
+# Fires on a Skill Firewall release tag (skill-scan-v*) and can be run by hand. It maps
+# the monorepo tag skill-scan-vX.Y.Z to the projection tag vX.Y.Z and moves the vX major.
+#
+# Requires a repository secret SKILL_FIREWALL_SYNC_TOKEN: a fine-grained PAT scoped to
+# opentrapp/skill-firewall with Contents read and write. Until that secret exists this
+# workflow no-ops with a clear message; a manual re-sync is always possible by running
+# scripts/build-skill-firewall-projection.sh locally and pushing the output.
+
+on:
+  push:
+    tags:
+      - 'skill-scan-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Projection version to publish, e.g. v1.0.1 (defaults to the latest skill-scan-v* tag)'
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Regenerate and push the projection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the source repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Guard on the sync token
+        env:
+          TOKEN: ${{ secrets.SKILL_FIREWALL_SYNC_TOKEN }}
+        run: |
+          if [ -z "${TOKEN}" ]; then
+            echo "::warning::SKILL_FIREWALL_SYNC_TOKEN is not set; skipping the projection sync."
+            echo "skip=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Resolve the projection version
+        if: env.skip != 'true'
+        run: |
+          set -euo pipefail
+          REF="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}"
+          # Accept either skill-scan-vX.Y.Z (a tag push) or vX.Y.Z (manual input).
+          VER="${REF#skill-scan-}"
+          case "$VER" in
+            v[0-9]*) : ;;
+            *) echo "::error::Could not resolve a vX.Y.Z version from '$REF'"; exit 1 ;;
+          esac
+          MAJOR="${VER%%.*}"   # v1.0.0 -> v1
+          echo "VER=$VER"     >> "$GITHUB_ENV"
+          echo "MAJOR=$MAJOR" >> "$GITHUB_ENV"
+          echo "Publishing projection $VER (moving $MAJOR)"
+
+      - name: Regenerate the projection
+        if: env.skip != 'true'
+        run: bash scripts/build-skill-firewall-projection.sh "$RUNNER_TEMP/projection"
+
+      - name: Push the projection to opentrapp/skill-firewall
+        if: env.skip != 'true'
+        env:
+          TOKEN: ${{ secrets.SKILL_FIREWALL_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          DEST="$RUNNER_TEMP/dest"
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/opentrapp/skill-firewall.git" "$DEST"
+          rsync -a --delete --exclude='.git' "$RUNNER_TEMP/projection/" "$DEST/"
+          cd "$DEST"
+          git config user.name  "opentrapp-sync[bot]"
+          git config user.email "opentrapp-sync@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No content changes; only (re)tagging."
+          else
+            git commit -m "sync: regenerate projection for ${VER}"
+            git push origin HEAD:main
+          fi
+          # Exact tag is immutable; the major tag moves to the new release.
+          if ! git ls-remote --exit-code --tags origin "refs/tags/${VER}" >/dev/null 2>&1; then
+            git tag -a "${VER}" -m "Skill Firewall ${VER}"
+            git push origin "${VER}"
+          else
+            echo "Tag ${VER} already exists on the projection; leaving it."
+          fi
+          git tag -f -a "${MAJOR}" -m "Skill Firewall ${MAJOR} (moving tag)"
+          git push -f origin "${MAJOR}"

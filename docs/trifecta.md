@@ -1,8 +1,8 @@
-# Architecture — Perimeter Defense for Autonomous CLI Agents
+# Architecture: Perimeter Defense for Autonomous CLI Agents
 
 **Updated:** 2026-05-03
 **Supersedes:** Previous version (2026-04-15)
-**Origin design spec (archived):** [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) — the seminal architecture-v2 design document. This document supersedes it.
+**Origin design spec (archived):** [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md). This is the seminal architecture-v2 design document; this document supersedes it.
 
 This document describes the security architecture of OpenTrApp: the problem it addresses, the threat model, the container topology, and how the components compose into a single defensive perimeter around an autonomous AI agent.
 
@@ -10,15 +10,15 @@ This document describes the security architecture of OpenTrApp: the problem it a
 
 ## 1. Problem statement
 
-Autonomous CLI agents — [OpenClaw](https://www.getopenclaw.ai) is the reference deployment for this work, and the example used throughout this document — execute shell commands, read files, control browsers, send messages, and dynamically load skills from third-party registries. Run with default settings on a personal computer, such an agent has the same operating-system privileges as the user, so any compromise — a prompt injection attack, a malicious skill, or a flaw in the agent itself — translates directly into damage to the user's system or accounts.
+Autonomous CLI agents (with [OpenClaw](https://www.getopenclaw.ai) as the reference deployment for this work, and the example used throughout this document) execute shell commands, read files, control browsers, send messages, and dynamically load skills from third-party registries. Run with default settings on a personal computer, such an agent has the same operating-system privileges as the user, so any compromise (a prompt injection attack, a malicious skill, or a flaw in the agent itself) translates directly into damage to the user's system or accounts.
 
 Three categories of untrusted input reach the agent during normal operation:
 
-1. **Runtime inputs** — user prompts, agent self-generated reasoning, and intermediate tool outputs that the agent processes inside its own context window.
-2. **Supply-chain inputs** — skills downloaded from the [ClawHub](https://www.clawhub.ai) registry. The ClawHavoc study (2026-Q1) classified 341 of 2,857 published ClawHub skills (11.9 %) as malicious.
-3. **Network and social inputs** — content fetched from the web or from agent-to-agent social platforms, which is now well-documented as a prompt-injection vector.
+1. **Runtime inputs**: user prompts, agent self-generated reasoning, and intermediate tool outputs that the agent processes inside its own context window.
+2. **Supply-chain inputs**: skills downloaded from the [ClawHub](https://www.clawhub.ai) registry. The ClawHavoc study (2026-Q1) classified 341 of 2,857 published ClawHub skills (11.9 %) as malicious.
+3. **Network and social inputs**: content fetched from the web or from agent-to-agent social platforms, which is now well-documented as a prompt-injection vector.
 
-A single defensive layer — a hardened container, a static skill scanner, or a network filter — is insufficient because each layer has a known failure mode (misconfiguration, missing pattern, encoded payload bypass). The mitigation strategy adopted here is defense-in-depth across an isolated perimeter, with all untrusted content kept inside hardened containers and never reaching the host filesystem.
+A single defensive layer (a hardened container, a static skill scanner, or a network filter) is insufficient because each layer has a known failure mode (misconfiguration, missing pattern, encoded payload bypass). The mitigation strategy adopted here is defense-in-depth across an isolated perimeter, with all untrusted content kept inside hardened containers and never reaching the host filesystem.
 
 A second design choice is **adaptive restriction**: the agent's privilege level is treated as a system state set per-context, rather than a single configuration value chosen at install time.
 
@@ -27,26 +27,26 @@ A second design choice is **adaptive restriction**: the agent's privilege level 
 ## 2. Trust tiers
 
 ```
-TIER 1 — TRUSTED (host)
+TIER 1: TRUSTED (host)
   user (issues high-level instructions)
-  trusted CLI coordinator (Claude Code or equivalent — translates intent into operations)
+  trusted CLI coordinator (Claude Code or equivalent; translates intent into operations)
   OpenTrApp desktop GUI
 
-TIER 2 — INFRASTRUCTURE (perimeter)
+TIER 2: INFRASTRUCTURE (perimeter)
   OpenTrApp container orchestrator
   5 containers: vault-agent, vault-skills, vault-social, vault-proxy, vault-egress
     └─ L7 application policy lives in vault-proxy (credentials, allowlist)
     └─ L3 network policy lives in vault-egress (kernel RFC1918 drop, DoT resolver)
     └─ See ADR-0009 for the L7/L3 split rationale
 
-TIER 3 — CONTAINED (inside perimeter)
+TIER 3: CONTAINED (inside perimeter)
   agent process
   Telegram gateway
   Loaded skills
   Fetched network content
 ```
 
-Tier 1 components run on the user's host with full filesystem and network access. They make decisions and issue commands. Tier 2 enforces boundaries mechanically — it does not make security decisions, only carries them out. Tier 3 performs the actual work the user wants done, within the boundaries Tier 2 enforces.
+Tier 1 components run on the user's host with full filesystem and network access. They make decisions and issue commands. Tier 2 enforces boundaries mechanically; it does not make security decisions, only carries them out. Tier 3 performs the actual work the user wants done, within the boundaries Tier 2 enforces.
 
 ---
 
@@ -56,15 +56,15 @@ A Mermaid drawing of the topology, the network-isolation matrix, the trust tiers
 
 ```mermaid
 flowchart TB
-    subgraph HOST["Host (Tier 1 — trusted)"]
+    subgraph HOST["Host (Tier 1: trusted)"]
         USER[User]
         GUI["OpenTrApp GUI<br/>(Tauri 2 + Rust)"]
     end
 
-    subgraph PERIMETER["Perimeter (Tier 2 — infrastructure)"]
+    subgraph PERIMETER["Perimeter (Tier 2: infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway"]
         FORGE["vault-skills<br/>87-pattern scanner + CDR"]
-        PIONEER["vault-social (opt-in)"]
+        SOCIAL["vault-social (opt-in)"]
         PROXY["vault-proxy<br/>L7 policy: allowlist, key injection"]
         EGRESS["vault-egress<br/>L3 policy: nftables drop, DoT resolver"]
     end
@@ -77,8 +77,8 @@ flowchart TB
     PROXY --> EGRESS
     EGRESS --> EXT[Public internet]
 
-    classDef parked stroke-dasharray: 5 5,color:#777
-    class PIONEER parked
+    classDef optional stroke-dasharray: 5 5,color:#777
+    class SOCIAL optional
 ```
 
 The ASCII tree below preserves the same content for readers on platforms without Mermaid rendering.
@@ -104,11 +104,11 @@ HOST
     │     vault-agent via a write-only shared volume
     │     Network isolated from vault-agent
     │
-    ├── vault-social (opt-in — see §8)
+    ├── vault-social (opt-in; see §8)
     │     Vets untrusted agent-social feeds for prompt-injection
     │     patterns before the agent sees them; opt-in / off by default.
     │     A live AT Protocol adapter shipped (ADR-0017); full build-out
-    │     deferred (original Moltbook target parked 2026-05-03)
+    │     deferred (original Moltbook target retired 2026-05-03)
     │
     ├── vault-proxy
     │     L7 (application-layer) egress policy:
@@ -145,14 +145,14 @@ Each internal container has its own internal network. `vault-proxy` bridges them
 | vault-skills         | vault-proxy       | Yes     | Skill download via filtered egress |
 | vault-skills         | vault-agent       | Volume only | Delivers certified skills via write-only mount |
 | vault-social       | vault-proxy       | Yes     | Feed fetch via filtered egress |
-| vault-proxy         | public internet   | **No**  | Removed by ADR-0009 — chains through vault-egress |
+| vault-proxy         | public internet   | **No**  | Removed by ADR-0009; chains through vault-egress |
 | host (GUI / coordinator) | vault-proxy  | Yes     | Management, monitoring, control |
 
 ---
 
 ## 4. Components
 
-### 4.1 opencli-container — runtime containment
+### 4.1 vault-agent (workloads/agent): runtime containment
 
 The core runtime layer. Wraps the agent in a hardened container with a six-layer defense profile:
 
@@ -165,21 +165,21 @@ The core runtime layer. Wraps the agent in a hardened container with a six-layer
 
 Verified at startup by a 24-point security check covering filesystem permissions, network reachability, capability set, mount layout, and tool-policy consistency.
 
-### 4.2 openagent-skills — supply-chain defense
+### 4.2 vault-skills (workloads/skills): supply-chain defense
 
 Runs as `vault-skills`, isolated from the agent at the network layer. Implements three defenses against malicious skills:
 
-- **Static scanner** — 87 patterns mapped to MITRE ATT&CK techniques. Detects credential exfiltration, persistence, command-and-control, defense-evasion, and other indicators on the skill source itself.
-- **Zero-trust line verifier** — every line of every skill is classified before the rebuilt artifact is approved.
-- **Content Disarm & Reconstruction** — the original artifact is discarded; a clean version is rebuilt from the parsed semantic intent.
+- **Static scanner**: 87 patterns mapped to MITRE ATT&CK techniques. Detects credential exfiltration, persistence, command-and-control, defense-evasion, and other indicators on the skill source itself.
+- **Zero-trust line verifier**: every line of every skill is classified before the rebuilt artifact is approved.
+- **Content Disarm & Reconstruction**: the original artifact is discarded; a clean version is rebuilt from the parsed semantic intent.
 
 Output is delivered to `vault-agent` via a write-only volume. The agent has no path to influence the scanner; a compromised agent cannot bypass the supply-chain check by talking to forge directly because no such path exists.
 
-### 4.3 vault-social — agent-social analysis (opt-in / deferred)
+### 4.3 vault-social: agent-social analysis (opt-in / deferred)
 
-Runs as `vault-social`. Vets untrusted agent-social feeds for prompt-injection patterns before content reaches `vault-agent`. The original Moltbook target was parked 2026-05-03 (Meta's acquisition; API instability), but a **live AT Protocol (Bluesky) adapter has since shipped** ([ADR-0017](adr/0017-unpark-social-live-adapter.md)) — the module is now **opt-in / off by default**, and its full build-out is **deferred** (the third concern after Vault/Skill/GUI — [ADR-0024](adr/0024-product-structure-three-concerns.md)); see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes live in [`workloads/social/`](../workloads/social/).
+Runs as `vault-social`. Vets untrusted agent-social feeds for prompt-injection patterns before content reaches `vault-agent`. The original Moltbook target was retired 2026-05-03 (Meta's acquisition; API instability), but a **live AT Protocol (Bluesky) adapter has since shipped** ([ADR-0017](adr/0017-unpark-social-live-adapter.md)); the module is now **opt-in / off by default**, and its full build-out is **deferred** (the third concern after Vault/Skill/GUI; [ADR-0024](adr/0024-product-structure-three-concerns.md)); see [§8 Status](#8-status). Code, threat-pattern catalog (25 patterns), and platform-anatomy notes live in [`workloads/social/`](../workloads/social/).
 
-### 4.4 vault-proxy — egress gateway
+### 4.4 vault-proxy: egress gateway
 
 The single point of contact between the perimeter and the public internet. Implemented as an mitmproxy-based addon that:
 
@@ -201,9 +201,9 @@ Privilege level is treated as a system state, set per context, rather than a per
 | Split Shell | File read/write in the workspace; safelisted shell commands with per-action approval | Commands not on the safelist; arbitrary network fetches              |
 | Soft Shell  | Web browsing, autonomous safelisted commands, scheduled tasks, the broader OpenClaw tool surface | Host-level resources, credential stores, administrative operations   |
 
-Default is Split Shell. Soft Shell is opt-in via CLI configuration in v0.3.0; a future revision will surface the toggle in the GUI behind a confirmation step.
+Default is Split Shell. Soft Shell is opt-in via configuration; a future revision will surface the toggle in the GUI behind a confirmation step.
 
-The shell is "adaptive" because the trusted CLI coordinator (Claude Code or equivalent) can switch levels in response to task context — for example, dropping to Hard Shell while the agent processes untrusted feed content, returning to Split Shell when the agent is back to user-initiated tasks. The agent itself cannot promote its own shell level; promotion is always initiated from Tier 1.
+The shell is "adaptive" because the trusted CLI coordinator (Claude Code or equivalent) can switch levels in response to task context: for example, dropping to Hard Shell while the agent processes untrusted feed content, returning to Split Shell when the agent is back to user-initiated tasks. The agent itself cannot promote its own shell level; promotion is always initiated from Tier 1.
 
 ---
 
@@ -233,7 +233,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 | Network proxy        | vault | vault-proxy | Domain allowlist, payload-size limits, request logging |
 | Tool policy          | vault | vault-agent | Denied tools never enter the LLM's tool catalog |
 | Exec controls        | vault | vault-agent | Safelisted binaries plus per-action human approval |
-| Workspace restriction| vault | vault-agent | `workspaceOnly: true` — no path traversal outside workspace |
+| Workspace restriction| vault | vault-agent | `workspaceOnly: true`; no path traversal outside workspace |
 | Kill switch          | vault | host        | Graceful stop / hard kill / full perimeter teardown |
 
 ### 7.2 Malicious skill (supply chain)
@@ -261,10 +261,10 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 ## 8. Status
 
-| Module             | Container                        | Maturity at v0.3.0 |
+| Module             | Container                        | Maturity at v0.7.2 |
 |--------------------|----------------------------------|--------------------|
-| opencli-container     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
-| openagent-skills      | vault-skills                      | Active. 87-pattern scanner + CDR pipeline operational. |
+| vault-agent (workloads/agent)     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
+| vault-skills (workloads/skills)      | vault-skills                      | Active. 87-pattern scanner + CDR pipeline operational. |
 | vault-social       | vault-social                    | **Opt-in / deferred.** Live AT Protocol adapter shipped (ADR-0017); off by default, full build-out deferred (ADR-0024 Thread C). |
 | opentrapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
 
@@ -273,7 +273,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 - 5-container `compose.yml` with per-service network isolation and an L7/L3 policy split (verified by `tests/orchestrator-check.sh` §10)
 - Manifest contract in `schemas/component.schema.json` (6 sections: identity, status, commands, configs, health, workflows)
 - 10 component-level workflows + 4 cross-component orchestrator workflows
-- 42-check validation suite passing (0 warnings)
+- 120-check validation suite passing (0 warnings)
 - Rust workflow executor with interpolation, sequencing, and success conditions
 - React workflow UI with progress tracking, input forms, and danger-level styling
 - Adaptive shell switching via CLI; GUI exposure deferred to a future release
@@ -284,8 +284,8 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 Each component declares a `component.yml` manifest with six sections. Workflows chain individual commands into single user-facing actions:
 
-- **Component workflows** (one per component) — sequences within a single component, e.g. forge: scan → verify → certify
-- **Orchestrator workflows** (`config/orchestrator-workflows.yml`) — sequences across components, e.g. forge.scan → vault.install
+- **Component workflows** (one per component): sequences within a single component, e.g. forge: scan → verify → certify
+- **Orchestrator workflows** (`config/orchestrator-workflows.yml`): sequences across components, e.g. forge.scan → vault.install
 
 The Rust orchestrator and the React GUI both execute workflows from the same manifest definitions. This decouples user-facing action wording from the underlying command sequence and lets components be added or replaced without GUI changes.
 

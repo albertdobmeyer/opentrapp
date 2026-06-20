@@ -88,3 +88,15 @@ app/src-tauri/resources/perimeter/
 /app/.nyc_output/
 /app/coverage-e2e/
 /app/coverage-merged/
+
+# Portfolio article + embedded assets (deployed to albertdobmeyer.dev, not the repo)
+article/
+
+# GitHub Pages teaser (deployed to opentrapp.github.io, not this repo)
+teaser/
+
+# Outbound post drafts (not part of the project)
+drafts/
+
+# Local working copy of the opentrapp.com landing (deployed to the server)
+landing/
