@@ -20,6 +20,29 @@ For a one-page explainer of how the perimeter works (one contained agent, two gu
 
 ---
 
+## Try it, lowest commitment first
+
+You do not have to adopt the whole perimeter to get value out of this.
+
+**1. Scan your agent's skills in CI (one line, fully offline, no model).** The skill scanner runs as a GitHub Action, so any repository can gate its skills or plugins against malware and prompt injection before they ship:
+
+```yaml
+- uses: albertdobmeyer/opentrapp/actions/skill-scan@main
+  with: { path: ./skills }
+```
+
+Findings land in your repository's Security tab, and a finding fails the job. Details in [`actions/skill-scan/`](actions/skill-scan/).
+
+**2. Scan a skill locally before you install it.** From a clone of this repo, the same offline check runs as a one-line pre-install gate, with no global install needed:
+
+```bash
+workloads/skills/skill scan ./that-plugin --strict || echo "blocked by the skill firewall"
+```
+
+**3. Run the full perimeter (the desktop app).** Download an installer from the [latest release](https://github.com/albertdobmeyer/opentrapp/releases/latest); the setup wizard does the rest. This is the end-to-end containment story.
+
+---
+
 ## Purpose
 
 Autonomous CLI agents, such as [OpenClaw](https://www.getopenclaw.ai), execute shell commands, read files, and load skills from third-party registries. Run with default settings, the agent has the same operating-system privileges as the user. The ClawHavoc study (2026-Q1) of one such registry classified 11.9% of published skills as malicious (341 of 2,857). OpenTrApp wraps any such agent in a defense-in-depth perimeter to reduce the impact of agent compromise, malicious skills, and prompt-injection attacks. The shipped integration is OpenClaw, and the perimeter is designed to extend to other CLI agents.
@@ -100,6 +123,23 @@ re-scanned and signed before reaching the agent.
 
 **Full narrative + the pitch to other CLI-agent maintainers:**
 [`docs/skills-spotlight.md`](docs/skills-spotlight.md).
+
+## For the skeptical
+
+**"Isn't this just a container sandbox? Why not gVisor, Firejail, or a VM?"**
+A sandbox is necessary but not sufficient, and OpenTrApp uses one. The two parts a generic sandbox does not give you are the reason this project exists. First, a privilege split: the container holding your API keys has no internet route, and the container with the internet route holds no keys, so compromising one yields neither exfiltration nor credential theft. Second, skill defense: sandboxing the agent does not contain a malicious skill, because the skill runs as part of the agent's own reasoning. The point-by-point comparison against Firejail, gVisor, VM-only isolation, and scanner-only tools is in [`docs/why-not-x.md`](docs/why-not-x.md).
+
+**"Is the boundary actually verified, or is this a claim?"**
+The perimeter ships with an automated boundary self-test: network isolation, the egress allowlist, credential injection, the L3 filter, and a proxy-CA pin, with the rule that a resumed perimeter must pass the same checks as a cold one. Full verification on real hardware is in progress, and until it is green the honest position is that any "it holds" statement is in progress, not done. The [threat model](docs/threat-model.md) names every residual gap.
+
+**"Does Content Disarm and Reconstruction break legitimate skills?"**
+The offline scan and verify, which is the wedge and what the Action runs, do not rebuild anything; they read and classify. Only the optional CDR rebuild reconstructs a skill. That rebuild is model-backed and best-effort rather than bit-identical, and it errs conservative: a single unrecognised line quarantines the whole skill. What it guarantees is that the original bytes are never delivered and every rebuild is re-scanned before it reaches the agent.
+
+**"Why five containers? Is that not overkill?"**
+Four are load-bearing and one (the agent-social shield) is opt-in and off by default. The count exists for the privilege split above: separating the L7 application-layer policy from the L3 network-layer policy is what lets "holds the keys" and "can reach the internet" sit in different trust domains. See [ADR-0009](docs/adr/0009-five-container-perimeter.md).
+
+**"It is solo and early. Why should I trust it?"**
+You should not trust it on reputation, and the project does not ask you to. It is MIT, built entirely in public, with an OpenSSF Best Practices badge, signed releases, a public threat model, and a reproducible-build recipe. The most useful thing you can do is review it adversarially, which is exactly what the project is asking for below.
 
 ## Limitations
 
@@ -248,10 +288,11 @@ See [`CLAUDE.md`](CLAUDE.md) for the full architecture specification and contrib
 
 ---
 
-## Contributing & project docs
+## Contributing, and please tear it apart
 
-Contributions are welcome. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the build,
-test gates, DCO sign-off, and pull-request workflow.
+This is an early, solo project, and the single most valuable contribution is adversarial review. Read the [threat model](docs/threat-model.md) and tell me where the perimeter leaks, where the scanner is bypassable, or where a claim outruns its evidence. Code reviewers and a co-maintainer are especially welcome. Open an issue, open a pull request, or ask and I will point you at a good place to start.
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the build, test gates, DCO sign-off, and pull-request workflow.
 
 | Document | What it covers |
 |----------|----------------|
