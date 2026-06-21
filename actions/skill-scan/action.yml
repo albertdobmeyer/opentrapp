@@ -1,5 +1,5 @@
 name: 'OpenTrApp Skill Firewall'
-description: 'Offline supply-chain scan of AI agent skills and plugins for malware and prompt injection (MITRE ATT&CK, SARIF).'
+description: 'Offline supply-chain scan of AI agent skills and plugins for malware and prompt injection (MITRE-mapped, SARIF).'
 author: 'Albert Dobmeyer'
 branding:
   icon: 'shield'
