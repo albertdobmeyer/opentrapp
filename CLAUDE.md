@@ -11,7 +11,21 @@ For end-user documentation, see [`README.md`](README.md). For the full architect
 **Product identity — north star ([ADR-0020](docs/adr/0020-product-identity-and-distribution.md)):**
 OpenTrApp is a **registry-installable CLI/daemon orchestrator + signed container images** that runs an autonomous CLI agent inside a **five-container security perimeter** on the user's own machine — **operable by humans *and* by the user's host agent** (e.g. Claude Code) — with a web GUI and an optional MCP adapter as **thin, on-demand projections of the same manifest-driven daemon**. The daemon owns the perimeter; the projections come and go. The *external* operator orchestrates the *contained* agent, and **boundary-weakening operations stay human-gated regardless of who asks** (danger-gated control plane; ADR-0021, forthcoming). It is **not** a desktop app and **not** an MCP server for the *contained* agent.
 
-**Current state (honest — the identity above is the TARGET, not yet fully built):** OpenTrApp ships *today* as a **Tauri 2 desktop application**. The perimeter-owning `opentrapp-core` / `opentrapp-daemon` are already Tauri-free ([ADR-0019](docs/adr/0019-headless-daemon-gui-viewer-split.md)), but the GUI is still a Tauri/GTK3 viewer and distribution is still native installers via GitHub Releases. The CLI-first / registry / MCP / de-Tauri direction is staged across ADR-0020 (identity), ADR-0021 (danger-gated control plane), and ADR-0022 (control surface / de-Tauri) — all forthcoming except 0020. **Do not document the CLI / registry / MCP / browser-viewer surfaces as existing until they land.**
+**Current state (honest — the identity above is the TARGET, not yet fully built):** OpenTrApp ships *today* as a **Tauri 2 desktop application**. The perimeter-owning `opentrapp-core` / `opentrapp-daemon` are already Tauri-free ([ADR-0019](docs/adr/0019-headless-daemon-gui-viewer-split.md)), but the GUI is still a Tauri/GTK3 viewer and distribution is still native installers via GitHub Releases. The CLI-first / registry / MCP / de-Tauri direction is staged across ADR-0020 (identity), ADR-0021 (danger-gated control plane), and ADR-0022 (control surface / de-Tauri) — all forthcoming except 0020. **Do not document the CLI / registry / MCP / browser-viewer surfaces as existing until they land.** Concretely, **de-Tauri is NOT done**: the GUI is still a Tauri/GTK3 desktop bundle today; only `opentrapp-core` / `opentrapp-daemon` are Tauri-free.
+
+**The mission (the *why*).** Enable as many people as possible to run **open-source CLI agents and agentic systems safely** on their own machines — whether they operate the agent themselves *or* delegate to a trusted vendor AI (e.g. Claude Code) — at the **highest standard** of autonomous-agent containment. This is bleeding-edge agentic security, built in the open, agent-agnostic, no lock-in. The bar is best-in-class, never good-enough. Stars and forks are *earned* by being the perimeter people actually trust: substance first, visibility follows (§12.4).
+
+**The three areas of concern — composable, CLI-first ([ADR-0024](docs/adr/0024-product-structure-three-concerns.md)).** OpenTrApp is one brand decomposed into three architecturally-standalone concerns, each independently CLI-operable and independently distributable, plus an optional GUI:
+- **Vault** — containerization / the perimeter. USP-1: privilege separation, no container holds both the API keys *and* the internet. This is the **virtual air-gap**: the contained agent can never reach the credentials, the host, or the network except through the proxy allowlist.
+- **Skill** — toolset forging / the Skill Firewall. USP-2: anti-tamper scan + Content-Disarm-Reconstruction of skills, in isolation the agent cannot touch.
+- **Social** — agent-to-agent social-feed vetting. Opt-in / on-demand; a live AT Protocol (Bluesky) adapter shipped (ADR-0017); full build-out deferred (ADR-0024).
+
+The **GUI is optional and a pure projection of the CLI systems underneath** — never the entry point. You run what you need: the Skill Firewall alone vets a skill, the Vault alone contains an agent. One monorepo for *development* ([ADR-0013](docs/adr/0013-monorepo-consolidation.md)); three independently-*distributable* modules; one optional GUI *projection*. If a module ever earns standalone adoption it is extracted via an OCI image / package, never back into a git submodule.
+
+**Three non-negotiable bars — catch drift early; push back on any change that erodes one:**
+1. **Zero-trust air-gap.** It must stay *impossible* for the contained agent to read the credentials or reach the network off-allowlist, *even if the agent is fully compromised* — enforced fail-closed by `verify.sh` check 7 and boundary self-test B3. The contained agent is untrusted-by-design (Tier 3); we *contain* it, never trust it (see `docs/known-advisories.md`, "Trust-tier triage").
+2. **Lean background app, the 7.2 GB floor.** The full perimeter and the T0 self-test must run on a 7.2 GB Linux laptop (verified 2026-06-22, cleaned of co-tenants); idle auto-pause collapses resting RAM toward zero. **If what we build does not run on this machine, we are failing.** Any change that breaks this floor is a regression, not a trade-off.
+3. **Agentic, two-position, never an amplifier.** Operable by the user directly *or* by a trusted external operator (Claude Code) outside the cage, orchestrating the untrusted agent inside. Boundary-weakening always needs **out-of-band human confirmation regardless of who asks** ([ADR-0021](docs/adr/0021-danger-gated-agentic-control-plane.md)) — so a prompt-injected external agent cannot disarm the cage.
 
 The application is the perimeter orchestrator: it composes the five containers, owns their lifetime, and exposes a manifest-driven GUI for user-facing operations. The L7 (application-layer) policy lives in `vault-proxy`; the L3 (network-layer) policy lives in `vault-egress`; see [ADR-0009](docs/adr/0009-five-container-perimeter.md).
 
@@ -24,13 +38,13 @@ Post [ADR-0013](docs/adr/0013-monorepo-consolidation.md): single monorepo. 3 wor
 
 ```
 opentrapp/                              (this repository — public, monorepo)
-├── app/                                Tauri 2 + React 18 desktop application (the orchestrator)
+├── app/                                Tauri 2 + React 18 desktop GUI — OPTIONAL projection (the daemon owns the perimeter, ADR-0019); not the product
 │   ├── src/                            React frontend
-│   └── src-tauri/                      Rust backend
+│   └── src-tauri/                      Rust backend (opentrapp-core / -daemon are Tauri-free)
 ├── workloads/                          one directory per workload container
-│   ├── agent/                          → vault-agent       (runtime containment)
-│   ├── forge/                          → vault-skills       (skill scanner + CDR)
-│   └── social/                         → vault-social      (agent-social analysis; parked)
+│   ├── agent/                          → vault-agent       (Vault concern: runtime containment)
+│   ├── skills/                         → vault-skills      (Skill concern: skill scanner + CDR)
+│   └── social/                         → vault-social      (Social concern: opt-in / on-demand)
 ├── infra/                              shared infrastructure containers
 │   ├── proxy/                          → vault-proxy       (L7 egress policy)
 │   └── egress/                         → vault-egress      (L3 egress policy)
@@ -53,9 +67,13 @@ opentrapp/                              (this repository — public, monorepo)
 
 | Workload | Directory | Container | Role | Status |
 |----------|-----------|-----------|------|--------|
-| Agent  | `workloads/agent/`  | `vault-agent`  | Runtime containment | Active |
-| Forge  | `workloads/skills/`  | `vault-skills`  | Supply-chain defense (skill scanner + CDR) | Active |
+| Agent (Vault)  | `workloads/agent/`  | `vault-agent`  | Runtime containment | Active |
+| Skill  | `workloads/skills/`  | `vault-skills`  | Supply-chain defense (skill scanner + CDR) | Active. Ships standalone (GitHub Action + Marketplace). |
 | Social | `workloads/social/` | `vault-social` | Agent-social-feed analysis | Opt-in / on-demand. Original Moltbook target parked 2026-05-03; a live AT Protocol (Bluesky) adapter shipped (ADR-0017). Full build-out as a generalized agent-social shield is the **deferred** third concern (MISSION Thread C / ADR-0024 — after Vault/Skill/GUI). |
+
+### Development vs. distribution (the modular model — do not flatten)
+
+This is **one monorepo for development** ([ADR-0013](docs/adr/0013-monorepo-consolidation.md)): no submodule-coordination tax, one history. Architecturally it is **three standalone concerns** (Vault / Skill / Social), each independently **CLI-operable** and independently **distributable** (ADR-0014): the Skill Firewall already ships standalone as a GitHub Action + Marketplace listing. The **GUI is an optional projection** of those CLIs — never a fourth concern, never the entry point. Monorepo ≠ bundle: a user runs only the concern they need. If a concern ever earns standalone adoption it is extracted via an OCI image / package, never back into a git submodule.
 
 ## 3. UI rule (non-negotiable)
 

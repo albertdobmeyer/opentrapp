@@ -10,9 +10,11 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12755/badge)](https://www.bestpractices.dev/projects/12755)
 [![License: MIT](https://img.shields.io/badge/License-MIT-009966.svg)](LICENSE)
 
+> **Status (2026-06):** OpenTrApp ships today as a **Tauri 2 desktop app**. The product identity it is built toward ([ADR-0020](docs/adr/0020-product-identity-and-distribution.md)) is a **lean, CLI-first daemon** with the GUI as an **optional projection**; that de-Tauri / CLI / registry direction is **ratified but not yet built**. See [`CLAUDE.md`](CLAUDE.md) for the full honest framing of target versus current.
+
 A safer way to run an autonomous CLI agent on your own computer. OpenTrApp wraps the agent in a security perimeter built on two ideas. **Privilege separation:** no single container holds both your API keys and internet access, so a compromised agent can reach neither directly. **Supply-chain defense:** every skill the agent loads is vetted in isolation before it can reach the agent, because a malicious skill runs as part of the agent's own reasoning. Open-source under MIT.
 
-It ships today as a desktop app pre-wired for [OpenClaw](https://www.getopenclaw.ai). The perimeter is agent-agnostic by design; opencode, Claude Code, and other CLI agents are candidates for support.
+It ships today via a Tauri desktop app pre-wired for [OpenClaw](https://www.getopenclaw.ai); the product is the perimeter itself, and the GUI is one optional projection of it (see status above). The perimeter is agent-agnostic by design; opencode, Claude Code, and other CLI agents are candidates for support.
 
 For a one-page explainer of how the perimeter works (one contained agent, two guards around it), see [`docs/perimeter-explained.md`](docs/perimeter-explained.md). The full architecture, threat model, and per-component capabilities are in [`docs/trifecta.md`](docs/trifecta.md).
 
@@ -39,7 +41,7 @@ Findings land in your repository's Security tab, and a finding fails the job. De
 workloads/skills/skill scan ./that-plugin --strict || echo "blocked by the skill firewall"
 ```
 
-**3. Run the full perimeter (the desktop app).** Download an installer from the [latest release](https://github.com/albertdobmeyer/opentrapp/releases/latest); the setup wizard does the rest. This is the end-to-end containment story.
+**3. Run the full perimeter (today, via the desktop app).** Download an installer from the [latest release](https://github.com/albertdobmeyer/opentrapp/releases/latest); the setup wizard does the rest. This is the end-to-end containment story. (The GUI is the current control surface; the target is CLI-first with the GUI optional.)
 
 ---
 
@@ -64,6 +66,9 @@ These are the principles that shape every design and product decision in this pr
 - **Agent-agnostic, community-driven.** The perimeter is not coupled to any single CLI agent. The reference deployment is OpenClaw because OpenClaw exists today; the architecture is designed to extend to others. Contributions that broaden compatibility are welcomed.
 - **Transparency over marketing.** No tracking, no telemetry, no proprietary blobs. Every dependency, every container layer, every external request is documentable from the source tree. Reproducibility steps are in [`docs/reproduce.md`](docs/reproduce.md).
 - **Shared for the safety of the commons.** This project is MIT-licensed and developed in the open. Security research findings, hardening recipes, and threat-model deltas land in the repo where everyone running an autonomous CLI agent can benefit, not in private channels.
+- **Lean by design, runs on modest hardware.** OpenTrApp is a lean background app. The full perimeter and its boundary self-test must run on a 7.2 GB laptop, the hard floor; idle auto-pause collapses the agent toward zero RAM between tasks. If what we build does not run on that machine, we have failed.
+- **Bleeding-edge agentic security, at the highest bar.** This project works toward the highest standards for autonomous-agent containment and supply-chain defense, grounded in empirical threat research (the ClawHavoc study found 11.9% of published skills malicious). The goal is best-in-class, not good-enough.
+- **An enabler, not a gatekeeper.** The aim is to let as many people as possible run open-source CLI agents and agentic systems safely, with or without an orchestrating vendor AI such as Claude Code. You operate OpenTrApp directly, or a trusted host agent does it for you; either way the contained agent stays caged and boundary-weakening stays human-gated. No lock-in.
 
 ## Capabilities (default Split Shell)
 
