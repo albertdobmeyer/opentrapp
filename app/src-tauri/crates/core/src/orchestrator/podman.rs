@@ -172,35 +172,21 @@ pub fn container_run_args(
         a.push("-v".into());
         a.push(spec);
     }
+    // Literals (e.g. HTTP_PROXY) are non-secret — fine to inline on the argv.
     for e in &svc.env {
-        match e.kind {
-            EnvKind::Literal => {
-                let val = e.value.clone().unwrap_or_default();
-                a.push("-e".into());
-                a.push(format!("{}={}", e.name, val));
-            }
-            EnvKind::Secret => {
-                let var = e.var.as_deref().unwrap_or(&e.name);
-                match ctx.env.get(var) {
-                    Some(val) => {
-                        a.push("-e".into());
-                        a.push(format!("{}={}", e.name, val));
-                    }
-                    None => {
-                        if let Some(def) = &e.default {
-                            a.push("-e".into());
-                            a.push(format!("{}={}", e.name, def));
-                        } else if e.optional {
-                            // tolerated absence (e.g. OPENAI_API_KEY)
-                        } else {
-                            return Err(OrchestratorError::ExecutionError(format!(
-                                "required secret '{var}' for {service_name} is not set"
-                            )));
-                        }
-                    }
-                }
-            }
+        if let EnvKind::Literal = e.kind {
+            let val = e.value.clone().unwrap_or_default();
+            a.push("-e".into());
+            a.push(format!("{}={}", e.name, val));
         }
+    }
+    // Secrets are passed by NAME only (`-e NAME`): podman forwards the value from
+    // its own environment (injected via `podman_run` → `apply_secret_env`), so the
+    // value never lands on the argv / host process table (#75). `resolve_secret_env`
+    // is the single source of truth for presence (required → error, optional → omit).
+    for (name, _value) in resolve_secret_env(service_name, svc, ctx)? {
+        a.push("-e".into());
+        a.push(name);
     }
     if let Some(hc) = &svc.healthcheck {
         a.push("--health-cmd".into());
@@ -244,6 +230,37 @@ pub fn container_run_args(
     Ok(a)
 }
 
+/// Resolve a service's `secret`-kind env vars to `(container_var_name, value)`
+/// pairs, from the runtime env (`ctx.env`) or each var's declared default. This
+/// is the single source of truth for secret presence: a **required** secret that
+/// is absent is an error; an **optional** one is omitted. The values are injected
+/// into podman's process environment at run time (see [`podman_run`]); the argv
+/// only ever carries the bare `-e NAME` passthrough — so a secret value never
+/// reaches the host process table (#75).
+fn resolve_secret_env(
+    service_name: &str,
+    svc: &Service,
+    ctx: &RunContext,
+) -> Result<Vec<(String, String)>, OrchestratorError> {
+    let mut out = Vec::new();
+    for e in &svc.env {
+        if !matches!(e.kind, EnvKind::Secret) {
+            continue;
+        }
+        let var = e.var.as_deref().unwrap_or(&e.name);
+        match ctx.env.get(var).cloned().or_else(|| e.default.clone()) {
+            Some(val) => out.push((e.name.clone(), val)),
+            None if e.optional => {} // tolerated absence (e.g. OPENAI_API_KEY)
+            None => {
+                return Err(OrchestratorError::ExecutionError(format!(
+                    "required secret '{var}' for {service_name} is not set"
+                )));
+            }
+        }
+    }
+    Ok(out)
+}
+
 // ─── Process helpers ────────────────────────────────────────────────────
 
 /// Env vars an AppImage injects to point at its OWN bundled libraries. When the
@@ -276,25 +293,54 @@ fn system_command(program: &str) -> StdCommand {
 /// `timeout(1)` is absent). Spawned with a sanitized env so system podman/conmon
 /// use system libraries, not the AppImage's bundled ones. Stderr is redacted.
 fn podman(args: &[String], timeout: Duration) -> Result<Output, OrchestratorError> {
-    podman_raw(args, timeout, true)
+    podman_raw(args, timeout, true, &[])
 }
 
 /// Like [`podman`] but never logs a non-zero exit. For existence probes
 /// (`network exists`, `image exists`) where exit 1 means "not found" — an
 /// expected, non-error outcome that would otherwise spam the log.
 fn podman_probe(args: &[String], timeout: Duration) -> Result<Output, OrchestratorError> {
-    podman_raw(args, timeout, false)
+    podman_raw(args, timeout, false, &[])
 }
 
-fn podman_raw(args: &[String], timeout: Duration, log_errors: bool) -> Result<Output, OrchestratorError> {
+/// Like [`podman`] but injects `secret_env` into podman's PROCESS ENVIRONMENT so
+/// a `-e NAME` passthrough (see [`container_run_args`]) forwards each secret into
+/// the container without the value ever appearing on the argv / host process
+/// table (#75). Used for the `podman run` of perimeter services.
+fn podman_run(
+    args: &[String],
+    timeout: Duration,
+    secret_env: &[(String, String)],
+) -> Result<Output, OrchestratorError> {
+    podman_raw(args, timeout, true, secret_env)
+}
+
+/// Inject secret env vars into a child command's process environment (never the
+/// argv) so a `-e NAME` passthrough forwards them to the container (#75).
+fn apply_secret_env(cmd: &mut StdCommand, secret_env: &[(String, String)]) {
+    for (k, v) in secret_env {
+        cmd.env(k, v);
+    }
+}
+
+fn podman_raw(
+    args: &[String],
+    timeout: Duration,
+    log_errors: bool,
+    secret_env: &[(String, String)],
+) -> Result<Output, OrchestratorError> {
     let secs = timeout.as_secs().max(1).to_string();
-    let wrapped = system_command("timeout")
+    let mut primary = system_command("timeout");
+    primary
         .args(["--signal=TERM", "--kill-after=5s", &secs, "podman"])
-        .args(args)
-        .output();
-    let out = match wrapped {
+        .args(args);
+    apply_secret_env(&mut primary, secret_env);
+    let out = match primary.output() {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-            system_command("podman").args(args).output()
+            let mut fallback = system_command("podman");
+            fallback.args(args);
+            apply_secret_env(&mut fallback, secret_env);
+            fallback.output()
         }
         other => other,
     }
@@ -373,7 +419,8 @@ pub fn up(spec: &PerimeterSpec, ctx: &RunContext) -> Result<(), OrchestratorErro
         // Clear any orphan with the same name before (re)creating.
         rm_service(&service_name)?;
         let args = container_run_args(&service_name, svc, &image, ctx)?;
-        let out = podman(&args, Duration::from_secs(120))?;
+        let secret_env = resolve_secret_env(&service_name, svc, ctx)?;
+        let out = podman_run(&args, Duration::from_secs(120), &secret_env)?;
         if !ok(&out) {
             return Err(OrchestratorError::ExecutionError(format!(
                 "failed to start {service_name}"
@@ -918,7 +965,8 @@ pub fn shell_up(data_dir: &Path) -> Result<(), OrchestratorError> {
         let image = ctx.verifier.verify_and_resolve(&svc.image)?;
         rm_service(&service_name)?;
         let args = container_run_args(&service_name, svc, &image, &ctx)?;
-        if !ok(&podman(&args, Duration::from_secs(120))?) {
+        let secret_env = resolve_secret_env(&service_name, svc, &ctx)?;
+        if !ok(&podman_run(&args, Duration::from_secs(120), &secret_env)?) {
             return Err(OrchestratorError::ExecutionError(format!(
                 "failed to start {service_name}"
             )));
@@ -967,7 +1015,8 @@ pub fn service_up(
     rm_service(service_name)?;
     let image = ctx.verifier.verify_and_resolve(&svc.image)?;
     let args = container_run_args(service_name, svc, &image, &ctx)?;
-    if !ok(&podman(&args, Duration::from_secs(120))?) {
+    let secret_env = resolve_secret_env(service_name, svc, &ctx)?;
+    if !ok(&podman_run(&args, Duration::from_secs(120), &secret_env)?) {
         return Err(OrchestratorError::ExecutionError(format!(
             "failed to start {service_name}"
         )));
@@ -1012,7 +1061,7 @@ mod tests {
     #[test]
     fn agent_args_are_maximally_contained() {
         let spec = perimeter::load().unwrap();
-        let env = BTreeMap::from([("TELEGRAM_BOT_TOKEN".into(), "T".into())]);
+        let env = BTreeMap::from([("TELEGRAM_BOT_TOKEN".into(), "bot-SENTINEL".into())]);
         let res = Path::new("/run/opentrapp/perimeter");
         let args =
             container_run_args("vault-agent", &spec.services["vault-agent"], "img:latest", &ctx_with(&env, &res))
@@ -1025,8 +1074,10 @@ mod tests {
         // seccomp resolved under the resource dir, NOT an absolute dev path
         assert!(joined.contains("seccomp=/run/opentrapp/perimeter/vault-seccomp.json"));
         assert!(!joined.contains("/home/albertd"));
-        // secret resolved from env, not inlined as a placeholder
-        assert!(joined.contains("-e TELEGRAM_BOT_TOKEN=T"));
+        // secret passed by NAME only (`-e TELEGRAM_BOT_TOKEN`) so podman forwards
+        // it from its env; the VALUE must never reach the argv / process table (#75).
+        assert!(joined.contains("-e TELEGRAM_BOT_TOKEN"));
+        assert!(!joined.contains("bot-SENTINEL"), "secret value leaked onto the argv");
         // name + image + label present
         assert!(joined.contains("--name vault-agent"));
         assert!(joined.ends_with("img:latest"));
@@ -1055,7 +1106,7 @@ mod tests {
     fn optional_secret_is_skipped_when_absent() {
         let spec = perimeter::load().unwrap();
         // ANTHROPIC present, OPENAI absent (optional), version has default
-        let env = BTreeMap::from([("ANTHROPIC_API_KEY".into(), "sk".into())]);
+        let env = BTreeMap::from([("ANTHROPIC_API_KEY".into(), "sk-SENTINEL".into())]);
         let res = Path::new("/run/opentrapp/perimeter");
         let args = container_run_args(
             "vault-proxy",
@@ -1065,9 +1116,73 @@ mod tests {
         )
         .unwrap();
         let joined = args.join(" ");
-        assert!(joined.contains("-e ANTHROPIC_API_KEY=sk"));
-        assert!(!joined.contains("OPENAI_API_KEY="), "optional+absent → omitted");
-        assert!(joined.contains("-e ANTHROPIC_API_VERSION=2023-06-01"), "default applied");
+        // present secret + non-secret default both passed by NAME, value off the argv
+        assert!(joined.contains("-e ANTHROPIC_API_KEY"));
+        assert!(!joined.contains("sk-SENTINEL"), "secret value must not be on the argv");
+        assert!(joined.contains("-e ANTHROPIC_API_VERSION"), "default still passed by name");
+        assert!(!joined.contains("OPENAI_API_KEY"), "optional+absent → omitted entirely");
+    }
+
+    #[test]
+    fn resolve_secret_env_resolves_present_default_and_omits_optional() {
+        let spec = perimeter::load().unwrap();
+        // ANTHROPIC present, OPENAI absent (optional), version has a default.
+        let env = BTreeMap::from([("ANTHROPIC_API_KEY".into(), "sk-live-7".into())]);
+        let res = Path::new("/run/opentrapp/perimeter");
+        let secrets =
+            resolve_secret_env("vault-proxy", &spec.services["vault-proxy"], &ctx_with(&env, &res))
+                .unwrap();
+        assert!(secrets.iter().any(|(k, v)| k == "ANTHROPIC_API_KEY" && v == "sk-live-7"));
+        assert!(secrets.iter().any(|(k, v)| k == "ANTHROPIC_API_VERSION" && v == "2023-06-01"));
+        assert!(!secrets.iter().any(|(k, _)| k == "OPENAI_API_KEY"), "optional+absent omitted");
+    }
+
+    #[test]
+    fn resolve_secret_env_errors_on_missing_required() {
+        let spec = perimeter::load().unwrap();
+        let env = BTreeMap::new(); // ANTHROPIC_API_KEY absent
+        let res = Path::new("/run/opentrapp/perimeter");
+        let err =
+            resolve_secret_env("vault-proxy", &spec.services["vault-proxy"], &ctx_with(&env, &res))
+                .unwrap_err();
+        assert!(format!("{err}").contains("ANTHROPIC_API_KEY"));
+    }
+
+    #[test]
+    fn no_secret_value_appears_on_the_command_line() {
+        // The core #75 guarantee, swept across every service that carries a secret.
+        let spec = perimeter::load().unwrap();
+        let env = BTreeMap::from([
+            ("ANTHROPIC_API_KEY".into(), "sk-ant-SUPERSECRET-xyz".into()),
+            ("TELEGRAM_BOT_TOKEN".into(), "12345:BOT-SUPERSECRET".into()),
+        ]);
+        let res = Path::new("/run/opentrapp/perimeter");
+        for svc_name in ["vault-proxy", "vault-agent"] {
+            let joined = container_run_args(
+                svc_name,
+                &spec.services[svc_name],
+                "img@sha256:x",
+                &ctx_with(&env, &res),
+            )
+            .unwrap()
+            .join(" ");
+            assert!(
+                !joined.contains("SUPERSECRET"),
+                "{svc_name}: a secret value leaked onto the argv:\n{joined}"
+            );
+        }
+    }
+
+    #[test]
+    fn apply_secret_env_injects_into_child_process_environment() {
+        // The other half of #75: the value reaches the child via its ENVIRONMENT
+        // (so `-e NAME` passthrough delivers it), never the argv. Mirrors the
+        // `system_command_strips_appimage_lib_env` child-process probe.
+        let mut cmd = system_command("sh");
+        cmd.args(["-c", "printf %s \"${SEKRET-UNSET}\""]);
+        apply_secret_env(&mut cmd, &[("SEKRET".to_string(), "hunter2".to_string())]);
+        let out = cmd.output().unwrap();
+        assert_eq!(String::from_utf8_lossy(&out.stdout), "hunter2");
     }
 
     #[test]

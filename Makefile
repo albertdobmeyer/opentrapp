@@ -170,8 +170,8 @@ audit-all: audit-rust audit-npm audit-deny
 COMPOSE := $(shell command -v podman-compose >/dev/null 2>&1 && echo podman-compose || echo podman compose)
 
 perimeter-up:
-	@echo "→ $(COMPOSE) up -d"
-	$(COMPOSE) up -d
+	@echo "→ $(COMPOSE) up -d  (secrets via .env passthrough — never on the argv/echo, #75)"
+	@set -a; [ -f .env ] && . ./.env; set +a; $(COMPOSE) up -d
 
 perimeter-down:
 	@echo "→ $(COMPOSE) down"

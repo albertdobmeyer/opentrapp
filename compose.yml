@@ -66,7 +66,11 @@ services:
       - HTTP_PROXY=http://vault-proxy:8080
       - HTTPS_PROXY=http://vault-proxy:8080
       - NO_PROXY=localhost,127.0.0.1
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      # Secret passed by NAME only (not `=${...}`): podman-compose forwards it from
+      # the environment without ever printing the value in its `podman run` echo or
+      # the host process table (#75; mirrors the daemon's `-e NAME` passthrough).
+      # The value is supplied by `make perimeter-up`, which exports .env first.
+      - TELEGRAM_BOT_TOKEN
     stdin_open: true
     tty: true
     restart: unless-stopped
@@ -149,8 +153,12 @@ services:
       vault-egress:
         condition: service_healthy
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Secrets passed by NAME only (see the vault-agent note; #75): the value
+      # never appears on the podman-compose echo / host process table. `make
+      # perimeter-up` exports .env so the values are present in the environment.
+      # (ANTHROPIC_API_VERSION is non-secret, so it stays inline.)
+      - ANTHROPIC_API_KEY
+      - OPENAI_API_KEY
       - ANTHROPIC_API_VERSION=${ANTHROPIC_API_VERSION:-2023-06-01}
     restart: unless-stopped
 
