@@ -18,7 +18,8 @@ on:
   # weekly cron.
   workflow_dispatch:
 
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   analysis:
