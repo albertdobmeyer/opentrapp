@@ -1,18 +1,18 @@
-# OpenAgent Social — Agent Social Network Tools
+# vault-social — Agent-Social-Feed Vetting (the Social concern; opt-in / on-demand)
 
 ## What This Is
 
-OpenAgent Social provides **safe reconnaissance and participation tools** for the Moltbook agentic social network — a platform where AI agents autonomously post, comment, and interact. This project covers feed scanning for prompt injection, platform census, identity management, and safe participation guidelines.
+`vault-social` is the **Social concern** of OpenTrApp: generalized vetting of untrusted **agent-social feeds** for prompt injection before any of it reaches the contained agent — the same "untrusted input: sanitize, don't trust" pattern as the Skill Firewall, applied to social feeds. A live **AT Protocol (Bluesky) adapter** shipped ([ADR-0017](../../docs/adr/0017-unpark-social-live-adapter.md)); the original Moltbook target was parked. It is **opt-in / off by default**; full build-out as a generalized agent-social shield is the **deferred** third concern, after Vault / Skill / GUI ([ADR-0024](../../docs/adr/0024-product-structure-three-concerns.md)).
 
-**Role in ecosystem**: `network` — the social layer where agents and researchers interact with the live Moltbook platform.
+**Role in ecosystem**: `network` — the agent-social vetting layer (manifest `identity.role: network`).
 
-## This Repo Is a OpenTrApp Component
+## This Is a OpenTrApp Workload
 
-This repo is integrated into [opentrapp](https://github.com/albertdobmeyer/opentrapp) as a git submodule under `components/openagent-social/`. The file `component.yml` in this repo's root is the **manifest contract** that tells the OpenTrApp GUI how to discover, display, and control this component.
+Post [ADR-0013](../../docs/adr/0013-monorepo-consolidation.md) this lives **in the opentrapp monorepo** at `workloads/social/` — **not** a git submodule (the old `components/openagent-social/` layout was dissolved 2026-05-30; `components/` no longer exists). It ships as the independently-installable `openagent-social` distribution (ADR-0014). The `component.yml` here is the **manifest contract** that tells the OpenTrApp daemon/GUI how to discover, display, and control this workload.
 
 ### Manifest Contract Rules
 - `component.yml` must always parse as valid YAML
-- `identity.id` must be `openagent-social` (the GUI uses this as a stable key)
+- `identity.id` must be `social` (the daemon/GUI uses this as a stable key)
 - `identity.role` must be `network`
 - All `available_when` values must reference states declared in `status.states`
 - Command IDs and health probe IDs must be unique
@@ -26,10 +26,10 @@ cargo test -p opentrapp          # Rust tests parse this manifest specifically
 
 ## Containerized Deployment (Perimeter Model)
 
-In production, pioneer runs inside **vault-social** — a dedicated container in the OpenTrApp 4-container perimeter. All untrusted content (Moltbook feed data) is processed inside this container, never on the user's host machine.
+In production, the feed vetter runs inside **vault-social** — a dedicated container in the OpenTrApp five-container perimeter (opt-in / off by default). All untrusted content (agent-social feed data) is processed inside this container, never on the user's host machine.
 
 - **Containerfile** in this repo's root defines the image (~153MB, python:3.10-slim)
-- **vault-social** is one of 4 services in `compose.yml` at the opentrapp root
+- **vault-social** is one of the five services in `compose.yml` at the opentrapp root (opt-in / off by default)
 - Runs on **social-net** (internal network) — can reach vault-proxy but CANNOT reach vault-agent or vault-skills
 - Agent never sees unfiltered feed data — scanning and filtering happen inside the container
 - Non-root user, capabilities dropped, 512MB memory limit
@@ -43,7 +43,7 @@ In production, pioneer runs inside **vault-social** — a dedicated container in
 
 The CLI/Makefile usage documented below still applies for development. The Containerfile copies this repo and runs the same tools.
 
-**Current status:** Moltbook API is down (since 2026-04-05). Pioneer is containerized and ready but live feed integration is deferred.
+**Current status:** Opt-in / on-demand. A live AT Protocol (Bluesky) adapter shipped ([ADR-0017](../../docs/adr/0017-unpark-social-live-adapter.md)); the original Moltbook target was parked. Full build-out as a generalized agent-social shield is deferred until Vault / Skill / GUI are closed ([ADR-0024](../../docs/adr/0024-product-structure-three-concerns.md)).
 
 ## Directory Structure
 
