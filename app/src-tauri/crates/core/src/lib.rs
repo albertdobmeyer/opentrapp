@@ -16,6 +16,7 @@
 //! [ADR-0019]: ../../../../docs/adr/0019-headless-daemon-gui-viewer-split.md
 
 pub mod control;
+pub mod diagnostics;
 pub mod idle;
 pub mod markers;
 pub mod orchestrator;
