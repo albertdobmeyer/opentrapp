@@ -43,6 +43,17 @@ pub fn should_auto_pause(
 }
 
 async fn perimeter_up(data_dir: PathBuf) {
+    // Stage the signed perimeter image tarballs (download from the release; the
+    // BundleVerifier then digest-checks them on load). The GUI does this in its
+    // bootstrap, but the headless daemon bring-up must too — otherwise a clean
+    // machine has no tars for `podman load` and the perimeter never comes up
+    // (#76, the CLI-first first-run gap). `fetch_perimeter_images` is idempotent:
+    // a no-op once the tars are present, for external images (pulled by the
+    // verifier, not here), or in dev (no bundled overlay).
+    if let Err(e) = crate::orchestrator::podman::fetch_perimeter_images().await {
+        eprintln!("[supervisor] perimeter image staging failed, not bringing up: {e}");
+        return; // fail-closed: never run an un-staged / unverified perimeter
+    }
     let _ = tokio::task::spawn_blocking(move || {
         crate::orchestrator::podman::perimeter_up(&data_dir)
     })
