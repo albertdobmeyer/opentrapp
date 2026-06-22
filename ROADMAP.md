@@ -48,9 +48,11 @@ The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as
 | Item | Status | Notes |
 |---|---|---|
 | Token-Permissions least privilege | ✅ | PR #139. |
-| Pinned-Dependencies | 🔶 | Version-pinned; re-run Scorecard to refresh; consider hash pins. |
-| Vulnerabilities (#46) | ⬜ | De-Tauri-gated (Section 2). |
-| Code-Review + Branch-Protection (required review, signed commits) | ⬜ | The solo-maintainer ceiling: needs a second reviewer / org settings. |
+| Dependabot #19 (js-yaml DoS) | ✅ | Overridden to js-yaml ≥4.2.0; `npm install` reports 0 vulnerabilities (PR #152). |
+| Pinned-Dependencies #80/#81/#82 | 🔶 | `npm install -g pkg@VERSION` in the agent/skills build scripts: version-pinned, but Scorecard wants integrity pins. Hash-pin or document the rationale (the built image is digest-pinned downstream by the signed bundle). |
+| Vulnerabilities #46 | ⬜ | De-Tauri-gated (Section 2): the GTK3/WebKit tree lives only in the GUI crate; the spine (core/daemon) is already Tauri-free. |
+| Code-Review #43 | ⬜ | Solo-maintainer ceiling: needs a second human reviewer. |
+| Branch-Protection #1 | 🔶 | Partly settable now via `gh api` (require status checks, no force-push, require PR); a required-review count ≥1 is meaningless without a co-maintainer. |
 | CII Best Practices + Scorecard climb | 🔶 | Several checks unlock with a co-maintainer. |
 
 ## 5. Distribution and packaging (ADR-0023)
@@ -58,7 +60,7 @@ The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as
 | Item | Status | Notes |
 |---|---|---|
 | Skill Firewall on the Marketplace + one-way sync | ✅ | Action published; projection sync verified end to end. |
-| Publish v0.7.x | ⬜ | Gated on WS0 verified; claims scoped to what is proven. |
+| Publish v0.7.x | ⛔ | **HARD-GATED (owner decision 2026-06-22): no release until every code-scan alert is closed.** #80-82 + #1 (fixable now), #46 (de-Tauri cutover), #43 (co-maintainer), in addition to WS0 verified. Puts Section 2 and the co-maintainer item on the release critical path. |
 | CLI/registry distribution (crates.io / Homebrew / curl-sh; GHCR) | ⬜ | OS-agnostic, no lock-in. |
 | Code signing (SignPath reapply) | ⬜ | After visibility signals land (rejected 2026-06-15). |
 
@@ -84,3 +86,5 @@ Substance first, visibility follows. The opencode reference is the highest-lever
 ---
 
 **The single most important next move is to finish Section 1** through the product's own entrypoints. Everything in Section 6 waits on it.
+
+**Release hard-gate (owner, 2026-06-22):** no new version ships until *all* code-scan alerts are closed. Because #46 needs the de-Tauri cutover (Section 2) and #43/#1 need a co-maintainer (Section 6), those are now on the **release critical path**, not deferrable if a release is wanted. The fixable alerts (#80-82, #1 settings) are being closed now; #19 is done.
