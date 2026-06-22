@@ -28,7 +28,7 @@
     "coverage:combined": "npm run test:coverage && npm run test:e2e:coverage && node scripts/merge-coverage.mjs"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-autostart": "^2.5.1",
     "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
     "@tauri-apps/plugin-notification": "^2.3.3",
@@ -39,7 +39,7 @@
     "lucide-react": "^0.400.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.17.0"
+    "react-router-dom": "^7.18.0"
   },
   "overrides": {
     "ws": "^8.20.1",
