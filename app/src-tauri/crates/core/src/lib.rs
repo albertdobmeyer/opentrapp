@@ -23,6 +23,7 @@ pub mod orchestrator;
 pub mod runguard;
 pub mod selftest;
 pub mod supervisor;
+pub mod telegram;
 pub mod util;
 
 /// Thin wrappers over the parsing / interpolation / redaction functions the
