@@ -1,17 +1,17 @@
-use std::path::PathBuf;
+//! Health-probe command — a thin Tauri shim over `opentrapp_core::health`.
+//!
+//! The probe execution + the component-directory lookup were lifted into `opentrapp-core`
+//! (ADR-0022 migration step 1). This shim clones the discovered-components cache out of the
+//! `AppState` mutex (the guard isn't held across the await) and delegates; the web GUI route
+//! will pass its own cache to the same fn. Command name + signature unchanged (registration
+//! intact).
+
 use tauri::State;
 
 use crate::orchestrator::error::OrchestratorError;
-use crate::orchestrator::runner;
 use crate::orchestrator::state::AppState;
 
-#[derive(serde::Serialize)]
-pub struct HealthResult {
-    pub probe_id: String,
-    pub stdout: String,
-    pub stderr: String,
-    pub exit_code: i32,
-}
+pub use opentrapp_core::health::HealthResult;
 
 #[tauri::command]
 pub async fn run_health_probe(
@@ -20,26 +20,7 @@ pub async fn run_health_probe(
     probe_command: String,
     timeout_seconds: u64,
 ) -> Result<HealthResult, OrchestratorError> {
-    let component_dir = {
-        let components = state.components.lock().unwrap();
-        let component = components
-            .iter()
-            .find(|c| c.manifest.identity.id == component_id)
-            .ok_or_else(|| OrchestratorError::ComponentNotFound(component_id.clone()))?;
-        component.component_dir.clone()
-    };
-
-    let result = runner::run_shell(
-        &probe_command,
-        &PathBuf::from(&component_dir),
-        timeout_seconds,
-    )
-    .await?;
-
-    Ok(HealthResult {
-        probe_id: component_id,
-        stdout: result.stdout,
-        stderr: result.stderr,
-        exit_code: result.exit_code,
-    })
+    let components = { state.components.lock().unwrap().clone() };
+    opentrapp_core::health::run_health_probe(&components, component_id, probe_command, timeout_seconds)
+        .await
 }
