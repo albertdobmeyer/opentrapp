@@ -16,7 +16,7 @@
         dogfood-fresh-sessions dogfood-restore-sessions \
         audit-rust audit-npm audit-deny audit-all \
         perimeter-up perimeter-down perimeter-status profile-memory \
-        sync-core-embedded
+        sync-core-embedded daemon daemon-run
 
 help:
 	@echo "OpenTrApp common targets:"
@@ -50,6 +50,10 @@ help:
 	@echo "    perimeter-down     podman compose down"
 	@echo "    perimeter-status   four-container health snapshot"
 	@echo "    profile-memory     per-container RSS + host RAM/swap + image sizes"
+	@echo ""
+	@echo "  Headless daemon (GUI-free, lean ~30-60 MB; ADR-0019):"
+	@echo "    daemon             build only the perimeter daemon (no GUI / no WebKit)"
+	@echo "    daemon-run         build + run the headless daemon (owns the perimeter)"
 
 # ── Test gates ───────────────────────────────────────────────────────────────
 
@@ -217,3 +221,22 @@ red-team:
 	 OPENTRAPP_PROXY_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-proxy --format '{{.Names}}' | head -1) \
 	 OPENTRAPP_EGRESS_CTR=$$(podman ps --filter label=com.docker.compose.service=vault-egress --format '{{.Names}}' | head -1) \
 	 bash tests/red-team-breakout.sh $(ARGS)
+
+# ── Headless daemon (GUI-free operation; ADR-0019 / ADR-0022) ────────────────
+# Build and run ONLY the perimeter daemon, skipping the Tauri GUI entirely.
+# opentrapp-daemon links only opentrapp-core + tokio (CI asserts the graph is
+# WebKit-free), so `make daemon` does NOT compile the GTK3/WebKit toolchain and
+# yields a lean (~30-60 MB) headless binary. This is the GUI-free way to operate
+# the perimeter; see docs/headless.md. Operate it via:
+#   opentrapp-daemon vault up|down|status|verify|pause|resume|restart
+daemon:
+	@echo "→ cargo build -p opentrapp-daemon --release (no GUI, no WebKit/GTK)"
+	cd app/src-tauri && cargo build -p opentrapp-daemon --release
+	@echo "✓ headless daemon: app/src-tauri/target/release/opentrapp-daemon"
+	@echo "  operate it with: opentrapp-daemon vault up|status|verify|pause|resume|down"
+
+daemon-run: daemon
+	@echo "→ opentrapp-daemon (owns + supervises the perimeter; Ctrl-C to stop)"
+	@echo "  NOTE: this brings the FULL perimeter up; on a <8 GB box close heavy"
+	@echo "  apps first (see docs/headless.md)."
+	app/src-tauri/target/release/opentrapp-daemon
