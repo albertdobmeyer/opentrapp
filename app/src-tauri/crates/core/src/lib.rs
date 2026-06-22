@@ -23,6 +23,7 @@ pub mod markers;
 pub mod orchestrator;
 pub mod runguard;
 pub mod selftest;
+pub mod status;
 pub mod supervisor;
 pub mod telegram;
 pub mod util;
