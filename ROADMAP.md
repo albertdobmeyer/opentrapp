@@ -8,6 +8,40 @@ Detailed specs: [`docs/specs/2026-06-09-lean-verified-perimeter-roadmap.md`](doc
 
 ---
 
+## The benchmark ladder (multi-session)
+
+The north star: OpenTrApp becomes the perimeter people trust to run open-source agents, earning thousands of stars and forks **because it is the best**, not through promotion ([`CLAUDE.md`](CLAUDE.md) §12.4: substance first, visibility follows). Four rungs, each a measurable benchmark that gates the next. We do not climb a rung before the one below it is verified through the product's own entrypoints (§11). Sections 1 to 7 below are the tactical detail for each rung.
+
+**Rung 1: Provably contained (security correctness).**
+*Benchmark:* the perimeter provably contains the agent, verified through the product CLI (`opentrapp-daemon vault up` / `vault verify`), cold and after every resume.
+- T0 boundary self-test exit 0 cold AND resumed, end-user-faithful (not dev scaffolding).
+- T1 idle auto-pause fires; T2 wake exactly-once with a security-correct resume.
+- Red-team breakout and proxy soak green.
+*Gate:* all green via the product path. (Section 1; tasks #35, #40, #76.) **This is the current frontier.**
+
+**Rung 2: Lean and CLI-first (the de-Tauri product).**
+*Benchmark:* the three concerns are CLI-operable, the GUI is optional, and the full perimeter runs on a 7.2 GB laptop with idle auto-pause collapsing resting RAM toward zero.
+- The de-Tauri cutover (the daemon is the product; the GUI an optional projection). Clears Scorecard Vulnerabilities #46.
+- Each of Vault / Skill / Social independently CLI-operable and distributable.
+- Leanness verified on the 7.2 GB box (resting RSS; idle auto-pause firing). The 7.2 GB floor is non-negotiable.
+*Gate:* de-Tauri done and lean verified on the laptop. (Section 2.) **Release-critical under the hard-gate.**
+
+**Rung 3: Best-in-class posture (the trust signals).**
+*Benchmark:* the posture is verifiably best-in-class: clean Scorecard on the trusted-tier items, CII Gold, signed reproducible releases, a second maintainer.
+- Scorecard Tier-1/2 alerts cleared (#46 via Rung 2; #43 and #1 via a co-maintainer).
+- CII Best Practices Gold; signed releases (SignPath); reproducible builds.
+- Co-maintainer recruited (also unlocks the people-gated checks).
+*Gate:* the trust signals are real and verifiable; the release hard-gate (owner 2026-06-22) binds here. (Sections 4 and 5.)
+
+**Rung 4: Adopted (the stars follow).**
+*Benchmark:* OpenTrApp is the referenced perimeter for open-source agents; stars and forks in the thousands, earned.
+- The opencode institutional reference (highest-leverage lever; gated on Rung 1).
+- Public launch: the CDR / supply-chain story (Show HN, r/netsec), the evolution article, the Skill Firewall on the Marketplace.
+- Awesome-lists, community contributions, the standalone-module adoption path.
+*Gate:* every visibility push is scoped to the substance behind it (§12.4); never promote ahead of the verified foundation. (Section 6.)
+
+---
+
 ## 1. Security correctness (the foundation, highest priority)
 
 The perimeter must provably contain the agent, cold and after every resume. This is the load-bearing gate for the opencode pitch and the proof the security promise is real.
