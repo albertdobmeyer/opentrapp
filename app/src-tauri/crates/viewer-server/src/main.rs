@@ -15,21 +15,34 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use axum::{response::Html, routing::get, Router};
+use tower_http::services::{ServeDir, ServeFile};
 
 /// Compose the router: the `/api` routes + the `/api/session` bootstrap + the `/api/events` WS +
-/// the SPA shell, wrapped in the §2 security middleware (Host allowlist → Origin allowlist →
-/// bearer; the SPA shell, `/api/session`, and the WS handshake are bearer-exempt — Host+Origin
-/// checked only — because that is where the bearer is issued / first-frame-verified).
+/// the SPA (the built React app via `ServeDir`, or the placeholder shell when no `dist/` is
+/// present), wrapped in the §2 security middleware (Host allowlist → Origin allowlist → bearer;
+/// the SPA, `/api/session`, and the WS handshake are bearer-exempt — Host+Origin checked only —
+/// because the SPA carries no secret and is where the bearer is issued / first-frame-verified).
 fn build_app(
     sec: security::SecurityState,
     app_state: routes::AppState,
     session: session::SharedSession,
+    dist_dir: Option<PathBuf>,
 ) -> Router {
-    routes::router(app_state)
-        .route("/", get(spa_shell))
+    let api = routes::router(app_state)
         .merge(session::router(session)) // /api/session nonce→bearer bootstrap exchange
-        .merge(events::router(sec.clone())) // /api/events WS (first-frame bearer auth)
-        .layer(axum::middleware::from_fn_with_state(sec, security::enforce))
+        .merge(events::router(sec.clone())); // /api/events WS (first-frame bearer auth)
+
+    // Serve the built React app from `dist/` with an index.html SPA fallback (client-side routes);
+    // fall back to the placeholder shell when there is no build (dev / tests).
+    let with_spa = match dist_dir {
+        Some(dir) if dir.join("index.html").is_file() => {
+            let index = ServeFile::new(dir.join("index.html"));
+            api.fallback_service(ServeDir::new(&dir).fallback(index))
+        }
+        _ => api.route("/", get(spa_shell)),
+    };
+
+    with_spa.layer(axum::middleware::from_fn_with_state(sec, security::enforce))
 }
 
 /// SPIKE SPA shell. The real serve mounts `app/dist/` via tower-http `ServeDir` (§5); this
@@ -62,7 +75,10 @@ async fn main() -> anyhow::Result<()> {
         std::env::current_dir()?,
         opentrapp_core::orchestrator::podman::runtime_data_dir(),
     )?;
-    let app = build_app(sec, app_state, shared_session);
+    // The daemon / launcher points this at the bundled React `dist/` (step 4); absent → the
+    // placeholder shell, so the server still boots in a bare dev checkout.
+    let dist_dir = std::env::var("OPENTRAPP_VIEWER_DIST").ok().map(PathBuf::from);
+    let app = build_app(sec, app_state, shared_session, dist_dir);
 
     // §2.3 — open the browser to the BARE loopback URL with the nonce in the FRAGMENT (#n=…),
     // never a query string (that is the leak we designed out). TODO: xdg-open/open/start
@@ -98,7 +114,7 @@ mod integration {
     fn app() -> Router {
         let sec = security::SecurityState { port: 8080, token: Arc::new("tok".to_string()) };
         let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).expect("discover workloads");
-        build_app(sec, state, dummy_session())
+        build_app(sec, state, dummy_session(), None)
     }
 
     #[tokio::test]
@@ -181,7 +197,7 @@ mod integration {
         let nonce = sess.nonce().unwrap().to_string();
         let sec = security::SecurityState { port: 8080, token: Arc::new(sess.token().to_string()) };
         let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).unwrap();
-        let app = build_app(sec, state, Arc::new(Mutex::new(sess)));
+        let app = build_app(sec, state, Arc::new(Mutex::new(sess)), None);
 
         let exchange = |n: &str| {
             Req::post("/api/session")
@@ -206,6 +222,31 @@ mod integration {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// With a built `dist/`, the SPA is served at `/` (Host-checked, no bearer — it carries no
+    /// secret); the security layer still wraps the static serving (a forged Host is 403 even for
+    /// the SPA, so ServeDir is not a Host-check bypass).
+    #[tokio::test]
+    async fn serves_the_built_spa_from_dist_under_the_host_check() {
+        let dist = std::env::temp_dir().join(format!("otv-dist-{}", std::process::id()));
+        std::fs::create_dir_all(&dist).unwrap();
+        std::fs::write(dist.join("index.html"), "<!doctype html><div id=root>real-app</div>").unwrap();
+        let sec = security::SecurityState { port: 8080, token: Arc::new("tok".to_string()) };
+        let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).unwrap();
+        let app = build_app(sec, state, dummy_session(), Some(dist.clone()));
+
+        // valid Host, no bearer → the built SPA loads
+        let ok = Req::get("/").header("host", "127.0.0.1:8080").body(Body::empty()).unwrap();
+        let resp = app.clone().oneshot(ok).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let body = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
+        assert!(String::from_utf8_lossy(&body).contains("real-app"), "the built index.html is served");
+
+        // forged Host → 403 even for the SPA (the §2 layer wraps ServeDir too)
+        let bad = Req::get("/").header("host", "attacker.com").body(Body::empty()).unwrap();
+        assert_eq!(app.oneshot(bad).await.unwrap().status(), StatusCode::FORBIDDEN);
+        let _ = std::fs::remove_dir_all(&dist);
+    }
+
     /// Risk item #3 — the bursty `stream-line` path carries over the WS, end-to-end through a
     /// REAL server: handshake passes Host+Origin, first-frame bearer authenticates, the
     /// stream-line frame arrives with the expected payload.
@@ -219,7 +260,7 @@ mod integration {
         let port = listener.local_addr().unwrap().port();
         let sec = security::SecurityState { port, token: Arc::new("tok".to_string()) };
         let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).unwrap();
-        let app = build_app(sec, state, dummy_session());
+        let app = build_app(sec, state, dummy_session(), None);
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
         // connect with the required Origin header (Host is set by the client to 127.0.0.1:port)
