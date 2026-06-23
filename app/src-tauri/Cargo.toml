@@ -13,7 +13,7 @@ resolver = "2"
 
 [package]
 name = "opentrapp"
-version = "0.7.2"
+version = "0.8.0"
 edition = "2021"
 # Never published to crates.io — this is a desktop app with workspace-internal
 # path deps. `publish = false` makes it a private crate so cargo-deny's
