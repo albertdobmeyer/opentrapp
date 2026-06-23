@@ -68,7 +68,7 @@ export default tseslint.config(
       },
     },
     settings: {
-      react: { version: '18.3' },
+      react: { version: '19' },
       'import-x/resolver': {
         typescript: { project: './tsconfig.json' },
         node: true,
