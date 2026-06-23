@@ -17,6 +17,7 @@
 
 pub mod control;
 pub mod diagnostics;
+pub mod execute;
 pub mod health;
 pub mod idle;
 pub mod markers;
