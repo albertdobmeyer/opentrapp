@@ -28,6 +28,7 @@ pub mod status;
 pub mod supervisor;
 pub mod telegram;
 pub mod util;
+pub mod workflow_ops;
 
 /// Thin wrappers over the parsing / interpolation / redaction functions the
 /// fuzz harness drives (`fuzz/fuzz_targets/*`). Lives here in the tauri-free
