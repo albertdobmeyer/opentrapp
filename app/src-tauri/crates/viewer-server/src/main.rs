@@ -161,7 +161,7 @@ mod integration {
 
     #[tokio::test]
     async fn get_component_returns_the_agent_through_the_secure_path() {
-        let req = authed_post("/api/get_component", serde_json::json!({ "component_id": "agent" }));
+        let req = authed_post("/api/get_component", serde_json::json!({ "componentId": "agent" }));
         let resp = app().oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
         let bytes = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
@@ -171,7 +171,7 @@ mod integration {
     #[tokio::test]
     async fn get_component_unknown_is_404() {
         // The route's ApiError maps ComponentNotFound → 404 (spec §1 error contract).
-        let req = authed_post("/api/get_component", serde_json::json!({ "component_id": "no-such-x" }));
+        let req = authed_post("/api/get_component", serde_json::json!({ "componentId": "no-such-x" }));
         assert_eq!(app().oneshot(req).await.unwrap().status(), StatusCode::NOT_FOUND);
     }
 
@@ -179,13 +179,28 @@ mod integration {
     async fn get_status_evaluates_a_real_component_through_core() {
         // evaluate_status runs the component's probes (or returns the default/"unknown" with no
         // perimeter up); the point is the slice-based core call returns a typed state through the route.
-        let req = authed_post("/api/get_status", serde_json::json!({ "component_id": "agent" }));
+        let req = authed_post("/api/get_status", serde_json::json!({ "componentId": "agent" }));
         let resp = app().oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
         let bytes = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
         let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         assert_eq!(v["component_id"], "agent");
         assert!(v["state_id"].is_string(), "a resolved state is returned");
+    }
+
+    /// A new route with a MULTI-field camelCase body (the shape the frontend shim actually sends):
+    /// the args deserialize (componentId/configPath/templatePath), and an unknown component → 404.
+    #[tokio::test]
+    async fn create_config_from_template_uses_camelcase_args_and_maps_not_found() {
+        let req = authed_post(
+            "/api/create_config_from_template",
+            serde_json::json!({
+                "componentId": "no-such-x",
+                "configPath": ".env",
+                "templatePath": ".env.example",
+            }),
+        );
+        assert_eq!(app().oneshot(req).await.unwrap().status(), StatusCode::NOT_FOUND);
     }
 
     /// The §2.3 bootstrap: POST /api/session {nonce} issues the bearer as an HttpOnly+SameSite
