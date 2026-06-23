@@ -11,7 +11,7 @@ daemon) · [ADR-0021](0021-danger-gated-agentic-control-plane.md) (authorization
 [ADR-0008](0008-tauri-over-electron.md) (Tauri choice — being phased out for the viewer) ·
 [ADR-0011](0011-zero-trust-self-sufficient-bootstrap.md) ·
 [`de-tauri-viewer-research.md`](../de-tauri-viewer-research.md) (security prior-art + C1 verdict) ·
-[`threat-model.md` T7](../threat-model.md) · [CLAUDE.md §10/§11](../../CLAUDE.md)
+[`threat-model.md` T8](../threat-model.md) (the loopback-viewer threat model + attack-surface comparison this ADR's spike gate consumes; T7 for the agentic control plane) · [CLAUDE.md §10/§11](../../CLAUDE.md)
 
 ---
 
@@ -97,7 +97,9 @@ ephemeral** config surface is **local control, not remote management**: unreacha
 construction, authenticable only by the owning user, exposing only the same projection the in-process
 Tauri IPC already exposed. This amends ADR-0019's "never a TCP port" line deliberately (a browser
 cannot speak a Unix socket). **If the spike's threat-model review finds the surface unacceptable, that
-is a kill criterion.**
+is a kill criterion.** That review is now written as [`threat-model.md` T8](../threat-model.md) (STRIDE
+decomposition + the in-process-WebKit-vs-loopback attack-surface comparison); its load-bearing residual
+is the hostile-extension path, and maintainer acceptance of that residual is the explicit go/no-go.
 
 ### 4. Transport: WebSocket over SSE
 
