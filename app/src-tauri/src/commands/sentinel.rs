@@ -7,31 +7,26 @@
 //! when their machine is doing semantic judgment ("never wonder why it got
 //! busy" — spec 01 §6).
 //!
-//! It stays generic-backend-clean (CLAUDE.md §5): it locates and runs the
-//! shared lib and shuttles opaque JSON; it contains no concern-specific logic
-//! (it doesn't know what a "skill" or a "feed post" is — the lib judges opaque
-//! fragments + a typed context).
+//! The transport-neutral judge **run + parse** (`Verdict`, `parse_verdict`,
+//! `run_judge`, `judge_with`) was lifted to `opentrapp_core::sentinel` (ADR-0022
+//! migration step 1) so the future loopback web route can run a judgment too.
+//! What stays here is the GUI-specific binding: the activity indicator
+//! (`SentinelActivityStore` + the Tauri `emit`) and lib **location**
+//! (`sentinel_candidates` bakes in a crate-relative dev fallback, so it must
+//! resolve against the GUI crate). `judge` locates the dir, drives the activity
+//! indicator, and delegates the run to core.
 //!
-//! Slice 1 (this module): the `judge` bridge + the activity indicator. The
-//! `score`/`drift` rung-1 bridges and the rich rung-3 escalation UX land with
-//! the skills/social GUI legs.
+//! It stays generic-backend-clean (CLAUDE.md §5): it locates and runs the
+//! shared lib and shuttles opaque JSON; it contains no concern-specific logic.
 
 use std::path::{Path, PathBuf};
-use std::process::Stdio;
 use std::sync::Mutex;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
-use tokio::io::AsyncWriteExt;
-use tokio::process::Command as TokioCommand;
 
-use crate::util::shell::find_bash;
-
-/// How long to wait on the local judge before giving up (matches the lib's
-/// own SENTINEL_TIMEOUT default headroom; the judge is load-on-demand so a
-/// cold start can take a few seconds).
-const JUDGE_TIMEOUT: Duration = Duration::from_secs(90);
+use opentrapp_core::sentinel::{judge_with, Verdict};
 
 /// The active rung Sentinel is working at — drives the activity indicator.
 /// User-facing labels are plain language (the 28-term banned-vocabulary rule
@@ -92,43 +87,6 @@ impl Default for SentinelActivityStore {
     }
 }
 
-/// The Verdict the lib returns (mirrors `sentinel/verdict-schema.json`). The
-/// `reason` is user-facing plain language.
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Verdict {
-    pub decision: String,
-    pub confidence: f64,
-    pub resolved_at_rung: u8,
-    pub reason: String,
-}
-
-impl Verdict {
-    /// The fail-safe verdict when the lib can't be run or its output can't be
-    /// parsed — mirrors judge.sh's own escalate-on-uncertainty contract so the
-    /// caller decides its policy rather than defaulting to allow.
-    fn escalate(reason: &str) -> Self {
-        Self {
-            decision: "escalate".to_string(),
-            confidence: 0.0,
-            resolved_at_rung: 2,
-            reason: reason.to_string(),
-        }
-    }
-}
-
-/// Parse the lib's stdout into a Verdict. Pure + unit-testable. Any malformed
-/// output becomes an `escalate` verdict (never a silent `allow`).
-pub fn parse_verdict(stdout: &str) -> Verdict {
-    let line = stdout.trim();
-    if line.is_empty() {
-        return Verdict::escalate("The local check produced no answer; please review manually.");
-    }
-    match serde_json::from_str::<Verdict>(line) {
-        Ok(v) if matches!(v.decision.as_str(), "allow" | "block" | "escalate") => v,
-        _ => Verdict::escalate("The local check returned an unreadable answer; please review manually."),
-    }
-}
-
 // ─── activity helpers ─────────────────────────────────────────────────
 
 fn set_activity(app: &AppHandle, rung: SentinelRung) {
@@ -161,7 +119,8 @@ pub fn get_sentinel_activity(store: State<'_, SentinelActivityStore>) -> Sentine
 ///   3. staged runtime — `<runtime_perimeter>/sentinel`: copied from the bundle
 ///      at first launch by `stage_resources_from_bundle` (self-heals tampering).
 ///   4. dev fallback — repo-root `sentinel/` relative to the crate, so
-///      `cargo`/`npm run dev` work from a source checkout.
+///      `cargo`/`npm run dev` work from a source checkout. (Crate-relative — the
+///      reason `sentinel_candidates` stays in the GUI crate, not core.)
 fn sentinel_candidates(resource_dir: Option<&Path>, runtime_perimeter: &Path) -> Vec<PathBuf> {
     let mut cands: Vec<PathBuf> = Vec::new();
     if let Some(res) = resource_dir {
@@ -185,31 +144,21 @@ fn locate_sentinel_dir(app: &AppHandle) -> Option<PathBuf> {
 
 // ─── the judge bridge ─────────────────────────────────────────────────
 
-/// Run the rung-2 judge on an opaque request. The request is the same JSON the
-/// CLI path uses (`context` / `fragment` / `task_hint` / `static_signal`); it
-/// is passed straight to `sentinel/judge.sh` on stdin. Drives the activity
-/// indicator: `thinking` while the judge runs, back to `watching` after.
 /// Run the rung-2 judge on an opaque request and return a [`Verdict`]. Reusable
 /// by any GUI consumer — the `sentinel_judge` command and the egress-approval
-/// path (`commands::egress`). Infra failures (lib/bash missing, bad serialise)
-/// return an `escalate` verdict — never a silent allow. Drives the activity
-/// indicator (`thinking` while the judge runs, back to `watching` after).
+/// path (`commands::egress`). Locates the lib (GUI, crate-relative dev fallback),
+/// drives the activity indicator (`thinking` while the judge runs, back to
+/// `watching` after), and delegates the run+parse to `opentrapp_core::sentinel`.
+/// A missing lib returns an `escalate` verdict — never a silent allow.
 pub(crate) async fn judge(app: &AppHandle, request: serde_json::Value) -> Verdict {
     let Some(dir) = locate_sentinel_dir(app) else {
-        return Verdict::escalate("The local judgment helper is not available; please review manually.");
-    };
-    let Some(bash) = find_bash() else {
-        return Verdict::escalate("Could not find a shell to run the local check; please review manually.");
-    };
-    let request_json = match serde_json::to_string(&request) {
-        Ok(s) => s,
-        Err(_) => {
-            return Verdict::escalate("The local check input could not be prepared; please review manually.")
-        }
+        return Verdict::escalate(
+            "The local judgment helper is not available; please review manually.",
+        );
     };
 
     set_activity(app, SentinelRung::Thinking);
-    let result = run_judge(&bash, &dir, &request_json).await;
+    let result = judge_with(&dir, request).await;
     set_activity(app, SentinelRung::Watching);
     result
 }
@@ -217,34 +166,6 @@ pub(crate) async fn judge(app: &AppHandle, request: serde_json::Value) -> Verdic
 #[tauri::command]
 pub async fn sentinel_judge(app: AppHandle, request: serde_json::Value) -> Result<Verdict, String> {
     Ok(judge(&app, request).await)
-}
-
-async fn run_judge(bash: &PathBuf, dir: &PathBuf, request_json: &str) -> Verdict {
-    let spawn = TokioCommand::new(bash)
-        .arg(dir.join("judge.sh"))
-        .current_dir(dir)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
-
-    let mut child = match spawn {
-        Ok(c) => c,
-        Err(_) => return Verdict::escalate("The local check could not be started."),
-    };
-
-    if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(request_json.as_bytes()).await;
-        // Drop closes stdin so judge.sh's `cat` returns.
-    }
-
-    let out = match tokio::time::timeout(JUDGE_TIMEOUT, child.wait_with_output()).await {
-        Ok(Ok(o)) => o,
-        Ok(Err(_)) => return Verdict::escalate("The local check failed to run."),
-        Err(_) => return Verdict::escalate("The local check took too long and was stopped."),
-    };
-
-    parse_verdict(&String::from_utf8_lossy(&out.stdout))
 }
 
 fn now_unix_ms() -> u64 {
@@ -274,28 +195,6 @@ mod tests {
         let a = store.0.lock().unwrap().clone();
         assert_eq!(a.rung, SentinelRung::Watching);
         assert_eq!(a.label, "watching");
-    }
-
-    #[test]
-    fn parse_verdict_accepts_a_valid_verdict() {
-        let v = parse_verdict(r#"{"decision":"block","confidence":0.9,"resolved_at_rung":2,"reason":"reads your saved passwords"}"#);
-        assert_eq!(v.decision, "block");
-        assert_eq!(v.resolved_at_rung, 2);
-    }
-
-    #[test]
-    fn parse_verdict_escalates_on_empty() {
-        assert_eq!(parse_verdict("").decision, "escalate");
-        assert_eq!(parse_verdict("   \n").decision, "escalate");
-    }
-
-    #[test]
-    fn parse_verdict_escalates_on_garbage_never_allows() {
-        // A malformed answer must NEVER silently become allow.
-        let v = parse_verdict("not json at all");
-        assert_eq!(v.decision, "escalate");
-        let v2 = parse_verdict(r#"{"decision":"yolo","confidence":1.0,"resolved_at_rung":2,"reason":"x"}"#);
-        assert_eq!(v2.decision, "escalate");
     }
 
     #[test]
