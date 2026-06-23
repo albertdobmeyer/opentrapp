@@ -191,8 +191,8 @@ exist as a historical reference; do not push to them.
 ## 9. Security considerations
 
 - **Command injection prevention** — `app/src-tauri/crates/core/src/orchestrator/runner.rs` wraps all interpolated arguments in single quotes with shell escaping.
-- **Path traversal protection** — `app/src-tauri/src/commands/config.rs` validates that canonical paths stay within the component's directory.
-- **Regex in probes** — `app/src-tauri/src/commands/status.rs` uses the `regex` crate for `stdout_regex` rules; never shells out to grep.
+- **Path traversal protection** — `app/src-tauri/crates/core/src/config_ops.rs` (`read_within` / `write_within`) validates that canonical paths stay within the component's directory (TOCTOU-safe via the canonical path); the Tauri `commands/config.rs` shim and the future loopback web route both call it. Traversal-rejection tests live in that module.
+- **Regex in probes** — `app/src-tauri/crates/core/src/status.rs` uses the `regex` crate for `stdout_regex` rules; never shells out to grep (the `commands/status.rs` shim delegates here).
 - **Stream deduplication** — `app/src-tauri/src/commands/stream.rs` kills any prior streaming process before starting a new one.
 - **Network isolation** — compose networks are `internal: true`; no default gateway. Containers cannot reach the public internet directly; only `vault-proxy` can.
 - **No untrusted content on the host** — all skill downloads, scanning, and feed processing happen inside containers.
