@@ -1,8 +1,9 @@
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 
+import EgressApprovalsCard from "./EgressApprovalsCard";
+
 import { listEgressApprovals, applyAllowlistDecision } from "@/lib/tauri";
 
-import EgressApprovalsCard from "./EgressApprovalsCard";
 
 vi.mock("@/lib/tauri", () => ({
   listEgressApprovals: vi.fn(),

@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { readConfig, writeConfig } from "@/lib/tauri";
 
 import { ConfigRow } from "./ConfigRow";
 
 import type { Config } from "@/lib/types";
+
+import { readConfig, writeConfig } from "@/lib/tauri";
 
 vi.mock("@/lib/tauri", () => ({
   readConfig: vi.fn(),

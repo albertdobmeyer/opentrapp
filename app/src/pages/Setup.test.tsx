@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+import Setup from "./Setup";
+
 import { useWizardProgress } from "@/hooks/useWizardProgress";
 
-import Setup from "./Setup";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
 

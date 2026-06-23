@@ -1,6 +1,8 @@
 import { Check, ExternalLink, Eye, EyeOff, Key, MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ClipboardEvent, type ReactNode, type Ref } from "react";
 
+import HowToModal, { type HowToStep } from "./HowToModal";
+
 import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
 import { saveCredentials, readRuntimeEnv } from "@/lib/tauri";
@@ -12,7 +14,6 @@ import {
   parseEnvKeys,
 } from "@/lib/wizardUtils";
 
-import HowToModal, { type HowToStep } from "./HowToModal";
 
 interface Props {
   onContinue: (opts: { skippedKeys: boolean }) => void;

@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { executeWorkflow } from "@/lib/tauri";
 
 import { WorkflowRow } from "./WorkflowRow";
 
 import type { Workflow } from "@/lib/types";
+
+import { executeWorkflow } from "@/lib/tauri";
 
 
 vi.mock("@/lib/tauri", async (importOriginal) => ({

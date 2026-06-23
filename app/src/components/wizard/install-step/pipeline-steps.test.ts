@@ -1,4 +1,3 @@
-import { checkPrerequisites, executeWorkflow, initSubmodules } from "@/lib/tauri";
 
 import {
   runBuildStep,
@@ -9,6 +8,8 @@ import {
 
 import type { PrerequisiteReport } from "@/lib/tauri";
 import type { WorkflowResult, WorkflowStatus } from "@/lib/types";
+
+import { checkPrerequisites, executeWorkflow, initSubmodules } from "@/lib/tauri";
 
 vi.mock("@/lib/tauri", () => ({
   checkPrerequisites: vi.fn(),

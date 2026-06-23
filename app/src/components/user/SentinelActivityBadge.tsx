@@ -1,10 +1,11 @@
 import { Eye, Loader2, Search } from "lucide-react";
 
 
-import { useSentinelActivity } from "@/hooks/useSentinelActivity";
 
 import type { SentinelRung } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
+
+import { useSentinelActivity } from "@/hooks/useSentinelActivity";
 
 interface RungCopy {
   label: string;

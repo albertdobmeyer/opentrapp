@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
+import Preferences from "./Preferences";
+
 import { readRuntimeEnv, restartPerimeter, saveCredentials } from "@/lib/tauri";
 
-import Preferences from "./Preferences";
 
 const { addToast, removeToast } = vi.hoisted(() => ({
   addToast: vi.fn(() => "toast-id"),

@@ -1,8 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react";
 
+import CleanedSkillsCard from "./CleanedSkillsCard";
+
 import { runCommand } from "@/lib/tauri";
 
-import CleanedSkillsCard from "./CleanedSkillsCard";
 
 vi.mock("@/lib/tauri", () => ({ runCommand: vi.fn() }));
 const mockRun = vi.mocked(runCommand);

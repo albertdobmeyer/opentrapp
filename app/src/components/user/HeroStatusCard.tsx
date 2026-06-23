@@ -3,13 +3,14 @@ import { MessageCircle, Play, RotateCcw, StopCircle } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import type { HeroState } from "@/hooks/useHero";
+
 import { useBootstrapProgress } from "@/hooks/useBootstrapProgress";
 import { useSettings } from "@/hooks/useSettings";
 import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
 import { pausePerimeter, resumePerimeter, retryBootstrap, type BootstrapFailureSummary } from "@/lib/tauri";
 
-import type { HeroState } from "@/hooks/useHero";
 
 interface Props {
   state: HeroState;

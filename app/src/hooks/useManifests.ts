@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 
+import type { DiscoveredComponent } from "@/lib/types";
+
 import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
 import { listComponents } from "@/lib/tauri";
 
-import type { DiscoveredComponent } from "@/lib/types";
 
 export function useManifests() {
   const [components, setComponents] = useState<DiscoveredComponent[]>([]);

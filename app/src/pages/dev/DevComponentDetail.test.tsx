@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { getComponent, getStatus } from "@/lib/tauri";
 
 import DevComponentDetail from "./DevComponentDetail";
 
 import type { DiscoveredComponent } from "@/lib/types";
+
+import { getComponent, getStatus } from "@/lib/tauri";
 
 
 vi.mock("react-router-dom", () => ({ useParams: () => ({ id: "vault-agent" }) }));

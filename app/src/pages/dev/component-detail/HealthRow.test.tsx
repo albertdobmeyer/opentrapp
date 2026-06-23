@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { runHealthProbe } from "@/lib/tauri";
 
 import { HealthRow } from "./HealthRow";
 
 import type { HealthProbe } from "@/lib/types";
+
+import { runHealthProbe } from "@/lib/tauri";
 
 
 vi.mock("@/lib/tauri", async (importOriginal) => ({

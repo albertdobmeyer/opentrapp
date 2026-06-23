@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
-import { runCommand, startStream, stopStream } from "@/lib/tauri";
 
 import { CommandRow } from "./CommandRow";
 
 import type { Command, CommandResult } from "@/lib/types";
+
+import { runCommand, startStream, stopStream } from "@/lib/tauri";
 
 vi.mock("@/lib/tauri", () => ({
   runCommand: vi.fn(),

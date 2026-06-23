@@ -1,5 +1,3 @@
-import { deriveTelegramBotUrl, readRuntimeEnv } from "@/lib/tauri";
-
 import {
   detectPlatform,
   estimateRemaining,
@@ -9,6 +7,9 @@ import {
   sanitizeLine,
   type SubStep,
 } from "./utils";
+
+import { deriveTelegramBotUrl, readRuntimeEnv } from "@/lib/tauri";
+
 
 vi.mock("@/lib/tauri", () => ({
   readRuntimeEnv: vi.fn(),

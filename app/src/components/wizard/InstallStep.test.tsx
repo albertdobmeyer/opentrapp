@@ -1,8 +1,9 @@
 import { act, render, screen } from "@testing-library/react";
 
+import InstallStep from "./InstallStep";
+
 import { useInstallPipeline } from "@/hooks/useInstallPipeline";
 
-import InstallStep from "./InstallStep";
 
 vi.mock("@/hooks/useInstallPipeline", () => ({ useInstallPipeline: vi.fn() }));
 vi.mock("@/hooks/useSettings", () => ({ useSettings: () => ({ update: vi.fn() }) }));

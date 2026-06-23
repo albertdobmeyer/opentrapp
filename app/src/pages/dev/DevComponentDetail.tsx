@@ -2,18 +2,19 @@ import { AlertTriangle, Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { getComponent, getStatus } from "@/lib/tauri";
-import {
-  COMMAND_GROUP_LABELS,
-  COMMAND_GROUP_ORDER,
-  type DiscoveredComponent,
-} from "@/lib/types";
 
 import { CommandRow } from "./component-detail/CommandRow";
 import { ConfigRow } from "./component-detail/ConfigRow";
 import { HealthRow } from "./component-detail/HealthRow";
 import { Panel } from "./component-detail/widgets";
 import { WorkflowRow } from "./component-detail/WorkflowRow";
+
+import { getComponent, getStatus } from "@/lib/tauri";
+import {
+  COMMAND_GROUP_LABELS,
+  COMMAND_GROUP_ORDER,
+  type DiscoveredComponent,
+} from "@/lib/types";
 
 /**
  * Generic, manifest-driven per-component dashboard (developer mode).

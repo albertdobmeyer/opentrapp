@@ -1,13 +1,14 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState } from "react";
 
+import { useSettings } from "./useSettings";
+
 import {
   getAssistantStatus,
   type AssistantStatus,
   type AssistantStatusSnapshot,
 } from "@/lib/tauri";
 
-import { useSettings } from "./useSettings";
 
 /**
  * The hero card on Home renders one of these states. This is a *user-facing*

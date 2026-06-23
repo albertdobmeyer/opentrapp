@@ -1,9 +1,10 @@
 import { Loader2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
+import type { HealthProbe } from "@/lib/types";
+
 import { runHealthProbe } from "@/lib/tauri";
 
-import type { HealthProbe } from "@/lib/types";
 
 /**
  * One manifest health probe: a Check button runs the probe via the generic

@@ -1,9 +1,10 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
+import type { SentinelActivity } from "@/lib/types";
+
 import { getSentinelActivity } from "@/lib/tauri";
 
-import type { SentinelActivity } from "@/lib/types";
 
 /**
  * The resting state: rung 0/1 only, no model running. Used as the initial

@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
-import importPlugin from 'eslint-plugin-import';
+import importPlugin from 'eslint-plugin-import-x';
 import unicorn from 'eslint-plugin-unicorn';
 import vitest from '@vitest/eslint-plugin';
 import globals from 'globals';
@@ -40,6 +40,13 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
 
+  // `preserve-caught-error` is new in eslint 10's `js.configs.recommended`, but it
+  // requires the ES2022 Error `cause` option (`new Error(msg, { cause })`), which does
+  // not type-check under this project's ES2020 tsconfig target — the same constraint
+  // that defers `unicorn/prefer-string-replace-all` below. Re-enable on a tsconfig
+  // target bump to ES2022.
+  { rules: { 'preserve-caught-error': 'off' } },
+
   // Application source: strict-type-checked + complexity gates + plugins
   {
     files: ['src/**/*.{ts,tsx}'],
@@ -62,7 +69,7 @@ export default tseslint.config(
     },
     settings: {
       react: { version: '18.3' },
-      'import/resolver': {
+      'import-x/resolver': {
         typescript: { project: './tsconfig.json' },
         node: true,
       },
@@ -71,7 +78,7 @@ export default tseslint.config(
       react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
-      import: importPlugin,
+      'import-x': importPlugin,
       unicorn,
     },
     rules: {
@@ -83,8 +90,8 @@ export default tseslint.config(
 
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
 
-      'import/no-cycle': ['error', { maxDepth: 10 }],
-      'import/order': [
+      'import-x/no-cycle': ['error', { maxDepth: 10 }],
+      'import-x/order': [
         'warn',
         {
           groups: [
@@ -99,12 +106,11 @@ export default tseslint.config(
           alphabetize: { order: 'asc', caseInsensitive: true },
         },
       ],
-      'import/no-duplicates': 'error',
-      'import/no-self-import': 'error',
-      'import/no-useless-path-segments': 'warn',
+      'import-x/no-duplicates': 'error',
+      'import-x/no-self-import': 'error',
+      'import-x/no-useless-path-segments': 'warn',
 
       // Unicorn: productive subset (skip stylistic-only and false-positive-prone rules)
-      'unicorn/better-regex': 'warn',
       'unicorn/catch-error-name': 'warn',
       'unicorn/consistent-destructuring': 'warn',
       'unicorn/consistent-function-scoping': 'warn',
@@ -113,12 +119,13 @@ export default tseslint.config(
       'unicorn/explicit-length-check': 'warn',
       'unicorn/new-for-builtins': 'error',
       'unicorn/no-array-callback-reference': 'warn',
-      'unicorn/no-array-for-each': 'warn',
-      'unicorn/no-array-push-push': 'warn',
+      // Renamed from no-array-for-each in unicorn 68 (same rule: prefer for…of over forEach).
+      'unicorn/no-for-each': 'warn',
       'unicorn/no-await-expression-member': 'warn',
       'unicorn/no-console-spaces': 'warn',
       'unicorn/no-for-loop': 'warn',
-      'unicorn/no-instanceof-array': 'error',
+      // Renamed/generalized from no-instanceof-array in unicorn 68.
+      'unicorn/no-instanceof-builtins': 'error',
       'unicorn/no-lonely-if': 'warn',
       'unicorn/no-nested-ternary': 'warn',
       'unicorn/no-new-array': 'error',
@@ -146,7 +153,6 @@ export default tseslint.config(
       'unicorn/prefer-date-now': 'warn',
       'unicorn/prefer-default-parameters': 'warn',
       'unicorn/prefer-dom-node-append': 'warn',
-      'unicorn/prefer-dom-node-dataset': 'warn',
       'unicorn/prefer-dom-node-remove': 'warn',
       'unicorn/prefer-dom-node-text-content': 'warn',
       'unicorn/prefer-includes': 'warn',

@@ -1,10 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 
-import { getAssistantStatus } from "@/lib/tauri";
 
 import { useHero } from "./useHero";
 
 import type { AssistantStatus, AssistantStatusSnapshot } from "@/lib/tauri";
+
+import { getAssistantStatus } from "@/lib/tauri";
 
 const { listeners, seeded } = vi.hoisted(() => ({
   listeners: new Map<string, (e: unknown) => void>(),

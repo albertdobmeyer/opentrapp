@@ -1,11 +1,12 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
-import { readConfig, writeConfig } from "@/lib/tauri";
 
 import { DangerPill } from "./widgets";
 
 import type { Config } from "@/lib/types";
+
+import { readConfig, writeConfig } from "@/lib/tauri";
 
 
 /**
