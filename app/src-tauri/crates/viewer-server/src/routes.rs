@@ -64,53 +64,103 @@ pub fn router(state: AppState) -> Router {
         .route("/api/write_config", post(write_config))
         .route("/api/run_command", post(run_command))
         .route("/api/execute_workflow", post(execute_workflow))
+        // first-run setup
+        .route("/api/init_submodules", post(init_submodules))
+        .route("/api/create_config_from_template", post(create_config_from_template))
+        .route("/api/generate_diagnostic_bundle", post(generate_diagnostic_bundle))
+        // telegram waker channel (token-based, stateless network ops)
+        .route("/api/derive_telegram_bot_url", post(derive_telegram_bot_url))
+        .route("/api/telegram_delete_webhook", post(telegram_delete_webhook))
+        .route("/api/telegram_poll_for_start", post(telegram_poll_for_start))
+        .route("/api/telegram_send_message", post(telegram_send_message))
+        .route("/api/telegram_advance_offset", post(telegram_advance_offset))
         .with_state(state)
 }
 
 // ───── argument bodies (mirror the Tauri command parameters) ─────────────────────────────────
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ComponentIdArg {
     component_id: String,
 }
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct HealthProbeArgs {
     component_id: String,
     probe_command: String,
     timeout_seconds: u64,
 }
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ReadConfigArgs {
     component_id: String,
     config_path: String,
 }
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct WriteConfigArgs {
     component_id: String,
     config_path: String,
     content: String,
 }
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct LoadOptionsArgs {
     component_id: String,
     command_string: String,
     timeout_seconds: u64,
 }
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct RunCommandArgs {
     component_id: String,
     command_id: String,
     args: HashMap<String, String>,
 }
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct ExecuteWorkflowArgs {
     component_id: String,
     workflow_id: String,
     inputs: HashMap<String, String>,
 }
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct KeyArg {
     key: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateConfigArgs {
+    component_id: String,
+    config_path: String,
+    template_path: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TokenArg {
+    token: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TelegramPollArgs {
+    token: String,
+    offset: i64,
+    timeout_secs: u32,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TelegramSendArgs {
+    token: String,
+    chat_id: i64,
+    text: String,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TelegramAdvanceArgs {
+    token: String,
+    update_id: i64,
 }
 
 // ───── handlers (thin projections over opentrapp-core) ───────────────────────────────────────
@@ -249,10 +299,91 @@ async fn execute_workflow(
     ))
 }
 
+// ───── first-run setup ───────────────────────────────────────────────────────────────────────
+
+async fn init_submodules(State(st): State<AppState>) -> Result<Json<String>, ApiError> {
+    Ok(Json(opentrapp_core::prerequisites::init_submodules(&st.runtime_data_dir).await?))
+}
+
+async fn create_config_from_template(
+    State(st): State<AppState>,
+    Json(a): Json<CreateConfigArgs>,
+) -> Result<Json<()>, ApiError> {
+    opentrapp_core::prerequisites::create_config_from_template(
+        &st.components,
+        a.component_id,
+        a.config_path,
+        a.template_path,
+    )?;
+    Ok(Json(()))
+}
+
+/// Redacted diagnostic bundle. Core stays clock/transport-neutral, so the route injects the
+/// timestamp (unix seconds — no chrono dep) + this server's version, mirroring the Tauri shim.
+async fn generate_diagnostic_bundle() -> Result<Json<String>, ApiError> {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let generated_at = format!("unix:{now}");
+    opentrapp_core::diagnostics::generate_bundle(&generated_at, env!("CARGO_PKG_VERSION"))
+        .map(Json)
+        .map_err(ApiError::upstream)
+}
+
+// ───── telegram waker channel (token-based; the String errors are upstream/network → 502) ─────
+
+async fn derive_telegram_bot_url(
+    Json(a): Json<TokenArg>,
+) -> Result<Json<opentrapp_core::telegram::TelegramBot>, ApiError> {
+    opentrapp_core::telegram::derive_telegram_bot_url(a.token)
+        .await
+        .map(Json)
+        .map_err(ApiError::upstream)
+}
+
+async fn telegram_delete_webhook(Json(a): Json<TokenArg>) -> Result<Json<()>, ApiError> {
+    opentrapp_core::telegram::telegram_delete_webhook(a.token)
+        .await
+        .map(Json)
+        .map_err(ApiError::upstream)
+}
+
+async fn telegram_poll_for_start(
+    Json(a): Json<TelegramPollArgs>,
+) -> Result<Json<Option<opentrapp_core::telegram::TelegramUpdate>>, ApiError> {
+    opentrapp_core::telegram::telegram_poll_for_start(a.token, a.offset, a.timeout_secs)
+        .await
+        .map(Json)
+        .map_err(ApiError::upstream)
+}
+
+async fn telegram_send_message(Json(a): Json<TelegramSendArgs>) -> Result<Json<()>, ApiError> {
+    opentrapp_core::telegram::telegram_send_message(a.token, a.chat_id, a.text)
+        .await
+        .map(Json)
+        .map_err(ApiError::upstream)
+}
+
+async fn telegram_advance_offset(Json(a): Json<TelegramAdvanceArgs>) -> Result<Json<()>, ApiError> {
+    opentrapp_core::telegram::telegram_advance_offset(a.token, a.update_id)
+        .await
+        .map(Json)
+        .map_err(ApiError::upstream)
+}
+
 // ───── error mapping ─────────────────────────────────────────────────────────────────────────
 
 /// Map a core error to an HTTP status + `{error}` body (spec §1): not-found → 404, else 500.
 pub struct ApiError(StatusCode, String);
+
+impl ApiError {
+    /// A plain-`String` error from a network/upstream/IO op (telegram, diagnostics, key validation)
+    /// → 502 Bad Gateway — not a client 4xx fault.
+    fn upstream(msg: String) -> Self {
+        ApiError(StatusCode::BAD_GATEWAY, msg)
+    }
+}
 
 impl From<OrchestratorError> for ApiError {
     fn from(e: OrchestratorError) -> Self {
