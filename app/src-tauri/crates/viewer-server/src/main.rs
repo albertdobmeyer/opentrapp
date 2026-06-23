@@ -1,39 +1,144 @@
-//! SCAFFOLD — viewer-server spike entry point (ADR-0022 §0 / spec §0).
+//! viewer-server — the on-demand loopback web GUI server (ADR-0022 §0 spike).
 //!
-//! Not working code. Shows the wiring the spike must implement. See README.md.
-//!
-//! Flow: bind 127.0.0.1:0 → build router (security layer + routes + /api/events WS +
-//! /api/session + SPA static) → write {port,token} to a 0600 file → open the browser to a
-//! bare loopback URL carrying a single-use launch nonce in the URL *fragment* → on session
-//! end / idle, tear down. ON-DEMAND ONLY: never start this from the always-on daemon path.
+//! Flow: bind 127.0.0.1:0 → build router (security layer + routes + SPA) → write {port,token}
+//! to a 0600 file → open the browser to a bare loopback URL carrying a single-use launch nonce
+//! in the URL *fragment* → serve until session end / idle. ON-DEMAND ONLY: never start this
+//! from the always-on daemon path (spec §2; CLAUDE.md §10).
+#![allow(dead_code)] // SPIKE: some scaffold paths (events WS, browser-open) still being wired.
 
-mod security;
-mod routes;
 mod events;
+mod routes;
+mod security;
 mod session;
+
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use axum::{response::Html, routing::get, Router};
+
+/// Compose the spike router: the `/api` routes + the SPA shell, wrapped in the §2 security
+/// middleware (Host allowlist → Origin allowlist → bearer; the SPA shell + `/api/session`
+/// bootstrap are exempted from the bearer, Host-checked only).
+fn build_app(sec: security::SecurityState, app_state: routes::AppState) -> Router {
+    routes::router(app_state)
+        .route("/", get(spa_shell))
+        .merge(events::router(sec.clone())) // /api/events WS (first-frame bearer auth)
+        .layer(axum::middleware::from_fn_with_state(sec, security::enforce))
+}
+
+/// SPIKE SPA shell. The real serve mounts `app/dist/` via tower-http `ServeDir` (§5); this
+/// placeholder proves the shell loads under the Host check with no bearer.
+async fn spa_shell() -> Html<&'static str> {
+    Html("<!doctype html><meta charset=utf-8><title>OpenTrApp viewer (spike)</title><div id=\"root\">spike</div>")
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // 1. Bind loopback + ephemeral port. ASSERT the bound addr is loopback (spec §2.1).
+    // §2.1 — bind loopback + ephemeral port; ASSERT loopback before serving.
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await?;
     let addr = listener.local_addr()?;
     assert!(addr.ip().is_loopback(), "viewer-server MUST bind loopback only");
 
-    // 2. Mint a ≥256-bit token + a single-use launch nonce; persist {port,token} 0600 (spec §2.3).
-    let _session = session::Session::new(addr.port()); // TODO: writes ~/.opentrapp/viewer/<…> mode 0600
+    // §2.3 — mint a 256-bit token + single-use launch nonce; persist {port,token} 0600.
+    let viewer_dir = PathBuf::from("/tmp/opentrapp-viewer-spike"); // TODO: ~/.opentrapp/viewer/
+    let (session, _path) = session::Session::mint_in(addr.port(), &viewer_dir)?;
+    let nonce = session.nonce().unwrap_or("").to_string();
 
-    // 3. Build the app: routes + WS + session-exchange + SPA fallback, wrapped in the security layer.
-    //    let core = opentrapp_core::Engine::open()?;   // shared orchestration handle (no duplication)
-    //    let app = routes::router(core)
-    //        .merge(events::router())
-    //        .merge(session::router())
-    //        .fallback(/* serve app/dist/ index.html for SPA routes */)
-    //        .layer(security::layer(&_session));        // Host/Origin/token/CSP/limits — spec §2
+    let sec = security::SecurityState {
+        port: addr.port(),
+        token: Arc::new(session.token().to_string()),
+    };
+    let app_state = routes::AppState { monorepo_root: std::env::current_dir()? };
+    let app = build_app(sec, app_state);
 
-    // 4. Open the browser to the nonce URL (fragment, not query): http://127.0.0.1:<port>/#n=<nonce>
-    //    Use xdg-open/open/start directly (NOT tauri-plugin-shell). Then serve until idle/session-end.
-    //    axum::serve(listener, app).await?;
+    // §2.3 — open the browser to the BARE loopback URL with the nonce in the FRAGMENT (#n=…),
+    // never a query string (that is the leak we designed out). TODO: xdg-open/open/start
+    // directly (NOT tauri-plugin-shell). For the spike, print it.
+    eprintln!("[viewer-server] open: http://127.0.0.1:{}/#n={nonce}", addr.port());
 
-    let _ = (&listener, addr);
-    todo!("spike: implement per docs/specs/2026-06-17-loopback-web-gui-implementation.md §0");
+    axum::serve(listener, app).await?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod integration {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::{Request as Req, StatusCode};
+    use tower::ServiceExt;
+
+    fn app() -> Router {
+        let sec = security::SecurityState { port: 8080, token: Arc::new("tok".to_string()) };
+        // monorepo root = the repo root (4 levels up from this crate): discover finds the real workloads.
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../..")
+            .canonicalize()
+            .expect("repo root");
+        build_app(sec, routes::AppState { monorepo_root: root })
+    }
+
+    #[tokio::test]
+    async fn list_components_returns_real_manifests_through_the_secure_path() {
+        // valid Host + Origin + bearer → 200 + JSON with the REAL workload manifests (core call).
+        let req = Req::post("/api/list_components")
+            .header("host", "127.0.0.1:8080")
+            .header("origin", "http://127.0.0.1:8080")
+            .header("cookie", "otv_bearer=tok")
+            .body(Body::empty())
+            .unwrap();
+        let resp = app().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
+        let raw = String::from_utf8_lossy(&bytes);
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(
+            !v.as_array().expect("array").is_empty(),
+            "discovered the real workload manifests through the secure path"
+        );
+        assert!(raw.contains("agent"), "the agent workload is in the response");
+    }
+
+    #[tokio::test]
+    async fn list_components_tokenless_is_401() {
+        let req = Req::post("/api/list_components")
+            .header("host", "127.0.0.1:8080")
+            .header("origin", "http://127.0.0.1:8080")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(app().oneshot(req).await.unwrap().status(), StatusCode::UNAUTHORIZED);
+    }
+
+    /// Risk item #3 — the bursty `stream-line` path carries over the WS, end-to-end through a
+    /// REAL server: handshake passes Host+Origin, first-frame bearer authenticates, the
+    /// stream-line frame arrives with the expected payload.
+    #[tokio::test]
+    async fn ws_carries_stream_line_after_first_frame_auth() {
+        use futures_util::{SinkExt, StreamExt};
+        use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+        use tokio_tungstenite::tungstenite::Message as TMsg;
+
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let sec = security::SecurityState { port, token: Arc::new("tok".to_string()) };
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../..")
+            .canonicalize()
+            .unwrap();
+        let app = build_app(sec, routes::AppState { monorepo_root: root });
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+        // connect with the required Origin header (Host is set by the client to 127.0.0.1:port)
+        let mut req = format!("ws://127.0.0.1:{port}/api/events").into_client_request().unwrap();
+        req.headers_mut()
+            .insert("origin", format!("http://127.0.0.1:{port}").parse().unwrap());
+        let (mut ws, _resp) = tokio_tungstenite::connect_async(req).await.unwrap();
+
+        // first frame = the bearer; then the stream-line should arrive
+        ws.send(TMsg::Text("tok".into())).await.unwrap();
+        let msg = ws.next().await.unwrap().unwrap();
+        let text = msg.into_text().unwrap();
+        let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+        assert_eq!(v["event"], "stream-line");
+        assert_eq!(v["payload"]["line"], "hello from the perimeter");
+    }
 }

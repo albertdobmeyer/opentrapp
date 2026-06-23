@@ -1,78 +1,63 @@
-//! SCAFFOLD — the route registry (spec §1.1). THE API CONTRACT, made concrete.
+//! The route registry (spec §1.1). Each route calls an `opentrapp-core` fn; the server NEVER
+//! duplicates orchestration logic (CLAUDE.md §5). Every `#[tauri::command]` becomes
+//! `POST /api/<name>` (JSON body = named args, JSON response = return value, errors → 4xx/5xx
+//! + `{error}`). The §6 contract test asserts this registry matches `tauri.ts` 1:1.
 //!
-//! Every `#[tauri::command]` becomes `POST /api/<command_name>`: JSON body = named args,
-//! JSON response = the return value, errors → 4xx/5xx + {error}. Each route calls an
-//! `opentrapp-core` fn (the lifted, transport-neutral handler) — the server NEVER duplicates
-//! orchestration logic (CLAUDE.md §5). `bi` = boundary_impact (ADR-0021): N=neutral
-//! (agent-operable), W=weakening (out-of-band human confirmation; NO agent call edge).
-//!
-//! The §6 contract test (orchestrator-check) asserts this registry matches tauri.ts 1:1 — so
-//! this list is the source of truth for completeness. Reconcile against the real
-//! `#[tauri::command]` set when lifting (the spike only needs the 3 starred handlers).
+//! SPIKE scope: `list_components` proves the manifest-render path end-to-end (fetch → axum →
+//! core → typed JSON). `get_status` and `run_command` follow the identical shape and are lifted
+//! into `opentrapp-core` at migration step 1 (they currently live in the Tauri command layer
+//! with `AppState`/`AppHandle` deps).
 
-// use axum::{Router, routing::post};
-// pub fn router(core: opentrapp_core::Engine) -> Router {
-//   Router::new()
-//     // ── Manifest / discovery (N) ──────────────────────────────────────────
-//     .route("/api/list_components",            post(list_components))   // ★ spike → orchestrator::discover
-//     .route("/api/get_component",              post(get_component))     //          orchestrator::discover
-//     .route("/api/set_monorepo_root",          post(set_monorepo_root)) //          orchestrator::discover
-//     // ── Status / health (N) ───────────────────────────────────────────────
-//     .route("/api/get_status",                 post(get_status))        // ★ spike → orchestrator::status
-//     .route("/api/run_health_probe",           post(run_health_probe))  //          orchestrator::health
-//     // ── Command exec (N*; per-command danger from component.yml still applies) ─
-//     .route("/api/run_command",                post(run_command))       // ★ spike → orchestrator::runner
-//     .route("/api/load_options",               post(load_options))      //          orchestrator::runner
-//     .route("/api/start_stream",               post(start_stream))      //          runner (emits stream-line/-end on WS)
-//     .route("/api/stop_stream",                post(stop_stream))       //          runner
-//     // ── Config ────────────────────────────────────────────────────────────
-//     .route("/api/read_config",                post(read_config))       // N        orchestrator::config (path-traversal guard)
-//     .route("/api/write_config",               post(write_config))      // W        orchestrator::config
-//     .route("/api/create_config_from_template",post(create_config_from_template)) // N  orchestrator::config
-//     // ── Workflows (N*) ────────────────────────────────────────────────────
-//     .route("/api/list_workflows",             post(list_workflows))    // N        orchestrator::workflow
-//     .route("/api/execute_workflow",           post(execute_workflow))  // N*       orchestrator::workflow
-//     // ── Lifecycle / perimeter (reads N, mutations W via control::submit) ──
-//     .route("/api/get_perimeter_state",        post(get_perimeter_state))  // N     supervisor/markers
-//     .route("/api/get_assistant_status",       post(get_assistant_status)) // N     markers/status-agg
-//     .route("/api/restart_perimeter",          post(restart_perimeter))    // W     control::submit(Restart)
-//     .route("/api/pause_perimeter",            post(pause_perimeter))      // W     control::submit(Pause)
-//     .route("/api/resume_perimeter",           post(resume_perimeter))     // W     control::submit(Resume)
-//     .route("/api/retry_bootstrap",            post(retry_bootstrap))      // W     supervisor
-//     // ── Prerequisites (N) ─────────────────────────────────────────────────
-//     .route("/api/check_prerequisites",        post(check_prerequisites))  // N     orchestrator::prereq
-//     .route("/api/init_submodules",            post(init_submodules))      // N     host git
-//     // ── Diagnostics (N) ───────────────────────────────────────────────────
-//     .route("/api/generate_diagnostic_bundle", post(generate_diagnostic_bundle)) // N  diagnostics (redacted)
-//     // ── Credentials / activation ──────────────────────────────────────────
-//     .route("/api/validate_anthropic_key",     post(validate_anthropic_key)) // N   credentials (live ping)
-//     .route("/api/save_credentials",           post(save_credentials))       // W   credentials (0600 .env)
-//     .route("/api/read_runtime_env",           post(read_runtime_env))       // N   credentials
-//     .route("/api/commit_activation",          post(commit_activation))      // W   credentials/supervisor
-//     // ── Sentinel (N) ──────────────────────────────────────────────────────
-//     .route("/api/sentinel_judge",             post(sentinel_judge))      // N      sentinel (judge.sh)
-//     .route("/api/get_sentinel_activity",      post(get_sentinel_activity)) // N    sentinel
-//     // ── Egress approvals (read N; write W — ADR-0016 human-only writer) ──
-//     .route("/api/list_egress_approvals",      post(list_egress_approvals))   // N  egress (read+judge)
-//     .route("/api/apply_allowlist_decision",   post(apply_allowlist_decision))// W  egress
-//     // ── Telegram (N; all calls Rust-side so the token never hits the browser) ─
-//     .route("/api/derive_telegram_bot_url",    post(derive_telegram_bot_url)) // N  telegram
-//     .route("/api/telegram_delete_webhook",    post(telegram_delete_webhook)) // N  telegram
-//     .route("/api/telegram_poll_for_start",    post(telegram_poll_for_start)) // N  telegram
-//     .route("/api/telegram_send_message",      post(telegram_send_message))   // N  telegram
-//     .route("/api/telegram_advance_offset",    post(telegram_advance_offset)) // N  telegram
-//     .with_state(core)
-// }
+use std::path::PathBuf;
 
-// ── The 3 spike handlers (sketch the real ones; the rest follow the same shape) ──
-// async fn list_components(State(core): State<Engine>) -> Result<Json<Vec<DiscoveredComponent>>, ApiError> {
-//     Ok(Json(core.list_components().await?))
-// }
-// async fn get_status(State(core): State<Engine>, Json(a): Json<GetStatusArgs>) -> ... { ... }
-// async fn run_command(State(core): State<Engine>, Json(a): Json<RunCommandArgs>) -> ... { ... }
-//
-// W-tagged handlers (write_config, pause/resume/restart_perimeter, save_credentials,
-// commit_activation, apply_allowlist_decision, retry_bootstrap): these MUST go through the
-// ADR-0021 danger-gate — no direct agent-callable edge to the weakening write.
+use axum::{
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::post,
+    Json, Router,
+};
+use opentrapp_core::orchestrator::discovery::{discover_components, DiscoveredComponent};
+use opentrapp_core::orchestrator::error::OrchestratorError;
 
-#![allow(dead_code)]
+/// Shared route state. The spike holds the monorepo root; the daemon reuses its core handle
+/// (the server adds NO orchestration logic — it calls core, like the Tauri commands do).
+#[derive(Clone)]
+pub struct AppState {
+    pub monorepo_root: PathBuf,
+}
+
+pub fn router(state: AppState) -> Router {
+    Router::new()
+        .route("/api/list_components", post(list_components))
+        .with_state(state)
+}
+
+/// ★ spike — manifest render: discover the workload manifests under the monorepo root and
+/// return them as JSON, exactly as the Tauri `list_components` command does (minus the cache).
+async fn list_components(
+    State(st): State<AppState>,
+) -> Result<Json<Vec<DiscoveredComponent>>, ApiError> {
+    Ok(Json(discover_components(&st.monorepo_root)?))
+}
+
+/// Map a core error to an HTTP status + `{error}` body (spec §1): not-found → 404, else 500.
+pub struct ApiError(StatusCode, String);
+
+impl From<OrchestratorError> for ApiError {
+    fn from(e: OrchestratorError) -> Self {
+        let code = match &e {
+            OrchestratorError::ComponentNotFound(_) | OrchestratorError::NotFound(_) => {
+                StatusCode::NOT_FOUND
+            }
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        ApiError(code, e.to_string())
+    }
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        (self.0, Json(serde_json::json!({ "error": self.1 }))).into_response()
+    }
+}
