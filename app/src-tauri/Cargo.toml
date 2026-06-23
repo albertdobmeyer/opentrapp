@@ -7,7 +7,9 @@ members = ["crates/core", "crates/daemon"]
 # crates/viewer-server is a SCAFFOLD for the de-Tauri loopback web GUI (ADR-0022 /
 # docs/specs/2026-06-17-loopback-web-gui-implementation.md). Excluded — and therefore
 # ignored by cargo, CI, and Cargo.lock — until the §0 de-risking spike passes its
-# threat-model review. The implementing agent moves it to `members` at migration step 2.
+# threat-model review (now written as docs/threat-model.md T8; the gate is maintainer
+# acceptance of T8's hostile-extension residual + the live/UX checks on capable hardware).
+# The implementing agent moves it to `members` at migration step 2.
 exclude = ["crates/viewer-server"]
 resolver = "2"
 
