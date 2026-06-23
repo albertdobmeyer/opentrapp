@@ -302,3 +302,62 @@ describe("IPC contract: security-critical + lifecycle commands", () => {
     expect(mockInvoke).toHaveBeenCalledWith("sentinel_judge", { request });
   });
 });
+
+// The de-Tauri loopback transport (ADR-0022): in a plain browser the SAME wrappers POST to
+// `/api/<cmd>` instead of using the Tauri IPC. The command-name + arg contract above is unchanged;
+// these pin the browser transport — the URL, the JSON body, the cookie-carrying credentials, and
+// the `{ error }` → thrown-Error mapping that gives callers the same rejection shape.
+describe("browser transport: invoke → fetch /api/<cmd>", () => {
+  const savedTauri = (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+
+  beforeEach(() => {
+    // browser mode: no Tauri runtime, so the wrappers take the fetch path
+    delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+  });
+  afterEach(() => {
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = savedTauri;
+    vi.unstubAllGlobals();
+  });
+
+  test("POSTs /api/<cmd> with same-origin credentials and returns parsed JSON", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify([{ id: "agent" }]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await listComponents();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/list_components",
+      expect.objectContaining({ method: "POST", credentials: "same-origin" }),
+    );
+    expect(result).toEqual([{ id: "agent" }]);
+  });
+
+  test("named args become the JSON request body", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getComponent("agent");
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ componentId: "agent" }));
+  });
+
+  test("a non-2xx { error } response is rethrown as Error(message) — same rejection shape as IPC", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ error: "component not found: x" }), { status: 404 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getComponent("x")).rejects.toThrow("component not found: x");
+  });
+
+  test("a void command resolves on a 200 null/empty body", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response("null", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    // write_config returns () → null body → the wrapper resolves (callers ignore the value)
+    await expect(writeConfig("agent", "c.yml", "x")).resolves.toBeNull();
+  });
+});
