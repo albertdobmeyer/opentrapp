@@ -14,10 +14,19 @@
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use anyhow::Context;
+use axum::{
+    extract::State,
+    http::{header, HeaderMap, StatusCode},
+    response::{IntoResponse, Response},
+    routing::post,
+    Json, Router,
+};
 use rand::RngCore;
+use serde::Deserialize;
 
 /// Single-use launch-nonce TTL (short; the browser exchanges it immediately on load, §2.3).
 const NONCE_TTL: Duration = Duration::from_secs(120);
@@ -104,6 +113,53 @@ fn write_session_file(dir: &Path, port: u16, token: &str) -> anyhow::Result<Path
         fs::write(&path, json.as_bytes())?;
     }
     Ok(path)
+}
+
+// ───── the /api/session bootstrap exchange (§2.3) ────────────────────────────────────────────
+
+/// The minted `Session` shared with the `/api/session` route, which mutates it to BURN the nonce.
+pub type SharedSession = Arc<Mutex<Session>>;
+
+#[derive(Deserialize)]
+struct NonceArg {
+    nonce: String,
+}
+
+/// Mount `POST /api/session` — the nonce→bearer bootstrap exchange. The security middleware
+/// already Host+Origin-checked the request and exempted it from the bearer (this is where the
+/// bearer is *issued*).
+pub fn router(session: SharedSession) -> Router {
+    Router::new().route("/api/session", post(exchange)).with_state(session)
+}
+
+/// Bootstrap exchange (§2.3): the bootstrap JS reads the single-use launch nonce from the URL
+/// *fragment* and POSTs it here. We validate + BURN the nonce and, on success, set the bearer as an
+/// `HttpOnly; SameSite=Strict` cookie (Secure omitted — loopback plaintext is correct). The bearer
+/// is never returned in the body and never transits a URL/`Referer`. Any failed/expired/replayed
+/// nonce → 401 (the nonce is burned on any attempt — see `Session::exchange_nonce`).
+async fn exchange(State(session): State<SharedSession>, Json(a): Json<NonceArg>) -> Response {
+    // Lock only for the synchronous burn — never held across an await.
+    let bearer = {
+        let mut s = session.lock().expect("session mutex");
+        s.exchange_nonce(&a.nonce, Instant::now())
+    };
+    match bearer {
+        Some(token) => {
+            let mut headers = HeaderMap::new();
+            // HttpOnly (no JS read) + SameSite=Strict (no cross-site send) + Path=/. The bearer
+            // is NOT echoed in the body — only set as the cookie the middleware will check.
+            let cookie = format!("otv_bearer={token}; HttpOnly; SameSite=Strict; Path=/");
+            if let Ok(v) = cookie.parse() {
+                headers.insert(header::SET_COOKIE, v);
+            }
+            (StatusCode::OK, headers, Json(serde_json::json!({ "ok": true }))).into_response()
+        }
+        None => (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({ "error": "invalid, expired, or already-used launch nonce" })),
+        )
+            .into_response(),
+    }
 }
 
 #[cfg(test)]

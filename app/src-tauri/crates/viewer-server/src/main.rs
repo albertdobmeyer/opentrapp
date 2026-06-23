@@ -12,16 +12,22 @@ mod security;
 mod session;
 
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::{response::Html, routing::get, Router};
 
-/// Compose the spike router: the `/api` routes + the SPA shell, wrapped in the §2 security
-/// middleware (Host allowlist → Origin allowlist → bearer; the SPA shell + `/api/session`
-/// bootstrap are exempted from the bearer, Host-checked only).
-fn build_app(sec: security::SecurityState, app_state: routes::AppState) -> Router {
+/// Compose the router: the `/api` routes + the `/api/session` bootstrap + the `/api/events` WS +
+/// the SPA shell, wrapped in the §2 security middleware (Host allowlist → Origin allowlist →
+/// bearer; the SPA shell, `/api/session`, and the WS handshake are bearer-exempt — Host+Origin
+/// checked only — because that is where the bearer is issued / first-frame-verified).
+fn build_app(
+    sec: security::SecurityState,
+    app_state: routes::AppState,
+    session: session::SharedSession,
+) -> Router {
     routes::router(app_state)
         .route("/", get(spa_shell))
+        .merge(session::router(session)) // /api/session nonce→bearer bootstrap exchange
         .merge(events::router(sec.clone())) // /api/events WS (first-frame bearer auth)
         .layer(axum::middleware::from_fn_with_state(sec, security::enforce))
 }
@@ -48,13 +54,15 @@ async fn main() -> anyhow::Result<()> {
         port: addr.port(),
         token: Arc::new(session.token().to_string()),
     };
+    // The /api/session route mutates the session to burn the launch nonce.
+    let shared_session: session::SharedSession = Arc::new(Mutex::new(session));
     // Discover the workload manifests (dev: under the cwd) + the runtime data dir where the
     // perimeter / on-demand shields live (the real daemon passes ~/.opentrapp).
     let app_state = routes::AppState::discover(
         std::env::current_dir()?,
         opentrapp_core::orchestrator::podman::runtime_data_dir(),
     )?;
-    let app = build_app(sec, app_state);
+    let app = build_app(sec, app_state, shared_session);
 
     // §2.3 — open the browser to the BARE loopback URL with the nonce in the FRAGMENT (#n=…),
     // never a query string (that is the leak we designed out). TODO: xdg-open/open/start
@@ -72,15 +80,25 @@ mod integration {
     use axum::http::{Request as Req, StatusCode};
     use tower::ServiceExt;
 
-    fn app() -> Router {
-        let sec = security::SecurityState { port: 8080, token: Arc::new("tok".to_string()) };
-        // monorepo root = the repo root (4 levels up from this crate): discover finds the real workloads.
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    /// The repo root (4 levels up from this crate): discover finds the real workloads.
+    fn repo_root() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../../..")
             .canonicalize()
-            .expect("repo root");
-        let state = routes::AppState::discover(root, std::env::temp_dir()).expect("discover workloads");
-        build_app(sec, state)
+            .expect("repo root")
+    }
+
+    /// A throwaway session for tests that exercise the API/WS surface (they auth via the bearer
+    /// cookie directly, not the nonce exchange).
+    fn dummy_session() -> session::SharedSession {
+        let dir = std::env::temp_dir().join(format!("otv-dummy-{}", std::process::id()));
+        Arc::new(Mutex::new(session::Session::mint_in(8080, &dir).unwrap().0))
+    }
+
+    fn app() -> Router {
+        let sec = security::SecurityState { port: 8080, token: Arc::new("tok".to_string()) };
+        let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).expect("discover workloads");
+        build_app(sec, state, dummy_session())
     }
 
     #[tokio::test]
@@ -154,6 +172,40 @@ mod integration {
         assert!(v["state_id"].is_string(), "a resolved state is returned");
     }
 
+    /// The §2.3 bootstrap: POST /api/session {nonce} issues the bearer as an HttpOnly+SameSite
+    /// cookie (never in the body), and a replay of the burned nonce is rejected.
+    #[tokio::test]
+    async fn session_exchange_issues_httponly_cookie_then_burns_the_nonce() {
+        let dir = std::env::temp_dir().join(format!("otv-exchange-{}", std::process::id()));
+        let (sess, _) = session::Session::mint_in(8080, &dir).unwrap();
+        let nonce = sess.nonce().unwrap().to_string();
+        let sec = security::SecurityState { port: 8080, token: Arc::new(sess.token().to_string()) };
+        let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).unwrap();
+        let app = build_app(sec, state, Arc::new(Mutex::new(sess)));
+
+        let exchange = |n: &str| {
+            Req::post("/api/session")
+                .header("host", "127.0.0.1:8080")
+                .header("origin", "http://127.0.0.1:8080")
+                .header("content-type", "application/json")
+                .body(Body::from(serde_json::json!({ "nonce": n }).to_string()))
+                .unwrap()
+        };
+
+        // first exchange: the valid nonce → 200 + Set-Cookie (HttpOnly, SameSite=Strict), no token in body
+        let resp = app.clone().oneshot(exchange(&nonce)).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let cookie = resp.headers().get("set-cookie").unwrap().to_str().unwrap().to_string();
+        assert!(cookie.contains("otv_bearer="), "the bearer is issued as a cookie");
+        assert!(cookie.contains("HttpOnly") && cookie.contains("SameSite=Strict"), "hardened cookie attrs");
+        let body = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
+        assert!(!String::from_utf8_lossy(&body).contains("otv_bearer"), "the bearer is NOT echoed in the body");
+
+        // replay the now-burned nonce → 401 (single use)
+        assert_eq!(app.oneshot(exchange(&nonce)).await.unwrap().status(), StatusCode::UNAUTHORIZED);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// Risk item #3 — the bursty `stream-line` path carries over the WS, end-to-end through a
     /// REAL server: handshake passes Host+Origin, first-frame bearer authenticates, the
     /// stream-line frame arrives with the expected payload.
@@ -166,12 +218,8 @@ mod integration {
         let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
         let port = listener.local_addr().unwrap().port();
         let sec = security::SecurityState { port, token: Arc::new("tok".to_string()) };
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../..")
-            .canonicalize()
-            .unwrap();
-        let state = routes::AppState::discover(root, std::env::temp_dir()).unwrap();
-        let app = build_app(sec, state);
+        let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).unwrap();
+        let app = build_app(sec, state, dummy_session());
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
         // connect with the required Origin header (Host is set by the client to 127.0.0.1:port)
