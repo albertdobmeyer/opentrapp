@@ -1,4 +1,3 @@
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { ExternalLink, Search, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -10,6 +9,7 @@ import {
   type UseCaseCategory,
 } from "@/content/use-cases";
 import { useSettings } from "@/hooks/useSettings";
+import { openUrl } from "@/lib/shell";
 
 type CategoryFilter = UseCaseCategory | "all";
 

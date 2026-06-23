@@ -1,4 +1,3 @@
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { MessageCircle, Play, RotateCcw, StopCircle } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +8,7 @@ import { useBootstrapProgress } from "@/hooks/useBootstrapProgress";
 import { useSettings } from "@/hooks/useSettings";
 import { useToast } from "@/hooks/useToast";
 import { classifyError } from "@/lib/errors";
+import { openUrl } from "@/lib/shell";
 import { pausePerimeter, resumePerimeter, retryBootstrap, type BootstrapFailureSummary } from "@/lib/tauri";
 
 

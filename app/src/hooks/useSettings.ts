@@ -1,9 +1,9 @@
-import { load } from "@tauri-apps/plugin-store";
 import { useState, useEffect, useCallback } from "react";
 
 import type { AppSettings } from "@/lib/settings";
 
 import { DEFAULT_SETTINGS } from "@/lib/settings";
+import { load } from "@/lib/store";
 
 
 

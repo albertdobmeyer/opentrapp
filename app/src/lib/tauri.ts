@@ -1,5 +1,7 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 
+import { isTauriRuntime } from "./runtime";
+
 import type {
   DiscoveredComponent,
   CommandResult,
@@ -12,12 +14,9 @@ import type {
   AllowlistDecision,
 } from "./types";
 
-// Detect if running inside the Tauri webview vs a plain browser (the de-Tauri loopback viewer,
-// ADR-0022). Tauri stays the shipped default during the migration; this is the dual-mode chokepoint.
-// Detected at CALL time (not module load) so the runtime can differ per call / be set in tests.
-function isTauriRuntime(): boolean {
-  return !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
-}
+// Runtime detection (Tauri webview vs the browser viewer, ADR-0022) lives in `./runtime` so it
+// survives the wholesale `vi.mock("@/lib/tauri", …)` that many tests use. Tauri stays the shipped
+// default during the migration; this is the dual-mode chokepoint.
 
 /**
  * The single command chokepoint every wrapper below goes through. In the Tauri webview it uses the

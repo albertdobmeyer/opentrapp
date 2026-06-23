@@ -1,4 +1,3 @@
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import {
   ExternalLink,
   KeyRound,
@@ -9,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { useSettings } from "@/hooks/useSettings";
+import { openUrl } from "@/lib/shell";
 
 interface Section {
   icon: typeof LifeBuoy;

@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   HeartHandshake,
   Clipboard,
@@ -17,6 +16,7 @@ import packageJson from "../../../package.json";
 import type { ClassifiedError } from "@/lib/errors";
 
 import { useToast } from "@/hooks/useToast";
+import { writeText } from "@/lib/clipboard";
 
 const APP_VERSION = packageJson.version;
 

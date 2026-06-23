@@ -1,9 +1,9 @@
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Lightbulb } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { USE_CASES } from "@/content/use-cases";
 import { useSettings } from "@/hooks/useSettings";
+import { openUrl } from "@/lib/shell";
 
 /**
  * Daily rotating tip — deterministic pick from the use-case gallery
