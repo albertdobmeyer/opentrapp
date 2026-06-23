@@ -1437,11 +1437,14 @@ ok = bool(m) and 'vault-skills' not in m.group(0) and 'vault-social' not in m.gr
 sys.exit(0 if ok else 1)
 PY
 
-if grep -q "on_demand_service_for" app/src-tauri/src/commands/execute.rs \
-   && grep -q "service_up" app/src-tauri/src/commands/execute.rs; then
-  pass "execute.rs starts an on-demand shield before running its command"
+# The on-demand shield start-if-needed step was lifted into opentrapp-core (ADR-0022
+# migration step 1: crates/core/src/execute.rs), so BOTH the Tauri command shim AND the
+# loopback web GUI route call the same generic step. The guard follows it to core.
+if grep -q "on_demand_service_for" app/src-tauri/crates/core/src/execute.rs \
+   && grep -q "service_up" app/src-tauri/crates/core/src/execute.rs; then
+  pass "core execute starts an on-demand shield before running its command (lifted, ADR-0022)"
 else
-  fail "execute.rs missing the generic on-demand start-if-needed step"
+  fail "core execute missing the generic on-demand start-if-needed step"
 fi
 
 # =============================================================================
