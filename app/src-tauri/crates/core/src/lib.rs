@@ -27,6 +27,7 @@ pub mod orchestrator;
 pub mod prerequisites;
 pub mod runguard;
 pub mod selftest;
+pub mod sentinel;
 pub mod status;
 pub mod supervisor;
 pub mod telegram;
