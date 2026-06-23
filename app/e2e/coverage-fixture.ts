@@ -15,7 +15,39 @@ const COVERAGE_DIR = path.resolve(process.cwd(), ".nyc_output");
  * The fixture is auto-applied, so specs only need to import `test`/`expect`
  * from this file instead of "@playwright/test" — no per-test wiring.
  */
-export const test = base.extend<{ collectCoverage: void }>({
+export const test = base.extend<{ collectCoverage: void; tauriRuntimeSim: void }>({
+  /**
+   * Simulate the SHIPPED runtime in every e2e test. OpenTrApp still ships as the Tauri 2 desktop
+   * app (v0.8.0 is the de-Tauri *foundation* — the browser viewer is built but not yet the default,
+   * ADR-0022), so the end-user-faithful runtime to exercise here is the Tauri webview. We inject a
+   * `__TAURI_INTERNALS__` whose `invoke` rejects: that flips `isTauriRuntime()` (app/src/lib/runtime.ts)
+   * true, so the `tauri.ts` chokepoint takes the native-IPC path — NOT the `/api/*` fetch path, which
+   * would 404 against a `viewer-server` the static e2e harness does not run. The rejection is
+   * `tauri`/`invoke`-tagged, so the "no JS errors" specs' existing backend-unavailable filter catches
+   * it — exactly the graceful degradation the app showed before the de-Tauri shim. The browser/fetch
+   * transport is covered separately by `tauri.test.ts` (unit) + the viewer-server Rust integration
+   * tests; full browser e2e needs the running server (step 4, hardware-gated).
+   */
+  tauriRuntimeSim: [
+    async ({ page }, use) => {
+      await page.addInitScript(() => {
+        // A complete-enough `__TAURI_INTERNALS__` so BOTH `invoke()` and `listen()` (which calls
+        // `transformCallback` then `invoke('plugin:event|listen', …)`) flow through one rejecting
+        // `invoke` — a clean "Tauri present, backend unavailable" simulation. `transformCallback`
+        // returns a callback id like real Tauri so `listen()` reaches `invoke` instead of throwing a
+        // different TypeError; the rejection is `tauri`/`invoke`-tagged for the console-error filter.
+        let cbId = 0;
+        (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ = {
+          invoke: (cmd: string) =>
+            Promise.reject(new Error(`tauri invoke unavailable in e2e (no backend): ${cmd}`)),
+          transformCallback: () => (cbId += 1),
+        };
+      });
+      await use();
+    },
+    { auto: true },
+  ],
+
   collectCoverage: [
     async ({ page }, use, testInfo) => {
       await use();

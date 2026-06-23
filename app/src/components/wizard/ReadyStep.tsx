@@ -1,8 +1,8 @@
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { LayoutDashboard, MessageCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useSettings } from "@/hooks/useSettings";
+import { openUrl } from "@/lib/shell";
 
 const AUTO_ADVANCE_SECONDS = 5;
 

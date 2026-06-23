@@ -1,5 +1,6 @@
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { DollarSign, ExternalLink } from "lucide-react";
+
+import { openUrl } from "@/lib/shell";
 
 const CONSOLE_COST_URL = "https://console.anthropic.com/cost";
 

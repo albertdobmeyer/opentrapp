@@ -1,7 +1,7 @@
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { MessageCircle, type LucideIcon } from "lucide-react";
 
 import { useSettings } from "@/hooks/useSettings";
+import { openUrl } from "@/lib/shell";
 
 interface Props {
   icon: LucideIcon;

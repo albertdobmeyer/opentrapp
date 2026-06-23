@@ -1,4 +1,3 @@
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -15,6 +14,7 @@ import CleanedSkillsCard from "@/components/user/CleanedSkillsCard";
 import EgressApprovalsCard from "@/components/user/EgressApprovalsCard";
 import SentinelActivityBadge from "@/components/user/SentinelActivityBadge";
 import { useHero } from "@/hooks/useHero";
+import { openUrl } from "@/lib/shell";
 
 interface Layer {
   icon: LucideIcon;

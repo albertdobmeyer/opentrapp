@@ -1,11 +1,11 @@
 /* eslint-disable max-lines */
-import { open as openUrl } from "@tauri-apps/plugin-shell";
 import { Check, Eye, EyeOff, Key, MessageCircle, X } from "lucide-react";
 import { useEffect, useRef, useState, type ClipboardEvent } from "react";
 
 import HowToModal, { type HowToStep } from "@/components/wizard/HowToModal";
 import { useSettings } from "@/hooks/useSettings";
 import { classifyError } from "@/lib/errors";
+import { openUrl } from "@/lib/shell";
 import {
   commitActivation,
   deriveTelegramBotUrl,

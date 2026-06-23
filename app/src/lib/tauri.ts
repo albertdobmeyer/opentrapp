@@ -1,5 +1,7 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 
+import { isTauriRuntime } from "./runtime";
+
 import type {
   DiscoveredComponent,
   CommandResult,
@@ -12,18 +14,50 @@ import type {
   AllowlistDecision,
 } from "./types";
 
-// Detect if running inside Tauri webview vs plain browser
-const isTauri = !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+// Runtime detection (Tauri webview vs the browser viewer, ADR-0022) lives in `./runtime` so it
+// survives the wholesale `vi.mock("@/lib/tauri", …)` that many tests use. Tauri stays the shipped
+// default during the migration; this is the dual-mode chokepoint.
 
-function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  if (!isTauri) {
-    return Promise.reject(
-      new Error(
-        `Tauri IPC not available — running in browser mode. Command "${cmd}" requires the Tauri desktop app. Run "npm run tauri dev" instead of "npm run dev".`,
-      ),
-    );
+/**
+ * The single command chokepoint every wrapper below goes through. In the Tauri webview it uses the
+ * native IPC; in a plain browser (served by `viewer-server`, ADR-0022) it POSTs to `/api/<cmd>`.
+ *
+ * Browser transport (ADR-0022 §1/§3):
+ *  - `POST /api/<cmd>` with the named args as the JSON body (mirrors the Tauri command params).
+ *  - `credentials: "same-origin"` carries the HttpOnly `otv_bearer` cookie the `/api/session`
+ *    bootstrap set — the bearer is never put in a URL/header by us. The browser adds `Origin`
+ *    (same-origin), which the server's §2 middleware allowlists.
+ *  - A non-2xx response carries `{ error }` (spec §1); it is rethrown as an `Error` so callers see
+ *    the same rejection shape they got from the Tauri IPC.
+ *  - A `()` return serializes as `null`/empty → resolved as `undefined`.
+ */
+async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (isTauriRuntime()) {
+    return args ? tauriInvoke<T>(cmd, args) : tauriInvoke<T>(cmd);
   }
-  return args ? tauriInvoke<T>(cmd, args) : tauriInvoke<T>(cmd);
+
+  const resp = await fetch(`/api/${cmd}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify(args ?? {}),
+  });
+
+  if (!resp.ok) {
+    let detail = `${String(resp.status)} ${resp.statusText}`;
+    try {
+      const body: unknown = await resp.json();
+      const err = (body as { error?: unknown } | null)?.error;
+      if (typeof err === "string") detail = err;
+      else if (err != null) detail = JSON.stringify(err);
+    } catch {
+      // non-JSON error body — keep the status line
+    }
+    throw new Error(detail);
+  }
+
+  const text = await resp.text();
+  return (text ? (JSON.parse(text) as T) : (undefined as T));
 }
 
 export async function listComponents(): Promise<DiscoveredComponent[]> {
