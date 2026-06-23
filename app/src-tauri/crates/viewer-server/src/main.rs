@@ -48,7 +48,12 @@ async fn main() -> anyhow::Result<()> {
         port: addr.port(),
         token: Arc::new(session.token().to_string()),
     };
-    let app_state = routes::AppState { monorepo_root: std::env::current_dir()? };
+    // Discover the workload manifests (dev: under the cwd) + the runtime data dir where the
+    // perimeter / on-demand shields live (the real daemon passes ~/.opentrapp).
+    let app_state = routes::AppState::discover(
+        std::env::current_dir()?,
+        opentrapp_core::orchestrator::podman::runtime_data_dir(),
+    )?;
     let app = build_app(sec, app_state);
 
     // §2.3 — open the browser to the BARE loopback URL with the nonce in the FRAGMENT (#n=…),
@@ -74,7 +79,8 @@ mod integration {
             .join("../../../..")
             .canonicalize()
             .expect("repo root");
-        build_app(sec, routes::AppState { monorepo_root: root })
+        let state = routes::AppState::discover(root, std::env::temp_dir()).expect("discover workloads");
+        build_app(sec, state)
     }
 
     #[tokio::test]
@@ -108,6 +114,46 @@ mod integration {
         assert_eq!(app().oneshot(req).await.unwrap().status(), StatusCode::UNAUTHORIZED);
     }
 
+    /// A POST through the full secure path (valid Host + Origin + bearer) carrying a JSON body.
+    fn authed_post(path: &str, body: serde_json::Value) -> Req<Body> {
+        Req::post(path)
+            .header("host", "127.0.0.1:8080")
+            .header("origin", "http://127.0.0.1:8080")
+            .header("cookie", "otv_bearer=tok")
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn get_component_returns_the_agent_through_the_secure_path() {
+        let req = authed_post("/api/get_component", serde_json::json!({ "component_id": "agent" }));
+        let resp = app().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
+        assert!(String::from_utf8_lossy(&bytes).contains("agent"), "the agent component is returned");
+    }
+
+    #[tokio::test]
+    async fn get_component_unknown_is_404() {
+        // The route's ApiError maps ComponentNotFound → 404 (spec §1 error contract).
+        let req = authed_post("/api/get_component", serde_json::json!({ "component_id": "no-such-x" }));
+        assert_eq!(app().oneshot(req).await.unwrap().status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn get_status_evaluates_a_real_component_through_core() {
+        // evaluate_status runs the component's probes (or returns the default/"unknown" with no
+        // perimeter up); the point is the slice-based core call returns a typed state through the route.
+        let req = authed_post("/api/get_status", serde_json::json!({ "component_id": "agent" }));
+        let resp = app().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
+        let v: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(v["component_id"], "agent");
+        assert!(v["state_id"].is_string(), "a resolved state is returned");
+    }
+
     /// Risk item #3 — the bursty `stream-line` path carries over the WS, end-to-end through a
     /// REAL server: handshake passes Host+Origin, first-frame bearer authenticates, the
     /// stream-line frame arrives with the expected payload.
@@ -124,7 +170,8 @@ mod integration {
             .join("../../../..")
             .canonicalize()
             .unwrap();
-        let app = build_app(sec, routes::AppState { monorepo_root: root });
+        let state = routes::AppState::discover(root, std::env::temp_dir()).unwrap();
+        let app = build_app(sec, state);
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
         // connect with the required Origin header (Host is set by the client to 127.0.0.1:port)
