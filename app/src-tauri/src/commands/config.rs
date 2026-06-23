@@ -1,4 +1,11 @@
-use std::path::PathBuf;
+//! Config commands — thin Tauri shims over `opentrapp_core::config_ops`.
+//!
+//! The read/write + the CLAUDE.md §9 path-traversal containment were lifted into
+//! `opentrapp-core` (ADR-0022 migration step 1) so the same transport-neutral, traversal-guarded
+//! fns back both this shim and the future loopback web route. Each shim clones the component cache
+//! out of the `AppState` mutex (never holding the guard across the call) and delegates. Command
+//! names + signatures + `lib.rs` registration unchanged.
+
 use tauri::State;
 
 use crate::orchestrator::error::OrchestratorError;
@@ -10,36 +17,8 @@ pub async fn read_config(
     component_id: String,
     config_path: String,
 ) -> Result<String, OrchestratorError> {
-    let component_dir = {
-        let components = state.components.lock().unwrap();
-        let component = components
-            .iter()
-            .find(|c| c.manifest.identity.id == component_id)
-            .ok_or_else(|| OrchestratorError::ComponentNotFound(component_id.clone()))?;
-        component.component_dir.clone()
-    };
-
-    let full_path = PathBuf::from(&component_dir).join(&config_path);
-
-    if !full_path.exists() {
-        return Ok(String::new());
-    }
-
-    // Security: ensure path doesn't escape component directory
-    let canonical_dir = PathBuf::from(&component_dir).canonicalize()
-        .map_err(|e| OrchestratorError::ConfigNotFound(e.to_string()))?;
-    let canonical_file = full_path.canonicalize()
-        .map_err(|e| OrchestratorError::ConfigNotFound(e.to_string()))?;
-
-    if !canonical_file.starts_with(&canonical_dir) {
-        return Err(OrchestratorError::ConfigNotFound(
-            "Path traversal detected".to_string(),
-        ));
-    }
-
-    // Use canonical path to prevent TOCTOU symlink swaps
-    std::fs::read_to_string(&canonical_file)
-        .map_err(|e| OrchestratorError::ConfigNotFound(e.to_string()))
+    let components = { state.components.lock().unwrap().clone() };
+    opentrapp_core::config_ops::read_config(&components, component_id, config_path)
 }
 
 #[tauri::command]
@@ -49,48 +28,6 @@ pub async fn write_config(
     config_path: String,
     content: String,
 ) -> Result<(), OrchestratorError> {
-    let component_dir = {
-        let components = state.components.lock().unwrap();
-        let component = components
-            .iter()
-            .find(|c| c.manifest.identity.id == component_id)
-            .ok_or_else(|| OrchestratorError::ComponentNotFound(component_id.clone()))?;
-        component.component_dir.clone()
-    };
-
-    let full_path = PathBuf::from(&component_dir).join(&config_path);
-
-    // Security: ensure path doesn't escape component directory
-    // For new files, check the parent directory
-    let canonical_dir = PathBuf::from(&component_dir).canonicalize()
-        .map_err(|e| OrchestratorError::ConfigWriteError(e.to_string()))?;
-
-    // For existing files, canonicalize and verify
-    if full_path.exists() {
-        let canonical_file = full_path.canonicalize()
-            .map_err(|e| OrchestratorError::ConfigWriteError(e.to_string()))?;
-        if !canonical_file.starts_with(&canonical_dir) {
-            return Err(OrchestratorError::ConfigWriteError(
-                "Path traversal detected".to_string(),
-            ));
-        }
-        // Use canonical path to prevent TOCTOU symlink swaps
-        std::fs::write(&canonical_file, content)
-            .map_err(|e| OrchestratorError::ConfigWriteError(e.to_string()))
-    } else {
-        // For new files, verify parent is within component dir
-        if let Some(parent) = full_path.parent() {
-            if parent.exists() {
-                let canonical_parent = parent.canonicalize()
-                    .map_err(|e| OrchestratorError::ConfigWriteError(e.to_string()))?;
-                if !canonical_parent.starts_with(&canonical_dir) {
-                    return Err(OrchestratorError::ConfigWriteError(
-                        "Path traversal detected".to_string(),
-                    ));
-                }
-            }
-        }
-        std::fs::write(&full_path, content)
-            .map_err(|e| OrchestratorError::ConfigWriteError(e.to_string()))
-    }
+    let components = { state.components.lock().unwrap().clone() };
+    opentrapp_core::config_ops::write_config(&components, component_id, config_path, content)
 }
