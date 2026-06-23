@@ -23,6 +23,7 @@ pub mod health;
 pub mod idle;
 pub mod markers;
 pub mod orchestrator;
+pub mod prerequisites;
 pub mod runguard;
 pub mod selftest;
 pub mod status;
