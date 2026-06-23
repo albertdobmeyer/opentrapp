@@ -3,14 +3,12 @@
 # Phase B (ADR-0019) adds two tauri-free members: the headless daemon + its core.
 # `fuzz/` is a workspace-of-its-own and is intentionally not a member.
 [workspace]
-members = ["crates/core", "crates/daemon"]
-# crates/viewer-server is a SCAFFOLD for the de-Tauri loopback web GUI (ADR-0022 /
-# docs/specs/2026-06-17-loopback-web-gui-implementation.md). Excluded — and therefore
-# ignored by cargo, CI, and Cargo.lock — until the §0 de-risking spike passes its
-# threat-model review (now written as docs/threat-model.md T8; the gate is maintainer
-# acceptance of T8's hostile-extension residual + the live/UX checks on capable hardware).
-# The implementing agent moves it to `members` at migration step 2.
-exclude = ["crates/viewer-server"]
+# crates/viewer-server is the de-Tauri loopback web GUI server (ADR-0022 / docs/threat-model.md
+# T8, accepted; migration step 2). Activated now that the threat-model gate cleared — it carries
+# the §2 security middleware (Host/Origin/bearer, 0600 session, nonce→cookie handoff) verified by
+# its own tests. INVARIANT (the gtk-free CI gate extends to it): it must stay gtk/webkit/wry-free —
+# `cargo tree -p viewer-server | grep -iE 'tauri|wry|webkit'` MUST be empty.
+members = ["crates/core", "crates/daemon", "crates/viewer-server"]
 resolver = "2"
 
 [package]

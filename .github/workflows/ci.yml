@@ -71,19 +71,23 @@ jobs:
       - run: cargo check --workspace
       - run: cargo test --workspace
 
-      # ADR-0019 verification #1: the headless daemon must not link tauri/wry/
+      # ADR-0019/0022 verification #1: the de-Tauri spine must not link tauri/wry/
       # webkit, directly or transitively. RAM numbers are meaningless if WebKit
-      # is still in the binary, so this is the load-bearing gate for Phase B.
-      - name: Daemon dependency graph is WebKit-free
+      # is still in the binary, and the whole point of the loopback viewer-server
+      # (ADR-0022, T8) is that it replaces the bundled webview — so it must be
+      # gtk-free too. This is the load-bearing gate for Phase B + de-Tauri step 2.
+      - name: De-Tauri spine dependency graphs are WebKit-free
         run: |
           # Strip the ` (path)` annotation first — otherwise the `src-tauri` in
           # the crate's own path is a false positive. We match dependency NAMES,
           # not filesystem paths.
-          if cargo tree -p opentrapp-daemon -e normal | sed -E 's/ \([^)]*\)//' | grep -iE 'tauri|wry|webkit'; then
-            echo "::error::opentrapp-daemon pulled in tauri/wry/webkit — the Phase B daemon must stay headless"
-            exit 1
-          fi
-          echo "opentrapp-daemon dependency graph is WebKit-free ✓"
+          for crate in opentrapp-daemon viewer-server; do
+            if cargo tree -p "$crate" -e normal | sed -E 's/ \([^)]*\)//' | grep -iE 'tauri|wry|webkit'; then
+              echo "::error::$crate pulled in tauri/wry/webkit — the de-Tauri spine must stay headless"
+              exit 1
+            fi
+            echo "$crate dependency graph is WebKit-free ✓"
+          done
 
   check-orchestration:
     name: Orchestration (42 checks)
