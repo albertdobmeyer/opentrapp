@@ -1,87 +1,38 @@
-//! Anthropic API-key validation and activation-commit command.
+//! Credential validation + activation-commit commands.
 //!
-//! `validate_anthropic_key` — live-pings Anthropic directly from the host
-//! (not via vault-proxy) as a pre-flight check. Post-activation, all real
-//! agent traffic goes through the proxy.
+//! The security-load-bearing parts were lifted into `opentrapp_core::credentials` (ADR-0022
+//! migration step 1) so the same transport-neutral fns back both this shim and the future loopback
+//! web route: `validate_anthropic_key` (host-side pre-flight ping, errors run through
+//! `redact_secrets`) and the runtime `.env` **0600** writer (`write_credentials_at`).
 //!
-//! `commit_activation` — called by ActivationModal after both keys are
-//! validated and written to .env. Restarts vault-proxy to pick up new keys,
-//! brings vault-agent up, and writes the activated + credentials-ok markers.
+//! What deliberately STAYS here is the GUI orchestration that cannot be transport-neutral:
+//! `commit_activation` restarts vault-proxy to pick up new keys, brings vault-agent up, writes the
+//! activated + credentials-ok markers, and updates the in-memory `PerimeterStateStore`; plus the
+//! `AppHandle`→`runtime_data_dir` path resolution. The shims resolve the `.env` path, then hand the
+//! write to core. Command names + signatures + `lib.rs` registration unchanged.
 
-use std::path::Path;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use tauri::{AppHandle, Manager as _};
-use serde::Serialize;
 
-use crate::lifecycle::{
-    write_activated_marker, write_credentials_ok_marker, PerimeterStateStore,
-};
+use opentrapp_core::credentials::{write_credentials_at, ValidationOutcome};
+
+use crate::lifecycle::{write_activated_marker, write_credentials_ok_marker, PerimeterStateStore};
 use crate::orchestrator::podman;
 use crate::orchestrator::state::AppState;
 
-/// Structured outcome of a key validation attempt. Lets the frontend show
-/// exact guidance per error class without parsing error strings.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ValidationOutcome {
-    Ok,
-    AuthFailure,
-    Billing,
-    Permission,
-    Rate,
-    ServerError,
-    Unknown,
-}
-
-/// Live-pings Anthropic's `/v1/messages` with `max_tokens: 1` to verify
-/// the key is accepted. Uses the cheapest current model for minimal cost.
-///
-/// Returns a network error string only on complete network failure —
-/// all API-level responses (401, 402, …) come back as `Ok(outcome)` so
-/// the frontend can give specific guidance.
+/// Live-pings Anthropic to verify the key is accepted (see `opentrapp_core::credentials`). All
+/// API-level responses come back as `Ok(outcome)`; only a complete network failure is an `Err`
+/// (already redacted in core).
 #[tauri::command]
 pub async fn validate_anthropic_key(key: String) -> Result<ValidationOutcome, String> {
-    let key = key.trim().to_string();
-    if key.is_empty() {
-        return Ok(ValidationOutcome::AuthFailure);
-    }
-
-    let body = serde_json::json!({
-        "model": "claude-haiku-4-5-20251001",
-        "max_tokens": 1,
-        "messages": [{"role": "user", "content": "."}]
-    });
-
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()
-        .map_err(|e| crate::lifecycle::redact_secrets(&e.to_string()))?;
-
-    let resp = client
-        .post("https://api.anthropic.com/v1/messages")
-        .header("x-api-key", &key)
-        .header("anthropic-version", "2023-06-01")
-        .header("content-type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| crate::lifecycle::redact_secrets(&e.to_string()))?;
-
-    Ok(match resp.status().as_u16() {
-        200 => ValidationOutcome::Ok,
-        401 => ValidationOutcome::AuthFailure,
-        402 => ValidationOutcome::Billing,
-        403 => ValidationOutcome::Permission,
-        429 => ValidationOutcome::Rate,
-        500..=599 => ValidationOutcome::ServerError,
-        _ => ValidationOutcome::Unknown,
-    })
+    opentrapp_core::credentials::validate_anthropic_key(key).await
 }
 
 /// Force-recreates vault-proxy (so it reads new .env keys), brings
 /// vault-agent up, and writes the activated + credentials-ok markers.
 ///
-/// The frontend must write both keys to `.env` via `write_config` BEFORE
+/// The frontend must write both keys to `.env` via `save_credentials` BEFORE
 /// calling this command. The commit is sequenced this way so the frontend
 /// can show per-field validation errors before any persistent state changes.
 #[tauri::command]
@@ -148,15 +99,11 @@ fn now_unix_ms() -> u64 {
 
 // ─── Runtime credentials (.env in the data dir) ───────────────────────────
 //
-// The wizard previously wrote the keys via `write_config("agent", ".env")` —
-// the generic component-config editor, which resolves into the *component*
-// directory. On a packaged AppImage first-run that directory is the read-only
-// bundle (the writable staged copy is only created later, inside the
-// credentials-gated bootstrap), so the write failed and the wizard dead-ended.
-// The runtime `.env` actually lives in the data dir (`~/.opentrapp/.env`) —
-// where the bootstrap (`bootstrap::run_bootstrap` step_write_env) and the
-// perimeter read it. These commands write/read it there directly, so first-run
-// works on packaged builds, not just dev source trees.
+// The runtime `.env` lives in the data dir (`~/.opentrapp/.env`) — where the
+// bootstrap (`bootstrap::run_bootstrap` step_write_env) and the perimeter read
+// it. Resolving that path needs the AppHandle (the `AppState` runtime_data_dir),
+// so it stays GUI-side; the write itself is the transport-neutral 0600 writer in
+// `opentrapp_core::credentials::write_credentials_at`.
 
 fn runtime_env_path(handle: &AppHandle) -> std::path::PathBuf {
     let root = handle
@@ -166,59 +113,10 @@ fn runtime_env_path(handle: &AppHandle) -> std::path::PathBuf {
     root.join(".env")
 }
 
-/// Replace an existing `KEY=...` line in a `.env` body, or append it. Preserves
-/// every other line (other vars, comments). Pure — unit-tested below. Mirrors
-/// the frontend `upsertEnvVar`.
-fn upsert_env_var(content: &str, key: &str, value: &str) -> String {
-    let prefix = format!("{key}=");
-    let mut replaced = false;
-    let mut out: Vec<String> = content
-        .lines()
-        .map(|line| {
-            if line.trim_start().starts_with(&prefix) {
-                replaced = true;
-                format!("{key}={value}")
-            } else {
-                line.to_string()
-            }
-        })
-        .collect();
-    if !replaced {
-        out.push(format!("{key}={value}"));
-    }
-    let mut s = out.join("\n");
-    s.push('\n');
-    s
-}
-
-/// Upsert the (non-empty) keys into the `.env` at `env_path`, preserving other
-/// content; creates the parent dir and tightens the file to 0600. Testable with
-/// a temp path.
-fn write_credentials_at(env_path: &Path, anthropic_key: &str, telegram_token: &str) -> std::io::Result<()> {
-    let mut content =
-        std::fs::read_to_string(env_path).unwrap_or_else(|_| "# OpenTrApp configuration\n".to_string());
-    if !anthropic_key.is_empty() {
-        content = upsert_env_var(&content, "ANTHROPIC_API_KEY", anthropic_key);
-    }
-    if !telegram_token.is_empty() {
-        content = upsert_env_var(&content, "TELEGRAM_BOT_TOKEN", telegram_token);
-    }
-    if let Some(parent) = env_path.parent() {
-        std::fs::create_dir_all(parent)?;
-    }
-    std::fs::write(env_path, content)?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(env_path, std::fs::Permissions::from_mode(0o600));
-    }
-    Ok(())
-}
-
 /// Write the agent credentials to the runtime `.env` (`~/.opentrapp/.env`).
-/// Only non-empty keys are upserted; existing vars are preserved. Replaces the
-/// wizard's old `write_config("agent",".env")` path that failed on packaged
-/// first-run.
+/// Only non-empty keys are upserted; existing vars are preserved; the file is
+/// tightened to 0600 (in core). Replaces the wizard's old
+/// `write_config("agent",".env")` path that failed on packaged first-run.
 #[tauri::command]
 pub fn save_credentials(
     handle: AppHandle,
@@ -236,64 +134,4 @@ pub fn save_credentials(
 pub fn read_runtime_env(handle: AppHandle) -> Result<String, String> {
     let env_path = runtime_env_path(&handle);
     Ok(std::fs::read_to_string(&env_path).unwrap_or_default())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn empty_key_returns_auth_failure() {
-        let result = validate_anthropic_key(String::new()).await;
-        assert!(matches!(result, Ok(ValidationOutcome::AuthFailure)));
-    }
-
-    #[tokio::test]
-    async fn whitespace_key_returns_auth_failure() {
-        let result = validate_anthropic_key("   ".to_string()).await;
-        assert!(matches!(result, Ok(ValidationOutcome::AuthFailure)));
-    }
-
-    #[test]
-    fn upsert_replaces_existing_preserves_others_and_appends_new() {
-        let c = "# header\nANTHROPIC_API_KEY=old\nOPENAI_API_KEY=keep\n";
-        let c = upsert_env_var(c, "ANTHROPIC_API_KEY", "new");
-        assert!(c.contains("ANTHROPIC_API_KEY=new"));
-        assert!(!c.contains("old"));
-        assert!(c.contains("OPENAI_API_KEY=keep"));
-        assert!(c.contains("# header"));
-        // appends a key that isn't present
-        let c = upsert_env_var(&c, "TELEGRAM_BOT_TOKEN", "123:abc");
-        assert!(c.contains("TELEGRAM_BOT_TOKEN=123:abc"));
-        assert!(c.ends_with('\n'));
-    }
-
-    #[test]
-    fn write_credentials_creates_upserts_and_preserves() {
-        let dir = std::env::temp_dir().join(format!("oc-cred-test-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        let env_path = dir.join(".env");
-
-        // First write into a non-existent path: creates dir + file with both keys.
-        write_credentials_at(&env_path, "sk-ant-aaa", "999:tok").unwrap();
-        let content = std::fs::read_to_string(&env_path).unwrap();
-        assert!(content.contains("ANTHROPIC_API_KEY=sk-ant-aaa"));
-        assert!(content.contains("TELEGRAM_BOT_TOKEN=999:tok"));
-
-        // Second write with an empty telegram token: replaces anthropic, keeps telegram.
-        write_credentials_at(&env_path, "sk-ant-bbb", "").unwrap();
-        let content = std::fs::read_to_string(&env_path).unwrap();
-        assert!(content.contains("ANTHROPIC_API_KEY=sk-ant-bbb"));
-        assert!(!content.contains("sk-ant-aaa"));
-        assert!(content.contains("TELEGRAM_BOT_TOKEN=999:tok"));
-
-        // 0600 on unix.
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(&env_path).unwrap().permissions().mode() & 0o777;
-            assert_eq!(mode, 0o600);
-        }
-        let _ = std::fs::remove_dir_all(&dir);
-    }
 }

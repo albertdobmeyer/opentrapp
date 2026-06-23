@@ -17,6 +17,7 @@
 
 pub mod config_ops;
 pub mod control;
+pub mod credentials;
 pub mod diagnostics;
 pub mod execute;
 pub mod health;
