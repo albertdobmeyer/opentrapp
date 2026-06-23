@@ -1,30 +1,29 @@
+//! Command-execution commands — thin Tauri shims over `opentrapp_core::execute`.
+//!
+//! The lookup + on-demand-shield start + the run were lifted into `opentrapp-core` (ADR-0022
+//! migration step 1). The GUI-side idle-stop task bookkeeping (the `AppState` `AbortHandle` map)
+//! stays HERE — the lifted `run_command` returns which on-demand service it started, so this
+//! shim arms the idle-stop. Behavior preserved exactly: a lookup error returns early (no
+//! idle-stop); the idle-stop is armed after the run regardless of the command's success/failure.
+//! Command names + signatures unchanged (registration in `lib.rs` is intact).
+
 use std::collections::HashMap;
-use std::path::PathBuf;
+
 use tauri::State;
 
 use crate::orchestrator::error::OrchestratorError;
-use crate::orchestrator::runner::{self, CommandResult};
+use crate::orchestrator::podman;
+use crate::orchestrator::runner::CommandResult;
 use crate::orchestrator::state::AppState;
-use crate::orchestrator::{perimeter, podman};
 
-/// How long an on-demand shield stays warm after its last command before the
-/// idle-stop timer reclaims it. Long enough that a multi-step workflow (several
-/// commands back-to-back) never cold-starts the container twice.
+/// How long an on-demand shield stays warm after its last command before the idle-stop timer
+/// reclaims it. Long enough that a multi-step workflow (several commands back-to-back) never
+/// cold-starts the container twice.
 const IDLE_GRACE_SECS: u64 = 300;
 
-/// Map a component id to its backing on-demand perimeter service, if any.
-/// Generic by construction: returns `Some` only when the signed spec has a
-/// `vault-<id>` service flagged `on_demand`, so it reacts to the spec, never to
-/// a hardcoded component name (the generic-backend rule).
-fn on_demand_service_for(component_id: &str) -> Option<String> {
-    let svc = format!("vault-{component_id}");
-    let spec = perimeter::load().ok()?;
-    spec.services.get(&svc).filter(|s| s.on_demand).map(|_| svc)
-}
-
-/// (Re)arm the idle-stop timer for an on-demand service: cancel any pending stop
-/// and schedule a fresh one `IDLE_GRACE_SECS` out. Bursts keep the container
-/// warm; it is stopped once that long passes with no further command.
+/// (Re)arm the idle-stop timer for an on-demand service: cancel any pending stop and schedule a
+/// fresh one `IDLE_GRACE_SECS` out. Bursts keep the container warm; it is stopped once that long
+/// passes with no further command. GUI-side spawned-task bookkeeping — stays in the shim.
 fn arm_idle_stop(state: &AppState, svc: String) {
     let mut map = state.idle_stops.lock().unwrap();
     if let Some(prev) = map.remove(&svc) {
@@ -47,66 +46,23 @@ pub async fn run_command(
     command_id: String,
     args: HashMap<String, String>,
 ) -> Result<CommandResult, OrchestratorError> {
-    let (manifest_cmd, component_dir) = {
-        let components = state.components.lock().unwrap();
-        let component = components
-            .iter()
-            .find(|c| c.manifest.identity.id == component_id)
-            .ok_or_else(|| OrchestratorError::ComponentNotFound(component_id.clone()))?;
+    let components = { state.components.lock().unwrap().clone() };
+    let data_dir = state.runtime_data_dir.read().unwrap().clone();
 
-        let cmd = component
-            .manifest
-            .commands
-            .iter()
-            .find(|c| c.id == command_id)
-            .ok_or_else(|| OrchestratorError::CommandNotFound {
-                component: component_id.clone(),
-                command: command_id.clone(),
-            })?
-            .clone();
+    let outcome = opentrapp_core::execute::run_command(
+        &components,
+        &data_dir,
+        component_id,
+        command_id,
+        &args,
+    )
+    .await?; // lookup error (component/command not found) returns early — no idle-stop armed
 
-        (cmd, component.component_dir.clone())
-    };
-
-    // On-demand shields (vault-skills/vault-social) are not booted with the
-    // perimeter. If this command targets one, start its container first, then
-    // keep it warm for a short grace afterwards so a burst of commands does not
-    // thrash. A start failure falls through to the existing graceful-degradation
-    // path (the command runs and reports "unavailable").
-    let on_demand = on_demand_service_for(&component_id);
-    if let Some(svc) = on_demand.clone() {
-        let data_dir = state.runtime_data_dir.read().unwrap().clone();
-        let _ = tokio::task::spawn_blocking(move || podman::service_up(&data_dir, &svc, false)).await;
-    }
-
-    // Containerized execution (CLAUDE.md §9 — "no untrusted content on the host;
-    // all skill scanning happens inside containers"). On-demand workload shields
-    // (vault-skills/vault-social) run their commands INSIDE their now-started
-    // container via `podman exec`, where the Makefile + tools live (WORKDIR /app)
-    // and untrusted downloaded content never touches the host. Other components
-    // fall back to host bash in the component dir (orchestrator-level commands).
-    // If the on-demand start above failed, the exec fails cleanly → "unavailable".
-    let result = match &on_demand {
-        Some(svc) => {
-            runner::run_command_in_container(svc, &manifest_cmd, &args, manifest_cmd.timeout_seconds)
-                .await
-        }
-        None => {
-            runner::run_command(
-                &manifest_cmd,
-                &PathBuf::from(&component_dir),
-                &args,
-                manifest_cmd.timeout_seconds,
-            )
-            .await
-        }
-    };
-
-    if let Some(svc) = on_demand {
+    // Arm the on-demand shield's idle-stop after the run, regardless of the command's result.
+    if let Some(svc) = outcome.on_demand_service {
         arm_idle_stop(state.inner(), svc);
     }
-
-    result
+    outcome.result
 }
 
 #[tauri::command]
@@ -116,26 +72,7 @@ pub async fn load_options(
     command_string: String,
     timeout_seconds: u64,
 ) -> Result<Vec<String>, OrchestratorError> {
-    let component_dir = {
-        let components = state.components.lock().unwrap();
-        let component = components
-            .iter()
-            .find(|c| c.manifest.identity.id == component_id)
-            .ok_or_else(|| OrchestratorError::ComponentNotFound(component_id.clone()))?;
-        component.component_dir.clone()
-    };
-
-    let result = runner::run_shell(
-        &command_string,
-        &PathBuf::from(&component_dir),
-        timeout_seconds,
-    )
-    .await?;
-
-    Ok(result
-        .stdout
-        .lines()
-        .map(|l| l.trim().to_string())
-        .filter(|l| !l.is_empty())
-        .collect())
+    let components = { state.components.lock().unwrap().clone() };
+    opentrapp_core::execute::load_options(&components, component_id, command_string, timeout_seconds)
+        .await
 }
