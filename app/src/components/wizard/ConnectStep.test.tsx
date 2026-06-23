@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import ConnectStep from "./ConnectStep";
+
 import { readRuntimeEnv, saveCredentials } from "@/lib/tauri";
 
-import ConnectStep from "./ConnectStep";
 
 const { addToast } = vi.hoisted(() => ({ addToast: vi.fn() }));
 

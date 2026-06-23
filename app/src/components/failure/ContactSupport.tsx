@@ -11,11 +11,12 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import { useToast } from "@/hooks/useToast";
 
 import packageJson from "../../../package.json";
 
 import type { ClassifiedError } from "@/lib/errors";
+
+import { useToast } from "@/hooks/useToast";
 
 const APP_VERSION = packageJson.version;
 

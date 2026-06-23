@@ -1,11 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-import { pausePerimeter, resumePerimeter } from "@/lib/tauri";
 
 import HeroStatusCard from "./HeroStatusCard";
 
 import type { HeroState } from "@/hooks/useHero";
+
+import { pausePerimeter, resumePerimeter } from "@/lib/tauri";
 
 vi.mock("@/hooks/useBootstrapProgress", () => ({
   useBootstrapProgress: () => ({

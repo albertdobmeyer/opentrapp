@@ -44,10 +44,13 @@
   "overrides": {
     "ws": "^8.20.1",
     "brace-expansion@5": "^5.0.6",
-    "js-yaml": "^4.2.0"
+    "js-yaml": "^4.2.0",
+    "eslint-plugin-react": {
+      "eslint": "$eslint"
+    }
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.0",
     "@tauri-apps/cli": "^2.11.2",
     "@testing-library/jest-dom": "^6.6.0",
@@ -62,20 +65,20 @@
     "@vitest/eslint-plugin": "^1.6.20",
     "autoprefixer": "^10.5.0",
     "esbuild": "^0.28.1",
-    "eslint": "^9.39.4",
+    "eslint": "^10.5.0",
     "eslint-import-resolver-typescript": "^4.4.5",
-    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-import-x": "^4.17.0",
     "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
-    "eslint-plugin-unicorn": "^56.0.1",
+    "eslint-plugin-unicorn": "^68.0.0",
     "globals": "^17.6.0",
     "jsdom": "^25.0.0",
     "nyc": "^18.0.0",
     "postcss": "^8.5.15",
     "tailwindcss": "^3.4.6",
     "typescript": "^5.5.3",
-    "typescript-eslint": "^8.61.0",
+    "typescript-eslint": "^8.62.0",
     "vite": "^8.0.16",
     "vite-plugin-istanbul": "^9.0.1",
     "vitest": "^4.1.5"

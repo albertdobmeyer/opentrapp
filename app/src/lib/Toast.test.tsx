@@ -1,8 +1,9 @@
 import { render, screen, fireEvent, act } from "@testing-library/react";
 
+import { ToastProvider } from "./ToastContext";
+
 import { useToast } from "@/hooks/useToast";
 
-import { ToastProvider } from "./ToastContext";
 
 // Helper component to trigger toasts
 function ToastTrigger(props: {

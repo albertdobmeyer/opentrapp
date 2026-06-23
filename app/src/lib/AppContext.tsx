@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from "react";
 
+import type { AppMode, AppSettings } from "@/lib/settings";
+
 import { AppContext, type AppContextValue } from "@/hooks/useAppContext";
 
-import type { AppMode, AppSettings } from "@/lib/settings";
 
 interface ProviderProps {
   settings: AppSettings;

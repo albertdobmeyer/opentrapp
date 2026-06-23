@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import ActivationModal from "./ActivationModal";
+
 import {
   commitActivation,
   deriveTelegramBotUrl,
@@ -10,7 +12,6 @@ import {
   validateAnthropicKey,
 } from "@/lib/tauri";
 
-import ActivationModal from "./ActivationModal";
 
 // Keep the real tauri surface (its functions call the mocked invoke); only
 // override what we drive/assert.

@@ -1,9 +1,10 @@
 import { Component, type ReactNode } from "react";
 
-import { classifyError } from "@/lib/errors";
 
 import ContactSupport from "./failure/ContactSupport";
 import FriendlyRetry from "./failure/FriendlyRetry";
+
+import { classifyError } from "@/lib/errors";
 
 interface Props {
   children: ReactNode;

@@ -1,6 +1,10 @@
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { SubStep, SubStepId } from "@/components/wizard/install-step/utils";
+import type { AppSettings } from "@/lib/settings";
+import type { StreamEnd, StreamLine } from "@/lib/types";
+
 import {
   runBuildStep,
   runCheckStep,
@@ -11,9 +15,6 @@ import { INITIAL_STEPS, prefetchTelegramUrl, sanitizeLine } from "@/components/w
 import { classifyError, type ClassifiedError } from "@/lib/errors";
 import { startStream, stopStream } from "@/lib/tauri";
 
-import type { SubStep, SubStepId } from "@/components/wizard/install-step/utils";
-import type { AppSettings } from "@/lib/settings";
-import type { StreamEnd, StreamLine } from "@/lib/types";
 
 export type Outcome =
   | { kind: "running" }

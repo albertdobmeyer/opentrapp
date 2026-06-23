@@ -1,9 +1,10 @@
 import { load } from "@tauri-apps/plugin-store";
 import { renderHook, act, waitFor } from "@testing-library/react";
 
+import { useSettings } from "./useSettings";
+
 import { DEFAULT_SETTINGS } from "@/lib/settings";
 
-import { useSettings } from "./useSettings";
 
 
 describe("useSettings", () => {

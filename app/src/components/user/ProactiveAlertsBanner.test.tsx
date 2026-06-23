@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
+import ProactiveAlertsBanner from "./ProactiveAlertsBanner";
+
 import { useAlerts } from "@/hooks/useAlerts";
 
-import ProactiveAlertsBanner from "./ProactiveAlertsBanner";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
 

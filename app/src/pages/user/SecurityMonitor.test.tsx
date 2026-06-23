@@ -1,10 +1,11 @@
 import { render, screen } from "@testing-library/react";
 
-import { useHero } from "@/hooks/useHero";
 
 import SecurityMonitor from "./SecurityMonitor";
 
 import type { AssistantStatusSnapshot, BackendAlert } from "@/lib/tauri";
+
+import { useHero } from "@/hooks/useHero";
 
 vi.mock("@/hooks/useHero", () => ({ useHero: vi.fn() }));
 // Child cards each have their own tauri-backed tests; stub them here so this

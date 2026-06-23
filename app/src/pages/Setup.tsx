@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import type { SetupStep } from "@/lib/settings";
+
 import ConnectStep from "@/components/wizard/ConnectStep";
 import InstallStep from "@/components/wizard/InstallStep";
 import ReadyStep from "@/components/wizard/ReadyStep";
@@ -9,7 +11,6 @@ import WizardProgress from "@/components/wizard/WizardProgress";
 import { useSettings } from "@/hooks/useSettings";
 import { useWizardProgress } from "@/hooks/useWizardProgress";
 
-import type { SetupStep } from "@/lib/settings";
 
 const STEP_ORDER: SetupStep[] = ["welcome", "connect", "install", "ready"];
 

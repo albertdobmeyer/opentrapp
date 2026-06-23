@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
+import ModeSwitcher from "./ModeSwitcher";
+
 import { useAppContext } from "@/hooks/useAppContext";
 
-import ModeSwitcher from "./ModeSwitcher";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
 

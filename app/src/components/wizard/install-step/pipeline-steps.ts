@@ -1,3 +1,5 @@
+import type { SubStep, SubStepId } from "./utils";
+
 import {
   checkPrerequisites,
   executeWorkflow,
@@ -5,7 +7,6 @@ import {
 } from "@/lib/tauri";
 import { withRetry } from "@/lib/wizardUtils";
 
-import type { SubStep, SubStepId } from "./utils";
 
 type PrerequisitesReport = Awaited<ReturnType<typeof checkPrerequisites>>;
 

@@ -1,13 +1,14 @@
 import { ChevronDown, ChevronRight, Loader2, Play, Square } from "lucide-react";
 import { useState } from "react";
 
-import { runCommand, startStream, stopStream } from "@/lib/tauri";
 
 
 import { initialArgValues, nonEmpty } from "./helpers";
 import { ArgFields, DangerPill, ResultPanel } from "./widgets";
 
 import type { Command, CommandResult } from "@/lib/types";
+
+import { runCommand, startStream, stopStream } from "@/lib/tauri";
 
 /**
  * One manifest command: collapsible arg-form + Run (action/query) or Stream

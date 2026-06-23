@@ -1,5 +1,11 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 
+
+import { useInstallPipeline } from "./useInstallPipeline";
+
+import type { ClassifiedError } from "@/lib/errors";
+import type { PrerequisiteReport } from "@/lib/tauri";
+
 import {
   runBuildStep,
   runCheckStep,
@@ -7,11 +13,6 @@ import {
   runSafetyStep,
 } from "@/components/wizard/install-step/pipeline-steps";
 import { classifyError } from "@/lib/errors";
-
-import { useInstallPipeline } from "./useInstallPipeline";
-
-import type { ClassifiedError } from "@/lib/errors";
-import type { PrerequisiteReport } from "@/lib/tauri";
 
 vi.mock("@/components/wizard/install-step/pipeline-steps", () => ({
   runCheckStep: vi.fn(),

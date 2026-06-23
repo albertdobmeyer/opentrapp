@@ -1,8 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 
+import Home from "./Home";
+
 import { useHero, type HeroState } from "@/hooks/useHero";
 
-import Home from "./Home";
 
 vi.mock("@/hooks/useHero", () => ({ useHero: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({

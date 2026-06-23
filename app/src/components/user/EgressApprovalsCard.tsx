@@ -1,9 +1,10 @@
 import { Globe } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import type { PendingApproval, AllowlistDecision } from "@/lib/types";
+
 import { listEgressApprovals, applyAllowlistDecision } from "@/lib/tauri";
 
-import type { PendingApproval, AllowlistDecision } from "@/lib/types";
 
 type State =
   | { kind: "loading" }
