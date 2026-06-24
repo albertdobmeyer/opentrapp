@@ -1,0 +1,426 @@
+# yaml-language-server: $schema=../../schemas/component.schema.json
+
+identity:
+  id: agent
+  name: OpenCli Container
+  version: "0.1.0"
+  description: Hardened container for the OpenClaw agent runtime
+  role: runtime
+  icon: shield
+  color: "#dc2626"
+  repo: https://github.com/albertdobmeyer/opencli-container
+
+status:
+  states:
+    - id: running
+      label: Running
+      icon: circle-check
+      color: "#22c55e"
+    - id: stopped
+      label: Stopped
+      icon: circle-x
+      color: "#6b7280"
+    - id: error
+      label: Error
+      icon: alert-triangle
+      color: "#ef4444"
+    - id: not_setup
+      label: Not Set Up
+      icon: circle-help
+      color: "#a855f7"
+
+  probes:
+    - command: podman inspect --format '{{.State.Status}}' opencli-container 2>/dev/null
+      interval_seconds: 10
+      timeout_seconds: 5
+      rules:
+        - stdout_contains: running
+          state: running
+        - stdout_contains: exited
+          state: stopped
+        - exit_code: 0
+          state: stopped
+    - command: podman image exists opencli-container 2>/dev/null && echo exists
+      interval_seconds: 30
+      timeout_seconds: 5
+      rules:
+        - stdout_contains: exists
+          state: stopped
+        - exit_code: 1
+          state: not_setup
+
+  default_state: not_setup
+
+commands:
+  # Lifecycle
+  - id: setup
+    name: Setup
+    description: Build and configure the hardened container environment
+    group: lifecycle
+    type: action
+    danger: safe
+    command: make setup
+    output:
+      format: ansi
+      display: terminal
+    available_when: [not_setup]
+    sort_order: 10
+    timeout_seconds: 300
+
+  - id: start
+    name: Start
+    description: Start the vault container and proxy sidecar
+    group: lifecycle
+    type: action
+    danger: safe
+    command: make start
+    output:
+      format: ansi
+      display: terminal
+    available_when: [stopped]
+    sort_order: 20
+    tier: user
+    timeout_seconds: 120
+
+  - id: soft-stop
+    name: Stop Assistant
+    description: Gracefully stop the vault container
+    group: lifecycle
+    type: action
+    danger: caution
+    command: make stop
+    output:
+      format: ansi
+      display: terminal
+    available_when: [running]
+    sort_order: 30
+    tier: user
+    timeout_seconds: 60
+
+  - id: hard-kill
+    name: Hard Kill
+    description: Force stop the vault container immediately
+    group: lifecycle
+    type: action
+    danger: destructive
+    command: make kill
+    output:
+      format: ansi
+      display: terminal
+    available_when: [running, error]
+    sort_order: 40
+    timeout_seconds: 30
+
+  - id: nuclear-kill
+    name: Nuclear Kill
+    description: Remove all containers, images, and volumes — full reset
+    group: lifecycle
+    type: action
+    danger: destructive
+    command: make nuclear
+    output:
+      format: ansi
+      display: terminal
+    available_when: [stopped, error, running]
+    sort_order: 50
+    timeout_seconds: 120
+
+  # Monitoring
+  - id: verify
+    name: Security Check
+    description: Run security verification checks on the container
+    group: monitoring
+    type: query
+    danger: safe
+    command: make verify
+    output:
+      format: ansi
+      display: checklist
+    sort_order: 10
+    tier: user
+    timeout_seconds: 60
+
+  - id: install-skill
+    name: Install Skill
+    description: Install a certified skill from the forge deliveries volume into the agent workspace
+    group: operations
+    type: action
+    danger: caution
+    command: make install-skill SKILL=${skill_path}
+    args:
+      - id: skill_path
+        name: Skill path
+        description: Path to the certified skill in exports/
+        type: string
+        required: true
+    output:
+      format: ansi
+      display: log
+    available_when: [running]
+    sort_order: 15
+    timeout_seconds: 30
+
+  - id: approve-pairing
+    name: Connect Telegram
+    description: "Approve a Telegram user to chat with your assistant. Open Telegram, message your bot, and enter the pairing code shown there."
+    group: operations
+    type: action
+    danger: caution
+    command: podman exec opencli-container openclaw pairing approve telegram ${pairing_code}
+    args:
+      - id: pairing_code
+        name: Pairing code
+        description: "The code shown in Telegram when you first message the bot (e.g., 6U6J6Y7H)"
+        type: string
+        required: true
+    output:
+      format: ansi
+      display: log
+    available_when: [running]
+    sort_order: 16
+    tier: user
+    timeout_seconds: 15
+
+  - id: logs
+    name: Container Logs
+    description: Stream live logs from the vault container
+    group: monitoring
+    type: stream
+    danger: safe
+    command: podman logs -f opencli-container
+    output:
+      format: ansi
+      display: terminal
+    available_when: [running]
+    sort_order: 20
+    timeout_seconds: 0
+
+  - id: proxy-logs
+    name: Proxy Logs
+    description: Stream live logs from the API proxy sidecar
+    group: monitoring
+    type: stream
+    danger: safe
+    command: podman logs -f vault-proxy
+    output:
+      format: ansi
+      display: terminal
+    available_when: [running]
+    sort_order: 30
+    timeout_seconds: 0
+
+  - id: tools-status
+    name: Tool Status
+    description: Show which tools are currently enabled or disabled
+    group: monitoring
+    type: query
+    danger: safe
+    command: make tools-status
+    output:
+      format: ansi
+      display: terminal
+    available_when: [running]
+    sort_order: 15
+    timeout_seconds: 30
+
+  # Tool Control
+  - id: hard-shell
+    name: Hard Shell
+    description: Switch to maximum lockdown — conversation only
+    group: lifecycle
+    type: action
+    danger: caution
+    command: make hard-shell
+    output:
+      format: ansi
+      display: terminal
+    available_when: [running, stopped]
+    sort_order: 55
+    timeout_seconds: 180
+
+  - id: split-shell
+    name: Split Shell
+    description: Switch to workspace I/O with controlled exec and approval
+    group: lifecycle
+    type: action
+    danger: caution
+    command: make split-shell
+    output:
+      format: ansi
+      display: terminal
+    available_when: [running, stopped]
+    sort_order: 56
+    timeout_seconds: 180
+
+configs:
+  - path: .env
+    name: Environment Variables
+    description: API keys and runtime configuration (secrets masked in UI)
+    format: env
+    editable: true
+    danger: caution
+    restart_required: true
+    restart_command: soft-stop
+
+  - path: proxy/allowlist.txt
+    name: Domain Allowlist
+    description: Domains the agent is permitted to contact
+    format: line-list
+    editable: true
+    danger: safe
+    line_list:
+      item_label: domain
+      pattern: "^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+      example: api.openai.com
+    restart_required: true
+    restart_command: soft-stop
+
+  - path: config/openclaw-hardening.json5
+    name: Agent Security Config
+    description: OpenClaw tool policy, exec controls, shell level configuration
+    format: json5
+    editable: true
+    danger: destructive
+    schema:
+      type: object
+      properties:
+        tools:
+          type: object
+          description: Tool policy — profile, deny/allow lists, exec controls
+        agents:
+          type: object
+          description: Agent defaults — model, sandbox mode
+        gateway:
+          type: object
+          description: Gateway mode and binding
+        channels:
+          type: object
+          description: Messaging channel configuration (Telegram, WhatsApp)
+    restart_required: true
+    restart_command: soft-stop
+
+  - path: config/tool-manifest.yml
+    name: Tool Manifest
+    description: Source of truth for all tools — risk levels, injection vectors, requirements
+    format: yaml
+    editable: false
+    danger: destructive
+
+prerequisites:
+  container_runtime: true
+  setup_command: setup
+  config_files:
+    - path: .env
+      template: .env.example
+      description: API keys and runtime configuration
+  check_command: podman image exists opencli-container 2>/dev/null || docker image inspect opencli-container >/dev/null 2>&1
+
+health:
+  - id: container-status
+    name: Container
+    command: podman inspect --format '{{.State.Status}}' opencli-container 2>/dev/null || echo offline
+    interval_seconds: 10
+    timeout_seconds: 5
+    parse:
+      type: regex
+      expression: "^(.+)$"
+      format: "{value}"
+    thresholds:
+      green: "== running"
+      yellow: "== exited"
+      red: "== offline"
+
+  - id: security-score
+    name: Security
+    command: make verify --quiet 2>/dev/null | tail -1
+    interval_seconds: 60
+    timeout_seconds: 30
+    parse:
+      type: regex
+      expression: "(\\d+)/\\d+ checks passed"
+      format: "{value} checks"
+    thresholds:
+      green: ">= 8"
+      yellow: ">= 5"
+      red: "< 5"
+
+# ─── Workflows ────────────────────────────────────────────────────
+workflows:
+  - id: secure-start
+    name: Start Securely
+    description: Build, start, and verify the vault in one step
+    user_description: >
+      Sets up the secure environment for your assistant, starts it
+      running, and verifies all 24 security checks pass before
+      letting your assistant go online.
+    trigger: manual
+    danger: caution
+    steps:
+      - id: setup
+        command: setup
+        abort_on_failure: true
+      - id: start
+        command: start
+        depends_on: setup
+        abort_on_failure: true
+      - id: verify
+        command: verify
+        depends_on: start
+    output:
+      display: checklist
+      summary_step: verify
+
+  - id: switch-to-hard
+    name: Maximum Restriction
+    description: Switch to Hard Shell — chat only, no tools
+    user_description: >
+      Locks your assistant down to chat-only mode. It can still
+      talk to you via Telegram but cannot access files, run
+      commands, or browse the web.
+    trigger: manual
+    danger: safe
+    steps:
+      - id: switch
+        command: hard-shell
+      - id: verify
+        command: verify
+        depends_on: switch
+    output:
+      display: checklist
+      summary_step: verify
+
+  - id: switch-to-split
+    name: Supervised Access
+    description: Switch to Split Shell — selective tools, approval required
+    user_description: >
+      Gives your assistant access to specific tools, but every
+      action requires your approval first. Good for tasks like
+      file management or note-taking where you want oversight.
+    trigger: manual
+    danger: caution
+    shell_requirement: hard
+    steps:
+      - id: switch
+        command: split-shell
+      - id: verify
+        command: verify
+        depends_on: switch
+    output:
+      display: checklist
+      summary_step: verify
+
+  - id: full-verify
+    name: Security Audit
+    description: Run full 24-point verification suite
+    user_description: >
+      Checks every security layer — container isolation, network
+      filtering, tool restrictions, and configuration integrity.
+      Shows exactly what protections are active.
+    trigger: manual
+    danger: safe
+    steps:
+      - id: verify
+        command: verify
+    output:
+      display: report
+      summary_step: verify

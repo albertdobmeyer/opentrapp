@@ -1,0 +1,317 @@
+# yaml-language-server: $schema=../../schemas/component.schema.json
+
+identity:
+  id: social
+  name: OpenAgent Social
+  version: "0.1.0"
+  description: Safe reconnaissance and participation in the Moltbook agentic social network
+  role: network
+  icon: users
+  color: "#a855f7"
+  repo: https://github.com/albertdobmeyer/openagent-social
+
+status:
+  states:
+    - id: ready
+      label: Ready
+      icon: circle-check
+      color: "#22c55e"
+    - id: not_setup
+      label: Not Set Up
+      icon: circle-help
+      color: "#a855f7"
+  probes:
+    - command: "test -f config/.env && echo ready"
+      interval_seconds: 30
+      timeout_seconds: 5
+      rules:
+        - stdout_contains: "ready"
+          state: ready
+        - exit_code: 1
+          state: not_setup
+  default_state: not_setup
+
+commands:
+  # ── Operations ──────────────────────────────────────────
+  - id: feed-scan
+    name: Scan Feed
+    description: Scan recent Moltbook posts for prompt injection patterns
+    group: operations
+    type: action
+    danger: safe
+    command: "./tools/feed-scanner.sh --recent ${count}"
+    args:
+      - id: count
+        name: Post count
+        description: Number of recent posts to scan
+        type: number
+        required: false
+        default: 50
+    output:
+      format: ansi
+      display: report
+    available_when:
+      - ready
+    sort_order: 10
+    timeout_seconds: 60
+
+  - id: feed-scan-agent
+    name: Scan Agent
+    description: Scan posts by a specific agent handle for injection patterns
+    group: operations
+    type: action
+    danger: safe
+    command: "./tools/feed-scanner.sh --agent ${handle}"
+    args:
+      - id: handle
+        name: Agent handle
+        description: Moltbook agent handle to scan
+        type: string
+        required: true
+    output:
+      format: ansi
+      display: report
+    available_when:
+      - ready
+    sort_order: 20
+    timeout_seconds: 60
+
+  - id: agent-census
+    name: Agent Census
+    description: Pull current platform stats from the Moltbook API
+    group: operations
+    type: action
+    danger: safe
+    command: "./tools/agent-census.sh"
+    output:
+      format: ansi
+      display: table
+    available_when:
+      - ready
+    sort_order: 30
+    timeout_seconds: 30
+
+  - id: census-trend
+    name: Census Trend
+    description: Show trend data from saved census snapshots
+    group: operations
+    type: action
+    danger: safe
+    command: "./tools/agent-census.sh --trend"
+    output:
+      format: ansi
+      display: table
+    available_when:
+      - ready
+    sort_order: 40
+    timeout_seconds: 15
+
+  # ── Monitoring ──────────────────────────────────────────
+  - id: level-status
+    name: Engagement Status
+    description: Show current engagement level, rate limits, and configuration summary
+    group: monitoring
+    type: query
+    danger: safe
+    command: "bash scripts/engagement-control.sh --status"
+    output:
+      format: ansi
+      display: report
+    available_when:
+      - ready
+      - not_setup
+    sort_order: 5
+    timeout_seconds: 10
+
+  - id: identity-check
+    name: Identity Checklist
+    description: Pre-flight safety check before registering an agent on Moltbook
+    group: monitoring
+    type: query
+    danger: safe
+    command: "./tools/identity-checklist.sh"
+    output:
+      format: ansi
+      display: checklist
+    available_when:
+      - ready
+      - not_setup
+    sort_order: 10
+    timeout_seconds: 15
+
+  # ── Lifecycle ───────────────────────────────────────────
+  - id: set-observer
+    name: Observer Mode
+    description: "Level 1: Read-only observation. No API key needed, no interaction."
+    group: lifecycle
+    type: action
+    danger: safe
+    command: "bash scripts/engagement-control.sh --level observer --apply"
+    output:
+      format: ansi
+      display: checklist
+    available_when:
+      - ready
+    sort_order: 20
+    timeout_seconds: 10
+
+  - id: set-researcher
+    name: Researcher Mode
+    description: "Level 2: Registered identity with controlled interaction. Feed scanning required."
+    group: lifecycle
+    type: action
+    danger: caution
+    command: "bash scripts/engagement-control.sh --level researcher --apply"
+    output:
+      format: ansi
+      display: checklist
+    available_when:
+      - ready
+    sort_order: 30
+    timeout_seconds: 10
+
+  - id: set-participant
+    name: Participant Mode
+    description: "Level 3: Full interaction with rate limits. Requires retraction plan."
+    group: lifecycle
+    type: action
+    danger: caution
+    command: "bash scripts/engagement-control.sh --level participant --apply"
+    output:
+      format: ansi
+      display: checklist
+    available_when:
+      - ready
+    sort_order: 40
+    timeout_seconds: 10
+
+  - id: export-patterns
+    name: Export Patterns
+    description: Export injection patterns as YAML for vault-proxy consumption
+    group: operations
+    type: action
+    danger: safe
+    command: make export-patterns
+    output:
+      format: text
+      display: log
+    sort_order: 45
+    timeout_seconds: 30
+
+  - id: setup
+    name: Setup
+    description: Copy example config and prepare working directory
+    group: lifecycle
+    type: action
+    danger: safe
+    command: "cp config/.env.example config/.env && mkdir -p data && echo 'Setup complete — edit config/.env to configure'"
+    output:
+      format: ansi
+      display: terminal
+    available_when:
+      - not_setup
+    sort_order: 10
+    timeout_seconds: 10
+
+configs:
+  - path: config/.env
+    name: Environment
+    description: API keys, agent identity, rate limits
+    format: env
+    editable: true
+    danger: caution
+  - path: config/feed-allowlist.yml
+    name: Feed Allowlist
+    description: Trusted agent handles and safe content patterns
+    format: yaml
+    editable: true
+    danger: safe
+  - path: config/injection-patterns.yml
+    name: Injection Patterns
+    description: Prompt injection signatures for the feed scanner
+    format: yaml
+    editable: true
+    danger: caution
+
+prerequisites:
+  container_runtime: false
+  setup_command: setup
+  config_files:
+    - path: config/.env
+      template: config/.env.example
+      description: API keys, agent identity, rate limits
+  check_command: test -f config/.env
+
+health:
+  - id: config-status
+    name: Config
+    command: "test -f config/.env && echo configured || echo missing"
+    interval_seconds: 60
+    timeout_seconds: 5
+    parse:
+      type: regex
+      expression: "(configured|missing)"
+      format: "{value}"
+    thresholds:
+      green: "== configured"
+      red: "== missing"
+
+# ─── Workflows ────────────────────────────────────────────────────
+workflows:
+  - id: scan-recent-feed
+    name: Scan Recent Feed
+    description: Fetch and scan recent Moltbook posts for injection attacks
+    user_description: >
+      Checks the latest posts on the Moltbook network for hidden
+      instructions that could manipulate your assistant. Flags anything
+      suspicious before your assistant sees it.
+    trigger: manual
+    danger: safe
+    steps:
+      - id: scan
+        command: feed-scan
+        args:
+          count: "{{input.count}}"
+    inputs:
+      - id: count
+        type: number
+        label: Number of posts
+        description: How many recent posts to scan
+        required: false
+        default: 50
+    output:
+      display: report
+      summary_step: scan
+
+  - id: export-patterns
+    name: Export Patterns for Proxy
+    description: Export injection patterns in YAML format for vault-proxy consumption
+    user_description: >
+      Compiles all known injection patterns into a format that the
+      security gateway can use to automatically filter dangerous
+      content before it reaches your assistant.
+    trigger: on-demand
+    danger: safe
+    steps:
+      - id: export
+        command: export-patterns
+    output:
+      display: log
+
+  - id: safety-check
+    name: Pre-Flight Safety Check
+    description: Run identity checklist and verify workbench health
+    user_description: >
+      Checks that your agent identity is configured safely and all
+      monitoring tools are working correctly before going online.
+    trigger: manual
+    danger: safe
+    steps:
+      - id: checklist
+        command: identity-check
+      - id: level
+        command: level-status
+        depends_on: checklist
+    output:
+      display: checklist
+      summary_step: level
