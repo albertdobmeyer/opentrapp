@@ -12,7 +12,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "app/src-tauri/src/**"
+      - "app/src-tauri/crates/core/**"
       - "app/src-tauri/fuzz/**"
       - "app/src-tauri/Cargo.toml"
       - "app/src-tauri/Cargo.lock"
@@ -20,7 +20,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "app/src-tauri/src/**"
+      - "app/src-tauri/crates/core/**"
       - "app/src-tauri/fuzz/**"
       - "app/src-tauri/Cargo.toml"
       - "app/src-tauri/Cargo.lock"

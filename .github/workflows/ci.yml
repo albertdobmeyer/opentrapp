@@ -13,8 +13,10 @@ on:
         type: boolean
         default: false
 
-# Read-only by default. Jobs that need write access (build-and-release)
-# declare it explicitly at the job level. Principle of least privilege.
+# Read-only by default. Jobs that need write access (build-images: ghcr push +
+# cosign signing) declare it explicitly at the job level. Principle of least
+# privilege. Post de-Tauri cutover there is no release-publishing job — packaging
+# is deferred to cargo-dist (ADR-0023).
 permissions:
   contents: read
 
@@ -52,22 +54,9 @@ jobs:
         with:
           workspaces: app/src-tauri
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev
-
-      # tauri-codegen (via generate_context! during `cargo check` of the app
-      # crate) resolves bundle.externalBin for the host target, so the sidecar
-      # binary must already exist. Build the daemon (debug — only its presence
-      # matters here) and stage it before checking the workspace.
-      - name: Stage daemon sidecar (externalBin must exist at compile time)
-        run: |
-          TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
-          cargo build -p opentrapp-daemon
-          mkdir -p binaries
-          cp "target/debug/opentrapp-daemon" "binaries/opentrapp-daemon-${TRIPLE}"
-
+      # Post de-Tauri cutover (ADR-0022): no GTK/WebKit system deps and no sidecar
+      # staging — the workspace (core + daemon + viewer-server) is pure-Rust /
+      # rustls, headless, and builds with the runner's stock toolchain.
       - run: cargo check --workspace
       - run: cargo test --workspace
 
@@ -263,47 +252,22 @@ jobs:
           path: images/
           retention-days: 1
 
-  build-and-release:
-    name: Build (${{ matrix.platform.name }})
-    # build-images only runs on tag pushes; on non-tag builds it is skipped.
-    # !cancelled() stops a skipped dependency from skipping this job, so we
-    # re-assert the real gates explicitly and accept build-images=skipped.
+  build-release-binaries:
+    name: Build headless binaries (release smoke)
+    # Post de-Tauri cutover (ADR-0022): the product is the headless opentrapp-daemon
+    # + the on-demand viewer-server — no Tauri installers. Cross-platform RELEASE
+    # PACKAGING (signed per-OS artifacts) is deferred to cargo-dist (ADR-0023),
+    # wired in a follow-up. This job proves the shipped binaries + the frontend
+    # build on main and stay GTK/WebKit-free; it does not publish a release.
     if: >-
       !cancelled() &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       needs.check-frontend.result == 'success' &&
       needs.check-rust.result == 'success' &&
       needs.check-orchestration.result == 'success' &&
-      needs.integration-tests.result == 'success' &&
-      (needs.build-images.result == 'success' || needs.build-images.result == 'skipped')
-    needs: [check-frontend, check-rust, check-orchestration, integration-tests, build-images]
-    permissions:
-      contents: write
-      id-token: write           # required for cosign keyless signing (sigstore OIDC)
-      attestations: write       # required for build-provenance attestation
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - name: Linux x64
-            slug: linux-x64
-            runner: ubuntu-22.04
-            args: ''
-          - name: macOS ARM
-            slug: macos-arm
-            runner: macos-latest
-            args: '--target aarch64-apple-darwin'
-          - name: macOS Intel
-            slug: macos-intel
-            runner: macos-latest
-            args: '--target x86_64-apple-darwin'
-          - name: Windows x64
-            slug: windows-x64
-            runner: windows-latest
-            args: ''
-    runs-on: ${{ matrix.platform.runner }}
-    outputs:
-      release_id: ${{ steps.tauri.outputs.releaseId }}
+      needs.integration-tests.result == 'success'
+    needs: [check-frontend, check-rust, check-orchestration, integration-tests]
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -311,320 +275,27 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: app/package-lock.json
-
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
-        with:
-          targets: ${{ matrix.platform.runner == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
-
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
           workspaces: app/src-tauri
 
-      - name: Install system dependencies (Linux)
-        if: matrix.platform.runner == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev
+      - name: Build the headless release binaries (daemon + viewer-server)
+        working-directory: app/src-tauri
+        run: cargo build --release -p opentrapp-daemon -p viewer-server
 
-      - name: Install frontend dependencies
+      - name: Build the frontend (served by the viewer-server)
         working-directory: app
-        run: npm ci
-
-      # Compose a Karen-friendly release-notes body for tag builds. The
-      # default Tauri-action body ("See the assets below…") drops users
-      # onto a 38-row asset list dominated by .pem/.sig/SBOM noise — a
-      # known breaker moment for non-technical first-time users. This
-      # step builds a body that leads with one direct-download link per
-      # OS and tucks the verification artefacts behind <details>.
-      #
-      # When the workflow runs on a non-tag ref (e.g. workflow_dispatch
-      # without a tag) the step is skipped and the Tauri-action falls
-      # back to its hardcoded one-liner via the `||` in `releaseBody`.
-      - name: Compose release-notes body
-        id: notes
-        if: startsWith(github.ref, 'refs/tags/v')
-        # Force bash on every platform — the heredoc + parameter
-        # substitution below isn't PowerShell syntax, so without
-        # `shell: bash` the step throws "Missing file specification
-        # after redirection operator" on Windows and the build job
-        # never gets past this step on Windows / macOS Intel where
-        # bash is the non-default shell.
-        shell: bash
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          TAG="${GITHUB_REF_NAME}"
-          BASE="https://github.com/${{ github.repository }}/releases/download/${TAG}"
-          {
-            echo 'body<<NOTES_EOF'
-            cat <<EOF
-          ## Just install
+          npm ci
+          npm run build
 
-          Pick the row for your operating system and click the link. After downloading, double-click to install. The setup wizard takes over from there — Anthropic key, Telegram bot pairing, and the five-container perimeter download. No terminal needed.
-
-          | Your OS | Download |
-          |---|---|
-          | **Windows** | [OpenTrApp_${VERSION}_x64_en-US.msi](${BASE}/OpenTrApp_${VERSION}_x64_en-US.msi) |
-          | **macOS — Apple Silicon** | [OpenTrApp_${VERSION}_aarch64.dmg](${BASE}/OpenTrApp_${VERSION}_aarch64.dmg) |
-          | **macOS — Intel** | [OpenTrApp_${VERSION}_x64.dmg](${BASE}/OpenTrApp_${VERSION}_x64.dmg) |
-          | **Linux — Ubuntu / Debian** | [OpenTrApp_${VERSION}_amd64.deb](${BASE}/OpenTrApp_${VERSION}_amd64.deb) |
-          | **Linux — universal** | [OpenTrApp_${VERSION}_amd64.AppImage](${BASE}/OpenTrApp_${VERSION}_amd64.AppImage) |
-          | **Linux — Fedora / RHEL** | [OpenTrApp-${VERSION}-1.x86_64.rpm](${BASE}/OpenTrApp-${VERSION}-1.x86_64.rpm) |
-
-          The full release notes for this version live at [\`docs/release-notes-${TAG}.md\`](https://github.com/${{ github.repository }}/blob/${TAG}/docs/release-notes-${TAG}.md).
-
-          <details>
-          <summary><strong>Verification artefacts</strong> (for security auditors)</summary>
-
-          Each binary above is shipped alongside three companion files in the asset list:
-
-          - \`<filename>.sig\` — cosign keyless signature (Sigstore)
-          - \`<filename>.pem\` — signing certificate (Sigstore Fulcio)
-          - \`sbom-<platform>.cyclonedx.json\` — CycloneDX 1.5 software bill of materials
-
-          To verify a binary against its signature:
-
-          \`\`\`bash
-          cosign verify-blob \\
-            --certificate OpenTrApp_${VERSION}_x64_en-US.msi.pem \\
-            --signature   OpenTrApp_${VERSION}_x64_en-US.msi.sig \\
-            --certificate-identity-regexp 'https://github.com/${{ github.repository }}' \\
-            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \\
-            OpenTrApp_${VERSION}_x64_en-US.msi
-          \`\`\`
-
-          The SLSA Build Level 2 build-provenance attestation for this release is in the **Attestations** panel above the asset list.
-
-          The full asset list (including all signature, certificate, and SBOM files for every platform) is below.
-          </details>
-          EOF
-            echo 'NOTES_EOF'
-          } >> "$GITHUB_OUTPUT"
-
-      # Perimeter images are NOT bundled in the AppImage (that made it 567 MB
-      # with a ~68 min build). Instead we bundle only the small SIGNED overlay
-      # (image-digests.json) — the trust anchor — and the runtime downloads the
-      # large tarballs from the release on first launch, verifying each against
-      # the overlay digest before podman load. Keeps the AppImage ~90 MB.
-      - name: Stage perimeter image artifacts (Linux release builds)
-        if: matrix.platform.slug == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: perimeter-images
-          path: perimeter-staging
-      - name: Bundle the signed overlay only
-        if: matrix.platform.slug == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
-        shell: bash
+      - name: Confirm the shipped binaries are GTK/WebKit-free (cutover guard)
+        working-directory: app/src-tauri
         run: |
-          mkdir -p app/src-tauri/resources/perimeter/images
-          cp perimeter-staging/image-digests.json app/src-tauri/resources/perimeter/images/
-
-      # Phase B (ADR-0019): build the headless daemon for this platform's target
-      # and stage it where `bundle.externalBin` expects it
-      # (binaries/opentrapp-daemon-<target-triple>[.exe]), so tauri bundles it as
-      # a sidecar the GUI can spawn. `-p opentrapp-daemon` builds only the daemon
-      # (core + tokio, no tauri), so this is cheap. MUST succeed on every platform
-      # or `tauri build` fails (externalBin requires the binary to be present).
-      - name: Build + stage the daemon sidecar
-        shell: bash
-        run: |
-          set -euo pipefail
-          ARGS='${{ matrix.platform.args }}'
-          if [[ "$ARGS" == *--target* ]]; then
-            TRIPLE=$(echo "$ARGS" | sed -n 's/.*--target \([^ ]*\).*/\1/p')
-            cargo build --manifest-path app/src-tauri/Cargo.toml -p opentrapp-daemon --release --target "$TRIPLE"
-            SRC="app/src-tauri/target/$TRIPLE/release/opentrapp-daemon"
-          else
-            TRIPLE=$(rustc -vV | sed -n 's/^host: //p')
-            cargo build --manifest-path app/src-tauri/Cargo.toml -p opentrapp-daemon --release
-            SRC="app/src-tauri/target/release/opentrapp-daemon"
-          fi
-          EXT=""
-          [[ "$RUNNER_OS" == "Windows" ]] && EXT=".exe"
-          mkdir -p app/src-tauri/binaries
-          cp "${SRC}${EXT}" "app/src-tauri/binaries/opentrapp-daemon-${TRIPLE}${EXT}"
-          echo "staged sidecar: opentrapp-daemon-${TRIPLE}${EXT}"
-          ls -la app/src-tauri/binaries/
-
-      - name: Build and release
-        id: tauri
-        uses: tauri-apps/tauri-action@84b9d35b5fc46c1e45415bdb6144030364f7ebc5 # v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # macOS code-signing + notarization (1E / road-to-recommendable §1E) —
-          # READY-TO-ACTIVATE, NOT LIVE. Do NOT pass APPLE_* here from unset
-          # secrets: tauri treats a *present-but-empty* APPLE_CERTIFICATE as
-          # "sign now" and runs `security import` on an empty cert, which FAILS
-          # the macOS bundle (this broke the build on 66750fc — reverted here).
-          # Only add the six env lines below once the Apple Developer ID secrets
-          # are actually populated (then present==real, no longer empty):
-          #   APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          #   APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          #   APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          #   APPLE_ID: ${{ secrets.APPLE_ID }}
-          #   APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          #   APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # See docs/code-signing-policy.md "macOS".
-        with:
-          projectPath: app
-          args: ${{ matrix.platform.args }}
-          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
-          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('OpenTrApp {0}', github.ref_name) || '' }}
-          releaseBody: ${{ steps.notes.outputs.body || 'See the assets below to download and install.' }}
-          releaseDraft: true
-          prerelease: false
-          includeUpdaterJson: true
-
-      # Attach the signed perimeter image tarballs as release assets. The
-      # runtime downloads these on first launch and verifies each against the
-      # bundled overlay digest. (Linux/tag only; the release was just created by
-      # the step above.)
-      - name: Attach perimeter image tarballs to the release
-        if: matrix.platform.slug == 'linux-x64' && startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "${{ github.ref_name }}" perimeter-staging/*.tar \
-            --repo "${{ github.repository }}" --clobber
-
-      # ── Supply-chain provenance (release tags only) ────────────────────────
-      # The four steps below run only on tag pushes and produce, per built
-      # artefact: a CycloneDX SBOM, a cosign keyless signature (sigstore), and
-      # a SLSA Build Level 2 build-provenance attestation. Outputs are
-      # uploaded as workflow artefacts; the release-bundle job below collects
-      # them into the GitHub Release as downloadable assets.
-
-      - name: Locate built artefacts
-        if: startsWith(github.ref, 'refs/tags/v')
-        id: artefacts
-        shell: bash
-        run: |
-          # Tauri writes the bundle to .../release/bundle/<format>/. The
-          # earlier version of this step found every *.exe under target/,
-          # which on Windows swept in ~80 Cargo build-script intermediate
-          # binaries (build_script_build-XXXXX.exe). Constraining the find
-          # to */release/bundle/* keeps only the user-facing release artefacts.
-          set -euo pipefail
-          mkdir -p artefacts
-          find app/src-tauri/target -type f -path "*/release/bundle/*" \
-            \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \
-               -o -name "*.dmg" -o -name "*.msi" -o -name "*.exe" \
-               -o -name "*.app.tar.gz" \) \
-            -exec cp {} artefacts/ \; || true
-          ls -la artefacts/
-          echo "dir=artefacts" >> "$GITHUB_OUTPUT"
-
-      # ── Windows code-signing via SignPath (1E / road-to-recommendable §1E) ──
-      # READY-TO-ACTIVATE TEMPLATE — intentionally commented out so the live
-      # release pipeline is unchanged until SignPath is provisioned. It is NOT
-      # enabled because (a) the org/project/policy slugs come from the SignPath
-      # OSS account, and (b) every `uses:` in this repo must be SHA-pinned
-      # (OpenSSF Scorecard pinned-dependencies + code-signing-policy.md) and the
-      # action SHA must be filled by the maintainer. Placed here (after the
-      # artefacts are located, before cosign sign-blob) so the cosign .sig/.pem
-      # cover the SIGNED binary, and the signed .msi/.exe replace the unsigned
-      # ones tauri-action already uploaded to the draft release.
-      #
-      # ACTIVATION CHECKLIST (maintainer):
-      #   1. Get the OSS project approved at https://signpath.org and note the
-      #      organization id, project slug, and a signing-policy slug (e.g.
-      #      "release-signing").
-      #   2. Add repo secrets: SIGNPATH_API_TOKEN, SIGNPATH_ORGANIZATION_ID.
-      #      (Project/policy slugs can be plain `with:` values or vars.)
-      #   3. SHA-pin the action below (replace @vX with the 40-char commit SHA).
-      #   4. Uncomment the two steps; push a `v*` tag; confirm the .msi/.exe in
-      #      the release are Authenticode-signed (right-click → Digital Signatures).
-      #
-      # - name: Sign Windows artefacts (SignPath)
-      #   if: matrix.platform.slug == 'windows-x64' && startsWith(github.ref, 'refs/tags/v') && secrets.SIGNPATH_API_TOKEN != ''
-      #   uses: signpath/github-action-submit-signing-request@<PIN-40-CHAR-SHA>  # vX
-      #   with:
-      #     api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-      #     organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
-      #     project-slug: opentrapp                 # from SignPath account
-      #     signing-policy-slug: release-signing     # from SignPath account
-      #     artifact-configuration-slug: initial      # from SignPath account
-      #     github-artifact-id: ''                    # or use a local path mode
-      #     wait-for-completion: true
-      #     output-artifact-directory: artefacts      # signed files overwrite artefacts/
-      # - name: Re-upload signed Windows artefacts to the release
-      #   if: matrix.platform.slug == 'windows-x64' && startsWith(github.ref, 'refs/tags/v') && secrets.SIGNPATH_API_TOKEN != ''
-      #   shell: bash
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   run: |
-      #     gh release upload "${{ github.ref_name }}" artefacts/*.msi artefacts/*.exe \
-      #       --repo "${{ github.repository }}" --clobber
-
-      - name: Generate CycloneDX SBOM (syft)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
-        with:
-          path: .
-          format: cyclonedx-json
-          # Use the platform's slug (no spaces) for the filename; matrix.platform.name
-          # contains a space (e.g. "Linux x64") which broke the unquoted `for f in $(ls)`
-          # downstream in the cosign sign-blob step on the v0.3.2 build.
-          output-file: artefacts/sbom-${{ matrix.platform.slug }}.cyclonedx.json
-          upload-artifact: false
-          upload-release-assets: true
-
-      - name: Sign artefacts with cosign (keyless / sigstore)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
-      - name: Run cosign sign-blob
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          set -euo pipefail
-          shopt -s nullglob
-          cd artefacts
-          # Glob expansion handles spaces correctly; `for f in $(ls)` does not.
-          for f in *; do
-            [ -f "$f" ] || continue
-            # Skip files we ourselves are about to produce.
-            case "$f" in
-              *.sig|*.pem) continue ;;
-            esac
-            cosign sign-blob --yes \
-              --output-signature "${f}.sig" \
-              --output-certificate "${f}.pem" \
-              "$f"
+          for crate in opentrapp-daemon viewer-server; do
+            if cargo tree -p "$crate" -e normal | sed -E 's/ \([^)]*\)//' | grep -iE 'tauri|wry|webkit|gtk'; then
+              echo "::error::$crate links tauri/wry/webkit/gtk — the de-Tauri cutover regressed"; exit 1
+            fi
+            echo "$crate is GTK/WebKit-free ✓"
           done
-
-      - name: Generate SLSA build-provenance attestation
-        id: provenance
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: actions/attest-build-provenance@ef244123eb79f2f7a7e75d99086184180e6d0018 # v1
-        with:
-          subject-path: artefacts/*
-
-      # attest-build-provenance writes the attestation to GitHub's attestations
-      # store, but OpenSSF Scorecard's signed-releases check looks for a
-      # provenance FILE among the release assets (matched by the `.intoto.jsonl`
-      # suffix). Copy the bundle out and upload it alongside the artefacts so the
-      # provenance is detectable on the release itself, not only via the API.
-      - name: Stage provenance bundle as a release asset
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp "${{ steps.provenance.outputs.bundle-path }}" \
-            "artefacts/provenance-${{ matrix.platform.slug }}.intoto.jsonl"
-          ls -la artefacts/*.intoto.jsonl
-
-      - name: Attach SBOM, signatures, and attestation to release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          draft: true
-          files: |
-            artefacts/sbom-*.cyclonedx.json
-            artefacts/*.sig
-            artefacts/*.pem
-            artefacts/*.intoto.jsonl
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

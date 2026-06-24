@@ -11,36 +11,13 @@ yanked = "warn"
 # (severity advisories) are NOT in this list — they are addressed by bumping
 # the underlying crate. Only "unmaintained" and "unsound" warnings are listed.
 ignore = [
-  # ── GTK3 bindings: pulled by webkit2gtk via tauri/wry on Linux. Will be
-  #    resolved when the Tauri ecosystem migrates to GTK4 bindings (tracked
-  #    upstream in tauri-apps/wry). No remediation available at our layer.
-  { id = "RUSTSEC-2024-0411", reason = "gdkwayland-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0412", reason = "gdk: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0413", reason = "atk: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0414", reason = "gdkx11-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0415", reason = "gtk: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0416", reason = "atk-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0417", reason = "gdkx11: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0418", reason = "gdk-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0419", reason = "gtk3-macros: pulled by tauri/wry; awaits GTK4 migration upstream" },
-  { id = "RUSTSEC-2024-0420", reason = "gtk-sys: pulled by tauri/wry; awaits GTK4 migration upstream" },
-
-  # ── Other unmaintained transitive deps with no first-party remediation:
-  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time only, transitive; replaced by proc-macro-error2 upstream when build-deps migrate" },
-  { id = "RUSTSEC-2025-0057", reason = "fxhash: transitive (selectors/cssparser via tauri); awaits selectors migration to ahash" },
-  { id = "RUSTSEC-2025-0075", reason = "unic-char-range: transitive (idna→unicode-bidi chain); deprecated in favour of icu4x" },
-  { id = "RUSTSEC-2025-0080", reason = "unic-common: transitive (same chain as unic-char-range)" },
-  { id = "RUSTSEC-2025-0081", reason = "unic-char-property: transitive (same chain as unic-char-range)" },
-  { id = "RUSTSEC-2025-0098", reason = "unic-ucd-version: transitive (same chain as unic-char-range)" },
-  { id = "RUSTSEC-2025-0100", reason = "unic-ucd-ident: transitive (same chain as unic-char-range)" },
-
-  # NOTE: RUSTSEC-2024-0429 (glib VariantStrIter unsoundness, ex-Dependabot alert
-  # #7) is intentionally NOT in this list. cargo-deny's advisory-DB view does not
-  # match our transitive glib version, so an `ignore` here emits a spurious
-  # "advisory-not-detected" warning on every supply-chain CI run. It IS still
-  # reported by `cargo audit` / OSV (hence the Scorecard count) and is accepted
-  # there: we call no VariantStrIter API, so the unsound path is never entered.
-  # See docs/known-advisories.md. Re-add if a future bump makes cargo-deny match.
+  # de-Tauri cutover (ADR-0022): EVERY advisory previously ignored here was a
+  # Tauri / wry / webkit2gtk / GTK3 transitive — the 10 GTK3 advisories
+  # (RUSTSEC-2024-0411..0420), fxhash (via selectors), proc-macro-error, the
+  # unic-* idna→unicode-bidi chain, and glib (RUSTSEC-2024-0429). With the GUI
+  # crate deleted none of them appear in the tree any more, so the ignore list is
+  # now EMPTY. `cargo deny check advisories` proves it (no present-but-ignored
+  # advisory). This is the supply-chain payoff of the cutover.
 
   # NOTE: GitHub Dependabot alert #8 (RUSTSEC-2026-0097, rand 0.7/0.8 unsoundness
   # with custom logger via rand::rng()) is intentionally NOT in this list —

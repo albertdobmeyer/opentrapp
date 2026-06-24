@@ -267,11 +267,21 @@ if [ -d "app/src-tauri" ]; then
     fail "Cargo.toml missing"
   fi
 
-  # Check tauri.conf.json is valid JSON
-  if python3 -c "import json; json.load(open('app/src-tauri/tauri.conf.json'))" 2>/dev/null; then
-    pass "tauri.conf.json is valid JSON"
+  # Post de-Tauri cutover (ADR-0022): Cargo.toml is a PURE virtual workspace —
+  # no [package] (the GUI Tauri crate is gone), with the three headless members.
+  if grep -q '^\[package\]' app/src-tauri/Cargo.toml; then
+    fail "app/src-tauri/Cargo.toml still has a [package] — the Tauri GUI crate should be deleted (de-Tauri cutover)"
+  elif grep -q 'crates/core' app/src-tauri/Cargo.toml && grep -q 'crates/daemon' app/src-tauri/Cargo.toml && grep -q 'crates/viewer-server' app/src-tauri/Cargo.toml; then
+    pass "Cargo.toml is a virtual workspace (core + daemon + viewer-server, no Tauri package)"
   else
-    fail "tauri.conf.json is not valid JSON"
+    fail "Cargo.toml virtual workspace is missing a member (core/daemon/viewer-server)"
+  fi
+  # The cutover's headline security payoff: the lockfile is GTK/Tauri-free, so the
+  # 19 GTK3 RUSTSEC advisories are gone (Scorecard Vulnerabilities #46 clears).
+  if grep -qE '^name = "(tauri|wry|webkit2gtk|gtk|gdk-sys|glib)' app/src-tauri/Cargo.lock; then
+    fail "Cargo.lock still contains tauri/wry/webkit/gtk crates — the cutover did not fully remove the GUI stack"
+  else
+    pass "Cargo.lock is tauri/wry/webkit/gtk-free (the 19 GTK3 advisories are gone)"
   fi
 fi
 
@@ -302,55 +312,40 @@ else
 fi
 
 # =============================================================================
-section "6. Frontend-Backend Contract"
+section "6. Frontend ↔ viewer-server route contract (post de-Tauri, ADR-0022)"
 # =============================================================================
+# Post-cutover the GUI is a browser projection: app/src/lib/tauri.ts's invoke("cmd")
+# POSTs to /api/<cmd> on the loopback viewer-server. The old #[tauri::command]
+# contract is gone with the crate. Two invariants replace it:
+#   (1) every mounted /api route is reachable from the frontend (no orphan route
+#       silently exposed); and — the security one —
+#   (2) the boundary-weakening / lifecycle ops are DELIBERATELY NOT mounted
+#       (ADR-0021): the browser projection can never weaken the cage or own the
+#       perimeter lifecycle; those run through the daemon CLI with out-of-band
+#       confirmation. A route for any of them is a FAIL.
 
-# Verify Rust command handlers match frontend invoke() calls
-python3 -c "
-import re, os, sys, glob
-
-# Extract Rust #[tauri::command] function names. Recursive scan so
-# top-level modules (e.g. status_aggregator.rs) are picked up alongside
-# the commands/ submodule.
-rust_commands = set()
-for rs_file in glob.glob('app/src-tauri/src/**/*.rs', recursive=True):
-    with open(rs_file) as f:
-        content = f.read()
-    # Find pub async fn NAME after #[tauri::command]
-    for match in re.finditer(r'#\[tauri::command\]\s*pub\s+(?:async\s+)?fn\s+(\w+)', content):
-        rust_commands.add(match.group(1))
-
-# Extract frontend invoke() calls
-frontend_commands = set()
-for ts_file in glob.glob('app/src/lib/tauri.ts'):
-    with open(ts_file) as f:
-        content = f.read()
-    for match in re.finditer(r'invoke[<(].*?\"(\w+)\"', content):
-        frontend_commands.add(match.group(1))
-
-# Check registered in lib.rs
-with open('app/src-tauri/src/lib.rs') as f:
-    lib_content = f.read()
-registered = set(re.findall(r'(\w+)::\w+', lib_content.split('generate_handler!')[1].split(']')[0])) if 'generate_handler!' in lib_content else set()
-
-# Compare
+python3 - <<'PY' 2>/dev/null && pass "frontend↔viewer-server route contract holds (no orphan route; ADR-0021 boundary ops unmounted)" || warn "frontend↔viewer-server route contract mismatch (see output above)"
+import re, glob, sys, pathlib
+fe = set(re.findall(r'invoke[<(][^"\']*["\'](\w+)["\']', pathlib.Path('app/src/lib/tauri.ts').read_text()))
+routes = set()
+for f in glob.glob('app/src-tauri/crates/viewer-server/src/*.rs'):
+    routes |= set(re.findall(r'\.route\("/api/(\w+)"', pathlib.Path(f).read_text()))
+infra = {'session', 'events'}  # the bootstrap exchange + the WS, not invoke() commands
 errors = []
-
-# Frontend calls not in Rust
-for cmd in frontend_commands:
-    if cmd not in rust_commands:
-        errors.append(f'Frontend invokes \"{cmd}\" but no Rust handler exists')
-
-# Rust handlers not in frontend (info only)
-for cmd in rust_commands:
-    if cmd not in frontend_commands:
-        errors.append(f'Rust handler \"{cmd}\" has no frontend invoke (may be unused)')
-
-if errors:
-    for e in errors:
-        print(e)
-    sys.exit(1)
-" 2>/dev/null && pass "Frontend-backend command contract matches" || warn "Frontend-backend contract mismatch (see output above)"
+# (1) every functional route has a frontend caller — no orphan/extra surface.
+for r in sorted(routes - infra):
+    if r not in fe:
+        errors.append(f'viewer-server mounts /api/{r} but no frontend invoke uses it (orphan route)')
+# (2) ADR-0021: boundary-weakening + lifecycle ops must NOT be browser-reachable.
+DAEMON_ONLY = {'apply_allowlist_decision', 'pause_perimeter', 'restart_perimeter',
+               'resume_perimeter', 'commit_activation'}
+for d in sorted(DAEMON_ONLY):
+    if d in routes:
+        errors.append(f'DANGER: {d} is mounted as a viewer-server route — it must stay daemon-only (ADR-0021)')
+for e in errors:
+    print(e)
+sys.exit(1 if errors else 0)
+PY
 
 # =============================================================================
 section "7. Manifest-Schema Alignment"
@@ -971,18 +966,16 @@ for name, s in shields.items():
 sys.exit(0)
 PY
 
-python3 - <<'PY' 2>/dev/null && pass "build.rs stages manifests by profile (GUI renders only the profile's shields)" || fail "build.rs is not profile-driven (M2)"
-import sys, pathlib
-t = pathlib.Path('app/src-tauri/build.rs').read_text()
-sys.exit(0 if ('OPENTRAPP_PROFILE' in t and 'profile_manifests' in t) else 1)
-PY
-
-python3 - <<'PY' 2>/dev/null && pass "bootstrap verify is profile-aware + the standalone installer exists" || fail "bootstrap shell_services or scripts/install-shield.sh missing (M2)"
-import sys, pathlib
-boot = pathlib.Path('app/src-tauri/src/bootstrap/mod.rs').read_text()
-installer = pathlib.Path('scripts/install-shield.sh')
-sys.exit(0 if ('shell_services' in boot and installer.exists()) else 1)
-PY
+# de-Tauri cutover (ADR-0022): per-profile BUILD-TIME bundling lived in the
+# deleted build.rs (it staged only a profile's manifests into the Tauri AppImage).
+# The daemon now embeds ALL resources (orchestrator::embedded_resources); install-
+# time profile selection is the standalone installer's job (re-pointed below), and
+# build-time per-profile packaging is deferred to cargo-dist (ADR-0023).
+if [ -f scripts/install-shield.sh ]; then
+  pass "standalone shield installer present (install-time profile selection; ADR-0023)"
+else
+  fail "scripts/install-shield.sh missing — the standalone profile installer"
+fi
 
 # =============================================================================
 section "19. Adaptive containment (v0.6 M3)"
@@ -1022,39 +1015,16 @@ else
 fi
 
 # =============================================================================
-section "21. Per-profile image bundling (spec 05 §4f + §4b image side)"
+section "21. distribution.yml profile→containers integrity"
 # =============================================================================
-# build.rs must filter the image-digests.json overlay by OPENTRAPP_PROFILE
-# so that a `containment` build only bundles 3 images, not all 5. The mapping
-# must derive from distribution.yml (the single source) — not a hardcoded
-# Rust match that would duplicate it.
+# Build-TIME per-profile image bundling lived in the deleted build.rs (it
+# filtered the image overlay into the Tauri AppImage). Post de-Tauri cutover
+# (ADR-0022) the daemon fetches images via core::fetch_perimeter_images and
+# embeds all resources; build-time per-profile packaging is deferred to
+# cargo-dist (ADR-0023). distribution.yml remains the single source — pin that
+# the `containment` profile still maps to exactly the 3 always-on containers.
 
-python3 - <<'PY' 2>/dev/null && pass "build.rs has a stage_images function that filters by profile" || fail "build.rs is missing stage_images (spec 05 §4f — per-profile image bundling not implemented)"
-import sys, pathlib
-t = pathlib.Path('app/src-tauri/build.rs').read_text()
-# Must have: a stage_images function + read distribution.yml + use OPENTRAPP_PROFILE
-has_fn   = 'fn stage_images' in t
-reads_dist = 'distribution.yml' in t
-uses_profile = 'OPENTRAPP_PROFILE' in t
-sys.exit(0 if (has_fn and reads_dist and uses_profile) else 1)
-PY
-
-python3 - <<'PY' 2>/dev/null && pass "build.rs derives profile→containers from distribution.yml (not a hardcoded match)" || fail "build.rs uses a hardcoded container match instead of reading distribution.yml (single-source violation)"
-import sys, pathlib, re
-t = pathlib.Path('app/src-tauri/build.rs').read_text()
-# A hardcoded container match would look like:
-#   match profile { "containment" => &["vault-agent", ...], ...}
-# This is a FAIL — the containers list must come from distribution.yml.
-# We allow a hardcoded *manifest* match (profile_manifests stays), but a
-# separate containers match is banned; the image function must read the file.
-bad = bool(re.search(r'"vault-agent".*"vault-proxy".*"vault-egress"', t, re.DOTALL)
-           and 'fn profile_images' in t
-           and 'distribution.yml' not in t)
-# Pass when distribution.yml IS referenced.
-sys.exit(0 if 'distribution.yml' in t else 1)
-PY
-
-python3 - <<'PY' 2>/dev/null && pass "distribution.yml profile→containers mapping matches build.rs behaviour for 'containment'" || fail "distribution.yml or build.rs missing the containment→[vault-agent,vault-proxy,vault-egress] mapping"
+python3 - <<'PY' 2>/dev/null && pass "distribution.yml: the containment profile maps to exactly [vault-agent, vault-proxy, vault-egress]" || fail "distribution.yml is missing the containment→[vault-agent,vault-proxy,vault-egress] mapping"
 import sys, pathlib, yaml
 d = yaml.safe_load(pathlib.Path('distribution.yml').read_text())
 # Derive the containment profile's containers via the shields.
@@ -1115,31 +1085,21 @@ section "23. Sentinel GUI bridge + activity indicator (v0.6 slice 1)"
 # unit tests + the vitest hook test; these assert the cross-language wiring
 # (esp. the event-name contract) can't silently regress.
 
-if [ -f "app/src-tauri/src/commands/sentinel.rs" ]; then
-  pass "Sentinel GUI bridge module present (commands/sentinel.rs)"
+# de-Tauri cutover (ADR-0022): the Sentinel JUDGE — the security substance — is in
+# core::sentinel (pinned in section 17, with cargo tests asserting parse_verdict
+# never silently allows). The ACTIVITY INDICATOR (SentinelActivityStore + the
+# `sentinel-activity-changed` event) was Tauri-GUI-only and went with the deleted
+# crate; re-projecting it onto a viewer-server route is a tracked follow-up — it is
+# a display affordance, not a containment control. The React badge + hook survive
+# for that re-wiring.
+if grep -q 'pub fn parse_verdict' app/src-tauri/crates/core/src/sentinel.rs 2>/dev/null; then
+  pass "Sentinel judge lives in core::sentinel (transport-neutral; activity indicator is a viewer-server follow-up)"
 else
-  fail "commands/sentinel.rs missing (v0.6 GUI slice 1)"
+  fail "core::sentinel::parse_verdict missing — the judgment layer regressed"
 fi
 
-python3 - <<'PY' 2>/dev/null && pass "sentinel commands registered in lib.rs (judge + activity)" || fail "lib.rs does not register get_sentinel_activity + sentinel_judge"
-import sys, pathlib
-t = pathlib.Path('app/src-tauri/src/lib.rs').read_text()
-ok = ('commands::sentinel::get_sentinel_activity' in t
-      and 'commands::sentinel::sentinel_judge' in t
-      and 'SentinelActivityStore::new()' in t)
-sys.exit(0 if ok else 1)
-PY
-
-python3 - <<'PY' 2>/dev/null && pass "activity event-name contract matches (Rust emit ↔ React listen)" || fail "the sentinel-activity-changed event name differs between Rust and the hook"
-import sys, pathlib
-rust = pathlib.Path('app/src-tauri/src/commands/sentinel.rs').read_text()
-hook = pathlib.Path('app/src/hooks/useSentinelActivity.ts').read_text()
-ev = 'sentinel-activity-changed'
-sys.exit(0 if (ev in rust and ev in hook) else 1)
-PY
-
 if [ -f "app/src/components/user/SentinelActivityBadge.tsx" ] && [ -f "app/src/hooks/useSentinelActivity.ts" ]; then
-  pass "activity indicator surface present (badge + hook)"
+  pass "activity indicator frontend surface present (badge + hook, awaiting viewer-server re-wire)"
 else
   fail "the activity-indicator badge or hook is missing (GUI slice 1)"
 fi
@@ -1203,14 +1163,18 @@ PY
 section "26. Production Sentinel staging (v0.6 Item B)"
 # =============================================================================
 # The shared Sentinel lib must reach a PACKAGED build the same verified way as
-# every other policy artifact: build.rs stages sentinel/ into the bundle, the
-# shields bind-mount it :ro at /opt/sentinel (perimeter.yml kind: resource +
+# every other policy artifact. Post de-Tauri cutover (ADR-0022) that is no longer
+# build.rs staging into the Tauri bundle — it is EMBEDDED in core and extracted at
+# runtime (orchestrator::embedded_resources), signed-by-binary, byte-identical to
+# the canonical sentinel/ tree (the vendored-embeds drift check enforces it). The
+# shields still bind-mount it :ro at /opt/sentinel (perimeter.yml kind:resource +
 # dev compose.yml), and the Ollama runtime requirement is documented (spec 08 §5).
 
-python3 - <<'PY' 2>/dev/null && pass "build.rs stages the shared Sentinel lib into the bundle" || fail "build.rs does not stage sentinel/ into resources/perimeter/sentinel (Item B)"
+python3 - <<'PY' 2>/dev/null && pass "core embeds the shared Sentinel lib (extracted at runtime, signed-by-binary)" || fail "core does not embed sentinel/ — orchestrator::embedded_resources or the embedded copy is missing"
 import sys, pathlib
-t = pathlib.Path('app/src-tauri/build.rs').read_text()
-ok = 'fn stage_sentinel' in t and 'resources/perimeter/sentinel' in t and 'stage_sentinel()' in t
+emb = pathlib.Path('app/src-tauri/crates/core/src/embedded/perimeter-resources/sentinel')
+ext = pathlib.Path('app/src-tauri/crates/core/src/orchestrator/embedded_resources.rs').read_text()
+ok = emb.is_dir() and (emb / 'judge.sh').exists() and 'sentinel/judge.sh' in ext
 sys.exit(0 if ok else 1)
 PY
 
@@ -1249,19 +1213,17 @@ section "27. Allowlist approval — human-mediated loosening (v0.6 Item A)"
 # statically: the agent can never widen its own allowlist; clear exfil never
 # reaches the judge; exactly one code path writes the allowlist (spec 08 §4).
 
-if [ -f "app/src-tauri/crates/core/src/orchestrator/allowlist.rs" ] && [ -f "app/src-tauri/src/commands/egress.rs" ]; then
-  pass "allowlist-approval modules present (orchestrator/allowlist.rs + commands/egress.rs)"
+# de-Tauri cutover (ADR-0022): the allowlist single-writer LOGIC lives in
+# core::orchestrator::allowlist (it survives); the Tauri commands/egress.rs shim is
+# gone. The danger-gated apply_allowlist_decision was never routed (ADR-0021); the
+# read-only list_egress_approvals route is a viewer-server follow-up. The write-
+# boundary substance is pinned by the two checks below (off-allowlist-only +
+# single-writer), which read core directly.
+if [ -f "app/src-tauri/crates/core/src/orchestrator/allowlist.rs" ]; then
+  pass "allowlist single-writer module present (core::orchestrator::allowlist)"
 else
-  fail "allowlist-approval modules missing (orchestrator/allowlist.rs / commands/egress.rs)"
+  fail "core::orchestrator::allowlist missing — the human-mediated loosening write boundary"
 fi
-
-python3 - <<'PY' 2>/dev/null && pass "both egress commands registered in lib.rs" || fail "lib.rs does not register list_egress_approvals + apply_allowlist_decision"
-import sys, pathlib
-t = pathlib.Path('app/src-tauri/src/lib.rs').read_text()
-ok = ('commands::egress::list_egress_approvals' in t
-      and 'commands::egress::apply_allowlist_decision' in t)
-sys.exit(0 if ok else 1)
-PY
 
 python3 - <<'PY' 2>/dev/null && pass "clear exfil never reaches the judge (only off-allowlist BLOCKED surfaces)" || fail "allowlist.rs parse does not gate on action==BLOCKED + the off-allowlist reason"
 import sys, pathlib
@@ -1429,13 +1391,10 @@ else
   fail "podman.rs still boots the full start_order() (on-demand not skipped)"
 fi
 
-python3 - <<'PY' 2>/dev/null && pass "bootstrap shell_services() no longer requires the on-demand shields" || fail "bootstrap shell_services() still lists vault-skills/social (verify would fail)"
-import sys, re, pathlib
-t = pathlib.Path('app/src-tauri/src/bootstrap/mod.rs').read_text()
-m = re.search(r'fn shell_services\(\).*?\n}', t, re.S)
-ok = bool(m) and 'vault-skills' not in m.group(0) and 'vault-social' not in m.group(0)
-sys.exit(0 if ok else 1)
-PY
+# de-Tauri cutover (ADR-0022): the Tauri bootstrap shell_services() mirror is gone;
+# perimeter.rs boot_services() + podman.rs (checked above) already prove the shields
+# are skipped at boot, and the authoritative on-demand start-if-needed gate in core
+# is checked below — no separate bootstrap check needed.
 
 # The on-demand shield start-if-needed step was lifted into opentrapp-core (ADR-0022
 # migration step 1: crates/core/src/execute.rs), so BOTH the Tauri command shim AND the
