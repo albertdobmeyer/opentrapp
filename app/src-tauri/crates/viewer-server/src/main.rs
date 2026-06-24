@@ -7,6 +7,7 @@
 #![allow(dead_code)] // SPIKE: some scaffold paths (events WS, browser-open) still being wired.
 
 mod events;
+mod launcher;
 mod routes;
 mod security;
 mod session;
@@ -81,10 +82,21 @@ async fn main() -> anyhow::Result<()> {
     let dist_dir = std::env::var("OPENTRAPP_VIEWER_DIST").ok().map(PathBuf::from);
     let app = build_app(sec, app_state, shared_session, dist_dir);
 
-    // §2.3 — open the browser to the BARE loopback URL with the nonce in the FRAGMENT (#n=…),
-    // never a query string (that is the leak we designed out). TODO: xdg-open/open/start
-    // directly (NOT tauri-plugin-shell). For the spike, print it.
-    eprintln!("[viewer-server] open: http://127.0.0.1:{}/#n={nonce}", addr.port());
+    // §2.3 — open the browser to the BARE loopback URL with the nonce in the FRAGMENT (#n=…), never
+    // a query string (the leak we designed out). The on-demand launcher (step 4) opens it via the
+    // OS default-browser opener (xdg-open / open / start — NOT tauri-plugin-shell). Set
+    // OPENTRAPP_VIEWER_NO_OPEN=1 for headless / CI / a remote shell — then we only print the URL.
+    let url = format!("http://127.0.0.1:{}/#n={nonce}", addr.port());
+    if std::env::var_os("OPENTRAPP_VIEWER_NO_OPEN").is_some() {
+        eprintln!("[viewer-server] open this URL in your browser: {url}");
+    } else {
+        match launcher::open_browser(&url) {
+            Ok(()) => eprintln!("[viewer-server] opened the control panel in your browser ({url})"),
+            Err(e) => {
+                eprintln!("[viewer-server] couldn't auto-open a browser ({e}); open this URL yourself: {url}")
+            }
+        }
+    }
 
     axum::serve(listener, app).await?;
     Ok(())
