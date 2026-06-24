@@ -24,7 +24,7 @@ use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+    Emitter, Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_store::StoreExt;
 
@@ -234,6 +234,18 @@ pub fn run() {
             // and rebuilt on demand from the tray. (windows:[] in tauri.conf.json
             // means we own window creation here, not at config-time.)
             open_dashboard(app.handle());
+            // Bridge the core event bus → the Tauri event system (ADR-0022 §4): `core::stream`
+            // (and future emitters) emit to `AppState.event_bus`; forward every event to the
+            // webview's `listen()` hooks via `AppHandle::emit`. One core, two transports — the
+            // loopback viewer-server fans the same bus out to its WS.
+            let event_bus = app.state::<AppState>().event_bus.clone();
+            let emit_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let mut rx = event_bus.subscribe();
+                while let Ok(env) = rx.recv().await {
+                    let _ = emit_handle.emit(env.event.as_str(), env.payload);
+                }
+            });
             // Install Unix signal handlers (SIGTERM, SIGINT → graceful exit).
             install_signal_handlers(app.handle().clone());
             // Spawn the perimeter-state watchdog.
