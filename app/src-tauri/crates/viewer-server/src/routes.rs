@@ -20,30 +20,43 @@ use axum::{
 };
 use serde::Deserialize;
 
+use opentrapp_core::events::EventBus;
 use opentrapp_core::orchestrator::discovery::{discover_components, DiscoveredComponent};
 use opentrapp_core::orchestrator::error::OrchestratorError;
 use opentrapp_core::orchestrator::runner::CommandResult;
+use opentrapp_core::stream::ActiveStreams;
 
 /// Shared route state: the discovered workload manifests (the slice the core fns operate on,
 /// cached once at startup like the Tauri backend's component cache) + the runtime data dir (where
-/// the perimeter / on-demand shields live). The server adds NO orchestration logic — it calls core.
+/// the perimeter / on-demand shields live) + the event bus (streaming commands emit `stream-line` /
+/// `stream-end` here; the `/api/events` WS fans them out) + the active-stream PID table. The server
+/// adds NO orchestration logic — it calls core.
 #[derive(Clone)]
 pub struct AppState {
     pub components: Arc<Vec<DiscoveredComponent>>,
     pub runtime_data_dir: PathBuf,
     pub monorepo_root: PathBuf,
+    pub event_bus: EventBus,
+    pub active_streams: Arc<ActiveStreams>,
 }
 
 impl AppState {
     /// Discover the workload manifests under `monorepo_root` and cache them (mirrors the Tauri
     /// backend populating its component cache at startup). `runtime_data_dir` is where the
-    /// perimeter `.env` + on-demand shields live (`~/.opentrapp` in production).
+    /// perimeter `.env` + on-demand shields live (`~/.opentrapp` in production). A fresh event bus +
+    /// active-stream table are created here; `main` clones the bus into the `/api/events` WS router.
     pub fn discover(
         monorepo_root: PathBuf,
         runtime_data_dir: PathBuf,
     ) -> Result<Self, OrchestratorError> {
         let components = Arc::new(discover_components(&monorepo_root)?);
-        Ok(Self { components, runtime_data_dir, monorepo_root })
+        Ok(Self {
+            components,
+            runtime_data_dir,
+            monorepo_root,
+            event_bus: EventBus::new(),
+            active_streams: Arc::new(ActiveStreams::default()),
+        })
     }
 }
 
@@ -74,6 +87,10 @@ pub fn router(state: AppState) -> Router {
         .route("/api/telegram_poll_for_start", post(telegram_poll_for_start))
         .route("/api/telegram_send_message", post(telegram_send_message))
         .route("/api/telegram_advance_offset", post(telegram_advance_offset))
+        // streaming command output — emits stream-line/stream-end to the bus the /api/events WS
+        // fans out (the high-frequency event path the WS was designed for, spec §1.2)
+        .route("/api/start_stream", post(start_stream))
+        .route("/api/stop_stream", post(stop_stream))
         .with_state(state)
 }
 
@@ -117,6 +134,12 @@ struct RunCommandArgs {
     component_id: String,
     command_id: String,
     args: HashMap<String, String>,
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StopStreamArgs {
+    component_id: String,
+    command_id: String,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -282,6 +305,35 @@ async fn run_command(
     )
     .await?;
     outcome.result.map(Json).map_err(ApiError::from)
+}
+
+/// Start streaming a command's output. Lines arrive asynchronously as `stream-line` / `stream-end`
+/// events on the bus, which the `/api/events` WS fans out to the browser (mirrors the Tauri
+/// `start_stream` + its `emit`). Returns `()` once the process is spawned.
+async fn start_stream(
+    State(st): State<AppState>,
+    Json(a): Json<RunCommandArgs>,
+) -> Result<Json<()>, ApiError> {
+    opentrapp_core::stream::start_stream(
+        &st.components,
+        &st.active_streams,
+        &st.event_bus,
+        a.component_id,
+        a.command_id,
+        &a.args,
+    )
+    .await?;
+    Ok(Json(()))
+}
+
+/// Stop a running stream (best-effort kill). Never boundary-weakening — it only cancels a process
+/// this server started.
+async fn stop_stream(
+    State(st): State<AppState>,
+    Json(a): Json<StopStreamArgs>,
+) -> Result<Json<()>, ApiError> {
+    opentrapp_core::stream::stop_stream(&st.active_streams, &a.component_id, &a.command_id)?;
+    Ok(Json(()))
 }
 
 async fn execute_workflow(

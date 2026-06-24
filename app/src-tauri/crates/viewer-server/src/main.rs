@@ -28,9 +28,10 @@ fn build_app(
     session: session::SharedSession,
     dist_dir: Option<PathBuf>,
 ) -> Router {
+    let event_bus = app_state.event_bus.clone(); // shared with the WS so route emissions reach clients
     let api = routes::router(app_state)
         .merge(session::router(session)) // /api/session nonce→bearer bootstrap exchange
-        .merge(events::router()); // /api/events WS (bearer-cookie auth on the handshake, via the §2 layer)
+        .merge(events::router(event_bus)); // /api/events WS (bearer-cookie auth on the handshake, via the §2 layer)
 
     // Serve the built React app from `dist/` with an index.html SPA fallback (client-side routes);
     // fall back to the placeholder shell when there is no build (dev / tests).
@@ -262,19 +263,21 @@ mod integration {
         let _ = std::fs::remove_dir_all(&dist);
     }
 
-    /// Risk item #3 — the bursty `stream-line` path carries over the WS, end-to-end through a
-    /// REAL server: the handshake passes Host + Origin + the bearer COOKIE (the auth model a real
-    /// browser uses — the cookie rides the upgrade request; first-frame auth is impossible with an
-    /// HttpOnly cookie), then the stream-line frame arrives with the expected payload.
+    /// The bursty event path carries over the WS, end-to-end through a REAL server: the handshake
+    /// passes Host + Origin + the bearer COOKIE (the auth model a real browser uses — the cookie
+    /// rides the upgrade request; first-frame auth is impossible with an HttpOnly cookie), then an
+    /// event emitted on the core `EventBus` is forwarded to the client as a `{event, payload}` frame.
     #[tokio::test]
-    async fn ws_carries_stream_line_with_handshake_cookie_auth() {
+    async fn ws_forwards_a_bus_event_after_handshake_cookie_auth() {
         use futures_util::StreamExt;
+        use std::time::Duration;
         use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 
         let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
         let port = listener.local_addr().unwrap().port();
         let sec = security::SecurityState { port, token: Arc::new("tok".to_string()) };
         let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).unwrap();
+        let bus = state.event_bus.clone(); // clone the bus before `state` moves into the app
         let app = build_app(sec, state, dummy_session(), None);
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
@@ -285,8 +288,23 @@ mod integration {
         req.headers_mut().insert("cookie", "otv_bearer=tok".parse().unwrap());
         let (mut ws, _resp) = tokio_tungstenite::connect_async(req).await.unwrap();
 
-        // No first frame needed — the stream-line arrives straight away.
-        let msg = ws.next().await.unwrap().unwrap();
+        // Emit repeatedly (the handler subscribes asynchronously just after the upgrade — re-emitting
+        // closes that race deterministically without sleeping on a fixed delay).
+        tokio::spawn(async move {
+            for _ in 0..50 {
+                bus.emit(
+                    "stream-line",
+                    serde_json::json!({ "component_id": "agent", "line": "hello from the perimeter", "stream": "stdout" }),
+                );
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+        });
+
+        let msg = tokio::time::timeout(Duration::from_secs(5), ws.next())
+            .await
+            .expect("a frame within the timeout")
+            .unwrap()
+            .unwrap();
         let v: serde_json::Value = serde_json::from_str(&msg.into_text().unwrap()).unwrap();
         assert_eq!(v["event"], "stream-line");
         assert_eq!(v["payload"]["line"], "hello from the perimeter");
