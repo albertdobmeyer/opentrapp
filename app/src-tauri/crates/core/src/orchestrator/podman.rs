@@ -1505,4 +1505,277 @@ mod tests {
         assert_eq!(last_activity_ms_from_log("", now), None);
         assert_eq!(last_activity_ms_from_log("not json\n{bad", now), None);
     }
+
+    // ========================================================================
+    // SECURITY PIN SUITE — perimeter resource provisioning (ADR-0019/0022).
+    //
+    // These pins lock one contract: the perimeter's mounted security policy is
+    // ALWAYS fully provisioned into the runtime resource dir, byte-identical to
+    // its canonical source, with exec bits intact. They are GREEN today against
+    // `stage_resources_from_bundle` (the recursive-copy primitive, which SURVIVES
+    // the de-Tauri cutover). At the cutover the `provision_into` SEAM below swaps
+    // from "copy the Tauri-bundled dir" to "extract the bytes embedded in the
+    // signed binary"; THE #[test] ASSERTION BODIES MUST NOT CHANGE. A red pin =
+    // a dropped policy file, a lost exec bit, or content drift — i.e. a silently
+    // broken boundary. They fail LOUD and never skip (a skipped security pin is
+    // exactly the gloss this suite exists to prevent).
+    // ========================================================================
+
+    struct ResourceEntry {
+        src: PathBuf,
+        dest: String,
+        exec: bool,
+    }
+
+    /// Ascend from this crate to the repo root (the dir holding `compose.yml` +
+    /// `workloads/`). Panics — never skips — if not found: these pins must RUN.
+    fn pin_repo_root() -> PathBuf {
+        let mut dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        loop {
+            if dir.join("compose.yml").is_file() && dir.join("workloads").is_dir() {
+                return dir;
+            }
+            if !dir.pop() {
+                panic!(
+                    "security pin: repo root (compose.yml + workloads/) not found from \
+                     CARGO_MANIFEST_DIR — run the pins from the workspace checkout"
+                );
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    fn pin_is_executable(p: &Path) -> bool {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::metadata(p)
+            .map(|m| m.permissions().mode() & 0o111 != 0)
+            .unwrap_or(false)
+    }
+    #[cfg(not(unix))]
+    fn pin_is_executable(_p: &Path) -> bool {
+        false
+    }
+
+    fn pin_walk_files(dir: &Path) -> Vec<PathBuf> {
+        let mut out = Vec::new();
+        if let Ok(rd) = std::fs::read_dir(dir) {
+            for e in rd.flatten() {
+                let p = e.path();
+                if p.is_dir() {
+                    out.extend(pin_walk_files(&p));
+                } else if p.is_file() {
+                    out.push(p);
+                }
+            }
+        }
+        out
+    }
+
+    /// The canonical-source → resource-dir-relative-dest mapping the perimeter
+    /// depends on. SINGLE SOURCE OF TRUTH for both the synthetic bundle and the
+    /// assertions. Mirrors build.rs STAGED_RESOURCES + stage_manifests +
+    /// stage_sentinel. The sentinel tree is walked dynamically (excluding
+    /// `*.test.sh`, runtime-only) so an added sentinel file can never silently
+    /// escape provisioning.
+    fn pin_expected_resources(root: &Path) -> Vec<ResourceEntry> {
+        let mut v = vec![
+            ResourceEntry {
+                src: root.join("workloads/agent/config/vault-seccomp.json"),
+                dest: "vault-seccomp.json".into(),
+                exec: false,
+            },
+            ResourceEntry {
+                src: root.join("workloads/agent/config/vault-proxy-seccomp.json"),
+                dest: "vault-proxy-seccomp.json".into(),
+                exec: false,
+            },
+            ResourceEntry {
+                src: root.join("infra/proxy/vault-proxy.py"),
+                dest: "vault-proxy.py".into(),
+                exec: false,
+            },
+            ResourceEntry {
+                src: root.join("infra/proxy/allowlist.txt"),
+                dest: "allowlist.txt".into(),
+                exec: false,
+            },
+            ResourceEntry {
+                src: root.join("infra/egress/resolv.conf"),
+                dest: "resolv.conf".into(),
+                exec: false,
+            },
+        ];
+        for wl in ["agent", "skills", "social"] {
+            v.push(ResourceEntry {
+                src: root.join(format!("workloads/{wl}/component.yml")),
+                dest: format!("manifests/{wl}/component.yml"),
+                exec: false,
+            });
+        }
+        let sentinel_root = root.join("sentinel");
+        for src in pin_walk_files(&sentinel_root) {
+            let name = src.file_name().unwrap().to_string_lossy().to_string();
+            if name.ends_with(".test.sh") {
+                continue;
+            }
+            let rel = src.strip_prefix(&sentinel_root).unwrap();
+            let exec = pin_is_executable(&src);
+            v.push(ResourceEntry {
+                dest: format!("sentinel/{}", rel.to_string_lossy()),
+                exec,
+                src,
+            });
+        }
+        v
+    }
+
+    /// A unique, clean scratch dir (no Date/random needed — keyed by the tag and
+    /// the running thread, removed first so it is always fresh).
+    fn pin_tmp(tag: &str) -> PathBuf {
+        let p = std::env::temp_dir().join(format!("{tag}-{:?}", std::thread::current().id()));
+        let _ = std::fs::remove_dir_all(&p);
+        std::fs::create_dir_all(&p).unwrap();
+        p
+    }
+
+    /// THE SWAP SEAM. Today: replicate build.rs staging into a bundle, then run
+    /// the real `stage_resources_from_bundle` copy primitive. AT THE DE-TAURI
+    /// CUTOVER replace this body with a single call to the embedded extractor
+    /// (e.g. `extract_embedded_resources(dst).unwrap();`). Do NOT touch the
+    /// assertions in the #[test]s below.
+    fn pin_provision_into(dst: &Path) {
+        let root = pin_repo_root();
+        let bundle = pin_tmp("opentrapp-pin-bundle");
+        for r in pin_expected_resources(&root) {
+            let bdest = bundle.join(&r.dest);
+            std::fs::create_dir_all(bdest.parent().unwrap()).unwrap();
+            std::fs::copy(&r.src, &bdest)
+                .unwrap_or_else(|e| panic!("canonical source missing: {} ({e})", r.src.display()));
+        }
+        stage_resources_from_bundle(&bundle, dst).unwrap();
+        let _ = std::fs::remove_dir_all(&bundle);
+    }
+
+    #[test]
+    fn pin_every_perimeter_resource_mount_and_seccomp_is_provisioned() {
+        // ANTI-DRIFT CROSS-CHECK: every `kind: resource` mount source and every
+        // `seccomp:` profile that perimeter.yml references MUST be produced by
+        // provisioning. If perimeter.yml grows a new resource mount, the embedded
+        // set must include it or this fails — the perimeter can never mount a
+        // policy file that provisioning failed to deliver.
+        let spec = perimeter::load().unwrap();
+        let dst = pin_tmp("opentrapp-pin-xref");
+        pin_provision_into(&dst);
+
+        let mut required: Vec<String> = Vec::new();
+        for svc in spec.services.values() {
+            if let Some(sc) = &svc.seccomp {
+                required.push(sc.clone());
+            }
+            for vol in &svc.volumes {
+                if matches!(vol.kind, perimeter::MountKind::Resource) {
+                    required.push(vol.source.clone());
+                }
+            }
+        }
+        required.sort();
+        required.dedup();
+        assert!(
+            !required.is_empty(),
+            "perimeter.yml must declare resource/seccomp mounts"
+        );
+        for name in &required {
+            let p = dst.join(name);
+            assert!(
+                p.exists(),
+                "perimeter.yml mounts `{name}` (kind:resource / seccomp) but \
+                 provisioning produced no {} — the boundary would fail to start",
+                p.display()
+            );
+        }
+        let _ = std::fs::remove_dir_all(&dst);
+    }
+
+    #[test]
+    fn pin_provisioned_resources_are_byte_identical_to_canonical_source() {
+        let root = pin_repo_root();
+        let dst = pin_tmp("opentrapp-pin-bytes");
+        pin_provision_into(&dst);
+        let entries = pin_expected_resources(&root);
+        assert!(entries.len() >= 13, "expected the full policy set, got {}", entries.len());
+        for r in entries {
+            let got = std::fs::read(dst.join(&r.dest))
+                .unwrap_or_else(|e| panic!("not provisioned: {} ({e})", r.dest));
+            let want = std::fs::read(&r.src).unwrap();
+            assert_eq!(
+                got, want,
+                "provisioned `{}` differs from canonical source {} — policy content drift",
+                r.dest,
+                r.src.display()
+            );
+        }
+        let _ = std::fs::remove_dir_all(&dst);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn pin_provisioned_scripts_keep_their_exec_bit() {
+        let root = pin_repo_root();
+        let dst = pin_tmp("opentrapp-pin-exec");
+        pin_provision_into(&dst);
+        let mut checked = 0;
+        for r in pin_expected_resources(&root).into_iter().filter(|r| r.exec) {
+            assert!(
+                pin_is_executable(&dst.join(&r.dest)),
+                "provisioned `{}` lost its exec bit — the in-container shield cannot run it",
+                r.dest
+            );
+            checked += 1;
+        }
+        assert!(
+            checked >= 4,
+            "expected the sentinel shield scripts (judge/embed/config/egress-advisor) \
+             to be exec-checked, got {checked}"
+        );
+        let _ = std::fs::remove_dir_all(&dst);
+    }
+
+    #[test]
+    fn pin_reprovisioning_overwrites_tampering() {
+        // The runtime resource dir is re-provisioned on every launch so a tampered
+        // policy file is overwritten from the signed source (the documented
+        // stage_resources_from_bundle contract). A compromised host write must not
+        // survive a perimeter restart.
+        let root = pin_repo_root();
+        let dst = pin_tmp("opentrapp-pin-tamper");
+        pin_provision_into(&dst);
+        let victim = dst.join("allowlist.txt");
+        std::fs::write(&victim, "evil.example.com\n").unwrap();
+        pin_provision_into(&dst); // re-provision overwrites
+        let restored = std::fs::read(&victim).unwrap();
+        let canonical = std::fs::read(root.join("infra/proxy/allowlist.txt")).unwrap();
+        assert_eq!(
+            restored, canonical,
+            "re-provisioning must overwrite a tampered allowlist with the canonical source"
+        );
+        let _ = std::fs::remove_dir_all(&dst);
+    }
+
+    #[test]
+    fn pin_seccomp_profiles_are_valid_json_with_a_default_action() {
+        // The seccomp profiles are load-bearing syscall containment. Pin that they
+        // parse as JSON and declare a defaultAction — an empty/garbage profile
+        // would silently weaken the filter.
+        let root = pin_repo_root();
+        for name in ["vault-seccomp.json", "vault-proxy-seccomp.json"] {
+            let path = root.join("workloads/agent/config").join(name);
+            let txt = std::fs::read_to_string(&path).unwrap();
+            let json: serde_json::Value = serde_json::from_str(&txt)
+                .unwrap_or_else(|e| panic!("{name} is not valid JSON: {e}"));
+            assert!(
+                json.get("defaultAction").and_then(|v| v.as_str()).is_some(),
+                "{name} must declare a defaultAction (the syscall default posture)"
+            );
+        }
+    }
 }
