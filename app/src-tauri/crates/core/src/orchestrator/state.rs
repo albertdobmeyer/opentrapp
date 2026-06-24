@@ -14,6 +14,11 @@ pub struct AppState {
     pub components: Mutex<Vec<DiscoveredComponent>>,
     pub component_states: Mutex<HashMap<String, String>>,
     pub active_streams: Mutex<HashMap<String, u32>>, // component:command -> child PID
+    /// The transport-neutral event bus (ADR-0022 §4). `core::stream` emits `stream-line` /
+    /// `stream-end` here; a forwarder spawned in `lib.rs` setup re-emits each event via the Tauri
+    /// `AppHandle::emit` so the webview's `listen()` hooks still receive them. One core, two
+    /// transports (the loopback viewer-server fans the same bus out to its WS).
+    pub event_bus: crate::events::EventBus,
     /// Pending idle-stop timers for on-demand shields (e.g. `vault-skills`),
     /// keyed by service name. A command (re)arms the timer; when it fires it
     /// stops the container. Re-arming aborts the previous handle so bursts of
@@ -50,6 +55,7 @@ impl AppState {
             waker: Mutex::new(None),
             quitting: AtomicBool::new(false),
             daemon_owned: AtomicBool::new(false),
+            event_bus: crate::events::EventBus::new(),
         }
     }
 }
