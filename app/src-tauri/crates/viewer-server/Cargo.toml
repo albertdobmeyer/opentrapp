@@ -12,6 +12,10 @@ name = "viewer-server"
 version = "0.1.0"
 edition = "2021"
 publish = false
+# MIT like the rest of the workspace. Required now that the de-Tauri cutover makes
+# this a top-level virtual-workspace member, so `cargo deny check licenses` sees it
+# (previously the graph rooted at the opentrapp package, which depended only on core).
+license = "MIT"
 
 [dependencies]
 # Pure-Rust async HTTP/WS — verified zero gtk/webkit (ADR-0022 §4).
