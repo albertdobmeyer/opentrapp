@@ -344,5 +344,101 @@ class CredentialInjectionTests(unittest.TestCase):
             os.unlink(cfg)
 
 
+class ExfiltrationAndRedactionPins(unittest.TestCase):
+    """SECURITY PIN SUITE — the L7 exfiltration/leak controls that were unpinned.
+
+    These lock the proxy's three hard controls so the WS-C Rust rewrite (which
+    must reproduce them EXACTLY) and any refactor cannot silently drop them:
+      1. an oversized outbound request is blocked 413 BEFORE the API key is
+         injected — a real key never rides a blocked exfiltration attempt;
+      2. an oversized response is blocked 413;
+      3. an API key reflected back in a response body is redacted before it can
+         reach the agent.
+    (Egress JSONL logging is observability — exercised by the live boundary
+    self-test that idle-auto-pause reads — deliberately out of scope here, not
+    silently dropped.) Thresholds are patched small so the pins stay lean.
+    """
+
+    mod = _VAULT_PROXY_MOD
+    proxy = _VAULT_PROXY_INSTANCE
+
+    @staticmethod
+    def _make_capturing_response():
+        def make(status, content=b"", headers=None):
+            return types.SimpleNamespace(status_code=status, content=content, headers=headers or {})
+        return types.SimpleNamespace(make=make)
+
+    def test_oversized_request_is_blocked_before_key_injection(self):
+        from unittest.mock import patch
+        flow = types.SimpleNamespace(
+            request=types.SimpleNamespace(
+                pretty_host="api.anthropic.com", method="POST",
+                pretty_url="https://api.anthropic.com/v1/messages",
+                content=b"x" * 11, headers={},
+            ),
+            response=None,
+        )
+        public = [(2, 1, 0, "", ("8.8.8.8", 0))]  # getaddrinfo → public, not rebinding
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-secret-KEY"}, clear=False), \
+                patch.object(self.mod.socket, "getaddrinfo", return_value=public), \
+                patch.object(self.mod, "EXFIL_THRESHOLD_BYTES", 10), \
+                patch.object(self.mod.http, "Response", self._make_capturing_response()):
+            self.proxy.request(flow)
+        self.assertIsNotNone(flow.response, "oversized outbound request must be blocked")
+        self.assertEqual(flow.response.status_code, 413)
+        # THE security property: the real key was NEVER attached to the blocked request.
+        self.assertNotIn("x-api-key", flow.request.headers)
+
+    def test_request_at_threshold_still_injects_key(self):
+        # Boundary: exactly-threshold is NOT over-threshold, so a normal request
+        # still gets its key — the block must not be an off-by-one over-block.
+        from unittest.mock import patch
+        flow = types.SimpleNamespace(
+            request=types.SimpleNamespace(
+                pretty_host="api.anthropic.com", method="POST",
+                pretty_url="https://api.anthropic.com/v1/messages",
+                content=b"x" * 10, headers={},
+            ),
+            response=None,
+        )
+        public = [(2, 1, 0, "", ("8.8.8.8", 0))]
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-secret-KEY"}, clear=False), \
+                patch.object(self.mod.socket, "getaddrinfo", return_value=public), \
+                patch.object(self.mod, "EXFIL_THRESHOLD_BYTES", 10), \
+                patch.object(self.mod.http, "Response", self._make_capturing_response()):
+            self.proxy.request(flow)
+        self.assertIsNone(flow.response, "at-threshold request must not be blocked")
+        self.assertEqual(flow.request.headers.get("x-api-key"), "sk-secret-KEY")
+
+    def test_oversized_response_is_blocked(self):
+        from unittest.mock import patch
+        flow = types.SimpleNamespace(
+            request=types.SimpleNamespace(pretty_url="https://api.anthropic.com/v1/x"),
+            response=types.SimpleNamespace(
+                status_code=200, content=b"x" * 11,
+                headers=types.SimpleNamespace(fields=()),
+            ),
+        )
+        with patch.object(self.mod, "EXFIL_RESPONSE_THRESHOLD_BYTES", 10), \
+                patch.object(self.mod.http, "Response", self._make_capturing_response()):
+            self.proxy.response(flow)
+        self.assertEqual(flow.response.status_code, 413)
+
+    def test_reflected_api_key_is_redacted_from_response_body(self):
+        from unittest.mock import patch
+        flow = types.SimpleNamespace(
+            request=types.SimpleNamespace(pretty_url="https://api.anthropic.com/v1/x"),
+            response=types.SimpleNamespace(
+                status_code=200,
+                content=b'{"echo":"sk-secret-KEY leaked here"}',
+                headers=types.SimpleNamespace(fields=()),
+            ),
+        )
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-secret-KEY", "OPENAI_API_KEY": ""}, clear=False):
+            self.proxy.response(flow)
+        self.assertNotIn(b"sk-secret-KEY", flow.response.content)
+        self.assertIn(b"[REDACTED_BY_VAULT]", flow.response.content)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
