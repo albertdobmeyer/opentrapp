@@ -40,8 +40,11 @@ pub async fn enforce(State(st): State<SecurityState>, req: Request, next: Next) 
             return (StatusCode::FORBIDDEN, "forbidden origin").into_response();
         }
         // §2.3 — bearer required on the API surface EXCEPT the nonce-exchange bootstrap
-        // (/api/session) and the WS handshake (/api/events authenticates in its FIRST FRAME).
-        let bearer_exempt = path == "/api/session" || path == "/api/events";
+        // (/api/session), which is where the bearer is first issued. The /api/events WS handshake
+        // IS bearer-gated here, via the HttpOnly cookie the browser sends automatically on the
+        // upgrade request — first-frame auth is impossible (JS can't read the HttpOnly cookie to
+        // send it), so the handshake cookie + the Origin check above (anti-CSWSH) is the auth.
+        let bearer_exempt = path == "/api/session";
         if !bearer_exempt && !bearer_ok(cookie_bearer(headers).as_deref(), st.token.as_str()) {
             return (StatusCode::UNAUTHORIZED, "unauthorized").into_response();
         }
@@ -80,12 +83,12 @@ pub fn origin_allowed(origin_header: Option<&str>, port: u16) -> bool {
 }
 
 /// §2.3 — bearer check. The long-lived token arrives as an HttpOnly+SameSite=Strict cookie
-/// (after the /api/session nonce exchange) or, for the WS, in the first frame. NEVER from a
-/// query string / URL (that is the leak we designed out). Tokenless → 401.
-pub fn bearer_ok(cookie_or_first_frame: Option<&str>, expected: &str) -> bool {
+/// (after the /api/session nonce exchange) — for both `/api/*` requests AND the `/api/events` WS
+/// handshake. NEVER from a query string / URL (that is the leak we designed out). Tokenless → 401.
+pub fn bearer_ok(cookie: Option<&str>, expected: &str) -> bool {
     // Constant-time value compare. TTL + revocation are enforced by the session layer (the
     // caller passes the live `expected`, or None once revoked); a tokenless request fails here.
-    match cookie_or_first_frame {
+    match cookie {
         Some(presented) => constant_time_eq(presented.as_bytes(), expected.as_bytes()),
         None => false,
     }
@@ -203,6 +206,10 @@ mod mw_tests {
             .route("/", get(|| async { "spa-shell" }))
             .route("/api/get_status", post(|| async { "ok" }))
             .route("/api/session", post(|| async { "exchanged" }))
+            // WS handshake stand-in — a plain GET so we can assert the §2 middleware gates the
+            // /api/events upgrade on the bearer COOKIE (the real client can't send a first-frame
+            // bearer — the cookie is HttpOnly — so cookie-on-handshake is the only workable auth).
+            .route("/api/events", get(|| async { "ws-upgrade" }))
             .layer(axum::middleware::from_fn_with_state(st, enforce))
     }
 
@@ -254,6 +261,36 @@ mod mw_tests {
             .body(Body::empty())
             .unwrap();
         assert_eq!(code(app(8080, "tok"), r).await, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn ws_handshake_requires_the_bearer_cookie() {
+        // The /api/events WS handshake is bearer-gated like every other /api/* route — via the
+        // HttpOnly cookie on the upgrade request (first-frame auth is impossible: JS can't read the
+        // cookie). Tokenless handshake → 401; cross-site is still blocked by Origin (next test set).
+        let tokenless = Req::get("/api/events")
+            .header("host", "127.0.0.1:8080")
+            .header("origin", "http://127.0.0.1:8080")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(code(app(8080, "tok"), tokenless).await, StatusCode::UNAUTHORIZED);
+
+        let withcookie = Req::get("/api/events")
+            .header("host", "127.0.0.1:8080")
+            .header("origin", "http://127.0.0.1:8080")
+            .header("cookie", "otv_bearer=tok")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(code(app(8080, "tok"), withcookie).await, StatusCode::OK);
+
+        // a forged Origin is rejected on the handshake even WITH the cookie (anti-CSWSH)
+        let crossorigin = Req::get("/api/events")
+            .header("host", "127.0.0.1:8080")
+            .header("origin", "http://attacker.com")
+            .header("cookie", "otv_bearer=tok")
+            .body(Body::empty())
+            .unwrap();
+        assert_eq!(code(app(8080, "tok"), crossorigin).await, StatusCode::FORBIDDEN);
     }
 
     #[tokio::test]
