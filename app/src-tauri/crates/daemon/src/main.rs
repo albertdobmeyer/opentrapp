@@ -15,7 +15,7 @@
 //!   `--selftest`       exercise the marker contract end-to-end, exit 0/1
 //!   `--help`           usage
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
 
@@ -33,6 +33,11 @@ async fn main() -> ExitCode {
     // `--help` scan so `vault --help` reaches the vault help, not the top-level one.
     if args.first().map(String::as_str) == Some("vault") {
         return dispatch_vault(args.get(1).map(String::as_str)).await;
+    }
+    // `configure` — open the on-demand web control panel. SPAWNS the viewer-server as a separate
+    // process; the always-on daemon never links it / exposes a network surface (CLAUDE.md §10).
+    if args.first().map(String::as_str) == Some("configure") {
+        return configure();
     }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         print_help();
@@ -180,10 +185,62 @@ fn print_vault_help() {
     println!("  The bare `opentrapp` command arrives with the GUI demotion (ADR-0022 / Phase 3).");
 }
 
+/// `opentrapp configure` — open the on-demand web control panel (ADR-0022 §2.3 / step 4).
+///
+/// Spawns the `viewer-server` as a SEPARATE process and waits on it. The always-on daemon NEVER
+/// links the viewer-server or exposes a network service (CLAUDE.md §10): the config surface is a
+/// transient, loopback-only, token-gated child that exists ONLY while you configure — started here
+/// on explicit user action, and torn down when you close it (Ctrl-C reaches the child via the shared
+/// foreground process group). The viewer-server opens your browser to the loopback URL itself.
+///
+/// This adds NO axum/network dependency to the daemon — it only execs a sibling binary.
+fn configure() -> ExitCode {
+    let override_bin = std::env::var_os("OPENTRAPP_VIEWER_SERVER_BIN").map(PathBuf::from);
+    let exe_dir = std::env::current_exe().ok().and_then(|p| p.parent().map(Path::to_path_buf));
+    let bin = match resolve_viewer_bin(override_bin, exe_dir.as_deref()) {
+        Some(b) => b,
+        None => {
+            eprintln!(
+                "opentrapp configure: couldn't find the viewer-server binary next to the daemon.\n\
+                 Install it alongside the daemon, or set OPENTRAPP_VIEWER_SERVER_BIN to its path."
+            );
+            return ExitCode::FAILURE;
+        }
+    };
+    eprintln!("opentrapp configure: opening the web control panel (Ctrl-C to close)…");
+    // Spawn + wait. The child inherits our env (so OPENTRAPP_VIEWER_DIST passes through) + stdio, and
+    // shares the foreground process group, so Ctrl-C stops both.
+    match std::process::Command::new(&bin).status() {
+        Ok(status) if status.success() => ExitCode::SUCCESS,
+        Ok(_) => ExitCode::FAILURE,
+        Err(e) => {
+            eprintln!("opentrapp configure: failed to start the viewer-server ({e})");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Resolve the `viewer-server` binary: an explicit `OPENTRAPP_VIEWER_SERVER_BIN` override wins;
+/// otherwise look for it next to this daemon binary (the install layout ships them side by side).
+/// Pure (takes its inputs) so the resolution is unit-testable without touching the global env.
+fn resolve_viewer_bin(
+    override_path: Option<PathBuf>,
+    daemon_exe_dir: Option<&Path>,
+) -> Option<PathBuf> {
+    if let Some(p) = override_path {
+        return Some(p);
+    }
+    let name = if cfg!(windows) { "viewer-server.exe" } else { "viewer-server" };
+    let sibling = daemon_exe_dir?.join(name);
+    sibling.is_file().then_some(sibling)
+}
+
 fn print_help() {
     println!("opentrapp-daemon (Phase B / ADR-0019)");
     println!("  vault <verb> friendly CLI: up|down|status|verify|pause|resume|restart");
     println!("               (see `opentrapp-daemon vault --help`)");
+    println!("  configure    open the on-demand web control panel in your browser");
+    println!("               (spawns the loopback viewer-server; Ctrl-C to close)");
     println!("  (no args)    own + supervise the perimeter until SIGTERM/SIGINT");
     println!("  pause|resume|restart|shutdown");
     println!("               queue a control request for the running daemon");
@@ -242,5 +299,35 @@ fn selftest() -> ExitCode {
     } else {
         eprintln!("opentrapp-daemon selftest: marker contract FAILED");
         ExitCode::FAILURE
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_viewer_bin_prefers_the_explicit_override() {
+        let got = resolve_viewer_bin(Some(PathBuf::from("/opt/custom/viewer-server")), None);
+        assert_eq!(got, Some(PathBuf::from("/opt/custom/viewer-server")));
+    }
+
+    #[test]
+    fn resolve_viewer_bin_finds_the_sibling_next_to_the_daemon() {
+        let dir = std::env::temp_dir().join(format!("otd-cfg-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let name = if cfg!(windows) { "viewer-server.exe" } else { "viewer-server" };
+        let sibling = dir.join(name);
+        std::fs::write(&sibling, b"binary").unwrap();
+        assert_eq!(resolve_viewer_bin(None, Some(&dir)), Some(sibling));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn resolve_viewer_bin_is_none_without_override_or_sibling() {
+        let dir = std::env::temp_dir().join(format!("otd-cfg-empty-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(resolve_viewer_bin(None, Some(&dir)), None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
