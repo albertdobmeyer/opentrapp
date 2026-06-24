@@ -50,7 +50,9 @@ services:
     cap_drop:
       - ALL
     pids_limit: 256
-    mem_limit: 4g
+    # Tuned to the 7.2 GB laptop floor (WS-A1): measured 356 MB resting / 1.35 GB startup peak.
+    # 2g caps a runaway above the real worst case without reserving RAM it never uses (was 4g).
+    mem_limit: 2g
     cpus: 2
     networks:
       - agent-net
@@ -130,7 +132,9 @@ services:
       # These are used only during startup, then dropped by gosu.
       - CHOWN
       - DAC_OVERRIDE
-    mem_limit: 2g
+    # Interim cap (WS-A1): measured 54 MB fresh but mitmproxy LEAKS to ~550 MB over a session.
+    # 1g bounds the leak's blast radius until WS-C replaces it with a leak-free lean Rust proxy.
+    mem_limit: 1g
     pids_limit: 128
     volumes:
       - ./infra/proxy/vault-proxy.py:/opt/vault/vault-proxy.py:ro
@@ -212,7 +216,8 @@ services:
     # per-network DNS plugin overrides it) — bind-mounting a static resolv.conf
     # is the only path that works consistently. unbound itself talks to Quad9
     # and Cloudflare by direct IP, so this redirection is safe on boot.
-    mem_limit: 256m
+    # Tuned (WS-A1): measured ~11 MB (alpine + nftables). 64m is ample headroom (was 256m).
+    mem_limit: 64m
     pids_limit: 64
     cpus: 0.5
     networks:
@@ -239,7 +244,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    mem_limit: 1g
+    # Tuned (WS-A1): on-demand shield, idle ~0. 512m covers a scan/CDR burst (was 1g).
+    mem_limit: 512m
     pids_limit: 128
     networks:
       - skills-net
@@ -283,7 +289,8 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    mem_limit: 512m
+    # Tuned (WS-A1): on-demand shield, idle ~0. 256m covers a feed-analysis burst (was 512m).
+    mem_limit: 256m
     pids_limit: 64
     volumes:
       # Trust the proxy's CA cert for HTTPS interception
