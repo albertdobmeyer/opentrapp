@@ -1,5 +1,6 @@
 pub mod allowlist;
 pub mod discovery;
+pub mod embedded_resources;
 pub mod error;
 pub mod manifest;
 pub mod perimeter;

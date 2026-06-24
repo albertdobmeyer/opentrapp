@@ -204,10 +204,27 @@ boundary-selftest:
 # source of truth; core keeps in-crate copies so it is crates.io-publishable
 # (ADR-0023). orchestrator-check.sh fails if they drift — run this after editing
 # a canonical file.
+EMB := app/src-tauri/crates/core/src/embedded
+EMB_RES := $(EMB)/perimeter-resources
 sync-core-embedded:
-	@cp app/src-tauri/resources/perimeter.yml app/src-tauri/crates/core/src/embedded/perimeter.yml
-	@cp tests/boundary-selftest.sh app/src-tauri/crates/core/src/embedded/boundary-selftest.sh
-	@echo "→ synced opentrapp-core/src/embedded/ from canonical resources/ + tests/"
+	@cp app/src-tauri/resources/perimeter.yml $(EMB)/perimeter.yml
+	@cp tests/boundary-selftest.sh $(EMB)/boundary-selftest.sh
+	@# Perimeter policy resources embedded into core (signed-by-binary, extracted
+	@# at runtime by orchestrator::embedded_resources). Canonical sources are the
+	@# workload/infra/sentinel dirs; orchestrator-check.sh cmp -s guards drift.
+	@mkdir -p $(EMB_RES)/manifests
+	@cp workloads/agent/config/vault-seccomp.json $(EMB_RES)/vault-seccomp.json
+	@cp workloads/agent/config/vault-proxy-seccomp.json $(EMB_RES)/vault-proxy-seccomp.json
+	@cp infra/proxy/vault-proxy.py $(EMB_RES)/vault-proxy.py
+	@cp infra/proxy/allowlist.txt $(EMB_RES)/allowlist.txt
+	@cp infra/egress/resolv.conf $(EMB_RES)/resolv.conf
+	@for wl in agent skills social; do \
+	  mkdir -p $(EMB_RES)/manifests/$$wl; \
+	  cp workloads/$$wl/component.yml $(EMB_RES)/manifests/$$wl/component.yml; \
+	done
+	@rm -rf $(EMB_RES)/sentinel && cp -r sentinel $(EMB_RES)/sentinel
+	@find $(EMB_RES)/sentinel -name '*.test.sh' -delete
+	@echo "→ synced opentrapp-core/src/embedded/ (perimeter.yml + boundary-selftest.sh + perimeter-resources/) from canonical sources"
 
 proxy-soak:
 	@echo "→ bash tests/proxy-memory-soak.sh $(ARGS) (vault-proxy RSS over load×time; perimeter up first)"

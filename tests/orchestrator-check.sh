@@ -1494,6 +1494,29 @@ else
   fail "core embedded boundary-selftest.sh DRIFTED from tests/boundary-selftest.sh — run 'make sync-core-embedded'"
 fi
 
+# The perimeter POLICY resources embedded into core (extracted at runtime by
+# orchestrator::embedded_resources, signed-by-binary; ADR-0022 de-Tauri). Each
+# must stay byte-identical to its canonical workload/infra/sentinel source — a
+# drift would mean the perimeter mounts a stale seccomp/proxy/sentinel policy.
+EMB_RES=app/src-tauri/crates/core/src/embedded/perimeter-resources
+RES_DRIFT=0
+check_emb() { if ! cmp -s "$EMB_RES/$1" "$2"; then RES_DRIFT=1; echo "    drift: $1 != $2"; fi; }
+check_emb vault-seccomp.json        workloads/agent/config/vault-seccomp.json
+check_emb vault-proxy-seccomp.json  workloads/agent/config/vault-proxy-seccomp.json
+check_emb vault-proxy.py            infra/proxy/vault-proxy.py
+check_emb allowlist.txt             infra/proxy/allowlist.txt
+check_emb resolv.conf               infra/egress/resolv.conf
+for wl in agent skills social; do check_emb "manifests/$wl/component.yml" "workloads/$wl/component.yml"; done
+# Sentinel lib is a tree; the embedded copy excludes *.test.sh (runtime-only).
+if ! diff -r -x '*.test.sh' "$EMB_RES/sentinel" sentinel >/dev/null 2>&1; then
+  RES_DRIFT=1; echo "    drift: sentinel/ tree"
+fi
+if [ "$RES_DRIFT" -eq 0 ]; then
+  pass "core embedded perimeter-resources/ matches canonical workload/infra/sentinel sources"
+else
+  fail "core embedded perimeter-resources/ DRIFTED from canonical sources — run 'make sync-core-embedded'"
+fi
+
 # =============================================================================
 section "Summary"
 # =============================================================================

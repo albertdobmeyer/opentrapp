@@ -934,11 +934,24 @@ pub fn reload_proxy_allowlist() -> Result<(), OrchestratorError> {
 // Each takes the runtime data dir (where `.env` lives) and internally loads
 // the signed spec + builds the run context. Keeps call sites a one-liner.
 
+/// Resolve the runtime resource dir AND (re)provision it from the policy set
+/// embedded in the signed binary — overwriting any tampered or stale copy.
+/// Every bring-up calls this, so the daemon is self-sufficient post de-Tauri
+/// (no Tauri `handle.path().resource_dir()` bundle, no build.rs staging) and the
+/// bind-mounted seccomp/proxy/sentinel policy is always the signed source of
+/// truth. See [`super::embedded_resources`] + the `pin_*` provisioning tests.
+fn provisioned_resource_dir() -> Result<PathBuf, OrchestratorError> {
+    let rd = resource_dir();
+    super::embedded_resources::extract_embedded_resources(&rd)
+        .map_err(|e| OrchestratorError::ExecutionError(format!("provision resources: {e}")))?;
+    Ok(rd)
+}
+
 /// Bring up every service in dependency order (egress+proxy+forge+social+agent).
 pub fn perimeter_up(data_dir: &Path) -> Result<(), OrchestratorError> {
     let spec = load_spec()?;
     let env = load_runtime_env(data_dir);
-    let rd = resource_dir();
+    let rd = provisioned_resource_dir()?;
     let verifier = make_verifier(&rd);
     let ctx = RunContext { resource_dir: &rd, env: &env, verifier: verifier.as_ref() };
     up(&spec, &ctx)
@@ -948,7 +961,7 @@ pub fn perimeter_up(data_dir: &Path) -> Result<(), OrchestratorError> {
 pub fn shell_up(data_dir: &Path) -> Result<(), OrchestratorError> {
     let spec = load_spec()?;
     let env = load_runtime_env(data_dir);
-    let rd = resource_dir();
+    let rd = provisioned_resource_dir()?;
     let verifier = make_verifier(&rd);
     let ctx = RunContext { resource_dir: &rd, env: &env, verifier: verifier.as_ref() };
     ensure_networks(&spec)?;
@@ -1005,7 +1018,7 @@ pub fn service_up(
         OrchestratorError::ExecutionError(format!("unknown service {service_name}"))
     })?;
     let env = load_runtime_env(data_dir);
-    let rd = resource_dir();
+    let rd = provisioned_resource_dir()?;
     let verifier = make_verifier(&rd);
     let ctx = RunContext { resource_dir: &rd, env: &env, verifier: verifier.as_ref() };
     ensure_networks(&spec)?;
@@ -1638,22 +1651,15 @@ mod tests {
         p
     }
 
-    /// THE SWAP SEAM. Today: replicate build.rs staging into a bundle, then run
-    /// the real `stage_resources_from_bundle` copy primitive. AT THE DE-TAURI
-    /// CUTOVER replace this body with a single call to the embedded extractor
-    /// (e.g. `extract_embedded_resources(dst).unwrap();`). Do NOT touch the
-    /// assertions in the #[test]s below.
+    /// THE SWAP SEAM. Post de-Tauri cutover this provisions from the bytes
+    /// embedded in the signed binary (`embedded_resources::extract_embedded_resources`)
+    /// — no Tauri bundle dir, no build.rs staging. The #[test] assertions below
+    /// are byte-for-byte unchanged from the pre-cutover bundle-copy version: the
+    /// contract (every file present, byte-identical, exec bits intact, covers
+    /// every perimeter.yml resource/seccomp mount) is identical, so the pins that
+    /// were green before the swap stay green after it.
     fn pin_provision_into(dst: &Path) {
-        let root = pin_repo_root();
-        let bundle = pin_tmp("opentrapp-pin-bundle");
-        for r in pin_expected_resources(&root) {
-            let bdest = bundle.join(&r.dest);
-            std::fs::create_dir_all(bdest.parent().unwrap()).unwrap();
-            std::fs::copy(&r.src, &bdest)
-                .unwrap_or_else(|e| panic!("canonical source missing: {} ({e})", r.src.display()));
-        }
-        stage_resources_from_bundle(&bundle, dst).unwrap();
-        let _ = std::fs::remove_dir_all(&bundle);
+        crate::orchestrator::embedded_resources::extract_embedded_resources(dst).unwrap();
     }
 
     #[test]

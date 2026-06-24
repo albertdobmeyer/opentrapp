@@ -1,0 +1,581 @@
+# yaml-language-server: $schema=../../schemas/component.schema.json
+
+identity:
+  id: skills
+  name: OpenSkill Forge
+  version: "0.1.0"
+  description: Skill development workbench and security scanner
+  role: toolchain
+  icon: hammer
+  color: "#3b82f6"
+  repo: https://github.com/albertdobmeyer/openagent-skills
+
+status:
+  states:
+    - id: ready
+      label: Ready
+      icon: circle-check
+      color: "#22c55e"
+    - id: not_setup
+      label: Not Set Up
+      icon: circle-help
+      color: "#a855f7"
+    - id: error
+      label: Error
+      icon: alert-triangle
+      color: "#ef4444"
+
+  probes:
+    - command: test -f Makefile && test -d skills && test -d tools && echo ready
+      interval_seconds: 30
+      timeout_seconds: 5
+      rules:
+        - stdout_contains: ready
+          state: ready
+        - exit_code: 2
+          state: error
+    - command: test -f Makefile && echo exists
+      interval_seconds: 60
+      timeout_seconds: 5
+      rules:
+        - stdout_contains: exists
+          state: not_setup
+        - exit_code: 1
+          state: not_setup
+
+  default_state: not_setup
+
+commands:
+  # Operations — Skill Development
+  - id: create-skill
+    name: Create Skill (AI)
+    description: AI-assisted skill creation — describe what you want and the forge drafts it
+    group: operations
+    type: action
+    danger: safe
+    command: make create-noninteractive NAME=${skill_name} TYPE=${template_type} DESC="${description}"
+    args:
+      - id: skill_name
+        name: Skill Name
+        description: Name for the new skill (lowercase, hyphens)
+        type: string
+        required: true
+      - id: template_type
+        name: Template Type
+        description: Skill template type
+        type: enum
+        required: true
+        options:
+          - cli-tool
+          - workflow
+          - language-ref
+      - id: description
+        name: Description
+        description: Describe what this skill should teach (2-3 sentences)
+        type: string
+        required: true
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 5
+    timeout_seconds: 300
+
+  - id: new-skill
+    name: New Skill
+    description: Scaffold a new ClawHub skill from template
+    group: operations
+    type: action
+    danger: safe
+    command: make new-skill SKILL_NAME=${skill_name}
+    args:
+      - id: skill_name
+        name: Skill Name
+        description: Name for the new skill (lowercase, hyphens allowed)
+        type: string
+        required: true
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 10
+    timeout_seconds: 30
+
+  - id: lint
+    name: Lint Skill
+    description: Run linting checks on a skill
+    group: operations
+    type: query
+    danger: safe
+    command: make lint SKILL=${skill}
+    args:
+      - id: skill
+        name: Skill
+        description: Skill to lint
+        type: enum
+        required: true
+        options_from:
+          command: ls skills/ 2>/dev/null
+          timeout_seconds: 5
+    output:
+      format: ansi
+      display: checklist
+    sort_order: 20
+    timeout_seconds: 60
+
+  - id: scan
+    name: Security Scan
+    description: Run full security scan — 87 malicious patterns across 13 MITRE ATT&CK categories
+    group: operations
+    type: query
+    danger: safe
+    command: make scan SKILL=${skill}
+    args:
+      - id: skill
+        name: Skill
+        description: Skill to scan
+        type: enum
+        required: true
+        options_from:
+          command: ls skills/ 2>/dev/null
+          timeout_seconds: 5
+    output:
+      format: ansi
+      display: report
+    sort_order: 30
+    timeout_seconds: 120
+
+  - id: verify
+    name: Verify Skill
+    description: Full verification — lint + scan + tests
+    group: operations
+    type: query
+    danger: safe
+    command: make verify SKILL=${skill}
+    args:
+      - id: skill
+        name: Skill
+        description: Skill to verify
+        type: enum
+        required: true
+        options_from:
+          command: ls skills/ 2>/dev/null
+          timeout_seconds: 5
+    output:
+      format: ansi
+      display: checklist
+    sort_order: 40
+    timeout_seconds: 180
+
+  - id: certify
+    name: Certify Skill
+    description: Run full 4-gate pipeline and generate security certificate
+    group: operations
+    type: action
+    danger: safe
+    command: make certify SKILL=${skill}
+    args:
+      - id: skill
+        name: Skill
+        description: Skill to certify
+        type: enum
+        required: true
+        options_from:
+          command: ls skills/ 2>/dev/null
+          timeout_seconds: 5
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 35
+    timeout_seconds: 180
+
+  - id: export
+    name: Export for Vault
+    description: Certify and package skill for vault installation
+    group: operations
+    type: action
+    danger: safe
+    command: make export SKILL=${skill}
+    args:
+      - id: skill
+        name: Skill
+        description: Skill to export
+        type: enum
+        required: true
+        options_from:
+          command: ls skills/ 2>/dev/null
+          timeout_seconds: 5
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 36
+    timeout_seconds: 180
+
+  - id: cdr
+    name: CDR Skill File
+    description: Content Disarm & Reconstruction — rebuild an untrusted skill safely
+    group: operations
+    type: action
+    danger: caution
+    command: make cdr FILE=${file_path}
+    args:
+      - id: file_path
+        name: Skill File
+        description: Path to untrusted SKILL.md file
+        type: string
+        required: true
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 40
+    timeout_seconds: 300
+
+  - id: download-safe
+    name: Download + CDR
+    description: Download skill from ClawHub and rebuild safely via CDR
+    group: operations
+    type: action
+    danger: caution
+    command: make cdr-download SKILL=${skill_name}
+    args:
+      - id: skill_name
+        name: Skill Name
+        description: ClawHub skill name to download
+        type: string
+        required: true
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 41
+    timeout_seconds: 300
+
+  - id: test
+    name: Test Skill
+    description: Run test suite for a skill
+    group: operations
+    type: query
+    danger: safe
+    command: make test SKILL=${skill}
+    args:
+      - id: skill
+        name: Skill
+        description: Skill to test
+        type: enum
+        required: true
+        options_from:
+          command: ls skills/ 2>/dev/null
+          timeout_seconds: 5
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 50
+    timeout_seconds: 120
+
+  - id: publish
+    name: Publish Skill
+    description: Publish a verified skill to the ClawHub registry
+    group: operations
+    type: action
+    danger: caution
+    command: make publish SKILL=${skill}
+    args:
+      - id: skill
+        name: Skill
+        description: Skill to publish
+        type: enum
+        required: true
+        options_from:
+          command: ls skills/ 2>/dev/null
+          timeout_seconds: 5
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 60
+    timeout_seconds: 120
+
+  - id: lint-all
+    name: Lint All
+    description: Run linting on all skills
+    group: operations
+    type: query
+    danger: safe
+    command: make lint-all
+    output:
+      format: ansi
+      display: checklist
+    sort_order: 70
+    timeout_seconds: 300
+
+  - id: scan-all
+    name: Scan All
+    description: Security scan all skills
+    group: operations
+    type: query
+    danger: safe
+    command: make scan-all
+    output:
+      format: ansi
+      display: report
+    sort_order: 80
+    timeout_seconds: 300
+
+  - id: verify-all
+    name: Verify All
+    description: Full verification on all skills
+    group: operations
+    type: query
+    danger: safe
+    command: make verify-all
+    output:
+      format: ansi
+      display: checklist
+    sort_order: 90
+    timeout_seconds: 600
+
+  # Monitoring
+  - id: stats
+    name: Workbench Stats
+    description: Show skill counts, sizes, and health overview
+    group: monitoring
+    type: query
+    danger: safe
+    command: make stats
+    output:
+      format: ansi
+      display: table
+    sort_order: 10
+    timeout_seconds: 30
+
+  - id: explore
+    name: Browse the Skill Library
+    description: Search the public skill library for a topic and show clean, vetted candidates
+    group: monitoring
+    type: query
+    danger: safe
+    command: make explore QUERY=${query}
+    args:
+      - id: query
+        name: Search term
+        description: What kind of skill are you looking for? (e.g. "csv format", "calendar")
+        type: string
+        required: true
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 20
+    timeout_seconds: 30
+
+  - id: report
+    name: Full Report
+    description: Generate comprehensive workbench report
+    group: monitoring
+    type: query
+    danger: safe
+    command: make report
+    output:
+      format: ansi
+      display: report
+    sort_order: 30
+    timeout_seconds: 120
+
+  - id: cleaned-skills
+    name: Recently cleaned skills
+    description: See what the security cleanroom removed from skills it processed — the plain-language disarm report
+    group: monitoring
+    type: query
+    danger: safe
+    command: bash tools/disarm-report.sh
+    output:
+      format: json
+      display: report
+    sort_order: 40
+    timeout_seconds: 30
+
+  # Maintenance
+  - id: clean
+    name: Clean
+    description: Remove build artifacts and temporary files
+    group: maintenance
+    type: action
+    danger: caution
+    command: make clean
+    output:
+      format: ansi
+      display: terminal
+    sort_order: 10
+    timeout_seconds: 30
+
+  - id: setup
+    name: Setup Workbench
+    description: Install dependencies and verify workbench environment
+    group: maintenance
+    type: action
+    danger: safe
+    command: make setup
+    output:
+      format: ansi
+      display: terminal
+    available_when: [not_setup]
+    sort_order: 20
+    timeout_seconds: 120
+
+prerequisites:
+  container_runtime: false
+  setup_command: setup
+  check_command: test -f Makefile && test -d skills && test -d tools
+
+health:
+  - id: skill-count
+    name: Skills
+    command: ls skills/ 2>/dev/null | wc -l
+    interval_seconds: 30
+    timeout_seconds: 5
+    parse:
+      type: regex
+      expression: "(\\d+)"
+      format: "{value} skills"
+    thresholds:
+      green: ">= 1"
+      yellow: "== 0"
+      red: "< 0"
+
+  - id: lint-health
+    name: Lint
+    command: make lint-all 2>/dev/null | grep -c 'PASS' || echo 0
+    interval_seconds: 60
+    timeout_seconds: 30
+    parse:
+      type: regex
+      expression: "(\\d+)"
+      format: "{value} passing"
+    thresholds:
+      green: ">= 1"
+      yellow: "== 0"
+      red: "< 0"
+
+  - id: scan-health
+    name: Scans
+    command: make scan-all 2>/dev/null | grep -c 'CLEAN\|PASS' || echo 0
+    interval_seconds: 60
+    timeout_seconds: 30
+    parse:
+      type: regex
+      expression: "(\\d+)"
+      format: "{value} clean"
+    thresholds:
+      green: ">= 1"
+      yellow: "== 0"
+      red: "< 0"
+
+  - id: test-health
+    name: Tests
+    command: make test 2>/dev/null | grep -c 'PASS' || echo 0
+    interval_seconds: 60
+    timeout_seconds: 30
+    parse:
+      type: regex
+      expression: "(\\d+)"
+      format: "{value} passing"
+    thresholds:
+      green: ">= 1"
+      yellow: "== 0"
+      red: "< 0"
+
+# ─── Workflows ────────────────────────────────────────────────────
+# Multi-step automated sequences. The GUI and Claude Code execute
+# these as single user-facing actions.
+workflows:
+  - id: vet-skill
+    name: Check Skill Safety
+    description: Run the full security pipeline on a single skill
+    user_description: >
+      Scans the skill for 87 known malware patterns, verifies every
+      line of code, and generates a security certificate. If anything
+      looks suspicious, the skill is rejected.
+    trigger: manual
+    danger: safe
+    steps:
+      - id: lint
+        command: lint
+        args:
+          skill: "{{input.skill}}"
+        abort_on_failure: true
+      - id: scan
+        command: scan
+        args:
+          skill: "{{input.skill}}"
+        depends_on: lint
+        abort_on_failure: true
+      - id: verify
+        command: verify
+        args:
+          skill: "{{input.skill}}"
+        depends_on: scan
+        abort_on_failure: true
+      - id: certify
+        command: certify
+        args:
+          skill: "{{input.skill}}"
+        depends_on: verify
+    inputs:
+      - id: skill
+        type: string
+        label: Skill name
+        description: Name of the skill to vet (from the skills/ directory)
+        required: true
+    output:
+      display: checklist
+      summary_step: certify
+
+  - id: safe-download
+    name: Download Skill Safely
+    description: Download a skill from ClawHub via CDR and deliver to agent workspace
+    user_description: >
+      Downloads the skill into a secure sandbox, scans it for malware,
+      rebuilds it from scratch to remove any hidden content, and
+      delivers the clean version to your assistant.
+    trigger: manual
+    danger: caution
+    shell_requirement: split
+    steps:
+      - id: download-cdr
+        command: download-safe
+        args:
+          skill_name: "{{input.skill_name}}"
+        abort_on_failure: true
+      - id: export
+        command: export
+        args:
+          skill: "{{input.skill_name}}"
+        depends_on: download-cdr
+    inputs:
+      - id: skill_name
+        type: string
+        label: Skill name
+        description: ClawHub skill name to download
+        required: true
+    output:
+      display: checklist
+      summary_step: export
+
+  - id: full-check
+    name: Full Pipeline Check
+    description: Run lint + scan + test on all skills
+    user_description: >
+      Runs the complete security pipeline on every skill in the
+      workbench. This checks structure, scans for threats, and
+      runs behavioral tests.
+    trigger: manual
+    danger: safe
+    steps:
+      - id: lint-all
+        command: lint-all
+        abort_on_failure: false
+      - id: scan-all
+        command: scan-all
+        depends_on: lint-all
+        abort_on_failure: false
+      - id: verify-all
+        command: verify-all
+        depends_on: scan-all
+    output:
+      display: report
+      summary_step: verify-all
