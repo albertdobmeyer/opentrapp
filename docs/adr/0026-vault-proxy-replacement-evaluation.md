@@ -1,7 +1,9 @@
 # ADR-0026 — vault-proxy replacement: evaluation & PoC-gated decision (WS-C)
 
-**Status:** Proposed (research complete; **gated on a `goproxy` CONNECT-chaining proof-of-concept**).
-Not yet Accepted — this ADR records the evaluation so the team and future agents do not re-litigate it.
+**Status:** Accepted — the gating PoC PASSED (2026-06-24); **`goproxy` (elazarl) is the chosen
+replacement.** Implementation (adopt + policy glue + container) is the remaining WS-C build, non-urgent
+(the leak is already bounded by WS-A's 1g cap). This ADR records the evaluation + the PoC so the team
+and future agents do not re-litigate it.
 
 **Cross-references:** [ADR-0009](0009-five-container-perimeter.md) (the L7/L3 split this proxy lives in) ·
 [ADR-0001](0001-proxy-side-api-key-injection.md) (proxy-side key injection — the chokepoint) ·
@@ -76,14 +78,22 @@ repo (currently Rust workloads + shell/nftables infra).
 ## Decision (gated)
 
 **The crux uncertainty — does `goproxy` forward MITM'd HTTPS through an upstream proxy via CONNECT —
-is resolved by a proof-of-concept, not a guess.** Decision tree:
+was resolved by a proof-of-concept, not a guess.**
 
-1. **Run the `goproxy` CONNECT-chaining PoC.**
-   - **PoC passes** → adopt `goproxy` + ~300-500 LOC of policy glue (allowlist, injection, DNS-rebind,
-     size caps, redaction, `requests.jsonl`). Vetted, ~10 MB, leak-free — the real WS-C win.
-   - **PoC fails** → fall back to a **Go hand-roll** (~300-400 LOC) OR hold on mitmproxy with the
-     bounded leak (WS-A cap) and revisit. Hand-roll requires external review + a fuzz harness before
-     it is trusted (it is the credential chokepoint).
+**PoC RESULT (2026-06-24): PASS.** A hermetic 3-component loopback test
+(`client → goproxy[MITM, injects header] → upstream-proxy[counts CONNECTs] → HTTPS origin`,
+goproxy v1.8.4, Go 1.23) confirmed all three make-or-break requirements at once:
+`upstream CONNECTs = 1` (chained the MITM'd HTTPS through the upstream proxy via CONNECT — the exact
+thing that blocked `hudsucker`), the origin received the injected header (TLS MITM + scriptable
+injection works), and the body round-tripped. Wiring: `proxy.OnRequest().HandleConnect(AlwaysMitm)` +
+`proxy.Tr.Proxy = http.ProxyURL(upstream)`. **goproxy is confirmed viable.**
+
+Decision tree (resolved):
+1. ✅ **PoC passed → adopt `goproxy`** + ~300-500 LOC of policy glue (allowlist, injection, DNS-rebind,
+   size caps, redaction, `requests.jsonl`). Vetted, ~10 MB, leak-free — the real WS-C win. The build
+   must keep the #182 proxy pins + `boundary-selftest.sh` B2/B3/B5 green, verified at the consumption
+   end (the real perimeter), per §11.
+2. ~~PoC fails → Go hand-roll (~300-400 LOC) / hold on mitmproxy~~ — not needed; the PoC passed.
 2. **WS-C is NOT urgent** (the leak is bounded). It must not be rushed on the chokepoint — doing it
    under pressure is exactly what the bar (§12) warns against. The higher-ROI, lower-risk lean-down
    moves (WS-B lean container bases; WS-E sharpen the USPs + the post-cutover footprint story) proceed
