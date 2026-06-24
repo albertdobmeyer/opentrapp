@@ -1,63 +1,13 @@
-# This package is also the workspace root (kept here, NOT at the repo root, so
-# `target/` stays at app/src-tauri/target — CI and tauri-action assume that path).
-# Phase B (ADR-0019) adds two tauri-free members: the headless daemon + its core.
-# `fuzz/` is a workspace-of-its-own and is intentionally not a member.
+# Virtual workspace root for the OpenTrApp Rust backend. Kept here (NOT at the
+# repo root) so `target/` stays at app/src-tauri/target — CI assumes that path.
+#
+# Post de-Tauri cutover (ADR-0022) this is a PURE virtual workspace: the GUI
+# `opentrapp` Tauri crate is gone. The product is the headless `opentrapp-daemon`
+# + the on-demand loopback `viewer-server` (serving the React app over HTTP),
+# both Tauri/GTK/WebKit/wry-free. `fuzz/` is a workspace-of-its-own and is
+# intentionally not a member.
 [workspace]
-# crates/viewer-server is the de-Tauri loopback web GUI server (ADR-0022 / docs/threat-model.md
-# T8, accepted; migration step 2). Activated now that the threat-model gate cleared — it carries
-# the §2 security middleware (Host/Origin/bearer, 0600 session, nonce→cookie handoff) verified by
-# its own tests. INVARIANT (the gtk-free CI gate extends to it): it must stay gtk/webkit/wry-free —
-# `cargo tree -p viewer-server | grep -iE 'tauri|wry|webkit'` MUST be empty.
+# INVARIANT (the gtk-free CI gate): every member must stay gtk/webkit/wry-free —
+# `cargo tree | grep -iE 'tauri|wry|webkit|gtk'` MUST be empty.
 members = ["crates/core", "crates/daemon", "crates/viewer-server"]
 resolver = "2"
-
-[package]
-name = "opentrapp"
-version = "0.8.0"
-edition = "2021"
-# Never published to crates.io — this is a desktop app with workspace-internal
-# path deps. `publish = false` makes it a private crate so cargo-deny's
-# allow-wildcard-paths applies to the internal `opentrapp-core` path dependency.
-publish = false
-description = "Containerization perimeter + skill scanner for autonomous CLI agents"
-authors = ["Albert Dobmeyer"]
-license = "MIT"
-repository = "https://github.com/albertdobmeyer/opentrapp"
-homepage = "https://github.com/albertdobmeyer/opentrapp#readme"
-
-[dependencies]
-tauri = { version = "2", features = ["tray-icon", "image-png"] }
-tauri-plugin-single-instance = "2"
-tauri-plugin-shell = "2"
-tauri-plugin-store = "2"
-tauri-plugin-updater = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-serde_yaml = "0.9"
-tokio = { version = "1", features = ["full"] }
-glob = "0.3"
-regex = "1"
-thiserror = "2"
-tauri-plugin-notification = "2.3.3"
-tauri-plugin-clipboard-manager = "2.3.2"
-tauri-plugin-autostart = "2.5.1"
-chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
-opentrapp-core = { path = "crates/core" }
-
-[build-dependencies]
-tauri-build = { version = "2", features = [] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-serde_yaml = "0.9"
-
-[lib]
-name = "opentrapp_lib"
-crate-type = ["lib", "cdylib", "staticlib"]
-
-[features]
-# Exposes a thin public surface (`fuzz_api` module) over the manifest
-# parser and command-argument interpolator. Enabled only by the fuzz
-# crate at app/src-tauri/fuzz/. Production builds have the feature off
-# and the internal modules remain private.
-fuzzing = ["opentrapp-core/fuzzing"]
