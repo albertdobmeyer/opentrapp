@@ -1,8 +1,8 @@
-import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
 import { useSettings } from "./useSettings";
 
+import { listen } from "@/lib/events";
 import {
   getAssistantStatus,
   type AssistantStatusSnapshot,

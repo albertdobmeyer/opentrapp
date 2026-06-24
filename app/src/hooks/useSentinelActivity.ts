@@ -1,8 +1,8 @@
-import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 
 import type { SentinelActivity } from "@/lib/types";
 
+import { listen } from "@/lib/events";
 import { getSentinelActivity } from "@/lib/tauri";
 
 

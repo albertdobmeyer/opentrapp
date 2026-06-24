@@ -1,5 +1,6 @@
-import { listen, type Event } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
+
+import { listen, type Event } from "@/lib/events";
 
 /**
  * Step IDs emitted by the Rust bootstrap pipeline. Mirrors

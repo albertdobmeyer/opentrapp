@@ -1,4 +1,3 @@
-import { listen } from "@tauri-apps/api/event";
 import { Shield } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -9,6 +8,7 @@ import SpendingTile from "@/components/user/SpendingTile";
 import StatTile, { type TileTone } from "@/components/user/StatTile";
 import TipOfTheDay from "@/components/user/TipOfTheDay";
 import { useHero, type HeroState } from "@/hooks/useHero";
+import { listen } from "@/lib/events";
 
 export default function Home() {
   const { state, loading, snapshot } = useHero();

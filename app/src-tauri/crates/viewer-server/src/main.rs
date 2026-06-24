@@ -30,7 +30,7 @@ fn build_app(
 ) -> Router {
     let api = routes::router(app_state)
         .merge(session::router(session)) // /api/session nonce→bearer bootstrap exchange
-        .merge(events::router(sec.clone())); // /api/events WS (first-frame bearer auth)
+        .merge(events::router()); // /api/events WS (bearer-cookie auth on the handshake, via the §2 layer)
 
     // Serve the built React app from `dist/` with an index.html SPA fallback (client-side routes);
     // fall back to the placeholder shell when there is no build (dev / tests).
@@ -263,13 +263,13 @@ mod integration {
     }
 
     /// Risk item #3 — the bursty `stream-line` path carries over the WS, end-to-end through a
-    /// REAL server: handshake passes Host+Origin, first-frame bearer authenticates, the
-    /// stream-line frame arrives with the expected payload.
+    /// REAL server: the handshake passes Host + Origin + the bearer COOKIE (the auth model a real
+    /// browser uses — the cookie rides the upgrade request; first-frame auth is impossible with an
+    /// HttpOnly cookie), then the stream-line frame arrives with the expected payload.
     #[tokio::test]
-    async fn ws_carries_stream_line_after_first_frame_auth() {
-        use futures_util::{SinkExt, StreamExt};
+    async fn ws_carries_stream_line_with_handshake_cookie_auth() {
+        use futures_util::StreamExt;
         use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-        use tokio_tungstenite::tungstenite::Message as TMsg;
 
         let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -278,18 +278,37 @@ mod integration {
         let app = build_app(sec, state, dummy_session(), None);
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
-        // connect with the required Origin header (Host is set by the client to 127.0.0.1:port)
+        // Handshake carries Origin + the bearer COOKIE (exactly what a same-origin browser sends).
         let mut req = format!("ws://127.0.0.1:{port}/api/events").into_client_request().unwrap();
         req.headers_mut()
             .insert("origin", format!("http://127.0.0.1:{port}").parse().unwrap());
+        req.headers_mut().insert("cookie", "otv_bearer=tok".parse().unwrap());
         let (mut ws, _resp) = tokio_tungstenite::connect_async(req).await.unwrap();
 
-        // first frame = the bearer; then the stream-line should arrive
-        ws.send(TMsg::Text("tok".into())).await.unwrap();
+        // No first frame needed — the stream-line arrives straight away.
         let msg = ws.next().await.unwrap().unwrap();
-        let text = msg.into_text().unwrap();
-        let v: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let v: serde_json::Value = serde_json::from_str(&msg.into_text().unwrap()).unwrap();
         assert_eq!(v["event"], "stream-line");
         assert_eq!(v["payload"]["line"], "hello from the perimeter");
+    }
+
+    /// The companion negative: a handshake WITHOUT the bearer cookie is rejected by the §2 layer
+    /// (401), so the WS never opens — the auth is real, not decorative.
+    #[tokio::test]
+    async fn ws_handshake_without_cookie_is_refused() {
+        use tokio_tungstenite::tungstenite::client::IntoClientRequest;
+
+        let listener = tokio::net::TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let sec = security::SecurityState { port, token: Arc::new("tok".to_string()) };
+        let state = routes::AppState::discover(repo_root(), std::env::temp_dir()).unwrap();
+        let app = build_app(sec, state, dummy_session(), None);
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+
+        let mut req = format!("ws://127.0.0.1:{port}/api/events").into_client_request().unwrap();
+        req.headers_mut()
+            .insert("origin", format!("http://127.0.0.1:{port}").parse().unwrap());
+        // no cookie → the handshake must fail (the §2 middleware returns 401 before the upgrade)
+        assert!(tokio_tungstenite::connect_async(req).await.is_err());
     }
 }

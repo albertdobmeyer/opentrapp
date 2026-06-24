@@ -1,4 +1,3 @@
-import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
@@ -9,6 +8,7 @@ import { useManifests } from "@/hooks/useManifests";
 import { useSettings } from "@/hooks/useSettings";
 import DevLayout from "@/layouts/DevLayout";
 import { AppContextProvider } from "@/lib/AppContext";
+import { listen } from "@/lib/events";
 import {
   getAutostartEnabled,
   setAutostartEnabled,
