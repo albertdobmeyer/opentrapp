@@ -78,6 +78,24 @@ jobs:
             echo "$crate dependency graph is WebKit-free ✓"
           done
 
+  check-goproxy:
+    name: goproxy vault-proxy (go test)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: "1.23"
+          cache-dependency-path: infra/proxy/goproxy/go.sum
+      # The L7 egress chokepoint (ADR-0026): the policy contract pins + the
+      # handler/CA pins. The credential-injection path must stay correct.
+      - name: go test (policy + handler/CA pins)
+        working-directory: infra/proxy/goproxy
+        run: go test ./...
+      - name: go vet
+        working-directory: infra/proxy/goproxy
+        run: go vet ./...
+
   check-orchestration:
     name: Orchestration (42 checks)
     runs-on: ubuntu-latest
@@ -150,8 +168,8 @@ jobs:
   # exports an OCI tarball for bundling into the AppImage, and emits a signed
   # `image-digests.json` overlay that the runtime verifies before `podman run`.
   # This is the supply-chain backbone of the zero-trust bootstrap (ADR-0009).
-  # vault-proxy is upstream mitmproxy, pinned by digest (recorded in the
-  # overlay as source=external) — not rebuilt here.
+  # All five perimeter images are now first-party built + signed (WS-C switched
+  # vault-proxy from upstream mitmproxy to the goproxy build, ADR-0026).
   build-images:
     name: Build perimeter images
     if: startsWith(github.ref, 'refs/tags/v')
@@ -174,7 +192,6 @@ jobs:
           OWNER="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
           REG="ghcr.io/${OWNER}/opentrapp"
           TAG="${GITHUB_REF_NAME}"
-          PROXY_REF="docker.io/mitmproxy/mitmproxy@sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1"
           echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u '${{ github.actor }}' --password-stdin
           # cosign uses its own keychain (~/.docker/config.json), NOT podman's
           # auth store — it must be logged in separately or the signature-blob
@@ -188,6 +205,7 @@ jobs:
             [vault-egress]=infra/egress
             [vault-skills]=workloads/skills
             [vault-social]=workloads/social
+            [vault-proxy]=infra/proxy/goproxy
           )
 
           # Begin the signed digest overlay the runtime verifies against.
@@ -202,7 +220,7 @@ jobs:
           } > images/image-digests.json
 
           first=1
-          for svc in vault-agent vault-egress vault-skills vault-social; do
+          for svc in vault-agent vault-egress vault-skills vault-social vault-proxy; do
             ctx="${CTX[$svc]}"
             img="${REG}/${svc}"
             echo "::group::build ${svc}"
@@ -226,14 +244,6 @@ jobs:
             printf '    "%s": { "digest": "%s", "source": "built", "tar": "%s.tar" }' "${img}" "${digest}" "${svc}" >> images/image-digests.json
             echo "::endgroup::"
           done
-
-          # External proxy: digest pin only (not our signature). NOT bundled —
-          # an upstream image's oci-archive round-trips unreliably; the runtime
-          # pulls it by this pinned digest instead (tamper-proof via the pin).
-          echo ',' >> images/image-digests.json
-          printf '    "%s": { "digest": "%s", "source": "external" }\n' \
-            "docker.io/mitmproxy/mitmproxy" "sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1" \
-            >> images/image-digests.json
 
           echo '  }' >> images/image-digests.json
           echo '}' >> images/image-digests.json
