@@ -689,24 +689,14 @@ for v in vols:
 sys.exit(0 if hit else 1)
 PY
 
-# The real Zone 3 fix: the vault-proxy entrypoint must run a root-stage chown of
-# the log dir before the image drops privileges. Assert the shim in BOTH files.
-python3 - <<'PY' 2>/dev/null && pass "perimeter.yml vault-proxy entrypoint chowns the log dir (Zone 3 real fix)" || fail "perimeter.yml vault-proxy is missing the entrypoint chown shim for /var/log/vault-proxy — ':U' alone does not fix this image (Zone 3)"
-import sys, yaml
-with open('app/src-tauri/resources/perimeter.yml') as f:
-    spec = yaml.safe_load(f)
-ep = spec['services'].get('vault-proxy', {}).get('entrypoint', []) or []
-joined = ' '.join(ep)
-sys.exit(0 if ('chown' in joined and '/var/log/vault-proxy' in joined) else 1)
-PY
-
-python3 - <<'PY' 2>/dev/null && pass "compose.yml vault-proxy entrypoint chowns the log dir (Zone 3 real fix)" || fail "compose.yml vault-proxy is missing the entrypoint chown shim for /var/log/vault-proxy (Zone 3)"
-import sys, yaml
-with open('compose.yml') as f:
-    c = yaml.safe_load(f)
-ep = c['services'].get('vault-proxy', {}).get('entrypoint', []) or []
-joined = ' '.join(ep) if isinstance(ep, list) else str(ep)
-sys.exit(0 if ('chown' in joined and '/var/log/vault-proxy' in joined) else 1)
+# The real Zone-3 fix: a root-stage chown of the log dir before privilege drop.
+# WS-C (ADR-0026) moved it IN-IMAGE — the goproxy image's own entrypoint chowns
+# the log + CA volumes then drops to the mitmproxy user via su-exec (no more
+# perimeter.yml/compose entrypoint shim). Assert it in the image entrypoint.
+python3 - <<'PY' 2>/dev/null && pass "vault-proxy image entrypoint chowns the log dir before dropping privilege (Zone 3 real fix, in-image)" || fail "infra/proxy/goproxy/entrypoint.sh is missing the root-stage chown of /var/log/vault-proxy + su-exec drop (Zone 3)"
+import sys, pathlib
+t = pathlib.Path('infra/proxy/goproxy/entrypoint.sh').read_text()
+sys.exit(0 if ('chown' in t and '/var/log/vault-proxy' in t and 'su-exec' in t) else 1)
 PY
 
 # =============================================================================

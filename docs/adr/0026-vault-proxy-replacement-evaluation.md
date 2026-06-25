@@ -1,9 +1,17 @@
 # ADR-0026 — vault-proxy replacement: evaluation & PoC-gated decision (WS-C)
 
-**Status:** Accepted — the gating PoC PASSED (2026-06-24); **`goproxy` (elazarl) is the chosen
-replacement.** Implementation (adopt + policy glue + container) is the remaining WS-C build, non-urgent
-(the leak is already bounded by WS-A's 1g cap). This ADR records the evaluation + the PoC so the team
-and future agents do not re-litigate it.
+**Status:** Accepted + BUILT + SWITCHED-IN (2026-06-25). The gating PoC passed; `goproxy` (elazarl) is
+the chosen replacement. The proxy is built (`infra/proxy/goproxy`, merged #189) and the perimeter is
+switched to it: `compose.yml` + `perimeter.yml` `vault-proxy` now build/run the goproxy image
+(`source: built`), the CI image-build job builds + signs it, and a Go CI job gates its tests.
+**Verified on the 7.2 GB box (proxy + config level):** boots + the request path run under the real
+`vault-proxy-seccomp.json`; the tightened cap set (cap-drop ALL + SETUID/SETGID/CHOWN/DAC_OVERRIDE,
+**no** NET_BIND_SERVICE) works (su-exec drops to the mitmproxy user); an off-allowlist host is blocked
+**403 via a real MITM request** under seccomp; the CA is generated at the agent-trusted path; the
+orchestration check + the #182 pins pass. **REMAINING final gate (per CLAUDE.md §11):** the full
+5-container live `boundary-selftest.sh` (B1/B2/B3/B5 with the agent up) — a heavy dedicated bring-up,
+to be run with a valid key (maintainer-controlled), plus the production digest-pin which runs in CI on
+tags. This ADR records the evaluation + the PoC + the switch so the team does not re-litigate it.
 
 **Cross-references:** [ADR-0009](0009-five-container-perimeter.md) (the L7/L3 split this proxy lives in) ·
 [ADR-0001](0001-proxy-side-api-key-injection.md) (proxy-side key injection — the chokepoint) ·

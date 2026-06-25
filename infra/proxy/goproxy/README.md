@@ -28,13 +28,15 @@ upstream-chaining — the requirement that ruled out the Rust path.
 binary boots, listens on `:8080`, chains to `vault-egress:8888`, generates the CA at the
 agent-trusted path, and fail-closes on a missing allowlist.
 
-## NOT done yet — the perimeter switch (follow-up)
-This builds + verifies the proxy in isolation. Switching the perimeter to it is the consumption-end
-follow-up (each gated on the real boundary self-test, per CLAUDE.md §11):
-1. Add the GHCR build for this image; flip `perimeter.yml` + `compose.yml` `vault-proxy` from the
-   external mitmproxy image (`source: external`) to this **built** image, and simplify the entrypoint
-   override (the chown is now in-image).
-2. Re-validate the **seccomp** profile (`vault-proxy-seccomp.json`) against the Go runtime's syscalls.
-3. Run the perimeter boundary self-test (`tests/boundary-selftest.sh`): **B2** (allowlist 403),
-   **B3** (key not in agent), **B5** (CA fingerprint stable) must stay green, plus the #182 proxy pins.
-4. Add a Go CI job (`go test ./infra/proxy/goproxy/...`). Then remove the Python `vault-proxy.py`.
+## Perimeter switch — status
+1. ✅ **Switched in.** `compose.yml` (build:) + `perimeter.yml` (`source: built`) `vault-proxy` now
+   build/run this image; the CI image-build job builds + signs it; the chown moved in-image.
+2. ✅ **Seccomp re-validated.** The Go runtime boots *and* the request path run under the unchanged
+   `vault-proxy-seccomp.json` (verified on the 7.2 GB box) — no profile change needed.
+3. ✅ **Go CI job added** (`check-goproxy`: `go test` + `go vet`).
+4. ⏳ **Final gate — the full live boundary self-test** (`tests/boundary-selftest.sh`, B1/B2/B3/B5 on
+   the running 5-container perimeter *with the agent*): a heavy dedicated bring-up, to be run with a
+   valid key (maintainer-controlled). Proxy-level evidence is already strong: an off-allowlist host is
+   blocked **403 via a real MITM request under seccomp**, the CA is generated at the agent-trusted path,
+   and the tightened cap set drops to the mitmproxy user via su-exec.
+5. ⏳ Then remove the Python `vault-proxy.py` (+ its embedded copy) — kept until the live gate is green.

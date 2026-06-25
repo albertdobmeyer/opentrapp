@@ -86,37 +86,17 @@ services:
   # outbound traffic is chained to vault-egress via --mode upstream which
   # enforces the L3 (kernel-level) policy. See ADR-0009 for the split rationale.
   vault-proxy:
-    image: docker.io/mitmproxy/mitmproxy@sha256:89735e2280557aa7597db3a96edcddd5055a0e30d9db7dfb1bfe12c450c333f1
-    # ZONE 3 fix — root-stage chown of the log volume before the upstream image's
-    # gosu privilege-drop, then hand off to the upstream entrypoint. The named
-    # vault-proxy-logs volume is created root-owned; the demoted (non-root)
-    # mitmproxy process otherwise can't write requests.jsonl and silently falls
-    # back to ephemeral /tmp, which disables idle auto-pause. The ':U' below does
-    # NOT fix this image (it chowns to the image's declared user = root, not the
-    # runtime mitmproxy uid set later by the entrypoint), and podman-compose 1.0.6
-    # drops ':U' entirely. This shim is the runner-agnostic fix. Command is a list
-    # (not a folded scalar) so it reaches the shim as separate "$@" args.
-    entrypoint:
-      - /bin/sh
-      - -c
-      - 'chown -R mitmproxy:mitmproxy /var/log/vault-proxy 2>/dev/null || true; exec docker-entrypoint.sh "$@"'
-      - sh
-    command:
-      - mitmdump
-      - --listen-host
-      - 0.0.0.0
-      - --listen-port
-      - "8080"
-      - --mode
-      - upstream:http://vault-egress:8888
-      - --set
-      - block_global=false
-      - --set
-      - block_private=false
-      - --set
-      - connection_strategy=lazy
-      - --scripts
-      - /opt/vault/vault-proxy.py
+    # WS-C (ADR-0026): the leaky Python mitmproxy is replaced by a lean Go proxy
+    # (elazarl/goproxy), built from infra/proxy/goproxy. Same L7 policy (allowlist,
+    # key injection, DNS-rebinding, 1MB/10MB size caps, redaction, requests.jsonl
+    # logging) — ~15 MB image, <50 MB RSS, leak-free. The image's own entrypoint
+    # chowns the mounted log + CA volumes then drops to the mitmproxy user via
+    # su-exec (the ZONE-3 fix, now in-image), so there is no mitmdump command, no
+    # chown shim, and no addon-script mount. Upstream chaining is the VAULT_UPSTREAM
+    # env (the proxy has no external-net; it reaches the internet only via vault-egress).
+    build:
+      context: ./infra/proxy/goproxy
+      dockerfile: Containerfile
     tmpfs:
       - /tmp:size=64m,noexec,nosuid
     security_opt:
@@ -124,26 +104,23 @@ services:
     cap_drop:
       - ALL
     cap_add:
-      - NET_BIND_SERVICE
+      # CHOWN + DAC_OVERRIDE: the entrypoint chowns the mounted log + CA volumes;
+      # SETUID + SETGID: it then drops to the non-root mitmproxy user via su-exec.
+      # Used only at startup. (No NET_BIND_SERVICE — the proxy listens on 8080.)
       - SETUID
       - SETGID
-      # CHOWN + DAC_OVERRIDE needed by mitmproxy entrypoint to set up
-      # the mitmproxy user and chown the home directory.
-      # These are used only during startup, then dropped by gosu.
       - CHOWN
       - DAC_OVERRIDE
-    # Interim cap (WS-A1): measured 54 MB fresh but mitmproxy LEAKS to ~550 MB over a session.
-    # 1g bounds the leak's blast radius until WS-C replaces it with a leak-free lean Rust proxy.
-    mem_limit: 1g
+    # WS-C: the mitmproxy leak is gone, so the 1 GB blast-radius cap drops to a
+    # tight ceiling (goproxy measured <50 MB RSS).
+    mem_limit: 256m
     pids_limit: 128
     volumes:
-      - ./infra/proxy/vault-proxy.py:/opt/vault/vault-proxy.py:ro
       - ./infra/proxy/allowlist.txt:/opt/vault/allowlist.txt:ro
-      # ':U' chowns the named volume to the container's user-namespace mapping
-      # at mount time so the non-root mitmproxy process can write
-      # requests.jsonl. Without it, mitmproxy hits EACCES and silently falls
-      # back to in-container /tmp. Podman-specific; this compose path is
-      # explicitly podman-targeted (see file header).
+      # ':U' chowns the named volume to the container's user-namespace mapping at
+      # mount time (belt-and-suspenders with the in-image entrypoint chown) so the
+      # non-root proxy can write requests.jsonl. Podman-specific (this path is
+      # podman-targeted, see file header).
       - vault-proxy-logs:/var/log/vault-proxy:U
       - proxy-ca:/home/mitmproxy/.mitmproxy
     networks:
@@ -157,13 +134,14 @@ services:
       vault-egress:
         condition: service_healthy
     environment:
-      # Secrets passed by NAME only (see the vault-agent note; #75): the value
-      # never appears on the podman-compose echo / host process table. `make
-      # perimeter-up` exports .env so the values are present in the environment.
-      # (ANTHROPIC_API_VERSION is non-secret, so it stays inline.)
+      # Secrets passed by NAME only (#75): the value never hits the host process
+      # table. The proxy injects them into matching provider requests; the agent
+      # container never sees them. (ANTHROPIC_API_VERSION is non-secret, inline.)
       - ANTHROPIC_API_KEY
       - OPENAI_API_KEY
       - ANTHROPIC_API_VERSION=${ANTHROPIC_API_VERSION:-2023-06-01}
+      # Upstream L3 forwarder (default is already vault-egress:8888; explicit here).
+      - VAULT_UPSTREAM=http://vault-egress:8888
     restart: unless-stopped
 
   # ─── THE FENCE (L3 policy) ──────────────────────────────────────
