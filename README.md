@@ -10,11 +10,11 @@
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/12755/badge)](https://www.bestpractices.dev/projects/12755)
 [![License: MIT](https://img.shields.io/badge/License-MIT-009966.svg)](LICENSE)
 
-> **Status (2026-06):** OpenTrApp ships today as a **Tauri 2 desktop app**. The product identity it is built toward ([ADR-0020](docs/adr/0020-product-identity-and-distribution.md)) is a **lean, CLI-first daemon** with the GUI as an **optional projection**; that de-Tauri / CLI / registry direction is **ratified but not yet built**. See [`CLAUDE.md`](CLAUDE.md) for the full honest framing of target versus current.
+> **Status (2026-06-24):** The **de-Tauri cutover has shipped on `main`** — the Tauri/WebKitGTK desktop GUI is **deleted**, so OpenTrApp is now the lean, headless **`opentrapp-daemon`** plus an **on-demand browser projection** (the loopback `viewer-server`, rendering in your existing browser only while a dashboard is open), and the build is **GTK-free** (the 19 GTK3 advisories cleared; `Cargo.lock` has 0 `tauri`/`wry`/`webkit` entries). Cross-platform **installers for the new architecture are pending** ([cargo-dist, ADR-0023](docs/adr/0023-distribution-and-packaging.md)); until they ship, the new build runs **from source**, and the **last tagged release ([v0.8.0](https://github.com/albertdobmeyer/opentrapp/releases/latest)) is still the previous Tauri desktop app**. The CLI-first / registry direction continues per [ADR-0020](docs/adr/0020-product-identity-and-distribution.md). See [`CLAUDE.md`](CLAUDE.md) for the full target-versus-current framing.
 
 A safer way to run an autonomous CLI agent on your own computer. OpenTrApp wraps the agent in a security perimeter built on two ideas. **Privilege separation:** no single container holds both your API keys and internet access, so a compromised agent can reach neither directly. **Supply-chain defense:** every skill the agent loads is vetted in isolation before it can reach the agent, because a malicious skill runs as part of the agent's own reasoning. Open-source under MIT.
 
-It ships today via a Tauri desktop app pre-wired for [OpenClaw](https://www.getopenclaw.ai); the product is the perimeter itself, and the GUI is one optional projection of it (see status above). The perimeter is agent-agnostic by design; opencode, Claude Code, and other CLI agents are candidates for support.
+It is pre-wired for [OpenClaw](https://www.getopenclaw.ai); the product is the perimeter itself, and the GUI is one optional, on-demand projection of it (see status above). The perimeter is agent-agnostic by design; opencode, Claude Code, and other CLI agents are candidates for support.
 
 For a one-page explainer of how the perimeter works (one contained agent, two guards around it), see [`docs/perimeter-explained.md`](docs/perimeter-explained.md). The full architecture, threat model, and per-component capabilities are in [`docs/trifecta.md`](docs/trifecta.md).
 
@@ -41,7 +41,7 @@ Findings land in your repository's Security tab, and a finding fails the job. De
 workloads/skills/skill scan ./that-plugin --strict || echo "blocked by the skill firewall"
 ```
 
-**3. Run the full perimeter (today, via the desktop app).** Download an installer from the [latest release](https://github.com/albertdobmeyer/opentrapp/releases/latest); the setup wizard does the rest. This is the end-to-end containment story. (The GUI is the current control surface; the target is CLI-first with the GUI optional.)
+**3. Run the full perimeter.** The latest tagged release ([v0.8.0](https://github.com/albertdobmeyer/opentrapp/releases/latest)) ships the previous Tauri desktop app with a setup wizard — the end-to-end containment story. The de-Tauri build on `main` (headless `opentrapp-daemon` + an on-demand browser dashboard) runs from source today; signed cross-platform installers for it are pending ([cargo-dist, ADR-0023](docs/adr/0023-distribution-and-packaging.md)).
 
 ---
 
@@ -249,7 +249,7 @@ npm run dev                              # frontend dev server
 cd src-tauri && cargo build              # Rust backend
 ```
 
-For a release-style desktop build, install Tauri's prerequisites for the target platform and run `cd app && npm run tauri build`.
+For a release build of the headless product, build the Rust binaries and the frontend: `cd app/src-tauri && cargo build --release -p opentrapp-daemon -p viewer-server`, then `cd app && npm run build`. Signed cross-platform installer packaging (cargo-dist) is pending — [ADR-0023](docs/adr/0023-distribution-and-packaging.md).
 
 ### Test suite
 
@@ -286,7 +286,7 @@ cosign verify-attestation --type slsaprovenance ...
 
 ```
 opentrapp/                            (this repository, single monorepo)
-├── app/                              Tauri 2 + React 18 desktop application (the orchestrator)
+├── app/                              React 18 frontend + the Rust workspace (core · daemon · viewer-server); the Tauri desktop crate was removed in the de-Tauri cutover
 ├── workloads/                        one directory per workload container
 │   ├── agent/                          → vault-agent  (runtime containment)
 │   ├── forge/                          → vault-skills  (supply-chain defense: skill scanner + CDR)

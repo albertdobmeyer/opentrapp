@@ -3,6 +3,20 @@
 *An honest accounting of what OpenTrApp costs in memory and disk, where that cost comes
 from, and which devices can run it comfortably. Written 2026-06-09.*
 
+> **Update (2026-06-24) — the heaviest part is GONE.** This report's central finding was correct:
+> the Tauri WebKitGTK webview (~442 MB resident, *more than the whole perimeter*) was the heaviest
+> thing OpenTrApp ran. The **de-Tauri cutover ([#184](https://github.com/albertdobmeyer/opentrapp/pull/184))
+> eliminated it.** The product is now the headless `opentrapp-daemon` + an **on-demand browser
+> projection** — the `viewer-server`, a small loopback HTTP server that runs *only while the GUI is
+> open*, rendering in your existing browser. There is **no in-process webview, and the build is
+> GTK-free**: `Cargo.lock` carries 0 `tauri`/`wry`/`webkit`/`gtk` entries and the 19 GTK3 RUSTSEC
+> advisories cleared (the `deny.toml` ignore list is now empty). So the ~442 MB webview numbers
+> below are **historical**; the perimeter numbers stand (now with the WS-A `mem_limit` tuning
+> applied). The one remaining heavy item — mitmproxy's long-session memory growth — is **bounded**
+> by WS-A's 1 GB cap and slated for replacement by `goproxy`
+> ([ADR-0026](adr/0026-vault-proxy-replacement-evaluation.md): decided, build pending). **Open
+> follow-up:** a fresh end-to-end resting re-measure on the post-cutover daemon + viewer-server build.
+
 This report answers four questions that come up whenever someone is asked to install
 OpenTrApp on their own machine:
 
@@ -23,12 +37,14 @@ Short answers up front, the evidence after.
   cost of running *that agent at all*. Our security infra adds **~15%** (proxy 54 MB + egress
   10.6 MB) — *smaller* than first estimated, though the split shifts under active load and
   over long sessions (§2). Our orchestrator app itself is small.
-- **Our orchestrator app's GUI is actually the heaviest part** [corrected, measured 2026-06-11].
-  The Tauri WebKitGTK webview is **~442 MB resident** with the dashboard open (WebProcess 222 MB
-  + GTK main 156 MB + network 47 MB) — *more than the whole perimeter*, and the SIGBUS trigger.
-  It runs no AI in-process and has no busy-polling loops, but WebKitGTK is not light. Phase A
-  (destroy the webview on close → tray-only daemon) frees the 222 MB WebProcess at rest; Phase B
-  (headless daemon) targets ~30–60 MB. See §3/§10.
+- **Our orchestrator app's GUI WAS the heaviest part — now ELIMINATED** [measured 2026-06-11;
+  removed by the de-Tauri cutover 2026-06-24, see the update banner above]. The Tauri WebKitGTK
+  webview was **~442 MB resident** with the dashboard open (WebProcess 222 MB + GTK main 156 MB +
+  network 47 MB) — *more than the whole perimeter*, and the SIGBUS trigger. The cutover deleted the
+  Tauri crate entirely: there is no longer any in-process webview, and the spine is GTK-free. The GUI
+  is now an on-demand browser projection (`viewer-server`), so the resting GUI cost is the user's
+  *existing* browser plus a small loopback server only while a dashboard is open. See §3/§10 for the
+  historical Tauri analysis that motivated this.
 - **The dev-laptop swap-storm is an artifact, not the typical experience.** It happened on
   a 7.2 GB, 2017 budget APU running Cursor + Brave + a Claude Code session *and* the full
   perimeter at once. The perimeter's own contribution is ~0.4–1.0 GB; the co-tenants were
