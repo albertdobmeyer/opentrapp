@@ -1,21 +1,28 @@
-# forge — the supply-chain defence
+# Skill Firewall — supply-chain defense for agent skills
 
-The skill-authoring toolchain and security scanner that runs as the
-`vault-skills` container in OpenTrApp's [five-container
-perimeter](../../docs/perimeter-explained.md). Offline static analysis
-(87 patterns, MITRE ATT&CK-mapped), 16-pattern prompt-injection detector,
-line-level zero-trust verification, Content Disarm & Reconstruction, and a
-gated publishing pipeline.
+A malicious skill runs as *part of the agent's own reasoning*, so it has to be vetted
+**before** it ever reaches the agent. The Skill Firewall does that: offline static analysis
+(87 MITRE ATT&CK-mapped patterns + a 16-pattern prompt-injection detector), line-level
+zero-trust verification, and — the part that is original work — **Content Disarm &
+Reconstruction**: the skill is rebuilt from its *extracted intent* in isolation, so the
+original downloaded bytes never reach the agent. It is a clean rebuild or a discard — nothing
+in between.
 
-This directory lives at `workloads/skills/` in the OpenTrApp monorepo since
-the v0.5.0 consolidation ([ADR-0013](../../docs/adr/0013-monorepo-consolidation.md)).
-The same toolchain doubles as the author's environment for publishing skills
-to [ClawHub](https://clawdhub.com); twenty-five published skills are included
-as the corpus the scanner is regression-tested against.
+**Runs three ways, lowest commitment first:**
+1. **GitHub Action** — one line in CI, fully offline, no model; findings land in your repo's
+   Security tab and a finding fails the job. (`actions/skill-scan/` at the repo root.)
+2. **Local one-line pre-install gate** — `workloads/skills/skill scan ./that-plugin --strict`
+   from a clone, no global install.
+3. **The `vault-skills` container** inside OpenTrApp's [five-container
+   perimeter](../../docs/perimeter-explained.md) — all untrusted skill content is processed
+   off your host.
 
-**For the elevator pitch and the narrative on why CDR-for-skills is original
-work**, see [`docs/skills-spotlight.md`](../../docs/skills-spotlight.md) at the
-repo root.
+It doubles as the author's environment for publishing to [ClawHub](https://clawdhub.com);
+twenty-five published skills are the corpus the scanner is regression-tested against. This is
+`workloads/skills/` in the OpenTrApp monorepo ([ADR-0013](../../docs/adr/0013-monorepo-consolidation.md)).
+
+**Elevator pitch + why CDR-for-skills is original work:**
+[`docs/skills-spotlight.md`](../../docs/skills-spotlight.md).
 
 **Author:** [@albertdobmeyer](https://github.com/albertdobmeyer)
 
