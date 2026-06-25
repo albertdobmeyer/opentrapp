@@ -386,11 +386,13 @@ mod tests {
     }
 
     #[test]
-    fn proxy_is_external_pinned_by_digest() {
+    fn proxy_is_built_first_party() {
+        // WS-C (ADR-0026): vault-proxy is now our own goproxy build, not the
+        // upstream mitmproxy external image (verified by digest in CI on tags).
         let spec = load().unwrap();
         let proxy = &spec.services["vault-proxy"];
-        assert_eq!(proxy.image.source, ImageSource::External);
-        let r = proxy.image.r#ref.as_deref().unwrap();
-        assert!(r.contains("@sha256:"), "external image must be digest-pinned");
+        assert_eq!(proxy.image.source, ImageSource::Built);
+        let repo = proxy.image.repo.as_deref().unwrap();
+        assert!(repo.contains("vault-proxy"), "built proxy image must be the vault-proxy repo, got {repo}");
     }
 }

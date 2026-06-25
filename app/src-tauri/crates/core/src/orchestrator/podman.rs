@@ -1372,7 +1372,9 @@ mod tests {
             container_run_args("vault-proxy", &spec.services["vault-proxy"], "mitm@sha256:x", &ctx_with(&env, &res))
                 .unwrap();
         let joined = args.join(" ");
-        assert!(joined.contains("/run/opentrapp/perimeter/vault-proxy.py:/opt/vault/vault-proxy.py:ro"));
+        // WS-C: the vault-proxy.py addon mount is gone (the goproxy compiles the
+        // policy in); allowlist.txt is still a verified resource mount, resolved
+        // from the resource dir — never a source-tree bind.
         assert!(joined.contains("/run/opentrapp/perimeter/allowlist.txt:/opt/vault/allowlist.txt:ro"));
         assert!(!joined.contains("workloads/agent") && !joined.contains("infra/proxy"), "no source-tree paths");
     }
@@ -1463,33 +1465,25 @@ mod tests {
     }
 
     #[test]
-    fn vault_proxy_entrypoint_chowns_log_dir_then_execs_upstream() {
-        // The real Zone 3 fix: vault-proxy overrides the entrypoint to chown the
-        // log dir as root before the upstream image's gosu privilege-drop. Assert
-        // `--entrypoint` is emitted, before the image, as a JSON array containing
-        // the chown of /var/log/vault-proxy and the hand-off to docker-entrypoint.sh.
+    fn vault_proxy_uses_the_image_entrypoint_no_override() {
+        // WS-C (ADR-0026): the Zone-3 chown moved IN-IMAGE — the goproxy image's
+        // own entrypoint chowns the mounted log + CA volumes then su-exec-drops to
+        // the mitmproxy user. So perimeter.yml no longer overrides --entrypoint;
+        // the run args must NOT carry an entrypoint override (the image provides it).
         let spec = perimeter::load().unwrap();
         let env = BTreeMap::from([("ANTHROPIC_API_KEY".into(), "sk".into())]);
         let res = Path::new("/run/opentrapp/perimeter");
-        let img = "mitm@sha256:x";
-        let args =
-            container_run_args("vault-proxy", &spec.services["vault-proxy"], img, &ctx_with(&env, &res))
-                .unwrap();
-
-        let ep_idx = args.iter().position(|a| a == "--entrypoint")
-            .expect("vault-proxy must emit --entrypoint (Zone 3 chown shim)");
-        let ep_json = &args[ep_idx + 1];
-        assert!(ep_json.contains("chown") && ep_json.contains("/var/log/vault-proxy"),
-            "entrypoint must chown the log dir, got: {ep_json}");
-        assert!(ep_json.contains("docker-entrypoint.sh"),
-            "entrypoint must hand off to the upstream entrypoint, got: {ep_json}");
-        // It must be a valid JSON array (podman --entrypoint array form).
-        let parsed: Vec<String> = serde_json::from_str(ep_json)
-            .expect("--entrypoint must be a JSON array");
-        assert_eq!(parsed.first().map(|s| s.as_str()), Some("/bin/sh"));
-        // --entrypoint must come BEFORE the image (it's a run flag, not a command).
-        let img_idx = args.iter().position(|a| a == img).expect("image in args");
-        assert!(ep_idx < img_idx, "--entrypoint must precede the image");
+        let args = container_run_args(
+            "vault-proxy",
+            &spec.services["vault-proxy"],
+            "ghcr.io/x/vault-proxy@sha256:x",
+            &ctx_with(&env, &res),
+        )
+        .unwrap();
+        assert!(
+            !args.iter().any(|a| a == "--entrypoint"),
+            "vault-proxy must NOT override the entrypoint — the goproxy image provides the Zone-3 chown shim"
+        );
     }
 
     #[test]
