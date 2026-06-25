@@ -252,6 +252,7 @@ workloads/agent/                    (the `agent` workload of the opentrapp monor
 - Do not add permission tools (chmod, chown) to `tools.exec.safeBins`
 - Do not change `sandbox.mode` from `"off"` — the container IS the sandbox
 - Do not give the agent any destructive capabilities — the agent is constructive only (read, write, create, search); all destructive operations are handled by the user or Claude from the host side
+- **Do not move `vault-agent` to a distroless base.** Evaluated 2026-06-24 (lean-down WS-B) and rejected: the agent *executes shell commands as its own tools* — the `safeBins` (Split Shell 16, Soft Shell 26: `cat`/`echo`/`jq`/`grep`/`sed`/`awk`/…) — which require busybox + coreutils, and `scripts/entrypoint.sh` is a load-bearing security shell script (CA-wait, `chmod 444` config lock, `.trust` SHA-256 skill-integrity verify). Distroless has no shell/coreutils, so it would break tool execution; a static-binary entrypoint would not help. `node:22-alpine` (busybox) is the required, already-lean base (the Containerfile already strips `apk`/`wget`/`curl`); the image bulk is node + OpenClaw, which is irreducible.
 
 ---
 *Last updated: 2026-06-16 — monorepo workload (id `agent`, container `vault-agent`); five-container perimeter; pluggable agent-recipe base (default `openclaw`). All three shell levels verified.*
