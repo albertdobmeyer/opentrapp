@@ -20,18 +20,24 @@ The method that carried the campaign — **pin-first**: for every security-relev
 
 Net: every base image is alpine (or the 15.6 MB Go proxy / node:22-alpine agent), the Python interpreter is out of the keys-holding container, and the heaviest single thing in the old footprint (the ~442 MB WebKitGTK webview) is deleted.
 
+## Rung-1 boundary + goproxy live gate — VERIFIED via the product daemon (2026-06-26)
+
+The load-bearing security gate is **crossed**. On the 7.2 GB box (cleaned), through the **product daemon** (not dev scaffolding):
+`opentrapp-daemon vault up` → `vault verify` → **`pass=7 fail=0` cold**, then `vault pause`→`resume`→`vault verify` → **`pass=7 fail=0` with B5 CA fingerprint UNCHANGED** → `vault down` (clean). B1 isolation · B2 allowlist (deny 403 / allow) · **B3 credential-separation (goproxy injects; no vendor key in `vault-agent`)** · B4 L3 egress · B5 CA-stable cold==resumed · B6 read-only. So **the #1 non-negotiable bar (zero-trust air-gap) is verified on the shipped goproxy stack**, AND **the goproxy live-boundary gate is green**. Scope (honest): DevVerifier/from-source mode + a **placeholder** key — the boundary checks need no valid key (P1-1/#96), so no real credential was handled. Repro: build the 3 always-on images tagged `ghcr.io/albertdobmeyer/opentrapp/<svc>:latest`, placeholder `~/.opentrapp/.env`, no overlay → DevVerifier.
+
 ## What is NOT done — the gates that stand between "built" and "released"
 
-1. **Rung 1 — product-daemon T0 end-to-end.** The boundary self-test holds cold==resumed via the **dev** perimeter bring-up (`pass=7`, CA unchanged), but **not yet through the product CLI** (`opentrapp-daemon vault up` + `vault verify`). This is the load-bearing security gate; finish it first. (#35, #40; #76 image-staging is wired + fail-closes, end-to-end pending a real published release.)
-2. **goproxy live-boundary gate (maintainer).** The full 5-container `tests/boundary-selftest.sh` (B1/B2/B3/B5, with the agent + a **real key**) is the final proof the switched-in proxy contains correctly live. Proxy-level evidence is already strong (above); the live run is maintainer-controlled. Until it is green, keep `infra/proxy/vault-proxy.py` (the old Python addon) in the tree.
+1. **The BundleVerifier digest-staging path (the *released*-product T0).** The run above used DevVerifier (from-source, no signed overlay) — faithful to how from-source runs today. The signed-overlay `podman load` + digest-pin path engages only with a real release overlay; it is naturally exercised at the **post-release T0** once the cargo-dist release lane lands (P4 / ADR-0023; #76).
+2. **Retire `vault-proxy.py`** (P2-1) — now UNBLOCKED by the green live gate; remove the Python fallback + its embedded/pinned copies in a focused PR.
 3. **Win/macOS browser-model runtime (maintainer hardware).** The de-Tauri browser model is **Linux-proven**; Windows/macOS are portable-by-construction (pure-Rust daemon + browser + a 3-line opener) but **runtime-unverified**. The cutover dropped the v0.8.0 Win/macOS desktop installers — a one-way product decision already taken.
-4. **Co-maintainer-gated Scorecard items** (#43 Code-Review, #1 Branch-Protection) — a second human, not a code change.
+4. **The 9 Go advisories** the goproxy introduced (P3-1, Tier-2 infra — should stay clean).
+5. **Co-maintainer-gated Scorecard items** (#43 Code-Review, #1 Branch-Protection) — a second human, not a code change.
 
 ## The public release — consolidated status
 
 - **Last tagged release: [v0.8.0](https://github.com/albertdobmeyer/opentrapp/releases/latest)** (2026-06-23) is the **pre-cutover Tauri desktop app**. `main` is a full product generation ahead of it (de-Tauri + goproxy + alpine).
 - **The README Status block is the honest public face** and is current: de-Tauri shipped, runs from source, installers pending (cargo-dist, ADR-0023), v0.8.0 is still the old desktop app.
-- **Next release would be v0.9.0** (the de-Tauri lean release). It is **built, box-verified, and ready to tag — but stays HARD-GATED** (owner decision 2026-06-22: no release until every code-scan alert is closed). Progress: #80-82 done, **#46 cleared by the cutover** (pending Scorecard re-scan); still blocking: #43+#1 (co-maintainer), Rung-1 T0, the goproxy live gate. **Do not `gh release create` without the maintainer's go/no-go** — it is outward-facing and several headline claims are still gated. Scope any release copy to what is verified (§11).
+- **Next release would be v0.9.0** (the de-Tauri lean release). It is **built and box-verified** — and now the **Rung-1 product-path T0 + the goproxy live boundary gate are GREEN** (above), so the containment claim is earned. What still stands between here and a release: (a) **no release *lane* exists** — the de-Tauri cutover deleted the publish job; a `git tag` produces only GHCR images, no installers/binaries (P4 / cargo-dist / ADR-0023 — the keystone); (b) the **BundleVerifier digest-staging path** is verified only at the post-release T0; (c) **#43+#1 co-maintainer** Scorecard posture; (d) the 3 open code-scanning alerts are **Tier-3-exempt** (contained-agent npm pins — policy says never hash-pin those). **Do not `gh release create` without the maintainer's go/no-go** — outward-facing, and the lane must be built first. Scope any release copy to what is verified (§11).
 
 ## Running the perimeter / T0 on this box (verified workable)
 

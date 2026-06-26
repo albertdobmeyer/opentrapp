@@ -8,10 +8,17 @@ switched to it: `compose.yml` + `perimeter.yml` `vault-proxy` now build/run the 
 `vault-proxy-seccomp.json`; the tightened cap set (cap-drop ALL + SETUID/SETGID/CHOWN/DAC_OVERRIDE,
 **no** NET_BIND_SERVICE) works (su-exec drops to the mitmproxy user); an off-allowlist host is blocked
 **403 via a real MITM request** under seccomp; the CA is generated at the agent-trusted path; the
-orchestration check + the #182 pins pass. **REMAINING final gate (per CLAUDE.md §11):** the full
-5-container live `boundary-selftest.sh` (B1/B2/B3/B5 with the agent up) — a heavy dedicated bring-up,
-to be run with a valid key (maintainer-controlled), plus the production digest-pin which runs in CI on
-tags. This ADR records the evaluation + the PoC + the switch so the team does not re-litigate it.
+orchestration check + the #182 pins pass. **LIVE BOUNDARY GATE — GREEN (2026-06-26):** the full live
+`boundary-selftest.sh` ran via the product daemon (`opentrapp-daemon vault up` → `vault verify`) against
+the goproxy perimeter on the 7.2 GB box — **B1** isolation, **B2** allowlist (off-list `example.org`→403,
+on-list `api.anthropic.com`→400 not-blocked), **B3** credential-separation (goproxy injects; no vendor key
+in `vault-agent`), **B4** L3 egress, **B5** CA fingerprint **unchanged cold==resumed** (after `vault
+pause`→`resume`), **B6** read-only delivery — `pass=7 fail=0` cold AND resumed. A **placeholder** key
+suffices for the boundary (the checks test isolation/allowlist/credential-separation/CA, not key validity;
+see task #96/P1-1), so no real credential was handled. **Still pending:** the production digest-pin
+(BundleVerifier) path, which engages only with a signed release overlay — naturally exercised at the
+post-release T0 once the cargo-dist release lane lands (ADR-0023). This ADR records the evaluation + PoC +
+switch + the live-gate result so the team does not re-litigate it.
 
 **Cross-references:** [ADR-0009](0009-five-container-perimeter.md) (the L7/L3 split this proxy lives in) ·
 [ADR-0001](0001-proxy-side-api-key-injection.md) (proxy-side key injection — the chokepoint) ·
