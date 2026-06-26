@@ -8,31 +8,27 @@
 # Run:    podman run --rm vault-social make scan
 #         podman run --rm vault-social make census
 
-FROM python:3.10-slim
+# WS-B: alpine base (python:3.10-alpine, ~40 MB vs python:3.10-slim ~126 MB).
+# The tools are bash + GNU-coreutils + jq over stdlib Python; apk's grep/sed are
+# the GNU versions (not busybox), so pattern-matching behaviour is unchanged.
+# PyYAML installs from the musllinux wheel (no compiler needed). Verified by
+# `make test` + a feed scan on this base.
+FROM python:3.10-alpine@sha256:cb0f3c7df8d980aed5c2a84cc6b83cdcd3ef5a359a2ff68ec750946e86fe281a
 
 LABEL maintainer="OpenAgent-Social" \
       description="Feed injection scanner — filters untrusted social content inside the perimeter"
 
-# Install system dependencies
-# curl: fetch posts from Moltbook API
-# jq: JSON formatting for API responses
-# grep/sed: text processing for pattern matching
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    curl \
-    jq \
-    make \
-    grep \
-    sed \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# System deps: curl (Moltbook API fetch), jq (JSON formatting), grep/sed (GNU,
+# pattern matching), make (entry point), bash, ca-certificates.
+RUN apk --no-cache add bash curl jq make grep sed ca-certificates
 
-# PyYAML is the only external Python dependency — used by export-patterns.py
+# PyYAML is the only external Python dependency — used by export-patterns.py.
+# pip resolves the musllinux binary wheel on alpine, so no build toolchain is needed.
 RUN pip install --no-cache-dir PyYAML
 
-# Non-root user — social doesn't need root for anything
-RUN groupadd -g 1000 social \
-    && useradd -u 1000 -g social -m -s /bin/bash social
+# Non-root user — social doesn't need root for anything.
+RUN addgroup -g 1000 social \
+    && adduser -u 1000 -G social -D -h /home/social -s /bin/bash social
 
 WORKDIR /app
 

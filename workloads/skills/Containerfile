@@ -8,34 +8,25 @@
 # Run:    podman run --rm vault-skills make scan SKILL=api-dev
 #         podman run --rm vault-skills make verify SKILL=api-dev
 
-FROM python:3.10-slim
+# WS-B: alpine base (python:3.10-alpine, ~40 MB vs python:3.10-slim ~126 MB).
+# The scripts are stdlib-only Python (json/sys/re/subprocess/urllib) over a
+# bash + GNU-coreutils toolchain; apk's grep/sed/gawk/findutils are the GNU
+# versions (not busybox), so scanner/parser behaviour is unchanged. Verified by
+# `make self-test` + `make scan` on this base.
+FROM python:3.10-alpine@sha256:cb0f3c7df8d980aed5c2a84cc6b83cdcd3ef5a359a2ff68ec750946e86fe281a
 
 LABEL maintainer="OpenSkill-Forge" \
       description="Skill security scanner — scans, verifies, and rebuilds untrusted SKILL files inside the perimeter"
 
-# Install system dependencies — bash-first toolchain
-# curl: download skills from ClawHub registry
-# git: skill scaffolding (make new)
-# make: entry point for all operations
-# grep/sed/gawk/findutils: text processing for scanners and parsers
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    curl \
-    git \
-    make \
-    grep \
-    sed \
-    gawk \
-    findutils \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# bash-first toolchain: GNU grep/sed/gawk/findutils for scanner/parser text
+# processing, curl for ClawHub downloads, git for `make new`, make as the entry
+# point. No external Python packages — all scripts use stdlib only
+# (json, sys, re, subprocess, urllib.request).
+RUN apk --no-cache add bash curl git make grep sed gawk findutils ca-certificates
 
-# No external Python packages needed — all scripts use stdlib only
-# (json, sys, re, subprocess, urllib.request)
-
-# Non-root user — forge doesn't need root for anything
-RUN groupadd -g 1000 forge \
-    && useradd -u 1000 -g forge -m -s /bin/bash forge
+# Non-root user — forge doesn't need root for anything.
+RUN addgroup -g 1000 forge \
+    && adduser -u 1000 -G forge -D -h /home/forge -s /bin/bash forge
 
 WORKDIR /app
 

@@ -28,7 +28,7 @@ cargo test -p opentrapp          # Rust tests parse this manifest specifically
 
 In production, the feed vetter runs inside **vault-social** — a dedicated container in the OpenTrApp five-container perimeter (opt-in / off by default). All untrusted content (agent-social feed data) is processed inside this container, never on the user's host machine.
 
-- **Containerfile** in this repo's root defines the image (~153MB, python:3.10-slim)
+- **Containerfile** in this repo's root defines the image (~74 MB, python:3.10-alpine; WS-B shrink from the former 153 MB python:3.10-slim)
 - **vault-social** is one of the five services in `compose.yml` at the opentrapp root (opt-in / off by default)
 - Runs on **social-net** (internal network) — can reach vault-proxy but CANNOT reach vault-agent or vault-skills
 - Agent never sees unfiltered feed data — scanning and filtering happen inside the container
