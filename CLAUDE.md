@@ -54,7 +54,7 @@ opentrapp/                              (this repository — public, monorepo)
 ├── config/
 │   └── orchestrator-workflows.yml      cross-workload workflow definitions
 ├── tests/
-│   └── orchestrator-check.sh           120-check validation suite
+│   └── orchestrator-check.sh           114-check validation suite
 └── docs/
     ├── perimeter-explained.md          one-page elevator architecture
     ├── trifecta.md                     full architecture, threat model, defense layers

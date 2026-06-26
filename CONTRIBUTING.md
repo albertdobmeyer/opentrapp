@@ -80,7 +80,7 @@ cd app && npx tsc --noEmit
 # 4. End-to-end browser tests (currently 25)
 cd app && npx playwright test
 
-# 5. Manifest and orchestration validation (42 checks; expects 0 warnings)
+# 5. Manifest and orchestration validation (114 checks; expects 0 warnings)
 bash tests/orchestrator-check.sh
 ```
 

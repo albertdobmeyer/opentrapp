@@ -4,7 +4,7 @@ identity:
   id: social
   name: OpenAgent Social
   version: "0.1.0"
-  description: Safe reconnaissance and participation in the Moltbook agentic social network
+  description: Safe reconnaissance and participation in agent-social networks
   role: network
   icon: users
   color: "#a855f7"
@@ -35,7 +35,7 @@ commands:
   # ── Operations ──────────────────────────────────────────
   - id: feed-scan
     name: Scan Feed
-    description: Scan recent Moltbook posts for prompt injection patterns
+    description: Scan recent agent-social posts for prompt injection patterns
     group: operations
     type: action
     danger: safe
@@ -65,7 +65,7 @@ commands:
     args:
       - id: handle
         name: Agent handle
-        description: Moltbook agent handle to scan
+        description: Agent handle to scan
         type: string
         required: true
     output:
@@ -78,7 +78,7 @@ commands:
 
   - id: agent-census
     name: Agent Census
-    description: Pull current platform stats from the Moltbook API
+    description: Pull current platform stats from the agent-social network
     group: operations
     type: action
     danger: safe
@@ -125,7 +125,7 @@ commands:
 
   - id: identity-check
     name: Identity Checklist
-    description: Pre-flight safety check before registering an agent on Moltbook
+    description: Pre-flight safety check before registering an agent on a social network
     group: monitoring
     type: query
     danger: safe
@@ -260,9 +260,9 @@ health:
 workflows:
   - id: scan-recent-feed
     name: Scan Recent Feed
-    description: Fetch and scan recent Moltbook posts for injection attacks
+    description: Fetch and scan recent agent-social posts for injection attacks
     user_description: >
-      Checks the latest posts on the Moltbook network for hidden
+      Checks the latest posts on the agent-social network for hidden
       instructions that could manipulate your assistant. Flags anything
       suspicious before your assistant sees it.
     trigger: manual

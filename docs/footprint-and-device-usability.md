@@ -12,10 +12,13 @@ from, and which devices can run it comfortably. Written 2026-06-09.*
 > GTK-free**: `Cargo.lock` carries 0 `tauri`/`wry`/`webkit`/`gtk` entries and the 19 GTK3 RUSTSEC
 > advisories cleared (the `deny.toml` ignore list is now empty). So the ~442 MB webview numbers
 > below are **historical**; the perimeter numbers stand (now with the WS-A `mem_limit` tuning
-> applied). The one remaining heavy item — mitmproxy's long-session memory growth — is **bounded**
-> by WS-A's 1 GB cap and slated for replacement by `goproxy`
-> ([ADR-0026](adr/0026-vault-proxy-replacement-evaluation.md): decided, build pending). **Open
-> follow-up:** a fresh end-to-end resting re-measure on the post-cutover daemon + viewer-server build.
+> applied). The other heavy item — mitmproxy's long-session memory growth — is also **GONE**:
+> `vault-proxy` is now the lean Go `goproxy` chokepoint (15.6 MB image, <50 MB RSS, leak-free;
+> [ADR-0026](adr/0026-vault-proxy-replacement-evaluation.md): **built + switched in**,
+> [#190](https://github.com/albertdobmeyer/opentrapp/pull/190)), and its `mem_limit` is tightened
+> to 256 MB (not the interim 1 GB cap). **Open follow-up:** a fresh end-to-end resting re-measure on
+> the post-cutover daemon + viewer-server + goproxy build (goproxy's resting RAM is documented
+> <50 MB but not yet separately measured on this box).
 
 This report answers four questions that come up whenever someone is asked to install
 OpenTrApp on their own machine:
@@ -99,15 +102,16 @@ shields are on-demand and absent at rest):
 
 | Container | Runtime | Image (disk) | Resting RAM | Attribution |
 |---|---|---|---|---|
-| **vault-agent** | Node 22 + OpenClaw | 689 MB published / 590 MB slimmed | **356 MB [measured, connected idle]** · ~1.35 GB startup spike (~90 s) [measured] | **OpenClaw-intrinsic** |
-| **vault-proxy** | mitmproxy (Python) | 250 MB | **54 MB [measured, fresh]** | **Our security infra** |
-| **vault-egress** | nftables/resolver (+ unused Node) | 176 MB | **10.6 MB [measured]** | **Our security infra** |
+| **vault-agent** | Node 22 (alpine) + OpenClaw | **525 MB [measured-now 2026-06-26]** (was 689/590 MB) | **356 MB [measured, connected idle]** · ~1.35 GB startup spike (~90 s) [measured] | **OpenClaw-intrinsic** |
+| **vault-proxy** | **goproxy (Go)** | **15.6 MB [doc-measured]** (was mitmproxy 250 MB) | **<50 MB flat (goproxy; old mitmproxy was 54 MB [measured 2026-06-09])** | **Our security infra** |
+| **vault-egress** | nftables/resolver (alpine, no Node) | **18.2 MB [measured-now 2026-06-26]** (was 176 MB) | **10.6 MB [measured]** | **Our security infra** |
 | *vault-skills* | Python + bash (idle) | **72 MB [measured 2026-06-26]** (was 234 MB; WS-B alpine shrink) | ~0 at rest (on-demand) | Our security infra |
 | *vault-social* | Python + bash (idle) | **74 MB [measured 2026-06-26]** (was 154 MB; WS-B alpine shrink) | ~0 (opt-in, off by default) | Our security infra |
 
 The resting perimeter was **measured at ≈ 421 MB** (egress 10.6 + proxy 54 + agent 356,
 `podman stats`, 2026-06-09) — well under the ~600 MB the planning docs feared for the agent
-alone. The agent's connected-idle RSS is 356 MB (just the gateway long-polling Telegram);
+alone. (That proxy 54 MB is the *old mitmproxy*; the goproxy replacement runs <50 MB flat, so
+≈421 MB is now an upper bound — a fresh re-measure on the goproxy stack is the open follow-up.) The agent's connected-idle RSS is 356 MB (just the gateway long-polling Telegram);
 the ~600 MB figure is the working set under active reasoning. The one number to respect is
 the **~1.35 GB startup spike** (~90 s, Node loading 136 extensions): that transient, not the
 resting state, is what stresses a memory-tight box (see §10.2).
@@ -181,13 +185,13 @@ Two things, in order of weight:
    (Phase 2). The only way to drive this below the floor is to *not run it while idle* —
    which is exactly what idle auto-pause does.
 2. **Our security architecture (a deliberate choice).** The L7/L3 egress split
-   ([ADR-0009](adr/0009-five-container-perimeter.md)) means an always-on mitmproxy
-   (54 MB measured, fresh) plus a lean egress container (10.6 MB measured). This is the price of
-   defense-in-depth — the proxy injects credentials and enforces the domain allowlist; the
-   egress container enforces a kernel-level destination filter and pinned DNS. It is a
-   design decision, not an accident, and it is the part we could most plausibly tune (e.g.
-   the egress container carries an unused ~50 MB Node runtime, kept only to reuse a pinned
-   base image).
+   ([ADR-0009](adr/0009-five-container-perimeter.md)) means an always-on proxy — now the lean Go
+   `goproxy` (<50 MB; the old mitmproxy was 54 MB measured) — plus a lean egress container
+   (10.6 MB measured). This is the price of defense-in-depth — the proxy injects credentials and
+   enforces the domain allowlist; the egress container enforces a kernel-level destination filter
+   and pinned DNS. It is a design decision, not an accident. The two tunings flagged here have
+   since landed: the egress container was de-Node'd (now a no-Node alpine image, 18.2 MB; WS2),
+   and the proxy's Python interpreter is gone (goproxy, WS-C / ADR-0026).
 
 The two scanner shields, once wrongly blamed for a guessed "1 GB," are actually ~5–20 MB of
 idle bash and are now removed from the resting set entirely (Phase 1, `on_demand`).

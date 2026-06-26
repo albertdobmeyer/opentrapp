@@ -1,10 +1,12 @@
 # Architecture: Perimeter Defense for Autonomous CLI Agents
 
-**Updated:** 2026-05-03
+**Updated:** 2026-06-26
 **Supersedes:** Previous version (2026-04-15)
 **Origin design spec (archived):** [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md). This is the seminal architecture-v2 design document; this document supersedes it.
 
 This document describes the security architecture of OpenTrApp: the problem it addresses, the threat model, the container topology, and how the components compose into a single defensive perimeter around an autonomous AI agent.
+
+> **Architecture currency (2026-06):** the de-Tauri cutover has shipped on `main` ([ADR-0019](adr/0019-headless-daemon-gui-split.md) / [ADR-0022](adr/0022-daemon-control-surface.md)). The product is the headless **`opentrapp-daemon`** that owns the perimeter; the GUI is an **optional on-demand browser projection** (the loopback `viewer-server` serving the React app), **not** a desktop app. The credential-holding `vault-proxy` is now a lean **Go MITM proxy** (`elazarl/goproxy`, [ADR-0026](adr/0026-vault-proxy-replacement-evaluation.md)), replacing the former Python mitmproxy. The five-container topology, the L7/L3 split, the trust tiers, and the defense-in-depth layers below are unchanged.
 
 ---
 
@@ -30,10 +32,11 @@ A second design choice is **adaptive restriction**: the agent's privilege level 
 TIER 1: TRUSTED (host)
   user (issues high-level instructions)
   trusted CLI coordinator (Claude Code or equivalent; translates intent into operations)
-  OpenTrApp desktop GUI
+  opentrapp-daemon (headless perimeter orchestrator)
+  optional on-demand browser viewer (loopback projection; comes and goes)
 
 TIER 2: INFRASTRUCTURE (perimeter)
-  OpenTrApp container orchestrator
+  opentrapp-daemon's container orchestrator
   5 containers: vault-agent, vault-skills, vault-social, vault-proxy, vault-egress
     └─ L7 application policy lives in vault-proxy (credentials, allowlist)
     └─ L3 network policy lives in vault-egress (kernel RFC1918 drop, DoT resolver)
@@ -58,19 +61,21 @@ A Mermaid drawing of the topology, the network-isolation matrix, the trust tiers
 flowchart TB
     subgraph HOST["Host (Tier 1: trusted)"]
         USER[User]
-        GUI["OpenTrApp GUI<br/>(Tauri 2 + Rust)"]
+        DAEMON["opentrapp-daemon<br/>(headless orchestrator)"]
+        VIEWER["browser viewer<br/>(optional, on-demand)"]
     end
 
     subgraph PERIMETER["Perimeter (Tier 2: infrastructure)"]
         AGENT["vault-agent<br/>agent runtime + Telegram gateway"]
         FORGE["vault-skills<br/>87-pattern scanner + CDR"]
         SOCIAL["vault-social (opt-in)"]
-        PROXY["vault-proxy<br/>L7 policy: allowlist, key injection"]
+        PROXY["vault-proxy<br/>L7 policy: allowlist, key injection (Go)"]
         EGRESS["vault-egress<br/>L3 policy: nftables drop, DoT resolver"]
     end
 
-    USER --> GUI
-    GUI --> PERIMETER
+    USER --> DAEMON
+    DAEMON --> PERIMETER
+    VIEWER -.->|"loopback projection"| DAEMON
     AGENT --> PROXY
     FORGE --> PROXY
     AGENT <-.->|"write-only volume"| FORGE
@@ -79,6 +84,7 @@ flowchart TB
 
     classDef optional stroke-dasharray: 5 5,color:#777
     class SOCIAL optional
+    class VIEWER optional
 ```
 
 The ASCII tree below preserves the same content for readers on platforms without Mermaid rendering.
@@ -86,7 +92,8 @@ The ASCII tree below preserves the same content for readers on platforms without
 ```
 HOST
 │
-├── OpenTrApp GUI (Tauri 2 + Rust)
+├── opentrapp-daemon (headless orchestrator; owns the perimeter lifetime)
+├── browser viewer (optional, on-demand loopback projection — not a desktop app)
 │
 └── Perimeter (Podman/Docker compose network)
     │
@@ -111,7 +118,8 @@ HOST
     │     deferred (original Moltbook target retired 2026-05-03)
     │
     ├── vault-proxy
-    │     L7 (application-layer) egress policy:
+    │     L7 (application-layer) egress policy — a lean Go MITM proxy
+    │     (elazarl/goproxy; ADR-0026), ~15 MB, replacing the former Python mitmproxy:
     │     - Domain allowlist with subdomain matching
     │     - Per-request API-key injection (real keys never leave this container)
     │     - Post-resolve destination-IP check (ADR-0009 Tier 2)
@@ -146,7 +154,7 @@ Each internal container has its own internal network. `vault-proxy` bridges them
 | vault-skills         | vault-agent       | Volume only | Delivers certified skills via write-only mount |
 | vault-social       | vault-proxy       | Yes     | Feed fetch via filtered egress |
 | vault-proxy         | public internet   | **No**  | Removed by ADR-0009; chains through vault-egress |
-| host (GUI / coordinator) | vault-proxy  | Yes     | Management, monitoring, control |
+| host (daemon / coordinator) | vault-proxy  | Yes     | Management, monitoring, control |
 
 ---
 
@@ -163,7 +171,7 @@ The core runtime layer. Wraps the agent in a hardened container with a six-layer
 - Tool-control layer that filters which OpenClaw tools the LLM is even told about
 - Three-level kill switch (graceful stop, container kill, full perimeter teardown)
 
-Verified at startup by a 24-point security check covering filesystem permissions, network reachability, capability set, mount layout, and tool-policy consistency.
+Verified at startup by a multi-point security check (`workloads/agent/scripts/verify.sh`) covering filesystem permissions, network reachability, capability set, mount layout, and tool-policy consistency.
 
 ### 4.2 vault-skills (workloads/skills): supply-chain defense
 
@@ -181,13 +189,14 @@ Runs as `vault-social`. Vets untrusted agent-social feeds for prompt-injection p
 
 ### 4.4 vault-proxy: egress gateway
 
-The single point of contact between the perimeter and the public internet. Implemented as an mitmproxy-based addon that:
+The single point of contact between the perimeter and the public internet. Implemented as a lean **Go MITM proxy** (`elazarl/goproxy`; [ADR-0026](adr/0026-vault-proxy-replacement-evaluation.md), ~15 MB image, leak-free), which replaced the former Python mitmproxy addon with the **same L7 policy**. It:
 
 - Holds the user's API keys (`ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`) in environment variables visible only to itself
 - Replaces a placeholder string in outbound requests with the real key, so no other container ever has the literal key
 - Enforces a domain allowlist; requests to unallowlisted hosts are rejected with a logged 403
 - Records every request (timestamp, host, status, byte counts) to a structured log readable by the host
 - Bridges the otherwise-isolated networks of `vault-agent`, `vault-skills`, and `vault-social`
+- Chains upstream to `vault-egress` (HTTP CONNECT); it holds the keys but has no direct internet attachment
 
 ---
 
@@ -201,7 +210,7 @@ Privilege level is treated as a system state, set per context, rather than a per
 | Split Shell | File read/write in the workspace; safelisted shell commands with per-action approval | Commands not on the safelist; arbitrary network fetches              |
 | Soft Shell  | Web browsing, autonomous safelisted commands, scheduled tasks, the broader OpenClaw tool surface | Host-level resources, credential stores, administrative operations   |
 
-Default is Split Shell. Soft Shell is opt-in via configuration; a future revision will surface the toggle in the GUI behind a confirmation step.
+Default is Split Shell. Soft Shell is opt-in via configuration; surfacing the toggle in the optional browser viewer behind a confirmation step is a future revision.
 
 The shell is "adaptive" because the trusted CLI coordinator (Claude Code or equivalent) can switch levels in response to task context: for example, dropping to Hard Shell while the agent processes untrusted feed content, returning to Split Shell when the agent is back to user-initiated tasks. The agent itself cannot promote its own shell level; promotion is always initiated from Tier 1.
 
@@ -217,7 +226,7 @@ A reasoning model running on the host (Claude Code, Anthropic's Opus, or an equi
 - Surfaces security events to the user in plain language
 - Approves or denies privileged agent requests
 
-This separates security decisions from security enforcement: the coordinator decides; the perimeter enforces; the contained agent does the work. Each tier has a single, well-scoped responsibility.
+This separates security decisions from security enforcement: the coordinator decides; the perimeter enforces; the contained agent does the work. Each tier has a single, well-scoped responsibility. Boundary-weakening operations stay human-gated regardless of who asks ([ADR-0021](adr/0021-danger-gated-agentic-control-plane.md), forthcoming), so a prompt-injected coordinator cannot disarm the cage.
 
 ---
 
@@ -261,22 +270,23 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 ## 8. Status
 
-| Module             | Container                        | Maturity at v0.7.2 |
+| Module             | Container                        | Maturity (main, 2026-06) |
 |--------------------|----------------------------------|--------------------|
-| vault-agent (workloads/agent)     | vault-agent + vault-proxy        | Active. 24-point verification passing on every release. Three shell levels implemented. |
+| vault-agent (workloads/agent)     | vault-agent + vault-proxy        | Active. `verify.sh` security check passing on every release. Three shell levels implemented. |
 | vault-skills (workloads/skills)      | vault-skills                      | Active. 87-pattern scanner + CDR pipeline operational. |
 | vault-social       | vault-social                    | **Opt-in / deferred.** Live AT Protocol adapter shipped (ADR-0017); off by default, full build-out deferred (ADR-0024 Thread C). |
-| opentrapp (GUI) | host                            | Active. Tauri 2 desktop application; perimeter lifecycle ownership; manifest-driven workflow execution. |
+| opentrapp-daemon + viewer | host                     | Active. The headless daemon owns the perimeter lifecycle (de-Tauri cutover shipped 2026-06-24; [ADR-0019](adr/0019-headless-daemon-gui-split.md) / [ADR-0022](adr/0022-daemon-control-surface.md)). The GUI is an **optional on-demand browser projection** (loopback `viewer-server` serving the React app), not a desktop app. |
 
 **Current implementation:**
 
-- 5-container `compose.yml` with per-service network isolation and an L7/L3 policy split (verified by `tests/orchestrator-check.sh` §10)
+- 5-container perimeter (`compose.yml` for dev; the signed `perimeter.yml` for the daemon's native orchestrator) with per-service network isolation and an L7/L3 policy split (verified by `tests/orchestrator-check.sh`)
+- `vault-proxy` is the Go `goproxy` chokepoint (ADR-0026); the Python mitmproxy is replaced
 - Manifest contract in `schemas/component.schema.json` (6 sections: identity, status, commands, configs, health, workflows)
 - 10 component-level workflows + 4 cross-component orchestrator workflows
-- 120-check validation suite passing (0 warnings)
+- 114-check validation suite passing (0 warnings)
 - Rust workflow executor with interpolation, sequencing, and success conditions
-- React workflow UI with progress tracking, input forms, and danger-level styling
-- Adaptive shell switching via CLI; GUI exposure deferred to a future release
+- React workflow UI (served by the loopback viewer) with progress tracking, input forms, and danger-level styling
+- Adaptive shell switching via CLI; optional browser-viewer exposure deferred to a future release
 
 ---
 
@@ -287,7 +297,7 @@ Each component declares a `component.yml` manifest with six sections. Workflows 
 - **Component workflows** (one per component): sequences within a single component, e.g. forge: scan → verify → certify
 - **Orchestrator workflows** (`config/orchestrator-workflows.yml`): sequences across components, e.g. forge.scan → vault.install
 
-The Rust orchestrator and the React GUI both execute workflows from the same manifest definitions. This decouples user-facing action wording from the underlying command sequence and lets components be added or replaced without GUI changes.
+The Rust orchestrator (in `opentrapp-core`, driven by the daemon) and the React viewer both execute workflows from the same manifest definitions. This decouples user-facing action wording from the underlying command sequence and lets components be added or replaced without UI changes.
 
 ---
 
@@ -303,13 +313,13 @@ Each capability has exactly one owning module to avoid duplication or ambiguity.
 | Shell-level switching (Hard / Split / Soft) | vault | vault-agent |
 | Kill switch (graceful / hard / nuclear) | vault | host → container management |
 | Runtime monitoring (proxy logs, session audit) | vault | vault-proxy + host volume |
-| 24-point security verification | vault | vault-agent |
+| Startup security verification (`verify.sh`) | vault | vault-agent |
 | Skill scanning (87 MITRE-mapped patterns) | forge | vault-skills |
 | Skill linting and structure validation | forge | vault-skills |
 | Zero-trust line verification | forge | vault-skills |
 | Content Disarm & Reconstruction | forge | vault-skills |
 | Feed-injection scanning (25 patterns) | vault-social (opt-in) | vault-social |
-| Workflow orchestration | opentrapp | GUI / CLI |
+| Workflow orchestration | opentrapp | daemon / CLI |
 | Cross-component workflows | opentrapp | `config/orchestrator-workflows.yml` |
 
 ---
@@ -318,9 +328,9 @@ Each capability has exactly one owning module to avoid duplication or ambiguity.
 
 - Top-level project [`README.md`](../README.md)
 - Architecture v2 origin design spec (archived): [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md)
-- Component manifests: `components/<component>/component.yml`
+- Component manifests: `workloads/<component>/component.yml`
 - Manifest schema: [`schemas/component.schema.json`](../schemas/component.schema.json)
 - Orchestrator workflows: [`config/orchestrator-workflows.yml`](../config/orchestrator-workflows.yml)
 - Validation suite: [`tests/orchestrator-check.sh`](../tests/orchestrator-check.sh)
 
-This document is the single source of truth for how the components compose. Per-component implementation detail lives in each component's own documentation under `components/<component>/`.
+This document is the single source of truth for how the components compose. Per-component implementation detail lives in each component's own documentation under `workloads/<component>/`.
