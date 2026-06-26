@@ -48,7 +48,7 @@ The perimeter must provably contain the agent, cold and after every resume. This
 
 | Item | Status | Notes and gate |
 |---|---|---|
-| T0 boundary self-test, cold == resumed | 🔶 | Held 2026-06-22 via the dev path (`pass=7` cold and resumed, CA unchanged). Re-run **through the product CLI** (`opentrapp-daemon vault up` + `vault verify`) to make it end-user-faithful (bar §1). |
+| T0 boundary self-test, cold == resumed | ✅ | **Verified via the product CLI 2026-06-26 on the live goproxy perimeter** (not dev scaffolding): `opentrapp-daemon vault up` → `vault verify` `pass=7 fail=0` cold, then `vault pause`→`resume`→`vault verify` `pass=7 fail=0` with **B5 CA-fingerprint UNCHANGED**. End-user-faithful (the product daemon's native orchestrator, not `podman-compose`). Scope: DevVerifier/from-source mode + a placeholder key (B1–B6 need no valid key — P1-1); the BundleVerifier digest-staging path is the post-release T0 (gated on P4). |
 | WS0-0a: idle auto-pause actually fires (T1) | ⬜ | Built but gated off (`IDLE_AUTO_PAUSE_ENABLED=false`). Enable the proper way (not a const hack), run the daemon, confirm dormant + RAM drop. |
 | WS0-0c: wake exactly-once + security-correct resume (T2) | ⬜ | One message wakes it, delivers exactly once, and the resumed perimeter re-passes T0. |
 | Credential hardening: `--env-file` / podman secrets (#75) | ⬜ | Keys are inline `-e` on the `podman run` line, visible in the host process table for the ~1s startup window (same-user-local). Close it; verify via the product path. |
@@ -65,7 +65,7 @@ The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as
 | Loopback-viewer de-risking spike + threat model | ✅ | ADR-0022 §0 passed; `viewer-server` built, session-bootstrap + events WS wired, Linux-proven this campaign. |
 | WS-A: tune `compose.yml`/`perimeter.yml` mem_limits to measured + SIGTERM teardown | ✅ | Resting-cap sum 6.3 GB → ~3 GB; clean idle shutdown (orchestrator-check §31). |
 | WS-B: lean every workload base to alpine | ✅ | **Shipped 2026-06-26** (PR #191). vault-skills 233→72 MB, vault-social 153→74 MB; vault-egress + goproxy already alpine; vault-agent node:22-alpine (distroless non-viable, #87). Verified on musl (self-test/test/scan green; PyYAML musllinux wheel). |
-| WS-C / WS5: replace mitmproxy with a lean Go L7 proxy | ✅ | **Built + switched in on `main`** (PR #189/#190; ADR-0026). `elazarl/goproxy`, 15.6 MB, leak-free, drops the Python interpreter from the keys-holding container. **Live-boundary gate pending** (the full 5-container `boundary-selftest.sh` B1/B2/B3/B5 with a real key — maintainer-controlled). |
+| WS-C / WS5: replace mitmproxy with a lean Go L7 proxy | ✅ | **Built + switched in on `main`** (PR #189/#190; ADR-0026). `elazarl/goproxy`, 15.6 MB, leak-free, drops the Python interpreter from the keys-holding container. **Live-boundary gate GREEN (2026-06-26):** the live `boundary-selftest.sh` ran via `opentrapp-daemon vault verify` against the goproxy perimeter — B1 isolation, B2 allowlist (deny 403 / allow), **B3 credential-separation (goproxy injects; no key in agent)**, B4 L3 egress, B5 CA-stable cold==resumed, B6 read-only — `pass=7` cold and resumed. A placeholder key suffices for the boundary (P1-1). |
 | Enable idle auto-pause by default | ⬜ | After WS0-0a/0c verified (Rung 1). |
 | Flip the daemon default on (`OPENTRAPP_DAEMON_DEFER`) | ⬜ | After resting-RSS + viewer-survival verified on the product path. |
 | Status-streaming API (Unix socket or loopback) | ⬜ | Today the CLI reads markers + stderr. |
