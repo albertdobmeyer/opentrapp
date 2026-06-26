@@ -21,10 +21,10 @@ The north star: OpenTrApp becomes the perimeter people trust to run open-source 
 
 **Rung 2: Lean and CLI-first (the de-Tauri product).**
 *Benchmark:* the three concerns are CLI-operable, the GUI is optional, and the full perimeter runs on a 7.2 GB laptop with idle auto-pause collapsing resting RAM toward zero.
-- The de-Tauri cutover (the daemon is the product; the GUI an optional projection). Clears Scorecard Vulnerabilities #46.
+- The de-Tauri cutover (the daemon is the product; the GUI an optional projection). ✅ **shipped** (clears Vulnerabilities #46 at the code level, pending Scorecard re-scan).
 - Each of Vault / Skill / Social independently CLI-operable and distributable.
 - Leanness verified on the 7.2 GB box (resting RSS; idle auto-pause firing). The 7.2 GB floor is non-negotiable.
-*Gate:* de-Tauri done and lean verified on the laptop. (Section 2.) **Release-critical under the hard-gate.**
+*Gate:* de-Tauri done and lean verified on the laptop. (Section 2.) **Cutover + lean-down (WS-A…WS-D) DONE and box-verified; the enablement defaults (idle-pause-on, daemon-default-on) and the goproxy live-boundary gate remain — they sit under Rung 1.** **Release-critical under the hard-gate.**
 
 **Rung 3: Best-in-class posture (the trust signals).**
 *Benchmark:* the posture is verifiably best-in-class: clean Scorecard on the trusted-tier items, CII Gold, signed reproducible releases, a second maintainer.
@@ -52,23 +52,25 @@ The perimeter must provably contain the agent, cold and after every resume. This
 | WS0-0a: idle auto-pause actually fires (T1) | ⬜ | Built but gated off (`IDLE_AUTO_PAUSE_ENABLED=false`). Enable the proper way (not a const hack), run the daemon, confirm dormant + RAM drop. |
 | WS0-0c: wake exactly-once + security-correct resume (T2) | ⬜ | One message wakes it, delivers exactly once, and the resumed perimeter re-passes T0. |
 | Credential hardening: `--env-file` / podman secrets (#75) | ⬜ | Keys are inline `-e` on the `podman run` line, visible in the host process table for the ~1s startup window (same-user-local). Close it; verify via the product path. |
-| WS1: bound proxy memory over long sessions | 🔶 | Measure mitmproxy RSS over load and time; if it climbs, apply the measured fix and confirm bounded. |
+| WS1: bound proxy memory over long sessions | ✅ | **Resolved by replacement (WS-C).** The mitmproxy RSS leak (54→550+ MB) is gone — `vault-proxy` is now the Go `goproxy` chokepoint (<50 MB RSS measured, leak-free; ADR-0026, Section 2). The 256 MB `mem_limit` is the blast-radius cap, not a working set. |
 
 ## 2. Lean foundation / de-Tauri endgame (GUI optional, CLI-first)
 
-The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as the product, the GUI an optional projection. About 85% built; this is the last mile. The cutover also clears the top code-scan alert.
+The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as the product, the GUI an optional projection. **The lean-down campaign (WS-A…WS-D) shipped on `main` (2026-06): the Tauri GUI is deleted, the proxy is a 15 MB Go chokepoint, and every base image is alpine. The cutover/lean parts are done and verified on the 7.2 GB box; the *enablement* parts (idle-auto-pause-on, daemon-default-on) stay gated on Rung 1 product-daemon T0.**
 
 | Item | Status | Notes and gate |
 |---|---|---|
 | Headless daemon operation (`make daemon`, `docs/headless.md`) | ✅ | Lean GUI-free binary + operating docs shipped. |
-| Enable idle auto-pause by default | ⬜ | After WS0-0a/0c verified. |
+| Delete the Tauri crate + GTK3 deps (the cutover) | ✅ | **Shipped on `main` 2026-06-24** (WS-D). Workspace re-rooted at `crates/{core,daemon,viewer-server}`; `Cargo.lock` has 0 `tauri`/`wry`/`webkit` entries; `deny.toml` ignore list empty. Clears Vulnerabilities #46 at the code level (Scorecard re-scan pending). |
+| Loopback-viewer de-risking spike + threat model | ✅ | ADR-0022 §0 passed; `viewer-server` built, session-bootstrap + events WS wired, Linux-proven this campaign. |
+| WS-A: tune `compose.yml`/`perimeter.yml` mem_limits to measured + SIGTERM teardown | ✅ | Resting-cap sum 6.3 GB → ~3 GB; clean idle shutdown (orchestrator-check §31). |
+| WS-B: lean every workload base to alpine | ✅ | **Shipped 2026-06-26** (PR #191). vault-skills 233→72 MB, vault-social 153→74 MB; vault-egress + goproxy already alpine; vault-agent node:22-alpine (distroless non-viable, #87). Verified on musl (self-test/test/scan green; PyYAML musllinux wheel). |
+| WS-C / WS5: replace mitmproxy with a lean Go L7 proxy | ✅ | **Built + switched in on `main`** (PR #189/#190; ADR-0026). `elazarl/goproxy`, 15.6 MB, leak-free, drops the Python interpreter from the keys-holding container. **Live-boundary gate pending** (the full 5-container `boundary-selftest.sh` B1/B2/B3/B5 with a real key — maintainer-controlled). |
+| Enable idle auto-pause by default | ⬜ | After WS0-0a/0c verified (Rung 1). |
 | Flip the daemon default on (`OPENTRAPP_DAEMON_DEFER`) | ⬜ | After resting-RSS + viewer-survival verified on the product path. |
-| Loopback-viewer de-risking spike + threat model | ⬜ | ADR-0022 §0 kill criteria; `crates/viewer-server` is scaffolded but excluded from the build. |
 | Status-streaming API (Unix socket or loopback) | ⬜ | Today the CLI reads markers + stderr. |
 | Unify the CLI as `opentrapp` (retire `opentrapp-daemon`) | ⬜ | Phase 3. |
 | OS autostart launches the daemon, not the GUI | ⬜ | systemd user unit / launchd / Windows task. |
-| Delete the Tauri crate + GTK3 deps | ⬜ | The cutover; clears Vulnerabilities #46 (the GTK3/WebKit advisories). |
-| WS5: replace mitmproxy with a lean Rust L7 proxy | ⬜ | Drop the Python interpreter from the keys-holding container. |
 
 ## 3. Supply-chain and dependency hygiene
 
@@ -84,7 +86,7 @@ The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as
 | Token-Permissions least privilege | ✅ | PR #139. |
 | Dependabot #19 (js-yaml DoS) | ✅ | Overridden to js-yaml ≥4.2.0; `npm install` reports 0 vulnerabilities (PR #152). |
 | Pinned-Dependencies #80/#81/#82 | 🔶 | `npm install -g pkg@VERSION` in the agent/skills build scripts: version-pinned, but Scorecard wants integrity pins. Hash-pin or document the rationale (the built image is digest-pinned downstream by the signed bundle). |
-| Vulnerabilities #46 | ⬜ | De-Tauri-gated (Section 2): the GTK3/WebKit tree lives only in the GUI crate; the spine (core/daemon) is already Tauri-free. |
+| Vulnerabilities #46 | 🔶 | **De-Tauri cutover shipped (Section 2): the GUI crate is deleted, `Cargo.lock` is GTK-free.** The 19 GTK3/WebKit advisories are gone at the code level; the Scorecard badge clears on its next re-scan cycle. |
 | Code-Review #43 | ⬜ | Solo-maintainer ceiling: needs a second human reviewer. |
 | Branch-Protection #1 | 🔶 | Partly settable now via `gh api` (require status checks, no force-push, require PR); a required-review count ≥1 is meaningless without a co-maintainer. |
 | CII Best Practices + Scorecard climb | 🔶 | Several checks unlock with a co-maintainer. |
@@ -94,7 +96,7 @@ The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as
 | Item | Status | Notes |
 |---|---|---|
 | Skill Firewall on the Marketplace + one-way sync | ✅ | Action published; projection sync verified end to end. |
-| Publish v0.7.x | ⛔ | **HARD-GATED (owner decision 2026-06-22): no release until every code-scan alert is closed.** #80-82 + #1 (fixable now), #46 (de-Tauri cutover), #43 (co-maintainer), in addition to WS0 verified. Puts Section 2 and the co-maintainer item on the release critical path. |
+| Publish the de-Tauri release (next: v0.9.0) | ⛔ | **HARD-GATED (owner decision 2026-06-22): no release until every code-scan alert is closed.** Progress: #80-82 done; **#46 de-Tauri cutover shipped** (clears on the next Scorecard re-scan). **Still blocking:** #43 + #1 (co-maintainer), WS0/Rung-1 product-daemon T0, and the goproxy **live-boundary self-test** (Section 2). The lean-down work is built + box-verified and ready to tag; the publish stays gated. The last tagged release ([v0.8.0](https://github.com/albertdobmeyer/opentrapp/releases/latest)) is still the pre-cutover Tauri desktop app. |
 | CLI/registry distribution (crates.io / Homebrew / curl-sh; GHCR) | ⬜ | OS-agnostic, no lock-in. |
 | Code signing (SignPath reapply) | ⬜ | After visibility signals land (rejected 2026-06-15). |
 
