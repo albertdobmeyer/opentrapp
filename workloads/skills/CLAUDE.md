@@ -46,7 +46,7 @@ cargo test -p opentrapp          # Rust tests parse this manifest specifically
 
 In production, the skill firewall runs inside **vault-skills** — a dedicated container in the OpenTrApp five-container perimeter. All untrusted content (downloaded SKILL files) is processed inside this container, never on the user's host machine.
 
-- **Containerfile** in this repo's root defines the image (~233MB, python:3.10-slim + bash toolchain)
+- **Containerfile** in this repo's root defines the image (~72 MB, python:3.10-alpine + bash toolchain; WS-B shrink from the former 233 MB python:3.10-slim)
 - **vault-skills** is one of five services in `compose.yml` at the opentrapp root
 - Runs on **skills-net** (internal network) — can reach vault-proxy but CANNOT reach vault-agent or vault-social
 - Certified skills delivered to agent via **skills-deliveries** shared volume (write in forge, read-only in agent)

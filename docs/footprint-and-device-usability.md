@@ -102,8 +102,8 @@ shields are on-demand and absent at rest):
 | **vault-agent** | Node 22 + OpenClaw | 689 MB published / 590 MB slimmed | **356 MB [measured, connected idle]** · ~1.35 GB startup spike (~90 s) [measured] | **OpenClaw-intrinsic** |
 | **vault-proxy** | mitmproxy (Python) | 250 MB | **54 MB [measured, fresh]** | **Our security infra** |
 | **vault-egress** | nftables/resolver (+ unused Node) | 176 MB | **10.6 MB [measured]** | **Our security infra** |
-| *vault-skills* | Python + bash (idle) | 234 MB | ~0 at rest (on-demand) | Our security infra |
-| *vault-social* | Python + bash (idle) | 154 MB | ~0 (opt-in, off by default) | Our security infra |
+| *vault-skills* | Python + bash (idle) | **72 MB [measured 2026-06-26]** (was 234 MB; WS-B alpine shrink) | ~0 at rest (on-demand) | Our security infra |
+| *vault-social* | Python + bash (idle) | **74 MB [measured 2026-06-26]** (was 154 MB; WS-B alpine shrink) | ~0 (opt-in, off by default) | Our security infra |
 
 The resting perimeter was **measured at ≈ 421 MB** (egress 10.6 + proxy 54 + agent 356,
 `podman stats`, 2026-06-09) — well under the ~600 MB the planning docs feared for the agent

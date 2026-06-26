@@ -186,7 +186,7 @@ make publish SKILL=my-tool VERSION=1.0.0
 
 In production, the toolchain runs inside the `vault-skills` container of the OpenTrApp five-container perimeter. All untrusted content (downloaded skills) is processed inside the container and never reaches the host filesystem.
 
-- The `Containerfile` in this repository's root defines the image (~233 MB, `python:3.10-slim` plus the bash toolchain).
+- The `Containerfile` in this repository's root defines the image (~72 MB, `python:3.10-alpine` plus the bash toolchain; WS-B shrank it from the former 233 MB `python:3.10-slim`).
 - `vault-skills` is one of five services in `compose.yml` at the opentrapp root (see [ADR-0009](../../docs/adr/0009-five-container-perimeter.md) for the topology).
 - It runs on `skills-net`, an internal network. It can reach `vault-proxy` for outbound HTTPS but cannot reach `vault-agent` or `vault-social` directly.
 - Certified skills are delivered to the agent through the `skills-deliveries` shared volume, which is writable in `vault-skills` and read-only in `vault-agent`.
