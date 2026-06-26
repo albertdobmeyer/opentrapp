@@ -65,10 +65,10 @@ grep -E '^check [0-9]+ "' workloads/agent/scripts/verify.sh
 
 | Field | Value |
 |-------|-------|
-| Claim | A 120-check manifest-orchestration suite runs on every commit and reports zero warnings in the released configuration |
+| Claim | A 114-check manifest-orchestration suite runs on every commit and reports zero warnings in the released configuration |
 | Source | [`README.md`](../README.md) "Test suite", [`docs/whitepaper.md`](whitepaper.md) §8, [`CLAUDE.md`](../CLAUDE.md) §7 |
 | Command | `bash tests/orchestrator-check.sh` |
-| Expected output | Last line: `Results: 120 passed, 0 failed, 0 warnings (total: 120 checks)` |
+| Expected output | Last line: `Results: 114 passed, 0 failed, 0 warnings (total: 114 checks)` |
 | Runtime | ≤ 30 s |
 
 The script needs `python3` (with `pyyaml` installed) and `node` available. The `Results:` line is what the README cites; rows above it are the per-check pass/fail listing.
@@ -181,10 +181,10 @@ The tier names appear in the architecture diagram in `docs/trifecta.md` §2 ("TI
 
 | Field | Value |
 |-------|-------|
-| Claim | The 120-check orchestrator suite reports zero warnings |
+| Claim | The 114-check orchestrator suite reports zero warnings |
 | Source | [`README.md`](../README.md), [`docs/whitepaper.md`](whitepaper.md) §8, [`docs/handoff.md`](handoff.md) |
 | Command | `bash tests/orchestrator-check.sh 2>&1 \| grep -E "Results:"` |
-| Expected output | `Results: 120 passed, 0 failed, 0 warnings (total: 120 checks)` |
+| Expected output | `Results: 114 passed, 0 failed, 0 warnings (total: 114 checks)` |
 | Runtime | ≤ 30 s |
 
 ---

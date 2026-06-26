@@ -258,7 +258,7 @@ cd app/src-tauri && cargo test --lib     # Rust unit tests
 cd app && npm test -- --run              # Vitest unit tests
 cd app && npx tsc --noEmit               # TypeScript strict
 cd app && npx playwright test            # End-to-end tests
-bash tests/orchestrator-check.sh         # Manifest validation (120 checks)
+bash tests/orchestrator-check.sh         # Manifest validation (114 checks)
 podman compose up -d && podman compose down  # Perimeter smoke test
 ```
 
