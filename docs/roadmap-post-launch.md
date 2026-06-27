@@ -1,5 +1,7 @@
 # Post-launch roadmap
 
+> **HISTORICAL (2026-05-04, v0.3-era enrichment plan) — not current.** Most items shipped; the live roadmap is [`/ROADMAP.md`](../ROADMAP.md). Kept for reference only (CLAUDE.md §13).
+
 **Created:** 2026-05-04
 **Status:** All eight items have a deliverable in `main` as of 2026-05-04. §7 (demo recording) is scaffolded but the recorded video itself is queued for a future maintainer session because it requires a clean recording environment.
 **Predecessor:** Pass 8 pre-ship audit shipped v0.3.0 on 2026-05-02. The cleanup and academic-tone passes (commits `4108482`, `1bc288f`, `9b9f6c8`, plus per-submodule work) brought the published codebase to a consistent baseline. This roadmap covers the next layer of work: enriching the project with artifacts that elevate it from "shipped open-source tool" to "publishable security-research project."

@@ -1,12 +1,17 @@
 # OpenTrApp Roadmap
 
-This is the public, intentionally-honest roadmap. It states where the project is,
-what has to be true before it can be recommended to non-expert users, and what is
-explicitly *not* promised. It is updated as milestones land; the authoritative
-working detail lives in [`road-to-recommendable.md`](road-to-recommendable.md) and
-the [architecture decision records](adr/).
+> **⚠️ DEPRECATED — superseded by [`/ROADMAP.md`](../ROADMAP.md), the single canonical roadmap.**
+> This was a second roadmap (a "Tier 1–3" framing of the same journey the canonical
+> file tracks as the "Rung 1–4" benchmark ladder); two roadmaps drift (this one fell
+> stale at v0.7.2 while v0.8.0 shipped and `main` went post-de-Tauri). Per the
+> documentation-governance rule (CLAUDE.md §13), roadmap status lives in `ROADMAP.md`
+> ONLY. **Do not update this file — update `ROADMAP.md`.** The containment-confidence-
+> first ordering it championed is carried in `ROADMAP.md`'s benchmark ladder + CLAUDE.md §11.
 
-**Current version:** `v0.7.2` (release-candidate line). **License:** MIT.
+The honest framing it preserved: do not call OpenTrApp "recommendable to non-expert
+users" until the security boundary is verified through the product's own entrypoints
+on capable hardware. **Current version: see [`/ROADMAP.md`](../ROADMAP.md)** (last tagged
+release v0.8.0 — pre-de-Tauri; `main` is the post-de-Tauri lean build).
 
 ---
 

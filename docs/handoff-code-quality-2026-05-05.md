@@ -1,5 +1,7 @@
 # Handoff — Code-quality and code-hygiene workstream
 
+> **HISTORICAL (2026-05-05 session handoff) — not current.** Current session state lives in [`handoff.md`](handoff.md); roadmap status in [`/ROADMAP.md`](../ROADMAP.md). Kept for reference only (CLAUDE.md §13).
+
 **Created:** 2026-05-05
 **Workstream:** Drive the strict code-scanning gate to zero open issues and zero warnings; identify and rewrite especially poor code where doing so produces a more elegant and maintainable result.
 
