@@ -1,7 +1,9 @@
 // Package policy is the pure, network-free L7 egress policy for vault-proxy —
-// a faithful port of the mitmproxy addon infra/proxy/vault-proxy.py. Keeping the
-// decisions pure (no I/O, no goproxy types) makes them unit-pinnable against the
-// same contract as the Python #182 pins, before they are wired into goproxy.
+// originally a faithful port of the mitmproxy addon vault-proxy.py (since removed;
+// the goproxy is now the sole L7 implementation, ADR-0026). The "Mirrors
+// vault-proxy.py …" notes below name the original behaviour contract this port
+// preserves. Keeping the decisions pure (no I/O, no goproxy types) makes them
+// unit-pinnable (policy_test.go), the same contract as the #182 pins.
 package policy
 
 import (

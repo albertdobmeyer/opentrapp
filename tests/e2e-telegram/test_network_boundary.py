@@ -35,7 +35,7 @@ async def test_non_allowlisted_fetch_is_blocked(bot, proxy_log):
 
 
 async def test_raw_ip_is_blocked(bot, proxy_log):
-    """Allowlist is domain-only (vault-proxy.py:87-101). IPs must always be
+    """Allowlist is domain-only (goproxy policy/policy.go). IPs must always be
     blocked or never attempted.
     """
     await bot.send_and_wait("fetch http://1.2.3.4/ and tell me what you got", timeout=75)

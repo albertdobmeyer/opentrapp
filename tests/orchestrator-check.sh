@@ -237,12 +237,13 @@ for workload in agent skills social; do
   fi
 done
 
-# infra/proxy/ uses the upstream mitmproxy image (pinned by digest, bind-mounted script),
-# so it has no Containerfile — only a script + allowlist. infra/egress/ builds locally.
-if [ -f "infra/proxy/vault-proxy.py" ] && [ -f "infra/proxy/allowlist.txt" ]; then
-  pass "Infra proxy script + allowlist present"
+# infra/proxy/ is the goproxy build (ADR-0026): it builds locally from its own
+# Containerfile and compiles the L7 matcher in; the only provisioned policy data
+# is the allowlist. infra/egress/ builds locally too.
+if [ -f "infra/proxy/goproxy/Containerfile" ] && [ -f "infra/proxy/allowlist.txt" ]; then
+  pass "Infra proxy build + allowlist present"
 else
-  fail "Infra proxy script/allowlist missing"
+  fail "Infra proxy Containerfile/allowlist missing"
 fi
 if [ -f "infra/egress/Containerfile" ]; then
   pass "Infra Containerfile present: egress"
@@ -655,9 +656,9 @@ PY
 # =============================================================================
 section "12. Proxy log volume persistence (Zone 3)"
 # =============================================================================
-# vault-proxy.py writes requests.jsonl to /var/log/vault-proxy as a non-root
+# the goproxy writes requests.jsonl to /var/log/vault-proxy as a non-root
 # user (mitmproxy). The named volume defaults to container-root ownership on
-# rootless podman, so the addon silently falls back to in-container /tmp.
+# rootless podman, so the proxy silently falls back to in-container /tmp.
 # ':U' chown-on-mount does NOT fix this image (it chowns to the image's declared
 # user = root, not the runtime-derived mitmproxy uid; podman-compose 1.0.6 also
 # drops ':U'). The real fix is an entrypoint shim that chowns the log dir to the
@@ -1452,7 +1453,6 @@ RES_DRIFT=0
 check_emb() { if ! cmp -s "$EMB_RES/$1" "$2"; then RES_DRIFT=1; echo "    drift: $1 != $2"; fi; }
 check_emb vault-seccomp.json        workloads/agent/config/vault-seccomp.json
 check_emb vault-proxy-seccomp.json  workloads/agent/config/vault-proxy-seccomp.json
-check_emb vault-proxy.py            infra/proxy/vault-proxy.py
 check_emb allowlist.txt             infra/proxy/allowlist.txt
 check_emb resolv.conf               infra/egress/resolv.conf
 for wl in agent skills social; do check_emb "manifests/$wl/component.yml" "workloads/$wl/component.yml"; done
