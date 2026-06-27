@@ -232,3 +232,22 @@ OpenTrApp is a high-stakes security application. It is public and already being 
 2. **Guard the reputation: highest quality, no glossing, no handwaving.** No quick fixes, no patching to force a passing run, no working around a failure, no glossing over a gap. Find the root cause and fix it properly, or state plainly that it is unverified and route it (§11: unverified is not done). For a security tool, reporting "it looks fine" as "it is correct" is the failure that ends trust.
 3. **Protect the end user from agent-related dangers, always.** Judge every change first by its containment effect: does it keep the contained agent caged, keep credentials and the network separated, keep untrusted skill content off the host, keep boundary-weakening operations human-gated (ADR-0021)? When convenience and the user's safety conflict, safety wins and the trade is documented.
 4. **Build something genuinely useful, and earn the stars and forks honestly.** The aim is a real, trustworthy security perimeter for open agent systems (OpenClaw, opencode, and others) that people adopt because it actually protects them. Substance first; visibility follows. Never let promotion outrun the verified foundation.
+
+## 13. Documentation governance — single source of truth (non-negotiable)
+
+Stale, contradictory status docs are worse than none: every agent and contributor acts on them, so a wrong status produces wrong work. The failure mode is **proliferation** — when the same status lives in many overlapping docs, each change must touch them all, some are missed, and they drift (e.g. a dead `IDLE_AUTO_PAUSE_ENABLED=false` flag copied across the roadmap + an ADR + an audit long after the code dropped it; an orchestration count that read 42 / 120 / 114 in three places). Reducing the *number of status surfaces* is the structural fix. One source of truth per concern:
+
+| Concern | The ONE canonical source |
+|---|---|
+| Roadmap status — what's built/next, the gates, the current frontier | **`ROADMAP.md`** (the benchmark ladder) |
+| Session state — "where we stopped + immediate next steps" | **`docs/handoff.md`** (one snapshot, supersedes prior) |
+| Mission / product identity / the bar / verification discipline | **`CLAUDE.md`** §1, §11, §12 |
+| One architectural decision (context, alternatives, current Status) | that decision's **`docs/adr/000X-*.md`** |
+| Domain facts (footprint numbers, advisory triage, threat model) | the **domain doc** (`docs/footprint-…`, `docs/known-advisories.md`, `docs/threat-model.md`) — facts, not duplicated roadmap status |
+
+Rules:
+- **Update the canonical doc; do not spawn a new one.** Before creating any `roadmap-*.md`, `handoff-*.md`, `*-plan-DATE.md`, or `status` file, update the canonical instead. (Reinforces the global no-`PROGRESS.md`/`SUMMARY.md` rule.)
+- **Don't duplicate status across docs; cross-reference the canonical.** Domain docs hold domain facts and link to `ROADMAP.md` for status — they don't restate the rung/gate status.
+- **Archive completed/dated docs.** A finished handoff or a dated plan gets a `> **HISTORICAL — superseded by <canonical>**` banner (and, when its links allow, moves to `docs/archive/`) so it can't be mistaken for current.
+- **Capture insights where future agents read them** — the canonical shared docs, not only a private memory or this session's context.
+- **When you change behavior, reconcile the docs in lockstep** (the §11 fix's 6-doc flip is the pattern): the code and every doc that describes it land together, or the claim is unverified.

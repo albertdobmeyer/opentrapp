@@ -1,5 +1,7 @@
 # Scorecard improvement plan
 
+> **HISTORICAL (2026-05-05 snapshot) — not current.** The live OpenSSF Scorecard posture lives in [`../SCORECARD.md`](../SCORECARD.md) (and roadmap status in [`/ROADMAP.md`](../ROADMAP.md) §4). Kept for reference only (CLAUDE.md §13).
+
 **Created:** 2026-05-05
 **Trigger:** OpenSSF Scorecard report against commit `9fee9b8` returned a score of **5.6 / 10**. This document captures the per-check assessment, the practical path to the highest reachable score, and a cheat-sheet for the OpenSSF Best Practices self-attestation that satisfies one of the open items.
 

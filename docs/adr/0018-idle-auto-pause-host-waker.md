@@ -1,6 +1,6 @@
 # ADR-0018 — Idle auto-pause and the host-side wake-on-message waker
 
-**Status:** Accepted — design (Phase 3 Slice D of the memory-optimization initiative); backend pause path (Slices A–C) landed and CI-green behind `IDLE_AUTO_PAUSE_ENABLED=false`; the waker is the activation step
+**Status:** Accepted — backend pause path + the host-side waker landed, CI-green. The `IDLE_AUTO_PAUSE_ENABLED` const (the historical design narrative in § Context / §7 below) was **removed 2026-06-09**: auto-pause is now **always-on, token-gated** — `should_auto_pause` requires a Telegram token (= a wake path) and is fail-safe otherwise. The resume boundary self-test is **default-ON** (§11; opt-out `OPENTRAPP_SELFTEST_ON_RESUME=0`, see the addendum). Remaining: the Slice-E user-facing `idleAutoPause` toggle (§7) + on-hardware T1/T2 verification (#35/#40).
 **Companion plan:** memory-optimization plan (`~/.claude/plans/glimmering-meandering-babbage.md`), Phase 3
 **Cross-references:** [ADR-0009](0009-five-container-perimeter.md) · [ADR-0011](0011-zero-trust-self-sufficient-bootstrap.md) · [ADR-0001](0001-proxy-side-api-key-injection.md) · [threat-model.md](../threat-model.md) T1
 
