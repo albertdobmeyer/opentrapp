@@ -96,11 +96,12 @@ async fn run() -> ExitCode {
         });
     }
 
+    let idle_ms = supervisor::idle_threshold_ms();
     eprintln!(
-        "opentrapp-daemon: owning the perimeter (idle threshold {} min)",
-        supervisor::IDLE_TIMEOUT_MS_DEFAULT / 60_000
+        "opentrapp-daemon: owning the perimeter (idle threshold {} s)",
+        idle_ms / 1000
     );
-    supervisor::run(data_dir.clone(), supervisor::IDLE_TIMEOUT_MS_DEFAULT, shutdown).await;
+    supervisor::run(data_dir.clone(), idle_ms, shutdown).await;
 
     runguard::clear(&data_dir);
     eprintln!("opentrapp-daemon: perimeter down, exiting cleanly");
