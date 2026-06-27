@@ -15,6 +15,7 @@
 //!
 //! [ADR-0019]: ../../../../docs/adr/0019-headless-daemon-gui-viewer-split.md
 
+pub mod approvals;
 pub mod boundary;
 pub mod config_ops;
 pub mod control;

@@ -172,14 +172,25 @@ Staged, test-first. The full **amplifier-prevention guarantee** (§ Decision) is
   are tagged: `ControlRequest::boundary_impact()` → `Pause`/`Shutdown` = `weakening` (they leave the
   perimeter *down*), `Resume`/`Restart` = `neutral` (they return it to full, re-verified protection).
   TDD + mutation-pinned. No behaviour change yet — this is the data the gate consumes.
-- **Slice 2 — structural enforcement (next).** At the supervisor control-dispatch chokepoint, a control
-  request whose `boundary_impact` is `weakening` (read from the agent-writable `~/.opentrapp/control`
-  inbox) is **refused** — never routed to its applying handler; only the human-approval surface applies
-  it. The daemon's *own* internal idle-auto-pause is not an agent-reachable request and is unaffected.
-  This delivers the §2/§3 guarantee; pinned by extending the ADR-0016 sole-writer tests to the inbox.
-- **Slice 3 — the out-of-band confirmation channel** (GUI two-tap / Telegram push) + the manifest
-  `boundary_impact` field across the three schema-alignment layers + its CI enum check, for the
-  GUI-projected command surface.
+- **Slice 2 — the gate + the held-approval backend (shipped 2026-06-27).** At the supervisor
+  control-dispatch chokepoint, `gate_inbox_request` reads each request's `boundary_impact`: a
+  `weakening` one (from the agent-writable `~/.opentrapp/control` inbox) is **held** in the
+  `core::approvals` queue — never applied here; only a `neutral` one (Resume/Restart) is applied. The
+  held request is applied only by `supervisor::apply_approved` (the generalization of
+  `allowlist::apply_always`: the sole pending→applied edge, with **no agent call edge** — `user_pause`,
+  the old ungated inbox applier, was removed). The daemon's *own* idle-auto-pause (`arm_pause`) is not
+  an inbox request and is untouched; the daemon still stops on SIGTERM (the un-amplified T4 escape).
+  Pinned by `inbox_holds_weakening_and_admits_neutral`, the `approvals` queue tests, and an
+  orchestrator-check structural pin (parity with the ADR-0016 §27 sole-writer pin). Why "held," not
+  "refused": holding is the no-compromise path — the op is queued for the human, not lost.
+- **Slice 2b — the human approval surface (next).** The GUI two-tap that lists the pending queue and
+  calls `apply_approved` (Pause applies cross-process via the shared markers + podman; a daemon stop
+  stays SIGTERM/quit). The Telegram **reply** path is ruled out: the waker is peek-only by hard
+  invariant (ADR-0018, the agent owns that bot's `getUpdates` when the perimeter is up), so the reply
+  can't be read without breaking the agent's exactly-once delivery — the GUI two-tap is the out-of-band
+  surface, exactly as ADR-0016. Its transport hardening (so the tap is the higher-cost path) is ADR-0022.
+- **Slice 3 — the manifest `boundary_impact` field** across the three schema-alignment layers + its CI
+  enum check, for the GUI-projected command surface.
 
 ## What this ADR does NOT decide
 

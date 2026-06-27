@@ -60,6 +60,21 @@ async fn main() -> ExitCode {
 }
 
 /// Queue a control request into the running daemon's inbox + exit.
+/// A boundary-WEAKENING verb (ADR-0021): queue it, but tell the operator it is
+/// HELD for out-of-band approval — the daemon will not apply it from the
+/// agent-writable control channel — and how to achieve the capability meanwhile.
+/// (The request is still queued, so the approval surface can apply it later.)
+fn submit_weakening(req: ControlRequest, escape: &str) -> ExitCode {
+    let data_dir = markers::default_data_dir();
+    let _ = control::submit(&data_dir, req);
+    println!(
+        "opentrapp-daemon: '{}' is boundary-weakening — HELD for out-of-band approval (ADR-0021); \
+         the daemon will not apply it from the control channel.\n  {escape}",
+        req.as_token()
+    );
+    ExitCode::SUCCESS
+}
+
 fn submit_control(req: ControlRequest) -> ExitCode {
     let data_dir = markers::default_data_dir();
     match control::submit(&data_dir, req) {
@@ -154,8 +169,14 @@ fn print_status() -> ExitCode {
 async fn dispatch_vault(verb: Option<&str>) -> ExitCode {
     match verb {
         Some("up") => run().await,
-        Some("down") => submit_control(ControlRequest::Shutdown),
-        Some("pause") => submit_control(ControlRequest::Pause),
+        Some("down") => submit_weakening(
+            ControlRequest::Shutdown,
+            "To stop the perimeter now: Ctrl-C / SIGTERM the running daemon (the `vault up` process).",
+        ),
+        Some("pause") => submit_weakening(
+            ControlRequest::Pause,
+            "Pausing happens automatically when idle; explicit pause awaits the approval UI (ADR-0021).",
+        ),
         Some("resume") => submit_control(ControlRequest::Resume),
         Some("restart") => submit_control(ControlRequest::Restart),
         Some("status") => print_status(),
@@ -175,10 +196,10 @@ async fn dispatch_vault(verb: Option<&str>) -> ExitCode {
 fn print_vault_help() {
     println!("opentrapp vault — control the containment perimeter (the Vault)");
     println!("  up        bring the perimeter up and supervise it (idle auto-pause + wake)");
-    println!("  down      tear the perimeter down (stop owning it)");
+    println!("  down      [weakening] HELD for out-of-band approval (ADR-0021); to stop now, SIGTERM `vault up`");
     println!("  status    print durable perimeter state + the current owner");
     println!("  verify    run the live boundary self-test now (0 hold / 1 fail / 2 can't assess)");
-    println!("  pause     pause the running perimeter");
+    println!("  pause     [weakening] HELD for out-of-band approval; pausing also happens automatically when idle");
     println!("  resume    resume a paused perimeter");
     println!("  restart   restart the perimeter");
     println!();

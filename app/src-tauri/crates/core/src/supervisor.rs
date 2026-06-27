@@ -102,24 +102,40 @@ async fn arm_pause(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
     *waker = crate::idle::spawn(data_dir.clone());
 }
 
-/// Explicit user pause: stop containers + set the PAUSED marker, with NO waker
-/// (stays paused until an explicit Resume — distinct from idle DORMANT, which
-/// auto-wakes on the next Telegram message). Routed from the GUI's
-/// `pause_perimeter` when a daemon owns the perimeter.
-async fn user_pause(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
-    if let Some(w) = waker.take() {
-        w.cancel();
+/// Apply a human-**approved** held weakening request — the SOLE edge from
+/// "pending approval" to an applied boundary-weakening op (ADR-0021), the
+/// generalization of [`crate::orchestrator::allowlist::apply_always`]. Called
+/// ONLY from the out-of-band approval surface (the GUI two-tap), **never** from
+/// the agent-reachable inbox-drain path ([`gate_inbox_request`] holds the
+/// request; this consumes the human's approval). Operates on the shared markers
+/// + podman, so the (separate-process) approval surface applies it without the
+/// daemon's in-memory waker. Returns whether a pending request with `id` was
+/// found and applied.
+pub async fn apply_approved(data_dir: &std::path::Path, id: &str) -> bool {
+    let Some(req) = crate::approvals::take_approved(data_dir, id) else {
+        return false; // nothing pending under that id (idempotent; no double-apply)
+    };
+    match req {
+        ControlRequest::Pause => {
+            let _ = crate::markers::set_flag(data_dir, crate::markers::PAUSED);
+            let d = data_dir.to_path_buf();
+            let _ = tokio::task::spawn_blocking(move || {
+                crate::orchestrator::podman::perimeter_stop(&d)
+            })
+            .await;
+            eprintln!("[approvals] applied human-approved PAUSE");
+            true
+        }
+        ControlRequest::Shutdown => {
+            // Stopping the daemon PROCESS is the owner's SIGTERM/quit, not a file
+            // op the (separate-process) approval surface can perform. The approval
+            // is consumed; the owner's signal is the stop. Honest, not a no-op trap.
+            eprintln!("[approvals] shutdown approved — quit the app / SIGTERM the daemon to stop");
+            true
+        }
+        // Neutral verbs are never enqueued for approval; defensive.
+        ControlRequest::Resume | ControlRequest::Restart => false,
     }
-    if crate::markers::is_set(data_dir, crate::markers::PAUSED) {
-        return; // already paused
-    }
-    let _ = crate::markers::set_flag(data_dir, crate::markers::PAUSED);
-    let d = data_dir.clone();
-    let _ = tokio::task::spawn_blocking(move || {
-        crate::orchestrator::podman::perimeter_stop(&d)
-    })
-    .await;
-    eprintln!("[supervisor] paused (user)");
 }
 
 /// Wake from dormant OR user-pause. Stops the waker BEFORE bringing up (so the
@@ -198,6 +214,29 @@ pub(crate) async fn verify_boundary_fail_closed(data_dir: &PathBuf) {
     }
 }
 
+/// ADR-0021 gate at the agent-reachable control-dispatch chokepoint. The
+/// `~/.opentrapp/control` inbox is a file drop any host process (incl. a
+/// prompt-injected host agent) can write, so a **boundary-weakening** request
+/// (`Pause`/`Shutdown`) is never applied here — it is **held** in the
+/// out-of-band approval queue ([`crate::approvals`]) and applied only when a
+/// human approves it on the approval surface. Generalizes the ADR-0016
+/// invariant ("the weakening writer has no agent call edge") from the contained
+/// agent to the control inbox: the dispatch loop has no edge to the weakening
+/// appliers — those are reached only from [`apply_approved`].
+///
+/// Returns `Some(req)` for a neutral request (apply it now), `None` if held.
+pub(crate) fn gate_inbox_request(data_dir: &std::path::Path, req: ControlRequest) -> Option<ControlRequest> {
+    if req.boundary_impact().agent_operable() {
+        return Some(req);
+    }
+    let _ = crate::approvals::enqueue(data_dir, req);
+    eprintln!(
+        "[supervisor] HELD boundary-weakening request {req:?} for out-of-band approval \
+         (ADR-0021 — the control inbox cannot weaken the perimeter; approve in the OpenTrApp app)"
+    );
+    None
+}
+
 /// Own the perimeter until `shutdown` fires (or a Shutdown control request).
 ///
 /// Brings it up, then each [`TICK`]: first drains the [`crate::control`] inbox
@@ -216,19 +255,23 @@ pub async fn run(data_dir: PathBuf, threshold_ms: u64, shutdown: Arc<Notify>) {
             _ = tokio::time::sleep(TICK) => {}
         }
 
-        // 1. Explicit control requests (valid in any state).
-        let mut stop = false;
+        // 1. Explicit control requests. ADR-0021: the `control` inbox is an
+        //    agent-writable file drop, so a boundary-WEAKENING request is HELD for
+        //    out-of-band approval by `gate_inbox_request` (never applied here); only
+        //    NEUTRAL requests (Resume/Restart) are applied. The daemon still stops
+        //    on SIGTERM/SIGINT (`shutdown.notified`, the owner's own process control,
+        //    daemon main.rs) — that is the un-amplified T4 escape the gate inherits.
         for req in crate::control::drain(&data_dir) {
+            let Some(req) = gate_inbox_request(&data_dir, req) else {
+                continue; // weakening — held for human approval, not applied
+            };
             match req {
-                ControlRequest::Shutdown => stop = true,
-                ControlRequest::Pause => user_pause(&data_dir, &mut waker).await,
                 ControlRequest::Resume => resume_now(&data_dir, &mut waker).await,
                 ControlRequest::Restart => restart_now(&data_dir, &mut waker).await,
+                // Pause/Shutdown are weakening — gate_inbox_request held them above,
+                // so they never reach here (the inbox has no edge to the appliers).
+                ControlRequest::Pause | ControlRequest::Shutdown => {}
             }
-        }
-        if stop {
-            eprintln!("[supervisor] shutdown requested via control channel");
-            break;
         }
 
         // 2. Idle auto-pause (only while awake + not user-paused).
@@ -286,5 +329,32 @@ mod tests {
         std::env::set_var("OPENTRAPP_IDLE_TIMEOUT_MS", "notanumber");
         assert_eq!(idle_threshold_ms(), IDLE_TIMEOUT_MS_DEFAULT);
         std::env::remove_var("OPENTRAPP_IDLE_TIMEOUT_MS");
+    }
+
+    #[test]
+    fn inbox_holds_weakening_and_admits_neutral() {
+        // ADR-0021 §2/§3: a weakening request from the agent-writable control
+        // inbox is HELD (enqueued for out-of-band approval), never applied here;
+        // a neutral request is admitted for immediate application.
+        let d = std::env::temp_dir().join(format!("opentrapp-gate-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        assert_eq!(gate_inbox_request(&d, ControlRequest::Pause), None, "Pause held");
+        assert_eq!(gate_inbox_request(&d, ControlRequest::Shutdown), None, "Shutdown held");
+        assert_eq!(
+            crate::approvals::list(&d).len(),
+            2,
+            "both weakening requests are pending approval, not applied"
+        );
+        assert_eq!(
+            gate_inbox_request(&d, ControlRequest::Resume),
+            Some(ControlRequest::Resume),
+            "Resume admitted"
+        );
+        assert_eq!(
+            gate_inbox_request(&d, ControlRequest::Restart),
+            Some(ControlRequest::Restart),
+            "Restart admitted"
+        );
+        let _ = std::fs::remove_dir_all(&d);
     }
 }
