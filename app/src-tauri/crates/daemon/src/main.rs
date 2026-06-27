@@ -196,10 +196,10 @@ async fn dispatch_vault(verb: Option<&str>) -> ExitCode {
 fn print_vault_help() {
     println!("opentrapp vault — control the containment perimeter (the Vault)");
     println!("  up        bring the perimeter up and supervise it (idle auto-pause + wake)");
-    println!("  down      tear the perimeter down (stop owning it)");
+    println!("  down      [weakening] HELD for out-of-band approval (ADR-0021); to stop now, SIGTERM `vault up`");
     println!("  status    print durable perimeter state + the current owner");
     println!("  verify    run the live boundary self-test now (0 hold / 1 fail / 2 can't assess)");
-    println!("  pause     pause the running perimeter");
+    println!("  pause     [weakening] HELD for out-of-band approval; pausing also happens automatically when idle");
     println!("  resume    resume a paused perimeter");
     println!("  restart   restart the perimeter");
     println!();

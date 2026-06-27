@@ -44,10 +44,13 @@ opentrapp-daemon vault up        # take ownership and bring the perimeter up
 opentrapp-daemon vault status    # print the durable perimeter state and exit
 opentrapp-daemon vault verify    # run the boundary self-test (network isolation,
                                  #   credential injection, allowlist, proxy CA, L3 filter)
-opentrapp-daemon vault pause     # idle-pause to dormant and arm the waker
 opentrapp-daemon vault resume    # wake from dormant
 opentrapp-daemon vault restart   # cycle the perimeter
-opentrapp-daemon vault down      # tear the perimeter down
+# pause / down are boundary-WEAKENING: HELD for out-of-band approval, not applied
+# from the agent-writable control channel (ADR-0021). Pausing happens automatically
+# when idle; to stop, SIGTERM the `vault up` process.
+opentrapp-daemon vault pause     # [weakening] held for approval (auto-pause covers idle)
+opentrapp-daemon vault down      # [weakening] held for approval (SIGTERM `vault up` to stop)
 ```
 
 Run the daemon as a long-lived owner with no arguments (it brings the perimeter

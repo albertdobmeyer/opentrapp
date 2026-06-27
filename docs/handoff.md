@@ -44,7 +44,7 @@ The load-bearing security gate is **crossed**. On the 7.2 GB box (cleaned), thro
 ## Running the perimeter / T0 on this box (verified workable)
 
 - The 7.2 GB laptop RUNS the full perimeter + T0 when cleaned of heavy apps (Cursor/Brave): ~3.6 GB free, no swap-storm. Images are pre-built (`podman images`).
-- podman operations need `dangerouslyDisableSandbox`; local builds need fully-qualified image names (`docker.io/library/…`) since there is no unqualified-search registry. Stop any running daemon (it holds a RunGuard) before re-running; tear down with `vault down` or by killing the pid.
+- podman operations need `dangerouslyDisableSandbox`; local builds need fully-qualified image names (`docker.io/library/…`) since there is no unqualified-search registry. Stop any running daemon (it holds a RunGuard) before re-running; tear down by SIGTERM/killing the pid (`vault down` is boundary-weakening — held for out-of-band approval, ADR-0021 — so it no longer stops the daemon from the control channel). To exercise a pause→resume cycle for resume-parity testing, use the idle auto-pause knob (`OPENTRAPP_IDLE_TIMEOUT_MS`) rather than `vault pause` (also held).
 - The dev keys (Anthropic + Telegram) were **rotated 2026-06-22** after `podman-compose` verbose output echoed them; the shipped daemon uses the native orchestrator (redacted logging, no echo). Never use `podman-compose` verbose with real keys.
 
 ## Open tasks / state
