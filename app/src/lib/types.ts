@@ -4,6 +4,9 @@ export type Role = "runtime" | "toolchain" | "network" | "placeholder";
 export type CommandGroup = "lifecycle" | "operations" | "monitoring" | "maintenance";
 export type CommandType = "action" | "query" | "stream";
 export type Danger = "safe" | "caution" | "destructive";
+
+/** ADR-0021 security axis, distinct from `danger`: does the op reduce the perimeter's protection? Fail-closed default is `weakening`. */
+export type BoundaryImpact = "neutral" | "weakening";
 export type OutputFormat = "text" | "ansi" | "json" | "jsonl" | "sarif";
 export type OutputDisplay =
   | "log"
@@ -82,6 +85,7 @@ export interface Command {
   group: CommandGroup;
   type: CommandType;
   danger: Danger;
+  boundary_impact: BoundaryImpact;
   command: string;
   args: Arg[];
   output?: Output;

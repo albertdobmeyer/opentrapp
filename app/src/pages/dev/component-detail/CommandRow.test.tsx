@@ -23,6 +23,7 @@ const cmd = (over: Partial<Command>): Command => ({
   group: "lifecycle",
   type: "action",
   danger: "safe",
+  boundary_impact: "neutral",
   command: "make setup",
   args: [],
   available_when: [],

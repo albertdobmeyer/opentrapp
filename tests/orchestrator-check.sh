@@ -178,6 +178,7 @@ m = yaml.safe_load(open('$manifest'))
 valid_groups = {'lifecycle', 'operations', 'monitoring', 'maintenance'}
 valid_danger = {'safe', 'caution', 'destructive'}
 valid_types = {'action', 'query', 'stream'}
+valid_boundary = {'neutral', 'weakening'}  # ADR-0021 (default 'weakening', fail-closed)
 errors = []
 for cmd in m.get('commands', []):
     g = cmd.get('group', 'operations')
@@ -186,6 +187,9 @@ for cmd in m.get('commands', []):
     d = cmd.get('danger', 'safe')
     if d not in valid_danger:
         errors.append(f'Command \"{cmd[\"id\"]}\": invalid danger \"{d}\"')
+    bi = cmd.get('boundary_impact', 'weakening')
+    if bi not in valid_boundary:
+        errors.append(f'Command \"{cmd[\"id\"]}\": invalid boundary_impact \"{bi}\" (ADR-0021: neutral|weakening)')
     t = cmd.get('type', 'action')
     if t not in valid_types:
         errors.append(f'Command \"{cmd[\"id\"]}\": invalid type \"{t}\"')
