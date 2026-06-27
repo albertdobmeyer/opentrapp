@@ -30,8 +30,9 @@ The load-bearing security gate is **crossed**. On the 7.2 GB box (cleaned), thro
 1. **The BundleVerifier digest-staging path (the *released*-product T0).** The run above used DevVerifier (from-source, no signed overlay) — faithful to how from-source runs today. The signed-overlay `podman load` + digest-pin path engages only with a real release overlay; it is naturally exercised at the **post-release T0** once the cargo-dist release lane lands (P4 / ADR-0023; #76).
 2. **Retire `vault-proxy.py`** (P2-1) — now UNBLOCKED by the green live gate; remove the Python fallback + its embedded/pinned copies in a focused PR.
 3. **Win/macOS browser-model runtime (maintainer hardware).** The de-Tauri browser model is **Linux-proven**; Windows/macOS are portable-by-construction (pure-Rust daemon + browser + a 3-line opener) but **runtime-unverified**. The cutover dropped the v0.8.0 Win/macOS desktop installers — a one-way product decision already taken.
-4. **The 9 Go advisories** the goproxy introduced (P3-1, Tier-2 infra — should stay clean).
-5. **Co-maintainer-gated Scorecard items** (#43 Code-Review, #1 Branch-Protection) — a second human, not a code change.
+4. **Co-maintainer-gated Scorecard items** (#43 Code-Review, #1 Branch-Protection) — a second human, not a code change.
+
+> **Resolved 2026-06-27 (was item: "the 9 Go advisories"):** govulncheck found **24 reachable** stdlib advisories (more than the guessed 9) — all because the goproxy built on **go 1.23.0**. Fixed at the root: `go.mod` → `go 1.25.11` (the max "Fixed in"), `golang.org/x/net` → v0.56.0 (the one reachable module vuln, GO-2026-4918), and the Containerfile builder pinned to `golang:1.25.11-alpine@sha256:523c3eff…` (digest, closing the unpinned-builder gap). **govulncheck now clean**, `go test ./...` green, and the rebuilt 15.6 MB proxy re-passed the live boundary self-test on the box (`pass=7` cold **and** resumed, B5 CA unchanged). goproxy is **Tier-2 release-gating** ([`known-advisories.md`](known-advisories.md)) and is now clean. See [`known-advisories.md`](known-advisories.md) for the standing posture.
 
 ## The public release — consolidated status
 

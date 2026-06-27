@@ -151,6 +151,27 @@ shipped in the desktop app:
 
 After the npm overrides, `npm audit` reports **0 vulnerabilities** (prod *and* dev).
 
+## goproxy (`vault-proxy`, Tier-2) — Go toolchain advisories: RESOLVED 2026-06-27
+
+`vault-proxy` is the L7 chokepoint and is **Tier-2 infrastructure (release-gating)** —
+a flaw here is a real breach path, so it must stay advisory-clean. `govulncheck ./...`
+on `infra/proxy/goproxy/` found **24 reachable** standard-library advisories (the repo
+had earlier *guessed* "9"); every one was a patched-toolchain fix, because the module
+built on **go 1.23.0**. Fixed at the root rather than per-CVE:
+
+| Change | From → To | Clears |
+|--------|-----------|--------|
+| `go.mod` `go` directive | `1.23.0` → **`1.25.11`** | all 24 reachable stdlib advisories (1.25.11 is the max "Fixed in", e.g. GO-2026-5039/5037 net/textproto + crypto/x509) |
+| `golang.org/x/net` | `v0.43.0` → **`v0.56.0`** | the one reachable *module* vuln, **GO-2026-4918** (`Fixed in v0.53.0`); `x/text` → v0.38.0 alongside |
+| Containerfile builder | `golang:1.23-alpine` (floating) → **`golang:1.25.11-alpine@sha256:523c3eff…`** (digest) | reproducibility + the unpinned-builder gap (the runtime base was already digest-pinned) |
+
+The 10 imported-package + 23 required-module advisories govulncheck also listed are
+**not called** (no reachable path) and are swept up by the `x/*` bumps regardless.
+**Verified at the consumption end:** `govulncheck` clean, `go test ./...` green, and the
+rebuilt 15.6 MB image re-passed the live boundary self-test through the product daemon
+(`pass=7` cold **and** resumed, B5 CA fingerprint unchanged). Re-evaluated on every Go
+dependency/toolchain bump; the CI `goproxy vault-proxy (go test)` job guards regressions.
+
 ## npm
 
 Production `npm audit --omit=dev` is **clean (0)**. The prior real advisory,
