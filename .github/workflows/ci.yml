@@ -173,9 +173,10 @@ jobs:
       - run: npx playwright test --project=default
 
   # ── Perimeter images (tag builds only) ─────────────────────────────────
-  # Builds the four OpenTrApp container images in CI — never on the user's
+  # Builds the five OpenTrApp container images in CI — never on the user's
   # machine — then signs each (cosign keyless), pushes to GHCR by digest,
-  # exports an OCI tarball for bundling into the AppImage, and emits a signed
+  # exports an OCI tarball uploaded as a durable release asset (the daemon
+  # downloads + digest-pins it on first run, ADR-0011), and emits a signed
   # `image-digests.json` overlay that the runtime verifies before `podman run`.
   # This is the supply-chain backbone of the zero-trust bootstrap (ADR-0009).
   # All five perimeter images are now first-party built + signed (WS-C switched
@@ -186,7 +187,7 @@ jobs:
     needs: [check-rust, check-orchestration]
     runs-on: ubuntu-22.04
     permissions:
-      contents: read
+      contents: write           # upload the signed tarballs + overlay to the draft release
       packages: write           # push to GHCR
       id-token: write           # cosign keyless (sigstore OIDC)
       attestations: write       # SLSA build-provenance
@@ -265,12 +266,33 @@ jobs:
         with:
           subject-path: 'images/*.tar'
 
-      - name: Upload perimeter images for the AppImage build
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: perimeter-images
-          path: images/
-          retention-days: 1
+      # Attach the signed image tarballs + the digest overlay as DURABLE release
+      # assets (not a 1-day artifact). The daemon's fetch_perimeter_images()
+      # downloads these from the release URL on first run and digest-pins them
+      # via BundleVerifier (ADR-0011, closes #76). The cargo-dist `release.yml`
+      # workflow owns release creation (as a --draft, with the announcement
+      # notes); this job waits for that draft on the same tag, then uploads to it.
+      - name: Publish signed perimeter images to the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          # cargo-dist's host job creates the draft AFTER its build matrix, so it
+          # may appear minutes after this job's images are built. Wait up to 30m.
+          for i in $(seq 1 180); do
+            if gh release view "$TAG" >/dev/null 2>&1; then break; fi
+            echo "waiting for the draft release $TAG (cargo-dist release.yml) — ${i}/180"
+            sleep 10
+          done
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::draft release $TAG never appeared — cargo-dist release.yml must run on the same tag. Images are built+signed; upload them manually: gh release upload $TAG images/*.tar images/image-digests.json"
+            exit 1
+          fi
+          # --clobber keeps re-runs idempotent.
+          gh release upload "$TAG" images/*.tar images/image-digests.json --clobber
+          echo "attached $(ls images/*.tar | wc -l) image tarballs + image-digests.json to $TAG"
 
   build-release-binaries:
     name: Build headless binaries (release smoke)
