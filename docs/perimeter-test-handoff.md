@@ -118,9 +118,9 @@ make boundary-selftest ARGS=--record-baseline
 
 **Resumed — the §11 core: the SAME test must pass after a resume, CA unchanged:**
 ```
-# production-faithful (preferred): have the daemon run the self-test on every (re)start, then let
-# the real idle-pause → wake cycle (T1 → T2) drive the resume:
-export OPENTRAPP_SELFTEST_ON_RESUME=1   # selftest.rs gating; default OFF, so shipping is unchanged
+# production-faithful (preferred): the daemon runs the self-test on every (re)start BY DEFAULT
+# (incl. the idle-pause → wake cycle, T1 → T2) — no env var needed (verified 2026-06-26):
+# export OPENTRAPP_SELFTEST_ON_RESUME=0   # ONLY to disable it (default is ON)
 
 # manual proxy (Path B / no daemon): restart the perimeter, then re-assess against the baseline:
 make perimeter-down && make perimeter-up && make perimeter-status
@@ -161,7 +161,7 @@ make boundary-selftest                  # assess mode — compares CA to the rec
   It covers exactly the manual checks this step used to list (no direct egress, off-allowlist host
   blocked, key still injected on an allowlisted request, nftables drop-private loaded) plus the
   CA-pin compare. A resumed-but-leaky boundary (exit 1) is the worst outcome and the reason this
-  test exists. (With `OPENTRAPP_SELFTEST_ON_RESUME=1` the daemon runs this for you on wake.)
+  test exists. (The daemon runs this for you on wake BY DEFAULT — `OPENTRAPP_SELFTEST_ON_RESUME=0` to disable.)
 
 ### T3 — WS1-1a: is the proxy's RAM bounded over time? (Path B)
 1. With the perimeter up, drive **sustained, large, streaming** traffic through the proxy —

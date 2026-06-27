@@ -200,13 +200,13 @@ self-test as a cold start, fail-closed.**
   marker (a half-built boundary serves no traffic); `CannotAssess` (2) → raise the
   alert but leave the perimeter up (could-not-measure ≠ failed). The marker is the
   viewer's signal to surface a security alert.
-- **Opt-in until hardware-verified (§11).** The wiring ships **inert by default**,
-  gated on `OPENTRAPP_SELFTEST_ON_RESUME=1`, mirroring `OPENTRAPP_DAEMON_DEFER`
-  (ADR-0019). The boundary assertions can't run on the dev box (it swap-storms
-  running the full perimeter), so until they pass on capable hardware the default
-  behavior is unchanged — *unverifiable ≠ verified*. Promote to default once the
-  script passes cold + on every resume path on real hardware (road-to-recommendable
-  §1A/§1B, task #45).
+- **Default ON (hardware-verified 2026-06-26, §11).** The boundary self-test runs on
+  EVERY resume path by default — both the control-channel resume (`resume_now`/
+  `restart_now`) and `idle::resume_from_dormant` (wake-on-message) call
+  `verify_boundary_fail_closed`. It was verified on the 7.2 GB box (the product-path
+  T0: `opentrapp-daemon vault verify` pass=7, cold==resumed), so *unverifiable ≠
+  verified* is no longer the blocker. Opt-out only via `OPENTRAPP_SELFTEST_ON_RESUME=0`
+  (not recommended; road-to-recommendable §1A/§1B, task #45).
 - **Operator escape hatch.** `opentrapp-daemon --boundary-selftest` runs the live
   check once and reports the verdict (exit 0/1/2) *without* tearing the perimeter
   down — for verifying a cold or resumed boundary by hand.

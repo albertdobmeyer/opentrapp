@@ -5,9 +5,10 @@
 //! resume is worse than a visible failure (CLAUDE.md §11). This module embeds
 //! `tests/boundary-selftest.sh` into the daemon binary, stages it to the data
 //! dir at runtime, and runs it against the live perimeter. The wiring into the
-//! supervisor's (re)start paths is **opt-in** (`OPENTRAPP_SELFTEST_ON_RESUME`,
-//! default OFF) so shipping behavior is unchanged until the script is verified on
-//! capable hardware — mirroring the `OPENTRAPP_DAEMON_DEFER` gating (ADR-0019).
+//! supervisor's (re)start paths is **default ON** (opt-out via
+//! `OPENTRAPP_SELFTEST_ON_RESUME=0`): the script was hardware-verified on the
+//! 7.2 GB box (the 2026-06-26 product-path T0, pass=7 cold==resumed), so a
+//! resumed perimeter is held to the same standard as a cold start (§11).
 //!
 //! Fail-closed semantics come from the script's exit code: 0 = all boundaries
 //! hold, 1 = a boundary FAILED (hold the perimeter closed + alert), 2 = could
@@ -25,13 +26,15 @@ use std::path::{Path, PathBuf};
 /// `make sync-core-embedded` after editing the canonical).
 pub const SCRIPT: &str = include_str!("embedded/boundary-selftest.sh");
 
-/// Opt-in: run the boundary self-test after every (re)start, fail-closed.
-/// Default OFF — until the script runs green on capable hardware, shipping
-/// behavior is unchanged (§11). Set `OPENTRAPP_SELFTEST_ON_RESUME=1` to enable.
+/// Run the boundary self-test after every (re)start, fail-closed. **Default ON**
+/// (§11: a resumed perimeter must re-verify the boundary). The script is
+/// hardware-verified — the 2026-06-26 product-path T0 (`vault verify` pass=7,
+/// cold==resumed). Explicit opt-OUT only: set `OPENTRAPP_SELFTEST_ON_RESUME` to
+/// `0`/`false`/`off` to disable (not recommended).
 pub fn on_resume_enabled() -> bool {
-    matches!(
+    !matches!(
         std::env::var("OPENTRAPP_SELFTEST_ON_RESUME").ok().as_deref(),
-        Some("1") | Some("true")
+        Some("0") | Some("false") | Some("off")
     )
 }
 
@@ -119,10 +122,22 @@ mod tests {
     }
 
     #[test]
-    fn opt_in_defaults_off() {
-        // The wiring must be inert unless explicitly enabled (§11).
+    fn on_resume_defaults_on_and_opts_out() {
+        // §11: a resumed perimeter MUST re-verify the boundary by default. The
+        // self-test is hardware-verified (the 2026-06-26 product-path T0,
+        // pass=7 cold==resumed), so the gate is now default-ON — the env var is
+        // an explicit opt-OUT only.
         std::env::remove_var("OPENTRAPP_SELFTEST_ON_RESUME");
-        assert!(!on_resume_enabled());
+        assert!(on_resume_enabled(), "resume self-test must be ON by default (§11)");
+        for v in ["0", "false", "off"] {
+            std::env::set_var("OPENTRAPP_SELFTEST_ON_RESUME", v);
+            assert!(!on_resume_enabled(), "{v} must disable the resume self-test");
+        }
+        for v in ["1", "true"] {
+            std::env::set_var("OPENTRAPP_SELFTEST_ON_RESUME", v);
+            assert!(on_resume_enabled(), "{v} keeps it on");
+        }
+        std::env::remove_var("OPENTRAPP_SELFTEST_ON_RESUME");
     }
 
     #[test]

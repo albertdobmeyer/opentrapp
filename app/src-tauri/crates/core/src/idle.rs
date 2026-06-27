@@ -204,14 +204,21 @@ async fn resume_from_dormant(data_dir: &Path) {
     }
     crate::markers::clear(data_dir, crate::markers::DORMANT);
     let dir = data_dir.to_path_buf();
+    let up_dir = dir.clone();
     let ok = tokio::task::spawn_blocking(move || {
-        crate::orchestrator::podman::perimeter_up(&dir).is_ok()
+        crate::orchestrator::podman::perimeter_up(&up_dir).is_ok()
     })
     .await
     .unwrap_or(false);
     if !ok {
         eprintln!("[idle] resume from dormant failed; the perimeter may need a manual restart");
+        return;
     }
+    // §11: the resumed boundary must re-pass the self-test, fail-closed — the SAME
+    // contract the control-channel resume (`supervisor::resume_now`) enforces. Without
+    // this the wake-on-message path (the most common resume) would be "alive but
+    // unverified". `on_resume_enabled()` defaults ON; no-ops only on explicit opt-out.
+    crate::supervisor::verify_boundary_fail_closed(&dir).await;
 }
 
 // ─── Public control surface ───────────────────────────────────────────────
