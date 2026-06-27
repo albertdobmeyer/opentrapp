@@ -77,6 +77,13 @@ pub fn router(state: AppState) -> Router {
         .route("/api/write_config", post(write_config))
         .route("/api/run_command", post(run_command))
         .route("/api/execute_workflow", post(execute_workflow))
+        // ADR-0021 out-of-band approval surface — the human two-tap that APPLIES a held
+        // boundary-weakening request. This is the *inverse* of the daemon-only direct-apply
+        // ops (which §6 forbids here): listing never weakens, and `approve_weakening` is the
+        // sole pending→applied edge (`supervisor::apply_approved`), reachable only behind this
+        // surface's §2 transport (loopback + Host/Origin + bearer; ADR-0022).
+        .route("/api/list_pending_approvals", post(list_pending_approvals))
+        .route("/api/approve_weakening", post(approve_weakening))
         // first-run setup
         .route("/api/init_submodules", post(init_submodules))
         .route("/api/create_config_from_template", post(create_config_from_template))
@@ -305,6 +312,31 @@ async fn run_command(
     )
     .await?;
     outcome.result.map(Json).map_err(ApiError::from)
+}
+
+/// ADR-0021 approval surface — list the boundary-weakening requests the daemon has HELD for
+/// out-of-band human approval (id + a plain-language label). Read-only: listing never weakens.
+async fn list_pending_approvals(
+    State(st): State<AppState>,
+) -> Json<Vec<opentrapp_core::approvals::PendingApproval>> {
+    Json(opentrapp_core::approvals::list_pending(&st.runtime_data_dir))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ApproveWeakeningArgs {
+    id: String,
+}
+
+/// ADR-0021 approval surface — APPLY a held weakening request the human approves (the two-tap).
+/// The sole pending→applied edge (`supervisor::apply_approved`), reachable only behind this
+/// surface's §2 transport (loopback + Host/Origin + bearer). Returns whether a pending request
+/// with `id` was found and applied (idempotent — a missing id is `false`, never a double-apply).
+async fn approve_weakening(
+    State(st): State<AppState>,
+    Json(a): Json<ApproveWeakeningArgs>,
+) -> Json<bool> {
+    Json(opentrapp_core::supervisor::apply_approved(&st.runtime_data_dir, &a.id).await)
 }
 
 /// Start streaming a command's output. Lines arrive asynchronously as `stream-line` / `stream-end`

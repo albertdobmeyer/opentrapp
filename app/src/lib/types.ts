@@ -303,3 +303,15 @@ export interface PendingApproval {
   reason: string;
   judged_at_ms: number;
 }
+
+/**
+ * One boundary-weakening control request the daemon has HELD for out-of-band
+ * human approval (ADR-0021). The agent-writable control inbox can enqueue it but
+ * cannot apply it; only the human two-tap here (`approveWeakening`) applies it.
+ */
+export interface PendingWeakening {
+  /** Opaque handle to pass to `approveWeakening`. */
+  id: string;
+  /** The neutral control verb (`pause` | `shutdown`); the UI maps it to friendly copy. */
+  verb: string;
+}

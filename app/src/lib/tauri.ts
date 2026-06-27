@@ -11,6 +11,7 @@ import type {
   SentinelActivity,
   Verdict,
   PendingApproval,
+  PendingWeakening,
   AllowlistDecision,
 } from "./types";
 
@@ -550,4 +551,24 @@ export async function applyAllowlistDecision(
   decision: AllowlistDecision,
 ): Promise<void> {
   return invoke("apply_allowlist_decision", { host, decision });
+}
+
+/**
+ * The boundary-weakening control requests the daemon has HELD for out-of-band
+ * approval (ADR-0021). Read-only — listing never weakens. The agent-writable
+ * control inbox can enqueue one of these, but only the human two-tap
+ * (`approveWeakening`) — behind this surface's loopback + Host/Origin + bearer
+ * transport (ADR-0022) — can apply it.
+ */
+export async function listPendingApprovals(): Promise<PendingWeakening[]> {
+  return invoke<PendingWeakening[]>("list_pending_approvals");
+}
+
+/**
+ * Apply a HELD boundary-weakening request the human approves (the second tap).
+ * The sole pending→applied edge; resolves `true` if a pending request with `id`
+ * was found and applied, `false` otherwise (idempotent — never a double-apply).
+ */
+export async function approveWeakening(id: string): Promise<boolean> {
+  return invoke<boolean>("approve_weakening", { id });
 }

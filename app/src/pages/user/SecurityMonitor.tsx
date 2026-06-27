@@ -13,6 +13,7 @@ import {
 import CleanedSkillsCard from "@/components/user/CleanedSkillsCard";
 import EgressApprovalsCard from "@/components/user/EgressApprovalsCard";
 import SentinelActivityBadge from "@/components/user/SentinelActivityBadge";
+import WeakeningApprovalsCard from "@/components/user/WeakeningApprovalsCard";
 import { useHero } from "@/hooks/useHero";
 import { openUrl } from "@/lib/shell";
 
@@ -159,6 +160,8 @@ export default function SecurityMonitor() {
           </article>
         ))}
       </div>
+
+      <WeakeningApprovalsCard />
 
       <EgressApprovalsCard />
 
