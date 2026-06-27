@@ -197,8 +197,15 @@ Staged, test-first. The full **amplifier-prevention guarantee** (§ Decision) is
   host agent could read the 0600 session + craft an authenticated POST to the *on-demand* (usually-not-
   running) server — strictly higher-cost than dropping a `.req`, so the "no easier path than T4"
   guarantee holds.
-- **Slice 3 — the manifest `boundary_impact` field** across the three schema-alignment layers + its CI
-  enum check, for the GUI-projected command surface.
+- **Slice 3 — the manifest `boundary_impact` field (plumbing shipped 2026-06-27).** Added across the
+  three schema-alignment layers (`component.schema.json`, `manifest.rs` `Command`, `types.ts`) +
+  the orchestrator-check §7 enum validation, **fail-closed** (default `weakening`; pinned by
+  `command_boundary_impact_defaults_to_weakening_fail_closed`). The per-command **values** for the 44
+  workload commands are classified (a per-command security review: **43 neutral**; the 2 weakening are
+  `agent/nuclear-kill` — `make nuclear` tears down the five-container cage — and `agent/split-shell`,
+  fail-closed since it loosens the agent's shell). Because the default is `weakening`, those 2 are
+  already correct un-tagged; explicitly tagging the 43 neutrals is the remaining, behaviour-neutral
+  data-population (no enforcement consumes the manifest `boundary_impact` yet — that is a later slice).
 
 ## What this ADR does NOT decide
 

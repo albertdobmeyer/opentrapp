@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::boundary::BoundaryImpact;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub identity: Identity,
@@ -115,6 +117,11 @@ pub struct Command {
     pub r#type: CommandType,
     #[serde(default = "default_danger")]
     pub danger: Danger,
+    /// ADR-0021 security axis, distinct from `danger`: does this op reduce the
+    /// perimeter's protection? Fail-closed via [`BoundaryImpact`]'s `Default`
+    /// (`Weakening`) — an unclassified command is treated as boundary-weakening.
+    #[serde(default)]
+    pub boundary_impact: BoundaryImpact,
     pub command: String,
     #[serde(default)]
     pub args: Vec<Arg>,
@@ -437,3 +444,23 @@ fn default_timeout() -> u64 { 60 }
 fn default_output_format() -> OutputFormat { OutputFormat::Text }
 fn default_output_display() -> OutputDisplay { OutputDisplay::Log }
 fn default_true() -> bool { true }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn command_boundary_impact_defaults_to_weakening_fail_closed() {
+        // A command manifest that OMITS boundary_impact must classify as
+        // weakening (ADR-0021 §1, fail-closed) — never silently agent-operable.
+        let cmd: Command =
+            serde_yaml::from_str("id: x\nname: X\ncommand: 'echo hi'\n").unwrap();
+        assert_eq!(cmd.boundary_impact, BoundaryImpact::Weakening);
+        assert!(!cmd.boundary_impact.agent_operable());
+        // explicit values parse
+        let neutral: Command =
+            serde_yaml::from_str("id: x\nname: X\ncommand: 'echo'\nboundary_impact: neutral\n")
+                .unwrap();
+        assert_eq!(neutral.boundary_impact, BoundaryImpact::Neutral);
+    }
+}

@@ -174,6 +174,12 @@
             "enum": ["safe", "caution", "destructive"],
             "default": "safe"
           },
+          "boundary_impact": {
+            "type": "string",
+            "description": "ADR-0021 security axis (distinct from operational `danger`): does this op reduce the perimeter's protection? `neutral` operates within the cage; `weakening` reduces it (tears down the perimeter, loosens egress, weakens the shell). Defaults to `weakening` (fail-closed): an unclassified op is treated as boundary-weakening.",
+            "enum": ["neutral", "weakening"],
+            "default": "weakening"
+          },
           "command": {
             "type": "string",
             "description": "Shell command with ${arg_id} interpolation"
