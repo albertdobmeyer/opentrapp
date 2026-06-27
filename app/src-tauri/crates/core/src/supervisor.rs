@@ -21,6 +21,18 @@ use crate::idle::IdleWaker;
 
 /// Idle-to-dormant threshold default (mirrors lifecycle.rs IDLE_TIMEOUT_MS_DEFAULT).
 pub const IDLE_TIMEOUT_MS_DEFAULT: u64 = 12 * 60 * 1000;
+
+/// The idle-to-dormant threshold in ms, read fresh at daemon launch. Defaults to
+/// [`IDLE_TIMEOUT_MS_DEFAULT`]; override with `OPENTRAPP_IDLE_TIMEOUT_MS` for fast
+/// on-box T1 verification / ops tuning (a `0` or unparseable value is ignored,
+/// falling back to the default — never an accidental 0-second hair-trigger).
+pub fn idle_threshold_ms() -> u64 {
+    std::env::var("OPENTRAPP_IDLE_TIMEOUT_MS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .filter(|&ms| ms > 0)
+        .unwrap_or(IDLE_TIMEOUT_MS_DEFAULT)
+}
 /// Supervision tick (mirrors the GUI watchdog's 30 s cadence).
 pub const TICK: Duration = Duration::from_secs(30);
 
@@ -259,5 +271,20 @@ mod tests {
         assert!(!should_auto_pause(Some(t), t, false, false)); // no token → no wake path
         assert!(!should_auto_pause(Some(t), t, true, true)); // already dormant
         assert!(!should_auto_pause(Some(t - 1), t, false, true)); // not idle long enough
+    }
+
+    #[test]
+    fn idle_threshold_env_override() {
+        // Default when unset; honored for a positive integer; ignored (→ default)
+        // for 0 or garbage — never an accidental 0-second hair-trigger.
+        std::env::remove_var("OPENTRAPP_IDLE_TIMEOUT_MS");
+        assert_eq!(idle_threshold_ms(), IDLE_TIMEOUT_MS_DEFAULT);
+        std::env::set_var("OPENTRAPP_IDLE_TIMEOUT_MS", "30000");
+        assert_eq!(idle_threshold_ms(), 30_000);
+        std::env::set_var("OPENTRAPP_IDLE_TIMEOUT_MS", "0");
+        assert_eq!(idle_threshold_ms(), IDLE_TIMEOUT_MS_DEFAULT);
+        std::env::set_var("OPENTRAPP_IDLE_TIMEOUT_MS", "notanumber");
+        assert_eq!(idle_threshold_ms(), IDLE_TIMEOUT_MS_DEFAULT);
+        std::env::remove_var("OPENTRAPP_IDLE_TIMEOUT_MS");
     }
 }
