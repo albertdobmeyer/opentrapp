@@ -48,6 +48,21 @@ impl ControlRequest {
             _ => None,
         }
     }
+
+    /// The ADR-0021 boundary classification of this control verb. `Pause` and
+    /// `Shutdown` leave the perimeter's protection *reduced* (down) → weakening;
+    /// `Resume` and `Restart` return it to full, re-verified protection → neutral.
+    /// The supervisor dispatch consults this to refuse an agent-reachable
+    /// weakening (the control inbox is a file drop any host process can write).
+    /// A mis-tag here (a weakener marked neutral) is a real vulnerability, so it
+    /// is test-pinned and fails closed by construction.
+    pub fn boundary_impact(self) -> crate::boundary::BoundaryImpact {
+        use crate::boundary::BoundaryImpact;
+        match self {
+            Self::Pause | Self::Shutdown => BoundaryImpact::Weakening,
+            Self::Resume | Self::Restart => BoundaryImpact::Neutral,
+        }
+    }
 }
 
 fn inbox_dir(data_dir: &Path) -> PathBuf {
@@ -116,6 +131,23 @@ mod tests {
             assert_eq!(ControlRequest::from_token(r.as_token()), Some(r));
         }
         assert_eq!(ControlRequest::from_token("bogus"), None);
+    }
+
+    #[test]
+    fn weakening_control_verbs_are_never_agent_operable() {
+        use crate::boundary::BoundaryImpact;
+        // Pause + Shutdown leave the perimeter down → weakening; the control
+        // inbox is an agent-writable file drop, so these must classify as
+        // NOT agent-operable (the supervisor refuses them, ADR-0021 §2).
+        for w in [ControlRequest::Pause, ControlRequest::Shutdown] {
+            assert_eq!(w.boundary_impact(), BoundaryImpact::Weakening, "{w:?} weakens");
+            assert!(!w.boundary_impact().agent_operable(), "{w:?} must not be agent-operable");
+        }
+        // Resume + Restart return to full, re-verified protection → neutral.
+        for n in [ControlRequest::Resume, ControlRequest::Restart] {
+            assert_eq!(n.boundary_impact(), BoundaryImpact::Neutral, "{n:?} is neutral");
+            assert!(n.boundary_impact().agent_operable(), "{n:?} is agent-operable");
+        }
     }
 
     #[test]

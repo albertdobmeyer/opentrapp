@@ -1,11 +1,10 @@
 # ADR-0021 — Danger-gated agentic control plane
 
-**Status:** Proposed — the security model for the agent-operable control plane that
-[ADR-0020](0020-product-identity-and-distribution.md) (tenet 5) requires. **No agentic control
-surface exists yet; this ADR MUST be accepted before any is built** (the control surface itself is
-[ADR-0022](0022-daemon-control-surface.md)). This record decides the *authorization* model (what may
+**Status:** Accepted (2026-06-27) — the security model for the agent-operable control plane that
+[ADR-0020](0020-product-identity-and-distribution.md) (tenet 5) requires; **implementation staged**
+(see *Implementation status* below). This record decides the *authorization* model (what may
 be done by whom, and how boundary-weakening is gated); the *transport* threat model of the loopback
-server is deferred to ADR-0022.
+server is deferred to [ADR-0022](0022-daemon-control-surface.md).
 **Cross-references:** [ADR-0002](0002-adaptive-shell-levels.md) (the loosening invariant) ·
 [ADR-0016](0016-host-mediated-allowlist-loosening.md) (the human-is-sole-writer pattern this
 generalizes) · [ADR-0011](0011-zero-trust-self-sufficient-bootstrap.md) (self-healing staged
@@ -158,6 +157,29 @@ Instead, exactly as ADR-0016:
   Gate the *operation*, not the caller.
 - **No agentic control plane at all.** Rejected — agent-operability is the ADR-0020 mission; the gate
   is precisely what makes it safe, so removing the feature is unnecessary over-correction.
+
+## Implementation status
+
+Staged, test-first. The full **amplifier-prevention guarantee** (§ Decision) is delivered by Slice 2.
+
+- **Already in place (the ADR-0016 invariant this generalizes).** The loopback HTTP surface deliberately
+  mounts *no* boundary-weakening op (`viewer-server/src/routes.rs`; pinned by the orchestrator-check §6
+  `DAEMON_ONLY` route-absence contract), and `allowlist::apply_always` — the sole allowlist writer — has
+  no agent call edge (pinned by `denial_never_writes_the_allowlist` + orchestrator-check §27).
+- **Slice 1 — the classification primitive (shipped 2026-06-27).** `core::boundary::BoundaryImpact`
+  (`neutral` | `weakening`), **fail-closed** default `weakening` (an unclassified op is never
+  agent-operable), and `agent_operable()` (true only for `neutral`, ADR §2). The control-channel verbs
+  are tagged: `ControlRequest::boundary_impact()` → `Pause`/`Shutdown` = `weakening` (they leave the
+  perimeter *down*), `Resume`/`Restart` = `neutral` (they return it to full, re-verified protection).
+  TDD + mutation-pinned. No behaviour change yet — this is the data the gate consumes.
+- **Slice 2 — structural enforcement (next).** At the supervisor control-dispatch chokepoint, a control
+  request whose `boundary_impact` is `weakening` (read from the agent-writable `~/.opentrapp/control`
+  inbox) is **refused** — never routed to its applying handler; only the human-approval surface applies
+  it. The daemon's *own* internal idle-auto-pause is not an agent-reachable request and is unaffected.
+  This delivers the §2/§3 guarantee; pinned by extending the ADR-0016 sole-writer tests to the inbox.
+- **Slice 3 — the out-of-band confirmation channel** (GUI two-tap / Telegram push) + the manifest
+  `boundary_impact` field across the three schema-alignment layers + its CI enum check, for the
+  GUI-projected command surface.
 
 ## What this ADR does NOT decide
 
