@@ -149,8 +149,19 @@ check_allowlist() {
       xa sh -c "http_proxy='$pxy' https_proxy='$pxy' $wget -T 8 -S -q -O /dev/null http://$1/ 2>&1 | awk '/HTTP\\//{print \$2; exit}'"
     fi
   }
+  # On a fresh (re)start the proxy fail-closes (blocks ALL) until it has read the
+  # allowlist — so an allowlisted host transiently returns 403, which would fail-
+  # close a perfectly healthy *resumed* perimeter. Wait for the proxy to be ready
+  # (the on-list host stops being blocked), then assert BOTH checks against a
+  # loaded allowlist. Mirrors B4's retry; a genuinely-blocked allowlisted host
+  # still fails after the loop.
+  on=""
+  for i in $(seq 1 10); do
+    on="$(status_for "$ONLIST_HOST")"
+    [ -n "$on" ] && [ "$on" != 403 ] && break
+    sleep 1
+  done
   off="$(status_for "$OFFLIST_HOST")"
-  on="$(status_for "$ONLIST_HOST")"
   if [ "$off" = 403 ]; then
     pass "B2-allowlist-deny" "$OFFLIST_HOST → 403 (blocked)"
   else

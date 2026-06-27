@@ -143,14 +143,16 @@ async fn restart_now(data_dir: &PathBuf, waker: &mut Option<IdleWaker>) {
 
 /// After a (re)start, prove the boundary holds — a resumed boundary that is
 /// "alive but subtly wrong" must not serve traffic (road-to-recommendable §1B,
-/// CLAUDE.md §11). **Opt-in**: inert unless `OPENTRAPP_SELFTEST_ON_RESUME=1`, so
-/// shipping behavior is unchanged until the script is hardware-verified (§11,
-/// mirrors `OPENTRAPP_DAEMON_DEFER`).
+/// CLAUDE.md §11). **Default ON** (opt-out via `OPENTRAPP_SELFTEST_ON_RESUME=0`):
+/// hardware-verified (the 2026-06-26 product-path T0), so every (re)start re-tests
+/// the boundary. Called by EVERY resume path — `resume_now`/`restart_now` (control
+/// channel) and `idle::resume_from_dormant` (wake-on-message) — so a resumed
+/// boundary is never left "alive but unverified".
 ///
 /// Fail-closed on the script's verdict: `Fail` → stop the perimeter + raise the
 /// `BOUNDARY_FAILED` alert (a half-built boundary serves nothing); `CannotAssess`
 /// → alert but leave it up (couldn't measure ≠ failed); `Pass` → clear the alert.
-async fn verify_boundary_fail_closed(data_dir: &PathBuf) {
+pub(crate) async fn verify_boundary_fail_closed(data_dir: &PathBuf) {
     if !crate::selftest::on_resume_enabled() {
         return;
     }

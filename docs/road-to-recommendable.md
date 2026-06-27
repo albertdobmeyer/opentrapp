@@ -82,10 +82,11 @@ script as 1A — re-run `make boundary-selftest` after each resume path. **Parti
   *(The script's fail-closed exit codes were exercised — exit 1 on a failing check,
   exit 2 on a skip; the daemon supervisor's hold-closed on an injected fault is still
   unverified on hardware.)*
-- [x] **Daemon wiring landed (opt-in, CI-green)** — `opentrapp_core::selftest`
-  embeds the script; the supervisor runs it after every (re)start
-  (`verify_boundary_fail_closed`: Fail→stop+`boundary-failed` marker, CannotAssess→
-  alert, Pass→clear), gated on `OPENTRAPP_SELFTEST_ON_RESUME=1` (default OFF, §11).
+- [x] **Daemon wiring landed (default-ON, CI-green)** — `opentrapp_core::selftest`
+  embeds the script; `verify_boundary_fail_closed` runs it after EVERY resume path —
+  `resume_now`/`restart_now` (control channel) AND `idle::resume_from_dormant`
+  (wake-on-message) (Fail→stop+`boundary-failed` marker, CannotAssess→alert,
+  Pass→clear), **default ON** (opt-out `OPENTRAPP_SELFTEST_ON_RESUME=0`; verified 2026-06-26, §11).
   `opentrapp-daemon --boundary-selftest` runs it once on demand. Contract folded
   into [ADR-0018](adr/0018-idle-auto-pause-host-waker.md) addendum (WS4, task #45).
   **Remaining:** enable + verify green on hardware, then promote to default.
