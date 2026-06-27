@@ -85,7 +85,9 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
-          go-version: "1.23"
+          # Track the pinned toolchain in go.mod (currently 1.25.11) so this
+          # never drifts behind a security-driven Go bump (known-advisories.md).
+          go-version-file: infra/proxy/goproxy/go.mod
           cache-dependency-path: infra/proxy/goproxy/go.sum
       # The L7 egress chokepoint (ADR-0026): the policy contract pins + the
       # handler/CA pins. The credential-injection path must stay correct.
@@ -95,6 +97,14 @@ jobs:
       - name: go vet
         working-directory: infra/proxy/goproxy
         run: go vet ./...
+      # vault-proxy is Tier-2 (release-gating): a reachable advisory here is a
+      # real breach path. Fail the build on any source-reachable vuln so the
+      # toolchain pin can never silently rot (known-advisories.md).
+      - name: govulncheck (reachable advisories only)
+        working-directory: infra/proxy/goproxy
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          "$(go env GOPATH)/bin/govulncheck" ./...
 
   check-orchestration:
     name: Orchestration (42 checks)
