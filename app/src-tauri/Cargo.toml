@@ -11,3 +11,8 @@
 # `cargo tree | grep -iE 'tauri|wry|webkit|gtk'` MUST be empty.
 members = ["crates/core", "crates/daemon", "crates/viewer-server"]
 resolver = "2"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
