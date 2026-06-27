@@ -6,15 +6,21 @@
 # tauri/wry/webkit.
 [package]
 name = "opentrapp-daemon"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 license = "MIT"
 publish = false  # workspace-internal crate; never published to crates.io
 description = "Headless perimeter daemon for OpenTrApp (no GUI deps)"
+repository = "https://github.com/albertdobmeyer/opentrapp"
 
 [[bin]]
 name = "opentrapp-daemon"
 path = "src/main.rs"
+
+# cargo-dist ships this binary (ADR-0023). `publish = false` keeps it off
+# crates.io but otherwise hides it from dist, so opt it back in explicitly.
+[package.metadata.dist]
+dist = true
 
 [dependencies]
 opentrapp-core = { path = "../core" }

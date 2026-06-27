@@ -9,13 +9,19 @@
 # `cargo tree -p viewer-server | grep -iE 'tauri|wry|webkit'` must be EMPTY.
 [package]
 name = "viewer-server"
-version = "0.1.0"
+version = "0.9.0"
 edition = "2021"
 publish = false
+repository = "https://github.com/albertdobmeyer/opentrapp"
 # MIT like the rest of the workspace. Required now that the de-Tauri cutover makes
 # this a top-level virtual-workspace member, so `cargo deny check licenses` sees it
 # (previously the graph rooted at the opentrapp package, which depended only on core).
 license = "MIT"
+
+# cargo-dist ships this binary alongside the daemon (the daemon spawns it for the
+# on-demand viewer; ADR-0023). `publish = false` would otherwise hide it from dist.
+[package.metadata.dist]
+dist = true
 
 [dependencies]
 # Pure-Rust async HTTP/WS — verified zero gtk/webkit (ADR-0022 §4).
