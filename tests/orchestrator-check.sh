@@ -319,11 +319,15 @@ section "6. Frontend ↔ viewer-server route contract (post de-Tauri, ADR-0022)"
 # POSTs to /api/<cmd> on the loopback viewer-server. The old #[tauri::command]
 # contract is gone with the crate. Two invariants replace it:
 #   (1) every mounted /api route is reachable from the frontend (no orphan route
-#       silently exposed); and — the security one —
-#   (2) the boundary-weakening / lifecycle ops are DELIBERATELY NOT mounted
-#       (ADR-0021): the browser projection can never weaken the cage or own the
-#       perimeter lifecycle; those run through the daemon CLI with out-of-band
-#       confirmation. A route for any of them is a FAIL.
+#       silently exposed); and — the security ones —
+#   (2) the boundary-weakening / lifecycle DIRECT-apply ops are DELIBERATELY NOT
+#       mounted (ADR-0021): the browser projection can never UNCONDITIONALLY weaken
+#       the cage or own the perimeter lifecycle. A route for any of them is a FAIL.
+#   (3) BUT the human-APPROVAL two-tap (`approve_weakening`) IS mounted — it is the
+#       intended out-of-band approval surface (the inverse of the direct-apply ops):
+#       it applies ONLY a request the daemon already HELD (the inbox enqueued it,
+#       could not apply it), behind this surface's §2 transport (loopback + Host/
+#       Origin + bearer). Its absence would leave held requests unapprovable.
 
 python3 - <<'PY' 2>/dev/null && pass "frontend↔viewer-server route contract holds (no orphan route; ADR-0021 boundary ops unmounted)" || warn "frontend↔viewer-server route contract mismatch (see output above)"
 import re, glob, sys, pathlib
@@ -343,6 +347,10 @@ DAEMON_ONLY = {'apply_allowlist_decision', 'pause_perimeter', 'restart_perimeter
 for d in sorted(DAEMON_ONLY):
     if d in routes:
         errors.append(f'DANGER: {d} is mounted as a viewer-server route — it must stay daemon-only (ADR-0021)')
+# (3) ADR-0021: the human-approval two-tap MUST be mounted (the intended out-of-band
+# surface that applies a daemon-held weakening), else held requests are stuck unapprovable.
+if 'approve_weakening' not in routes:
+    errors.append('ADR-0021: the approve_weakening human-approval route is missing — held weakening requests would be unapprovable')
 for e in errors:
     print(e)
 sys.exit(1 if errors else 0)

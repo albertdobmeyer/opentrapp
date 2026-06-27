@@ -36,6 +36,32 @@ pub fn enqueue(data_dir: &Path, req: ControlRequest) -> std::io::Result<String> 
     Ok(id)
 }
 
+/// A pending boundary-weakening request, shaped for the human approval surface
+/// (the GUI two-tap). `id` is the opaque handle the surface approves by; `verb`
+/// is the neutral control verb (`pause`/`shutdown`). **No user-facing copy here**
+/// — presentation is the frontend's job (the generic-backend constraint + the
+/// UI vocabulary rule, CLAUDE.md §3/§5); the frontend maps `verb` to friendly text.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PendingApproval {
+    /// The handle to pass back to `apply_approved` / the approve route.
+    pub id: String,
+    /// The neutral control verb (`pause` | `shutdown`).
+    pub verb: String,
+}
+
+/// The pending weakening requests, shaped for the approval surface to render.
+/// The GUI never weakens by listing — only the explicit two-tap approve (which
+/// calls `apply_approved`) does.
+pub fn list_pending(data_dir: &Path) -> Vec<PendingApproval> {
+    list(data_dir)
+        .into_iter()
+        .map(|req| PendingApproval {
+            id: req.as_token().to_string(),
+            verb: req.as_token().to_string(),
+        })
+        .collect()
+}
+
 /// The pending weakening requests awaiting approval (for the approval surface to
 /// render). Order is unspecified.
 pub fn list(data_dir: &Path) -> Vec<ControlRequest> {
@@ -86,6 +112,19 @@ mod tests {
         assert!(list(&d).is_empty(), "approved request leaves the queue");
         // taking a non-existent id yields nothing (no spurious apply)
         assert_eq!(take_approved(&d, "shutdown"), None);
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    #[test]
+    fn list_pending_surfaces_id_and_verb_for_the_gui() {
+        let d = temp("gui");
+        enqueue(&d, ControlRequest::Pause).unwrap();
+        let pending = list_pending(&d);
+        assert_eq!(pending.len(), 1);
+        // the id must round-trip to the approve path (take_approved keys by it)
+        assert_eq!(pending[0].id, "pause");
+        assert_eq!(pending[0].verb, "pause", "the neutral verb for the frontend to map");
+        assert_eq!(take_approved(&d, &pending[0].id), Some(ControlRequest::Pause));
         let _ = std::fs::remove_dir_all(&d);
     }
 }

@@ -183,12 +183,20 @@ Staged, test-first. The full **amplifier-prevention guarantee** (§ Decision) is
   Pinned by `inbox_holds_weakening_and_admits_neutral`, the `approvals` queue tests, and an
   orchestrator-check structural pin (parity with the ADR-0016 §27 sole-writer pin). Why "held," not
   "refused": holding is the no-compromise path — the op is queued for the human, not lost.
-- **Slice 2b — the human approval surface (next).** The GUI two-tap that lists the pending queue and
-  calls `apply_approved` (Pause applies cross-process via the shared markers + podman; a daemon stop
-  stays SIGTERM/quit). The Telegram **reply** path is ruled out: the waker is peek-only by hard
-  invariant (ADR-0018, the agent owns that bot's `getUpdates` when the perimeter is up), so the reply
-  can't be read without breaking the agent's exactly-once delivery — the GUI two-tap is the out-of-band
-  surface, exactly as ADR-0016. Its transport hardening (so the tap is the higher-cost path) is ADR-0022.
+- **Slice 2b — the human approval surface (shipped 2026-06-27).** The viewer-server (already running on
+  the ADR-0022 §3 transport — loopback-only, Host/Origin allowlist, 256-bit bearer, 0600 session,
+  nonce→bearer) mounts `POST /api/list_pending_approvals` + `POST /api/approve_weakening` (the latter
+  calls `apply_approved` — Pause applies cross-process via the shared markers + podman; a daemon stop
+  stays SIGTERM/quit). The `WeakeningApprovalsCard` two-tap (assistant-first copy, no dev vocabulary)
+  surfaces it on the Security page. The §6 route contract is reconciled: the daemon-only *direct-apply*
+  ops stay unmounted, while the *human-approval* `approve_weakening` route is asserted present (else held
+  requests would be unapprovable). The Telegram **reply** path is ruled out: the waker is peek-only by
+  hard invariant (ADR-0018, the agent owns that bot's `getUpdates` when the perimeter is up), so the
+  reply can't be read without breaking exactly-once delivery — the GUI two-tap is the out-of-band
+  surface, exactly as ADR-0016. **Residual (honest, = ADR-0021's accepted T4):** a same-UID injected
+  host agent could read the 0600 session + craft an authenticated POST to the *on-demand* (usually-not-
+  running) server — strictly higher-cost than dropping a `.req`, so the "no easier path than T4"
+  guarantee holds.
 - **Slice 3 — the manifest `boundary_impact` field** across the three schema-alignment layers + its CI
   enum check, for the GUI-projected command surface.
 
