@@ -1255,6 +1255,18 @@ ok = bool(m) and 'live_allowlist_path' not in m.group(0) and 'denials_path' in m
 sys.exit(0 if ok else 1)
 PY
 
+# ADR-0021: the agent-writable control inbox must HOLD a boundary-weakening
+# request for out-of-band approval, never apply it. Pin the structural shape so a
+# future refactor can't re-introduce an ungated weakening path on the inbox.
+python3 - <<'PY' 2>/dev/null && pass "ADR-0021: control inbox dispatch routes through the danger gate; no ungated weakening applier" || fail "ADR-0021: the supervisor inbox-drain path can apply a boundary-weakening request"
+import sys, pathlib
+t = pathlib.Path('app/src-tauri/crates/core/src/supervisor.rs').read_text()
+ok = 'let Some(req) = gate_inbox_request(' in t          # the gate sits in the inbox-drain loop
+ok = ok and 'fn user_pause' not in t                     # the old ungated pause applier is gone
+ok = ok and 'pub async fn apply_approved' in t           # the sole approval-applier exists (no agent call edge)
+sys.exit(0 if ok else 1)
+PY
+
 if [ -f "docs/adr/0016-host-mediated-allowlist-loosening.md" ]; then
   pass "ADR-0016 (host-mediated allowlist loosening) present"
 else
