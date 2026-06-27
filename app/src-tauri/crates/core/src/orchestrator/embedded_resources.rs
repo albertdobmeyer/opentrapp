@@ -38,12 +38,8 @@ const EMBEDDED: &[(&str, &[u8], bool)] = &[
         include_bytes!("../embedded/perimeter-resources/vault-proxy-seccomp.json"),
         false,
     ),
-    // ── L7 egress policy ──────────────────────────────────────────────────
-    (
-        "vault-proxy.py",
-        include_bytes!("../embedded/perimeter-resources/vault-proxy.py"),
-        false,
-    ),
+    // ── L7 egress policy (the goproxy compiles its matcher in; only the
+    //    allowlist data is provisioned as a resource — ADR-0026) ───────────
     (
         "allowlist.txt",
         include_bytes!("../embedded/perimeter-resources/allowlist.txt"),

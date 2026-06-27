@@ -129,11 +129,6 @@ jobs:
 
       - run: bash tests/orchestrator-check.sh
 
-      # vault-proxy policy unit tests — pin IP-literal denial against regression.
-      # See ~/.claude/plans/discuss-which-one-is-buzzing-crab.md (A1).
-      - name: vault-proxy policy unit tests
-        run: python3 -m unittest discover -s infra/proxy -p 'test_*.py' -v
-
   integration-tests:
     name: Integration tests (cross-module contracts)
     needs: check-orchestration

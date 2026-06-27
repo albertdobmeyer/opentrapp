@@ -10,7 +10,7 @@ caps + reflected-key redaction, logs every request as JSON, and chains **upstrea
 upstream-chaining — the requirement that ruled out the Rust path.
 
 ## Layout
-- `policy/` — the **pure, network-free** L7 policy (a faithful port of `infra/proxy/vault-proxy.py`):
+- `policy/` — the **pure, network-free** L7 policy (originally ported from the now-removed `vault-proxy.py`; the goproxy is the sole L7 impl, ADR-0026):
   allowlist, DNS-rebinding ranges, injection rules, size thresholds, redaction, and
   `DecideRequest` (which pins the **size-block-before-injection** ordering). Unit-pinned in
   `policy/policy_test.go` against the same contract as the #182 Python pins.
@@ -34,9 +34,9 @@ agent-trusted path, and fail-closes on a missing allowlist.
 2. ✅ **Seccomp re-validated.** The Go runtime boots *and* the request path run under the unchanged
    `vault-proxy-seccomp.json` (verified on the 7.2 GB box) — no profile change needed.
 3. ✅ **Go CI job added** (`check-goproxy`: `go test` + `go vet`).
-4. ⏳ **Final gate — the full live boundary self-test** (`tests/boundary-selftest.sh`, B1/B2/B3/B5 on
-   the running 5-container perimeter *with the agent*): a heavy dedicated bring-up, to be run with a
-   valid key (maintainer-controlled). Proxy-level evidence is already strong: an off-allowlist host is
-   blocked **403 via a real MITM request under seccomp**, the CA is generated at the agent-trusted path,
-   and the tightened cap set drops to the mitmproxy user via su-exec.
-5. ⏳ Then remove the Python `vault-proxy.py` (+ its embedded copy) — kept until the live gate is green.
+4. ✅ **Live boundary self-test GREEN.** `opentrapp-daemon vault up` → `vault verify` returns
+   `pass=7 fail=0` cold **and** after pause→resume (B5 CA unchanged), via the product daemon on the
+   7.2 GB box (2026-06-26; re-confirmed on the 1.25.11 rebuild 2026-06-27). Off-allowlist → 403,
+   on-allowlist forwarded, credentials proxy-injected (none in `vault-agent`).
+5. ✅ **Python `vault-proxy.py` removed** (source + test + the embedded copy; the goproxy compiles
+   the matcher in, so only the allowlist data is provisioned). The live gate is green.

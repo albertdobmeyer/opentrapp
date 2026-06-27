@@ -391,8 +391,7 @@ for f in \
   "$SOCIAL/tools/feed-scanner.sh" \
   "$SOCIAL/tools/agent-census.sh" \
   "$SOCIAL/tools/identity-checklist.sh" \
-  "$VAULT/scripts/verify.sh" \
-  "infra/proxy/vault-proxy.py"; do
+  "$VAULT/scripts/verify.sh"; do
   if [[ ! -f "$f" ]]; then
     fail "3.5 Missing tool: $f"
     TOOLS_OK=false

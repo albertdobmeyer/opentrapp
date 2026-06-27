@@ -43,7 +43,7 @@ pub trait ImageVerifier {
 /// and the image verifier.
 pub struct RunContext<'a> {
     /// Verified, non-agent-writable dir holding policy files (seccomp profiles,
-    /// vault-proxy.py, allowlist.txt, resolv.conf). See ADR-0009.
+    /// allowlist.txt, resolv.conf). See ADR-0009.
     pub resource_dir: &'a Path,
     /// Runtime environment (from the user's `.env`) for secret resolution.
     pub env: &'a BTreeMap<String, String>,
@@ -757,9 +757,8 @@ pub fn runtime_data_dir() -> PathBuf {
     home.join(".opentrapp")
 }
 
-/// Verified, non-agent-writable resource dir (seccomp profiles, vault-proxy.py,
-/// allowlist.txt, resolv.conf). Populated from the signed bundle at first
-/// launch (step 5).
+/// Verified, non-agent-writable resource dir (seccomp profiles, allowlist.txt,
+/// resolv.conf). Populated from the signed bundle at first launch (step 5).
 pub fn resource_dir() -> PathBuf {
     runtime_data_dir().join("perimeter")
 }
@@ -1594,11 +1593,6 @@ mod tests {
             ResourceEntry {
                 src: root.join("workloads/agent/config/vault-proxy-seccomp.json"),
                 dest: "vault-proxy-seccomp.json".into(),
-                exec: false,
-            },
-            ResourceEntry {
-                src: root.join("infra/proxy/vault-proxy.py"),
-                dest: "vault-proxy.py".into(),
                 exec: false,
             },
             ResourceEntry {

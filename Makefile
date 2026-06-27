@@ -215,7 +215,6 @@ sync-core-embedded:
 	@mkdir -p $(EMB_RES)/manifests
 	@cp workloads/agent/config/vault-seccomp.json $(EMB_RES)/vault-seccomp.json
 	@cp workloads/agent/config/vault-proxy-seccomp.json $(EMB_RES)/vault-proxy-seccomp.json
-	@cp infra/proxy/vault-proxy.py $(EMB_RES)/vault-proxy.py
 	@cp infra/proxy/allowlist.txt $(EMB_RES)/allowlist.txt
 	@cp infra/egress/resolv.conf $(EMB_RES)/resolv.conf
 	@for wl in agent skills social; do \

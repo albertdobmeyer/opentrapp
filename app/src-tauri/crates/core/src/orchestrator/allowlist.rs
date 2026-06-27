@@ -37,7 +37,8 @@ use super::podman;
 /// The off-allowlist block reason the proxy logs for a gray-zone host — the
 /// only `BLOCKED` reason a human may choose to allow. The DNS-rebinding block
 /// (a different reason) and `EXFIL_BLOCKED` are hard rung-0 blocks that must
-/// never surface as approvable. Must match `infra/proxy/vault-proxy.py`.
+/// never surface as approvable. Must match the goproxy matcher
+/// (`infra/proxy/goproxy/policy/policy.go`).
 const OFF_ALLOWLIST_REASON: &str = "domain not in allowlist";
 
 // ─── file layout ─────────────────────────────────────────────────────────
