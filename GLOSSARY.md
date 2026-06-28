@@ -2,18 +2,18 @@
 
 Definitions of terms used in the OpenTrApp source, manifests, and documentation. Use these terms consistently across all repositories, UI text, and contributor discussions.
 
-**Updated:** 2026-05-03
+**Updated:** 2026-06-27
 
 ---
 
 ## 1. User-facing terms (frontend only)
 
-The desktop application (`opentrapp`) is the only surface non-technical users see. The mappings below define how internal developer concepts are presented in the GUI. **Developer terms must never appear in user-facing UI.**
+The GUI — the React frontend served on-demand by the loopback `viewer-server` (de-Tauri, [ADR-0022](docs/adr/0022-daemon-control-surface.md)) — is the only surface non-technical users see. The mappings below define how internal developer concepts are presented in the GUI. **Developer terms must never appear in user-facing UI.**
 
 | Developer term | User-facing term | Where used |
 |---|---|---|
 | `agent` (workload) | **My Assistant** | Sidebar, dashboard, component detail |
-| `forge` (workload) | **Skills** / **Skill Store** | Sidebar, dashboard |
+| `skills` (workload) | **Skills** / **Skill Store** | Sidebar, dashboard |
 | `social` (workload) | **Agent Network** | Sidebar, dashboard (opt-in; build-out deferred) |
 | Hard Shell | **Chat Only** | Mode descriptions |
 | Split Shell | **Supervised** | Mode descriptions |
@@ -143,6 +143,6 @@ These older terms appear in pre-2026-04-15 documents and commit messages. Replac
 | Driver Seat | Protected resources | Resources denied at every shell level |
 | Exoskeleton | Container hardening | Same concept, plain term |
 | Monorepo orchestrator | Perimeter orchestrator | The role of the parent `opentrapp` repository |
-| Dashboard | GUI control surface | The Tauri desktop application |
+| Dashboard | GUI control surface | The browser-viewer GUI projection (loopback `viewer-server`) |
 | Warden | CLI coordinator | The trusted reasoning model on the host |
-| The Trifecta | The three modules | Used informally to refer to vault + forge + pioneer collectively |
+| The Trifecta | The three modules | Used informally to refer to vault + skills + social (the three concerns) collectively |

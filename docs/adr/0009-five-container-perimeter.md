@@ -1,13 +1,13 @@
 # ADR-0009 — From four-container perimeter to five: separating L7 and L3 egress policy
 
-**Status:** Accepted — implementation pending (Tier 2 landed 2026-05-18; Tier 4 deferred to a dedicated session)
+**Status:** Accepted — implemented and verified. The five-container perimeter is the current architecture on `main`: Tier 2 (L7) landed 2026-05-18; Tier 4 (L3 egress sidecar) has since shipped.
 **Decision date:** 2026-05-18
 **Supersedes (partially):** [ADR-0006 — Four-container compose topology](0006-four-container-topology.md) — the count changes; the rationale for *why each boundary exists* is preserved.
-**Companion ADR:** [ADR-0010 — Pinned-resolver DNS](0010-pinned-resolver-dns.md) (in flight; specifies the Tier 5 layer)
+**Companion ADR:** [ADR-0010 — Pinned-resolver DNS](0010-pinned-resolver-dns.md) (specifies the Tier 5 layer)
 **Implemented by:**
-- Tier 2 (L7 destination-IP check inside `vault-proxy.py`) — [`components/opencli-container/proxy/vault-proxy.py`](../../components/opencli-container/proxy/vault-proxy.py); regression-pinned by [`components/opencli-container/proxy/test_vault_proxy.py`](../../components/opencli-container/proxy/test_vault_proxy.py)
-- Tier 4 (L3 kernel-level RFC1918 egress filter in `vault-egress` sidecar) — pending; will land as a new compose service + `egress-net` network + `components/opencli-container/egress/` directory
-**Verified by:** Tier 2 — `python3 -m unittest discover -s components/opencli-container/proxy -p 'test_*.py'`; Tier 4 — `tests/orchestrator-check.sh` extension that asserts the five-container topology and `vault-proxy`'s lack of `external-net` attachment
+- Tier 2 (L7 destination-IP check) — the Go `goproxy` chokepoint at [`infra/proxy/goproxy/`](../../infra/proxy/goproxy/), which replaced the original `vault-proxy.py` ([ADR-0026](0026-vault-proxy-replacement-evaluation.md)); regression-pinned by `go test` in CI.
+- Tier 4 (L3 kernel-level RFC1918 egress filter in the `vault-egress` sidecar) — shipped as the `vault-egress` compose service + `egress-net` network at [`infra/egress/`](../../infra/egress/).
+**Verified by:** `tests/orchestrator-check.sh` asserts the five-container topology and `vault-proxy`'s lack of public-internet attachment; the live boundary self-test (`opentrapp-daemon vault verify`) exercises the egress filter end-to-end (cold and resumed).
 
 ---
 

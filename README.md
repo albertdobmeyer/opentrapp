@@ -165,7 +165,7 @@ You should not trust it on reputation, and the project does not ask you to. It i
 - This is experimental software. It is provided as-is, without warranty of any kind. The authors accept no responsibility for damage resulting from its use.
 - Autonomous AI agent containment is an open research problem. The perimeter raises the cost of a successful compromise; it does not eliminate the possibility. The full attacker-capability matrix and residual-risk enumeration are in [`docs/threat-model.md`](docs/threat-model.md); the differential against alternative containment strategies (Firejail, gVisor, VM-only isolation, scanner-only, etc.) is in [`docs/why-not-x.md`](docs/why-not-x.md).
 - The agent's reasoning is not local. Operating OpenTrApp without internet access to Anthropic's API is not supported.
-- Installer binaries are signed with the Tauri auto-updater key, not with OS-level code-signing certificates. macOS Gatekeeper and Windows SmartScreen will display a first-launch warning.
+- The last tagged release (v0.8.0, the previous Tauri desktop app) ships installers signed with the Tauri auto-updater key, not OS-level code-signing certificates, so macOS Gatekeeper and Windows SmartScreen show a first-launch warning. Signed cross-platform installers for the new daemon architecture are still **pending** ([ADR-0023](docs/adr/0023-distribution-and-packaging.md)).
 - The agent-social workload (`vault-social`, formerly `vault-pioneer`) is **opt-in / on-demand**, and its full build-out is **deferred** (the third concern, after Vault/Skill/GUI). The original Moltbook target was parked 2026-05-03 (Meta's acquisition); a live AT Protocol (Bluesky) adapter has since shipped ([ADR-0017](docs/adr/0017-unpark-social-live-adapter.md)). The container is defined in `compose.yml` (off by default); code at [`workloads/social/`](workloads/social/). Tracked in MISSION.md (Thread C).
 
 ## Requirements
@@ -177,6 +177,8 @@ You should not trust it on reputation, and the project does not ask you to. It i
 - *(Optional)* [Ollama](https://ollama.com/) running locally, for the on-device AI safety checks. Without it the fast built-in checks still run; the deeper AI second opinion simply holds anything uncertain for your review instead of judging it automatically. Pull the small local models it uses: `ollama pull qwen2.5-coder:1.5b`, `ollama pull qwen2.5-coder:3b`, and `ollama pull all-minilm`.
 
 ## Installation
+
+> The pre-built installers below describe the **last tagged release ([v0.8.0](https://github.com/albertdobmeyer/opentrapp/releases/latest)) — the previous Tauri desktop app.** The current `main` (the headless `opentrapp-daemon` + on-demand browser viewer) builds **from source** (see *Building from source*) until the signed cross-platform installers land ([ADR-0023](docs/adr/0023-distribution-and-packaging.md)); see the status note at the top of this README.
 
 Pre-built installers for all three platforms are attached to each [GitHub release](https://github.com/albertdobmeyer/opentrapp/releases/latest):
 
@@ -258,7 +260,7 @@ cd app/src-tauri && cargo test --lib     # Rust unit tests
 cd app && npm test -- --run              # Vitest unit tests
 cd app && npx tsc --noEmit               # TypeScript strict
 cd app && npx playwright test            # End-to-end tests
-bash tests/orchestrator-check.sh         # Manifest validation (114 checks)
+bash tests/orchestrator-check.sh         # Manifest validation (115 checks)
 podman compose up -d && podman compose down  # Perimeter smoke test
 ```
 

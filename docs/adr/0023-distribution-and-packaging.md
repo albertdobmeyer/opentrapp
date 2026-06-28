@@ -1,9 +1,10 @@
 # ADR-0023 — Distribution & packaging: OS-agnostic, vendor-neutral, Scorecard-legible
 
-**Status:** Proposed — the distribution strategy is decided here; implementation is staged (the
-recognized registry publish can land **early**, decoupled from de-Tauri; the prebuilt-installer track
-lands with the de-Tauri cutover — see Sequencing). Tier 3 of the architecture mission
-([ADR-0020](0020-product-identity-and-distribution.md)).
+**Status:** Accepted — the cargo-dist release lane is **built** and hardened (`dist-workspace.toml` +
+SHA-pinned [`.github/workflows/release.yml`](../../.github/workflows/release.yml)); the actual
+signed-installer cut for the new architecture is **owner-gated and not yet tagged** (the last tag,
+v0.8.0, is still the previous Tauri app — the new daemon build runs from source until the cut). Tier 3
+of the architecture mission ([ADR-0020](0020-product-identity-and-distribution.md)).
 **Constraint (maintainer):** *as OS-agnostic as possible; never vendor- or OS-lock the project.*
 **Cross-references:** [ADR-0020](0020-product-identity-and-distribution.md) (CLI/daemon + images are
 the artifacts) · [ADR-0022](0022-daemon-control-surface.md) (the de-Tauri cutover changes the shipped

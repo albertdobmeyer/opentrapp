@@ -54,7 +54,7 @@ opentrapp/                              (this repository — public, monorepo)
 ├── config/
 │   └── orchestrator-workflows.yml      cross-workload workflow definitions
 ├── tests/
-│   └── orchestrator-check.sh           114-check validation suite
+│   └── orchestrator-check.sh           115-check validation suite
 └── docs/
     ├── perimeter-explained.md          one-page elevator architecture
     ├── trifecta.md                     full architecture, threat model, defense layers
@@ -124,8 +124,9 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Manifest schema (source of truth) | [`schemas/component.schema.json`](schemas/component.schema.json) |
 | Rust manifest structs | [`app/src-tauri/crates/core/src/orchestrator/manifest.rs`](app/src-tauri/crates/core/src/orchestrator/manifest.rs) |
 | TypeScript types | [`app/src/lib/types.ts`](app/src/lib/types.ts) |
-| Tauri command handlers | [`app/src-tauri/src/commands/`](app/src-tauri/src/commands/) |
-| Tauri invoke wrappers | [`app/src/lib/tauri.ts`](app/src/lib/tauri.ts) |
+| Daemon command surface (loopback `/api` routes) | [`app/src-tauri/crates/viewer-server/src/routes.rs`](app/src-tauri/crates/viewer-server/src/routes.rs) |
+| Frontend command client (Tauri IPC / loopback `/api`) | [`app/src/lib/tauri.ts`](app/src/lib/tauri.ts) |
+| ADR-0021 danger-gate mechanics | [`app/src-tauri/crates/core/src/boundary.rs`](app/src-tauri/crates/core/src/boundary.rs) + [`approvals.rs`](app/src-tauri/crates/core/src/approvals.rs) |
 | React hooks | [`app/src/hooks/`](app/src/hooks/) |
 | Perimeter compose | [`compose.yml`](compose.yml) |
 | Orchestrator workflows | [`config/orchestrator-workflows.yml`](config/orchestrator-workflows.yml) |
@@ -136,7 +137,7 @@ The backend knows *how* to execute workflows generically; it does not know *what
 | Prior-art comparison | [`docs/why-not-x.md`](docs/why-not-x.md) |
 | Reproducibility recipe | [`docs/reproduce.md`](docs/reproduce.md) + [`docs/reproduce.sh`](docs/reproduce.sh) |
 | Mermaid architecture diagrams | [`docs/diagrams.md`](docs/diagrams.md) |
-| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — 15 records covering proxy-side credentials, adaptive shells, CDR, social-workload parking, deserve-to-exist, four-container topology (superseded by 0009), manifest-driven backend, Tauri, five-container L7/L3 split, pinned-resolver DNS, zero-trust bootstrap, subscription-OAuth feasibility, monorepo consolidation (0013), modular distribution + `openagent-*` naming (0014), and local-AI judgment layer / Sentinel (0015) |
+| Architecture decisions (ADRs) | [`docs/adr/`](docs/adr/) — 26 records (0001–0026); browse the directory for the index. Load-bearing recents: 0019 headless daemon / GUI-viewer split, 0020 product identity, 0021 danger-gated control plane, 0022 daemon control surface (de-Tauri), 0023 distribution & packaging, 0024 three-concerns structure, 0025 standalone Skill Firewall, 0026 vault-proxy → goproxy replacement |
 | Whitepaper | [`docs/whitepaper.md`](docs/whitepaper.md) |
 | Architecture v2 design spec (historical, supersded by `docs/trifecta.md`) | [`docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md`](docs/archive/superpowers/2026-04-15-architecture-v2-perimeter-redesign.md) |
 
@@ -145,14 +146,14 @@ The backend knows *how* to execute workflows generically; it does not know *what
 ```bash
 # Rust backend
 cd app/src-tauri && cargo build
-cd app/src-tauri && cargo test --lib    # 56 tests at v0.3.0
+cd app/src-tauri && cargo test --lib    # 137 tests (workspace at v0.9.0)
 
 # Frontend
 cd app && npm install
 cd app && npm run lint                  # eslint --max-warnings 0 (CI GATE — must be clean)
 cd app && npm test -- --run             # vitest
 cd app && npx tsc --noEmit              # TypeScript strict
-cd app && npx playwright test           # end-to-end, 25 tests
+cd app && npx playwright test           # end-to-end, 27 tests
 cd app && npm run dev                   # Vite dev server
 
 # Manifest and orchestration validation
