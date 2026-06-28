@@ -4,7 +4,7 @@ What is left to build, ordered by the bar in [`CLAUDE.md`](CLAUDE.md) §12: **se
 
 Legend: ✅ done and verified · 🔶 in progress or needs end-user-faithful re-verification · ⬜ not started.
 
-Detailed specs: [`docs/specs/2026-06-09-lean-verified-perimeter-roadmap.md`](docs/specs/2026-06-09-lean-verified-perimeter-roadmap.md) (WS0 to WS5), [`docs/road-to-recommendable.md`](docs/road-to-recommendable.md), the decisions in [`docs/adr/`](docs/adr/).
+Detailed specs: [`docs/specs/2026-06-09-lean-verified-perimeter-roadmap.md`](docs/specs/2026-06-09-lean-verified-perimeter-roadmap.md) (WS0 to WS5), [`docs/specs/2026-06-28-command-surfaces-implementation-plan.md`](docs/specs/2026-06-28-command-surfaces-implementation-plan.md) (CLI / registry / MCP — the next frontier), [`docs/road-to-recommendable.md`](docs/road-to-recommendable.md), the decisions in [`docs/adr/`](docs/adr/).
 
 ---
 
@@ -53,6 +53,7 @@ The perimeter must provably contain the agent, cold and after every resume. This
 | WS0-0c: wake exactly-once + security-correct resume (T2) | 🔶 | **Security-correct resume CLOSED (#195):** both resume paths — control-channel (`resume_now`) AND wake-on-message (`idle::resume_from_dormant`) — now run the boundary self-test fail-closed (the waker path previously skipped it). The waker arms while dormant; exactly-once is by construction (peek-only, never advances the offset). Verified on the box: dormant→resume→auto-self-test PASS. **Maintainer tail:** the live wake on a real Telegram message (real token + capable hardware) + upgrade the e2e wake test to assert exactly-once (#40). |
 | Credential hardening: `--env-file` / podman secrets (#75) | ✅ | **Done.** Secrets pass as `-e NAME` (name only on the argv) with the value injected into podman's process env via `Command::env()` — never on the argv / host process table. Pinned by `secrets_never_leak_onto_the_argv` + `apply_secret_env_injects_into_child_process_environment`. |
 | WS1: bound proxy memory over long sessions | ✅ | **Resolved by replacement (WS-C).** The mitmproxy RSS leak (54→550+ MB) is gone — `vault-proxy` is now the Go `goproxy` chokepoint (<50 MB RSS measured, leak-free; ADR-0026, Section 2). The 256 MB `mem_limit` is the blast-radius cap, not a working set. |
+| Enforce command `boundary_impact` at the `run_command` chokepoint (ADR-0021) | ⬜ | **Phase 0 of the [command-surfaces plan](docs/specs/2026-06-28-command-surfaces-implementation-plan.md).** `Command.boundary_impact` is classified + fail-closed but **not runtime-enforced** today — `execute::run_command` runs commands ungated; the GUI relies on a documented assumption (`routes.rs:75`). Audit + classify every workload command, gate at the single chokepoint (fail-closed *refuse*), so the new CLI/MCP **and** the existing GUI all inherit one gate. **Prerequisite of the agent-reachable CLI/MCP surfaces** (owner decision 2026-06-28). |
 
 ## 2. Lean foundation / de-Tauri endgame (GUI optional, CLI-first)
 
@@ -69,7 +70,8 @@ The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as
 | Enable idle auto-pause by default | ⬜ | After WS0-0a/0c verified (Rung 1). |
 | Flip the daemon default on (`OPENTRAPP_DAEMON_DEFER`) | ⬜ | After resting-RSS + viewer-survival verified on the product path. |
 | Status-streaming API (Unix socket or loopback) | ⬜ | Today the CLI reads markers + stderr. |
-| Unify the CLI as `opentrapp` (retire `opentrapp-daemon`) | ⬜ | Phase 3. |
+| Unify the CLI as `opentrapp <concern> <verb>` (retire `opentrapp-daemon`) | ⬜ | **[CLI spec](docs/specs/2026-06-28-cli-first-command-surface.md) + plan Phases P1–P2.** A thin projection over `core`'s manifest command API (`execute::run_command`/`execute_workflow`) — no concern rewritten. Inherits the Phase-0 chokepoint gate. The bare-`opentrapp` rename is owner-gated (P2). |
+| Optional MCP adapter (external-operator-only) | ⬜ | **[MCP spec](docs/specs/2026-06-28-mcp-adapter.md) + plan Phase P4.** A thin stdio JSON-RPC wrapper over the same command API; host-operator-only (**never** the contained agent — ADR-0020 tenet 5); inherits the chokepoint gate. Gated on the dep-vs-hand-roll decision (rec: hand-roll minimal). |
 | OS autostart launches the daemon, not the GUI | ⬜ | systemd user unit / launchd / Windows task. |
 
 ## 3. Supply-chain and dependency hygiene
@@ -97,7 +99,7 @@ The north star (ADR-0019 / ADR-0020 / ADR-0022): a lean headless daemon + CLI as
 |---|---|---|
 | Skill Firewall on the Marketplace + one-way sync | ✅ | Action published; projection sync verified end to end. |
 | Publish the de-Tauri release (next: v0.9.0) | 🔶 | **Release LANE built (#199, #200, 2026-06-27); the cut is the owner's go/no-go (P5-1).** cargo-dist builds the daemon + viewer-server for Linux/macOS/Windows (×2 arch) with shell+PowerShell installers + SLSA attestations; the five perimeter images publish as durable signed release assets the daemon digest-pins (#76 closed). Version is **0.9.0** lockstep; `dist plan` announces it cleanly on the box. **Code-scan posture for the gate:** #80-82 done, #46 de-Tauri shipped, **the goproxy live-boundary self-test is GREEN** (Section 2) and **its Go advisories are cleared** (#198); the only open alerts are **#43 + #1 (co-maintainer)** — honestly open, never dismissed. Last tagged release ([v0.8.0](https://github.com/albertdobmeyer/opentrapp/releases/latest)) is still the pre-cutover Tauri app until the owner tags v0.9.0. |
-| CLI/registry distribution (crates.io / Homebrew / curl-sh; GHCR) | 🔶 | **Built, owner-trigger-gated.** curl-sh + PowerShell installers via cargo-dist (#199); `opentrapp-core` crates.io publish wired (`publish-crate.yml`, needs `CARGO_REGISTRY_TOKEN`); GHCR images signed + published as release assets (#200). Homebrew tap is a later optional convenience (ADR-0023). OS-agnostic, no lock-in. |
+| CLI/registry distribution (crates.io / Homebrew / curl-sh; GHCR) | 🔶 | **Built, owner-trigger-gated.** curl-sh + PowerShell installers via cargo-dist (#199); `opentrapp-core` crates.io publish wired (`publish-crate.yml`, needs `CARGO_REGISTRY_TOKEN`); GHCR images signed + published as release assets (#200). Homebrew tap is a later optional convenience (ADR-0023). OS-agnostic, no lock-in. See the [registry readiness spec](docs/specs/2026-06-28-registry-native-distribution.md) + plan Phase P3 (a pre-tag readiness harness — `cargo publish --dry-run`, metadata pins — + the owner runbook). |
 | Code signing (SignPath reapply) | ⬜ | After visibility signals land (rejected 2026-06-15). |
 
 ## 6. Visibility and adoption (Track B, AFTER the foundation)
