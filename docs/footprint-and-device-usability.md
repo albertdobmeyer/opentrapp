@@ -126,9 +126,10 @@ resting state, is what stresses a memory-tight box (see §10.2).
 
 The freshly-measured proxy (54 MB, not the earlier ~150 MB estimate) makes *our* share
 **smaller** than first thought at rest — ~15%, not ~25%. **But this split is non-stationary**:
-under active reasoning the agent rises toward ~600 MB (pushing OpenClaw's share up), and
-mitmproxy is known to grow over a long session (pending the WS1-1a measurement) — at which
-point *our* share rises instead. The single resting snapshot is a floor, not the whole story.
+under active reasoning the agent rises toward ~600 MB (pushing OpenClaw's share up); the proxy
+share, by contrast, stays flat now that the Go `goproxy` (<50 MB flat) has replaced the old
+mitmproxy whose long-session growth would have raised *our* share. The single resting snapshot is
+a floor, not the whole story.
 
 External grounding corroborates every line: a working Node LLM client is a few hundred MB
 ([nodejs.org](https://nodejs.org/learn/diagnostics/memory/understanding-and-tuning-memory)),
@@ -270,11 +271,12 @@ while idle.
   can't host the perimeter). If either fails, the feature is *inert* (never sleeps) — not
   dangerous (it can't strand the perimeter: it refuses to pause without a wake token), but
   it wouldn't deliver the memory win. Tracked as `mem-phase3-operator-verify`.
-- **mitmproxy memory growth (watch-item).** mitmproxy is known to grow over long sessions
-  as it retains flows — one report saw ~50 MB climb to ~550 MB in ~10 minutes of heavy
-  traffic ([mitmproxy#4456](https://github.com/mitmproxy/mitmproxy/issues/4456)). Our
-  **54 MB measured** figure is a freshly-started instance. For a "silent background process"
-  goal, the proxy's long-run growth deserves a periodic-recycle or a flow-retention cap.
+- **Proxy long-run memory growth — RESOLVED (was a mitmproxy watch-item).** The old Python
+  mitmproxy grew over long sessions as it retained flows (~50 MB → ~550 MB in ~10 min of heavy
+  traffic, [mitmproxy#4456](https://github.com/mitmproxy/mitmproxy/issues/4456)). It has been
+  replaced by the Go `goproxy` chokepoint ([ADR-0026](adr/0026-vault-proxy-replacement-evaluation.md)),
+  which runs **<50 MB flat** — so the growth concern is gone and no periodic-recycle / flow-retention
+  cap is needed.
 - **Dev-disk hygiene (not user-facing).** The Rust `target/` build cache is ~29 GB and old
   `podman images` total ~5.6 GB (largely reclaimable dupes incl. pre-rebrand tags). This
   affects contributors, not users, but is worth a periodic `cargo clean` / `podman image
@@ -396,7 +398,8 @@ claims are verified, the *boundary-survival-under-spike* claim is not (yet).
 Phase A is now **gate-verified** (§10.4); Phase B (the webview-less daemon) is designed in
 [ADR-0019](adr/0019-headless-daemon-gui-viewer-split.md), implementation pending. Open items from
 §8 unchanged: (a) does idle auto-pause actually fire in production
-(`mem-phase3-operator-verify`); (b) mitmproxy long-run memory growth. Added this session:
+(`mem-phase3-operator-verify`); (b) proxy long-run memory growth — RESOLVED by the goproxy
+replacement ([ADR-0026](adr/0026-vault-proxy-replacement-evaluation.md); <50 MB flat). Added this session:
 (c) **fix social/skills SIGTERM handling** (§10.3) before relying on auto-pause for a clean
 teardown; (d) **capture a real `podman stats` per-container reading** (§10.2) next time the
 full perimeter is up. Full session log lives in the laptop's `~/state.json`

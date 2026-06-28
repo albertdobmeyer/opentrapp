@@ -92,7 +92,17 @@ residual under the rule above.
 
 ## The 23 in the Scorecard *Vulnerabilities* count (2026-06-13)
 
-Scorecard's external OSV scan reports **23**. They split cleanly:
+> **Update (2026-06-27) — the 19 Rust advisories in this section are now RESOLVED by removal.** The
+> de-Tauri cutover ([ADR-0022](adr/0022-daemon-control-surface.md); #184, 2026-06-24) **deleted the GUI
+> crate and the entire Tauri / wry / GTK3 tree.** Verified at the consumption end: `app/src-tauri/Cargo.lock`
+> has **0** `tauri`/`wry`/`webkit`/`gtk` entries and the `deny.toml` `[advisories].ignore` list is now
+> **empty** (`cargo deny check advisories` is clean — nothing present-but-ignored). The external Scorecard
+> *Vulnerabilities* count may lag until its next OSV re-scan, but at the lockfile level these are
+> **eliminated, not merely accepted.** The detail below is the pre-cutover posture, kept as an audit
+> trail. The only release-gating advisory surface today is the goproxy Go toolchain (RESOLVED 2026-06-27,
+> at the end of this doc).
+
+Scorecard's external OSV scan reported **23** (pre-cutover snapshot). They split cleanly:
 
 - **4 genuinely fixable → fixed this session** (2 npm dev-tooling, 2 Python test deps). See *Resolved* below.
 - **19 accepted** — `unmaintained` / `unsound` *warnings* on **transitive** Rust
@@ -118,14 +128,20 @@ Scorecard's external OSV scan reports **23**. They split cleanly:
    `tauri` string is the `src-tauri/` directory *path*). So the Scorecard *Vulnerabilities*
    count is entirely the optional GUI's deprecated GTK3 bindings; the daemon + core have none.
 
-## Accepted Rust advisories (all *warnings*, not vulnerabilities)
+## Accepted Rust advisories — now RESOLVED by the de-Tauri cutover (historical record)
 
-The machine-readable acceptance for the `unmaintained` set is in `deny.toml`
-(`[advisories].ignore`); `cargo deny check` is clean against it. The two `unsound`
-entries (glib, rand) are **not** in that list — cargo-deny's advisory-DB view does
-not match our transitive version constraints, so an `ignore` there would emit
-spurious "advisory-not-detected" warnings on every CI run. They are still detected
-by `cargo audit` / OSV and accounted for here.
+> All 19 below were *accepted warnings* only while the Tauri GUI crate still pulled them. The cutover
+> (#184, 2026-06-24) **removed the entire Tauri/wry/GTK3 tree**, so none appear in
+> `app/src-tauri/Cargo.lock` any more and the `deny.toml` `[advisories].ignore` list is now **empty**
+> (`cargo deny check advisories` is clean — nothing present-but-ignored). The table is the pre-cutover
+> acceptance record.
+
+The machine-readable acceptance for the `unmaintained` set **previously** lived in `deny.toml`
+(`[advisories].ignore`) and is now empty. The two `unsound`
+entries (glib, rand) were **not** in that list — cargo-deny's advisory-DB view did
+not match our transitive version constraints, so an `ignore` there would have emitted
+spurious "advisory-not-detected" warnings on every CI run. They were detected
+by `cargo audit` / OSV and accounted for here at the time (pre-cutover).
 
 | Source | Crates | IDs | Why accepted |
 |--------|--------|-----|--------------|

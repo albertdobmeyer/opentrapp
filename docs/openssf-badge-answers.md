@@ -104,7 +104,7 @@ Evidence: https://github.com/albertdobmeyer/opentrapp/blob/main/README.md
 
 ### maintained: the project is actively maintained
 Status: Met
-Justification: The project is actively maintained. The main branch receives frequent commits, the most recent release is version 0.6.0 from June 2026, and the maintainer triages issues and dependency updates on an ongoing basis.
+Justification: The project is actively maintained. The main branch receives frequent commits, the most recent tagged release is version 0.8.0 (June 2026) — and `main` is actively a product generation ahead of it (the de-Tauri headless daemon, built from source pending the next tagged release) — and the maintainer triages issues and dependency updates on an ongoing basis.
 Evidence: https://github.com/albertdobmeyer/opentrapp/commits/main
 
 ## Change Control (9 criteria; entry was at 3 of 9)
