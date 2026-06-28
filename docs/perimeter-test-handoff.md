@@ -1,5 +1,7 @@
 # Live-perimeter test handoff (capable machine)
 
+> **Currency note (2026-06-27):** this runbook predates the **de-Tauri cutover** ([ADR-0022](adr/0022-daemon-control-surface.md); #184, 2026-06-24). The *install mechanics* below (download a `v0.7.0` `.msi`, run the Tauri first-run wizard) describe the **pre-cutover desktop app** and are historical — there is no signed installer for the new architecture yet (cargo-dist, [ADR-0023](adr/0023-distribution-and-packaging.md)). The runbook's **purpose still stands**: the live, hardware-gated verification a 7.2 GB box can't sustain — now specifically the **Win/macOS browser-runtime check** of the headless `opentrapp-daemon` + on-demand browser viewer (built from source). For current status see [`ROADMAP.md`](../ROADMAP.md) and [`handoff.md`](handoff.md).
+
 *A self-contained runbook for running the hardware-gated perimeter tests on a machine with
 RAM headroom (e.g. a 16 GB+ Windows desktop), when the primary dev laptop can't sustain
 them. Written 2026-06-09. **You do not need the chat session that produced this** — the repo
