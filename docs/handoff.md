@@ -1,57 +1,51 @@
 # Handoff (session-state)
 
-**Last updated: 2026-06-26.** The roadmap is [`ROADMAP.md`](../ROADMAP.md); the operating bar is [`CLAUDE.md`](../CLAUDE.md) §12. This doc is "where we stopped and the immediate next steps."
+**Last updated: 2026-06-27.** Canonical roadmap: [`ROADMAP.md`](../ROADMAP.md). Operating bar: [`CLAUDE.md`](../CLAUDE.md) §12. This doc is *only* "where we stopped + the immediate next steps" — it does not restate status that lives in `ROADMAP.md` or the ADRs.
 
-## The frame for next session
+## Where we are (one paragraph)
 
-The **radical lean-down + USP-sharpening campaign** ("reel it in" — the plan in `.claude/plans/`, mapped to ROADMAP Rung 2) is **structurally complete on `main`**. The product is now what the north star always wanted: a lean headless **`opentrapp-daemon`** + CLI, with the GUI an optional on-demand browser projection. What remains before a release are the **Rung-1 security-correctness gates** (product-daemon T0 end-to-end) and a couple of **maintainer-controlled final gates** — not more building. Hold the bar (CLAUDE.md §12): end-user-faithful tests only, root-cause fixes, no glossing, protect the user, substance before visibility.
+Two multi-session arcs are **done on `main`**: the **lean-down campaign** (de-Tauri + goproxy + alpine; ROADMAP Rung 2) and **bar-c, the danger-gated control plane** ([ADR-0021](adr/0021-danger-gated-agentic-control-plane.md)). The product is the lean **headless `opentrapp-daemon`** that owns the perimeter, with an **optional on-demand browser viewer** as the GUI projection. The Rung-1 boundary self-test (cold == resumed) is **green through the product daemon** ([product-path T0, 2026-06-26](../ROADMAP.md)). This session also ran a **documentation-consolidation sweep** ([CLAUDE.md](../CLAUDE.md) §13): reconciled stale facts (counts → 115, ADR statuses 0009/0022/0023, deleted Tauri paths), marked the 19 GTK3/Tauri advisories **resolved-by-removal** in [`known-advisories.md`](known-advisories.md), retired the dead mitmproxy watch-items, and bannered the whitepaper. What is verified vs gated is in the ROADMAP rungs — not repeated here.
 
-The method that carried the campaign — **pin-first**: for every security-relevant refactor we wrote characterization tests that had to be **green before AND after** (mutation-proven to bite), so containment could not silently drift. Keep using it.
+## The next frontier — registry / MCP / CLI-first command surfaces
 
-## The lean-down campaign — what shipped (all on `main`, verified on the 7.2 GB box)
+The next session continues toward the **north star** ([ADR-0020](adr/0020-product-identity-and-distribution.md)): *a registry-installable CLI/daemon orchestrator + signed images, with the GUI and an optional MCP adapter as thin projections of one manifest-driven daemon — agent-operable, danger-gated.* The control-surface architecture is [ADR-0022](adr/0022-daemon-control-surface.md) §1: **one command surface, three projections** (CLI / loopback GUI / optional MCP), each inheriting the danger-gate unchanged.
 
-| WS | What | Result | Evidence |
-|---|---|---|---|
-| **A** | Tune `compose.yml`/`perimeter.yml` mem_limits to measured + SIGTERM teardown | Resting-cap sum 6.3 GB → ~3 GB; clean idle shutdown | `podman stats`; orchestrator-check §31 |
-| **B** | Lean every workload base to alpine (PR #191) | vault-skills 233→**72 MB**, vault-social 153→**74 MB** | self-test 10/10, test 168/168 + 48/48, scan 0/25, PyYAML musllinux wheel — all on musl |
-| **C** | Replace the leaky Python mitmproxy with a Go `goproxy` chokepoint (PR #189/#190; ADR-0026) | 250 MB→**15.6 MB**, 54→550 MB leak → **<50 MB flat** | proxy-level: off-allowlist **403 via real MITM under seccomp**, CA at agent-trusted path, 1 MB/10 MB caps, redaction; `go test ./...` green |
-| **D** | Delete the Tauri/GTK GUI; re-root workspace at `crates/{core,daemon,viewer-server}` (shipped 2026-06-24) | ~220 MB resting + **19 GTK3 advisories gone**; `Cargo.lock` GTK-free; `deny.toml` ignore list empty | de-Tauri end-to-end Linux-proven (session-bootstrap → events WS → viewer) |
-| **E** | Sharpen USPs + harmonize the public narrative to the lean reality | README/landing/docs de-Tauri-current; Skill Firewall is the standalone lean wedge | (ongoing — see "the public release" below) |
+### What EXISTS today (the foundation to build on)
 
-Net: every base image is alpine (or the 15.6 MB Go proxy / node:22-alpine agent), the Python interpreter is out of the keys-holding container, and the heaviest single thing in the old footprint (the ~442 MB WebKitGTK webview) is deleted.
+- **Daemon CLI** — `opentrapp-daemon vault <verb>`: `up | down | status | verify | pause | resume | restart` (`crates/daemon/src/main.rs` → `dispatch_vault` / `print_vault_help`). The weakening verbs (`down`, `pause`) are **HELD for out-of-band approval** (ADR-0021), not applied from the control channel.
+- **Loopback GUI projection** — `viewer-server` (127.0.0.1-only + Host/Origin allowlist + 256-bit bearer + nonce→HttpOnly-cookie; [ADR-0022](adr/0022-daemon-control-surface.md) §3). Routes in `crates/viewer-server/src/routes.rs`; frontend client in `app/src/lib/tauri.ts` (dual-mode: Tauri IPC / `fetch /api/<cmd>`).
+- **Danger-gate mechanics** — `crates/core/src/boundary.rs` (`BoundaryImpact` neutral|weakening, fail-closed default), `control.rs` (verb→impact), `approvals.rs` (pending queue), `supervisor.rs` (`gate_inbox_request` / `apply_approved`). Approval surface: `/api/list_pending_approvals` + `/api/approve_weakening` + `WeakeningApprovalsCard`.
+- **Registry/release lane (BUILT, not cut)** — cargo-dist (`dist-workspace.toml` + SHA-pinned `.github/workflows/release.yml`) + `cargo publish` of `opentrapp-core` ([ADR-0023](adr/0023-distribution-and-packaging.md)). The actual tag cut is **owner-gated** (see the maintainer tail).
 
-## Rung-1 boundary + goproxy live gate — VERIFIED via the product daemon (2026-06-26)
+### What's NEXT (the work to pick up)
 
-The load-bearing security gate is **crossed**. On the 7.2 GB box (cleaned), through the **product daemon** (not dev scaffolding):
-`opentrapp-daemon vault up` → `vault verify` → **`pass=7 fail=0` cold**, then `vault pause`→`resume`→`vault verify` → **`pass=7 fail=0` with B5 CA fingerprint UNCHANGED** → `vault down` (clean). B1 isolation · B2 allowlist (deny 403 / allow) · **B3 credential-separation (goproxy injects; no vendor key in `vault-agent`)** · B4 L3 egress · B5 CA-stable cold==resumed · B6 read-only. So **the #1 non-negotiable bar (zero-trust air-gap) is verified on the shipped goproxy stack**, AND **the goproxy live-boundary gate is green**. Scope (honest): DevVerifier/from-source mode + a **placeholder** key — the boundary checks need no valid key (P1-1/#96), so no real credential was handled. Repro: build the 3 always-on images tagged `ghcr.io/albertdobmeyer/opentrapp/<svc>:latest`, placeholder `~/.opentrapp/.env`, no overlay → DevVerifier.
+1. **CLI-first command surface beyond `vault`** ([ADR-0020](adr/0020-product-identity-and-distribution.md) tenet 2 + [ADR-0024](adr/0024-product-structure-three-concerns.md) three concerns). Make each concern independently CLI-operable under one binary: the **Skill Firewall already ships standalone** (`workloads/skills/skill scan …` + the GitHub Action), so the model exists — extend it to a unified `opentrapp <concern> <verb>` surface (`opentrapp vault …`, `opentrapp skill …`, social on-demand). The bare `opentrapp` command arrives with the GUI demotion ([ADR-0022](adr/0022-daemon-control-surface.md) Phase 3); today it is `opentrapp-daemon vault`.
+2. **Registry-native distribution** ([ADR-0023](adr/0023-distribution-and-packaging.md)). Lane is built; the cut is the owner tagging v0.9.0 → crates.io `opentrapp-core` + cargo-dist installers, which **flips the Scorecard Packaging check** legitimately. Needs the owner tag + `CARGO_REGISTRY_TOKEN`.
+3. **Optional MCP adapter** ([ADR-0022](adr/0022-daemon-control-surface.md) §1; shape deferred). A thin wrapper over the **same** command API, **for the external host operator only** — **never** an MCP server for the *contained* agent (a security inversion, explicitly rejected in [ADR-0020](adr/0020-product-identity-and-distribution.md)). Same danger-gate. Design it before building.
 
-## What is NOT done — the gates that stand between "built" and "released"
+### The invariants the new surfaces must never break
 
-1. **The BundleVerifier digest-staging path (the *released*-product T0).** The run above used DevVerifier (from-source, no signed overlay) — faithful to how from-source runs today. The signed-overlay `podman load` + digest-pin path engages only with a real release overlay; it is naturally exercised at the **post-release T0** once the owner tags v0.9.0 and the signed assets exist. The lane that produces them is now **built** (cargo-dist host binaries #199 + perimeter images as durable release assets #200, which closes #76).
-2. **Win/macOS browser-model runtime (maintainer hardware).** The de-Tauri browser model is **Linux-proven**; Windows/macOS are portable-by-construction (pure-Rust daemon + browser + a 3-line opener) but **runtime-unverified**. The cutover dropped the v0.8.0 Win/macOS desktop installers — a one-way product decision already taken.
-3. **Co-maintainer-gated Scorecard items** (#43 Code-Review, #1 Branch-Protection) — a second human, not a code change.
+- **Danger-gate ([ADR-0021](adr/0021-danger-gated-agentic-control-plane.md)).** Any new CLI verb or MCP tool that weakens the boundary (`boundary_impact: weakening`) MUST route through the approval queue (`supervisor::gate_inbox_request` → human `apply_approved`), **never apply directly** — there is no agent-call edge to a weakening writer, regardless of who asks.
+- **Two agents, one rule ([ADR-0020](adr/0020-product-identity-and-distribution.md) tenet 4).** The external operator (Claude Code) is a trusted *operator*; the contained agent never controls its own cage. The MCP adapter serves the external operator only.
+- **Verify at the consumption end ([CLAUDE.md §11](../CLAUDE.md)).** A new surface is "done" only when exercised through the **product binary** (not `make`/`podman-compose`), with the cold == resumed boundary self-test re-passing. Local green ≠ CI green ([§7](../CLAUDE.md)).
 
-> **Resolved 2026-06-27:** `vault-proxy.py` retired (P2-1, #202) — the goproxy is the sole L7 impl (ADR-0026); 1370 lines of dead Python + its embedded/pinned copies + the orphaned CI step removed; `threat-model.md` repointed at the goproxy matcher.
+## Maintainer-gated tail (human decisions, not building)
 
-> **Resolved 2026-06-27 (was item: "the 9 Go advisories"):** govulncheck found **24 reachable** stdlib advisories (more than the guessed 9) — all because the goproxy built on **go 1.23.0**. Fixed at the root: `go.mod` → `go 1.25.11` (the max "Fixed in"), `golang.org/x/net` → v0.56.0 (the one reachable module vuln, GO-2026-4918), and the Containerfile builder pinned to `golang:1.25.11-alpine@sha256:523c3eff…` (digest, closing the unpinned-builder gap). **govulncheck now clean**, `go test ./...` green, and the rebuilt 15.6 MB proxy re-passed the live boundary self-test on the box (`pass=7` cold **and** resumed, B5 CA unchanged). goproxy is **Tier-2 release-gating** ([`known-advisories.md`](known-advisories.md)) and is now clean. See [`known-advisories.md`](known-advisories.md) for the standing posture.
+- **v0.9.0 cut** (#103). Owner go/no-go on the tag. `git tag v0.9.0` fires `release.yml` (host binaries, as a **draft**) + `build-images` (signed perimeter images onto the draft) + `publish-crate.yml` (crates.io; needs `CARGO_REGISTRY_TOKEN`); the human verifies the draft and publishes. **Do not push a `v*` tag without the owner's go/no-go** (outward-facing). The post-publish BundleVerifier digest-staging T0 is then exercised on a clean box.
+- **Win/macOS browser-runtime** (#104). The de-Tauri browser model is Linux-proven; Win/macOS are portable-by-construction but runtime-unverified — owner hardware. Runbook: [`perimeter-test-handoff.md`](perimeter-test-handoff.md) (its `.msi` install path is now historical; the purpose stands).
+- **Co-maintainer Scorecard** #43 (Code-Review) + #1 (Branch-Protection) (#78). A second human, not a code change — honestly OPEN, never dismissed.
 
-## The public release — consolidated status
+## Running the perimeter / T0 on this box (still true)
 
-- **Last tagged release: [v0.8.0](https://github.com/albertdobmeyer/opentrapp/releases/latest)** (2026-06-23) is the **pre-cutover Tauri desktop app**. `main` is a full product generation ahead of it (de-Tauri + goproxy + alpine).
-- **The README Status block is the honest public face**: de-Tauri shipped, runs from source today, v0.8.0 is still the old desktop app. The installer **lane is now built** (cargo-dist, #199) — what remains is the owner tagging v0.9.0.
-- **Next release would be v0.9.0** (the de-Tauri lean release). It is **built, box-verified, and the release lane now exists.** The **Rung-1 product-path T0 + the goproxy live boundary gate are GREEN** (above), so the containment claim is earned. The release **lane** is built: cargo-dist host binaries + installers + SLSA attestations (#199), and the five perimeter images publish as durable signed release assets the daemon digest-pins (#200 / #76). Version is **0.9.0** lockstep; `dist plan` announces it cleanly. What still stands between here and a *published* release: (a) **the owner's go/no-go on the tag cut** (P5-1) — `git tag v0.9.0` fires `release.yml` (host binaries, as a **draft**) + `build-images` (signed perimeter images onto that draft) + `publish-crate.yml` (crates.io, needs `CARGO_REGISTRY_TOKEN`); the human verifies the draft and publishes; (b) the **BundleVerifier digest-staging T0** is exercised post-publish on a clean box; (c) **#43+#1 co-maintainer** Scorecard posture (honestly open, never dismissed); (d) **Win/macOS browser runtime** on owner hardware (P6-1). **Do not `gh release create` / push a `v*` tag without the owner's go/no-go** — outward-facing. Scope any release copy to what is verified (§11).
+- The 7.2 GB laptop runs the full perimeter + T0 **when cleaned** of heavy apps (Cursor/Brave): ~3.6 GB free, no swap-storm. Images are pre-built (`podman images`).
+- podman ops need `dangerouslyDisableSandbox`; local builds need fully-qualified image names (`docker.io/library/…`). Stop any running daemon (it holds a `RunGuard`) before re-running.
+- `vault down` / `vault pause` are **HELD** (boundary-weakening; ADR-0021) — they no longer stop the daemon from the control channel. To tear down: SIGTERM the `vault up` pid. To exercise a pause→resume cycle: use the idle knob `OPENTRAPP_IDLE_TIMEOUT_MS`, not `vault pause`.
+- **Credentials:** dev keys were rotated 2026-06-22; never run `podman-compose` *verbose* with real keys (it echoes them). The boundary self-test needs only a **placeholder** key (no real credential). Move the real `~/.opentrapp/.env` aside UNREAD and restore after box tests — never handle a real key.
 
-## Running the perimeter / T0 on this box (verified workable)
+## Remaining doc debt (small, named — not glossed)
 
-- The 7.2 GB laptop RUNS the full perimeter + T0 when cleaned of heavy apps (Cursor/Brave): ~3.6 GB free, no swap-storm. Images are pre-built (`podman images`).
-- podman operations need `dangerouslyDisableSandbox`; local builds need fully-qualified image names (`docker.io/library/…`) since there is no unqualified-search registry. Stop any running daemon (it holds a RunGuard) before re-running; tear down by SIGTERM/killing the pid (`vault down` is boundary-weakening — held for out-of-band approval, ADR-0021 — so it no longer stops the daemon from the control channel). To exercise a pause→resume cycle for resume-parity testing, use the idle auto-pause knob (`OPENTRAPP_IDLE_TIMEOUT_MS`) rather than `vault pause` (also held).
-- The dev keys (Anthropic + Telegram) were **rotated 2026-06-22** after `podman-compose` verbose output echoed them; the shipped daemon uses the native orchestrator (redacted logging, no echo). Never use `podman-compose` verbose with real keys.
+- **OpenSSF badge answers** ([`openssf-badge-answers.md`](openssf-badge-answers.md), [`openssf-best-practices-application.md`](openssf-best-practices-application.md)) still describe OpenTrApp as a "desktop application" in the Description + interface fields. These are owner-facing form text submitted to bestpractices.dev — they want a de-Tauri pass before the next badge submission (the *version* line was fixed this session; the framing was left for owner review).
 
-## Open tasks / state
-
-- Standing: **#35/#40** (Rung-1 T0 + wake exactly-once), **#76** (daemon image-staging end-to-end pending a published release). Plus the Section 2 enablement defaults (idle-pause-on, daemon-default-on) and the goproxy live gate.
-- Memory (auto-loaded) carries: the bar, footprint-and-headless reality (now with the alpine numbers), de-Tauri handler-lift status, Skill Firewall projection, product identity, Scorecard solo ceiling, trust-tier triage, verify-the-consumption-end, frontend-needs-Node-22.
-
-## Reminder of the bar (CLAUDE.md §12)
+## The bar ([CLAUDE.md §12](../CLAUDE.md))
 
 End-user-faithful tests only (the product daemon, not dev scaffolding). Root-cause fixes, no glossing or handwaving. Protect the user from agent dangers first. Substance before visibility.
