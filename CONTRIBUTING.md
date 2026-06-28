@@ -80,7 +80,7 @@ cd app && npx tsc --noEmit
 # 4. End-to-end browser tests (currently 25)
 cd app && npx playwright test
 
-# 5. Manifest and orchestration validation (114 checks; expects 0 warnings)
+# 5. Manifest and orchestration validation (115 checks; expects 0 warnings)
 bash tests/orchestrator-check.sh
 ```
 
@@ -135,7 +135,7 @@ Whether a PR is self-merged (solo) or approved by another maintainer, the same
 documented criteria apply. A reviewer (or the author, when solo) confirms:
 
 1. **CI is green** — all required checks pass: Rust check+test, Frontend tsc+vitest,
-   Orchestration (42 checks), Integration (cross-module contracts), Playwright
+   Orchestration (115 checks), Integration (cross-module contracts), Playwright
    smoke, and the DCO sign-off. A local green that skips the lint or integration
    jobs does **not** count (see [`CLAUDE.md` §7](CLAUDE.md)).
 2. **Verification at the consumption end** — the change is confirmed correct at the

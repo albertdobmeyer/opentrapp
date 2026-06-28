@@ -226,7 +226,7 @@ A reasoning model running on the host (Claude Code, Anthropic's Opus, or an equi
 - Surfaces security events to the user in plain language
 - Approves or denies privileged agent requests
 
-This separates security decisions from security enforcement: the coordinator decides; the perimeter enforces; the contained agent does the work. Each tier has a single, well-scoped responsibility. Boundary-weakening operations stay human-gated regardless of who asks ([ADR-0021](adr/0021-danger-gated-agentic-control-plane.md), forthcoming), so a prompt-injected coordinator cannot disarm the cage.
+This separates security decisions from security enforcement: the coordinator decides; the perimeter enforces; the contained agent does the work. Each tier has a single, well-scoped responsibility. Boundary-weakening operations stay human-gated regardless of who asks ([ADR-0021](adr/0021-danger-gated-agentic-control-plane.md), accepted and implemented), so a prompt-injected coordinator cannot disarm the cage.
 
 ---
 
@@ -270,6 +270,8 @@ Each major threat category is mitigated by multiple independent layers. A single
 
 ## 8. Status
 
+> **Live rung/gate status is canonical in [`../ROADMAP.md`](../ROADMAP.md)** (governance: one source of truth per concern, [`CLAUDE.md`](../CLAUDE.md) §13). The table below is a module-maturity snapshot for orientation, not the roadmap.
+
 | Module             | Container                        | Maturity (main, 2026-06) |
 |--------------------|----------------------------------|--------------------|
 | vault-agent (workloads/agent)     | vault-agent + vault-proxy        | Active. `verify.sh` security check passing on every release. Three shell levels implemented. |
@@ -283,7 +285,7 @@ Each major threat category is mitigated by multiple independent layers. A single
 - `vault-proxy` is the Go `goproxy` chokepoint (ADR-0026); the Python mitmproxy is replaced
 - Manifest contract in `schemas/component.schema.json` (6 sections: identity, status, commands, configs, health, workflows)
 - 10 component-level workflows + 4 cross-component orchestrator workflows
-- 114-check validation suite passing (0 warnings)
+- 115-check validation suite passing (0 warnings)
 - Rust workflow executor with interpolation, sequencing, and success conditions
 - React workflow UI (served by the loopback viewer) with progress tracking, input forms, and danger-level styling
 - Adaptive shell switching via CLI; optional browser-viewer exposure deferred to a future release

@@ -1,9 +1,11 @@
 # ADR-0022 — Daemon control surface: CLI, on-demand loopback viewer (de-Tauri), optional MCP
 
-**Status:** Proposed — the control-surface architecture and its **transport security model** are
-decided here; **implementation is deferred and spike-gated** (a throwaway de-risking spike with
-explicit kill criteria must pass first; if it fails, the fallback is *not* C1 — see below — but a
-re-scoped viewer or accepting the documented Tauri/Scorecard residual). Inherits the danger-gate of
+**Status:** Accepted — the de-risking spike passed and the cutover **shipped on `main`** (de-Tauri
+[#184](https://github.com/albertdobmeyer/opentrapp/pull/184), 2026-06-24): the headless daemon owns the
+perimeter and the on-demand loopback `viewer-server` is the GUI projection (the transport security
+model below is implemented in [`crates/viewer-server/`](../../app/src-tauri/crates/viewer-server/)). The
+CLI-first and optional-MCP command surfaces remain **forthcoming**
+([ADR-0020](0020-product-identity-and-distribution.md)). Inherits the danger-gate of
 [ADR-0021](0021-danger-gated-agentic-control-plane.md) unchanged.
 **Cross-references:** [ADR-0019](0019-headless-daemon-gui-viewer-split.md) (the Tauri-free daemon owns
 the perimeter) · [ADR-0020](0020-product-identity-and-distribution.md) (three projections of one
