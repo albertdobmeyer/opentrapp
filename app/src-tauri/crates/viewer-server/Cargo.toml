@@ -40,5 +40,5 @@ opentrapp-core = { path = "../core" }
 
 [dev-dependencies]
 # Live WS client for the spike's stream-line proof (test-only; pure-Rust, gtk-free).
-tokio-tungstenite = "0.24"
+tokio-tungstenite = "0.29"
 futures-util = "0.3"
