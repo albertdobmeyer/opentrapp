@@ -27,7 +27,7 @@ dist = true
 # Pure-Rust async HTTP/WS — verified zero gtk/webkit (ADR-0022 §4).
 axum = { version = "0.8", features = ["ws"] }
 tower = { version = "0.5", features = ["util"] }   # ServiceExt::oneshot for middleware tests
-tower-http = { version = "0.6", features = ["fs", "set-header", "limit", "timeout"] }
+tower-http = { version = "0.7", features = ["fs", "set-header", "limit", "timeout"] }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "signal"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
